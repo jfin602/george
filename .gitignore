@@ -7,3 +7,5 @@ dist/
 artifacts/
 .tmp/
 *.log
+.tmp*
+.codex*
