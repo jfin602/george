@@ -9,8 +9,9 @@ The roadmap deliberately proves the provider, read-only tool foundation, and rea
 Goal: establish a small, testable Node/TypeScript core, a Codex-style OpenTUI interface, one streamed local-model turn, and independently testable read-only tools.
 
 Scope:
-- Node 24 + TypeScript + ESM repository baseline;
+- Node.js >=26.4.0 <27 + TypeScript + ESM repository baseline;
 - `@opentui/core` production presentation dependency, without React initially;
+- launch/runtime wiring that supplies `--experimental-ffi` automatically for native OpenTUI execution;
 - interactive TUI entry point;
 - in-place terminal redraw and clean terminal restoration;
 - persistent input plus streamed assistant output;
@@ -27,6 +28,7 @@ Scope:
 - read-only tools: file read/list, text search, Git status/diff;
 - deterministic provider/tool/TUI-state fixtures where practical;
 - explicit test commands that truthfully distinguish unit, runner, provider/TUI/integration, and live-smoke evidence as those layers are introduced;
+- exact Petri phase-runner tests exercised under Node 26 before implementation proceeds past the runtime-foundation prompt;
 - one bounded live LM Studio/Qwen smoke path;
 - every generated P1 prompt uses `Browser required: no.` so the exact phase runner can execute the entire stack.
 
