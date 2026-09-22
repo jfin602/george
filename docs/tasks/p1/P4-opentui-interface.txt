@@ -1,0 +1,54 @@
+TASK: Phase 1 / P4 — OpenTUI coding-agent interface
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Terra High`.
+- Browser required: no.
+
+VERSIONING
+- This prompt's assigned project version is `0.1.4`.
+
+GOAL
+
+Build George's initial Codex-style terminal application as a presentation adapter over the existing application service. Use current `@opentui/core` directly from TypeScript without React.
+
+First inspect the installed/current OpenTUI package APIs and its supported test-renderer facilities rather than guessing stale APIs.
+
+Dependency/runtime requirements:
+- add `@opentui/core` as the production presentation dependency without creating `package-lock.json`;
+- normal repository launch command(s) must invoke Node with `--experimental-ffi` automatically;
+- preserve Node >=26.4.0 <27 and ESM;
+- do not move provider/context/tool/session logic into TUI code.
+
+Implement a restrained coding-agent layout with:
+- George identity/header;
+- configured provider/model/workspace status;
+- scrollable transcript;
+- compact activity/status region capable of showing read-only-tool lifecycle events;
+- persistent multiline-capable input;
+- streamed assistant text updated in place.
+
+Lifecycle/input requirements:
+- submitting input invokes the existing one-turn application service;
+- input remains coherent while output streams and is usable again after completion;
+- define and test clear submit vs multiline semantics using the actual OpenTUI input API;
+- transcript scrollback works;
+- resize preserves a coherent layout;
+- Ctrl+C during an active turn requests cancellation first;
+- Ctrl+C while idle exits cleanly;
+- normal exit and handled failure restore terminal state;
+- no browser UI and no React.
+
+Use OpenTUI's supported test renderer for deterministic semantic rendering/input/resize/lifecycle tests. Avoid brittle decorative cell-perfect tests when a semantic assertion is sufficient.
+
+Add an architecture guard that prevents George core/provider/application modules from importing OpenTUI.
+
+Do not add autonomous tool cycling, write tools, arbitrary shell, web/browser tools, daemon networking, or Tauri.
+
+Set `package.json` version to `0.1.4`.
+
+Required proof:
+- focused TUI/test-renderer tests cover initial/status rendering, streaming updates, input preservation, submit/multiline behavior, scrollback, resize, active cancellation, idle exit and cleanup seams;
+- the normal launch script contains the required FFI flag;
+- core/provider tests and architecture boundaries remain Green;
+- typecheck and `git diff --check` pass;
+- no `package-lock.json` exists.
