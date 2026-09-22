@@ -1,4 +1,5 @@
 export * from './cancellation.ts';
+export * from './approval.ts';
 export * from './config.ts';
 export * from './errors.ts';
 export * from './events.ts';

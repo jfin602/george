@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { execFileSync } from 'node:child_process';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
@@ -8,6 +9,7 @@ import { createTestRenderer } from '@opentui/core/testing';
 
 import {
   GeorgeError,
+  PendingApprovalPort,
   type ModelProvider,
   type ProviderEvent,
   type ProviderRequest,
@@ -42,8 +44,13 @@ class PausedProvider implements ModelProvider {
 
   async *stream(request: ProviderRequest, options: ProviderStreamOptions = {}): AsyncGenerator<ProviderEvent> {
     this.calls.push({ request, options });
-    yield { type: 'provider.response.started' };
-    if (this.tool && this.calls.length === 1) yield { type: 'provider.tool.call', callId: 'call-1', name: 'read_file', arguments: '{"path":"BOOT.md"}' };
+    yield { type: 'provider.response.started', ...(this.tool && this.calls.length === 1 ? { responseId: 'paused-tool-response' } : {}) };
+    if (this.tool && this.calls.length === 1) {
+      yield { type: 'provider.tool.call', callId: 'call-1', name: 'read_file', arguments: '{"path":"BOOT.md"}' };
+      this.started.resolve();
+      yield { type: 'provider.response.completed' };
+      return;
+    }
     this.started.resolve();
     await Promise.race([
       this.release.promise,
@@ -54,12 +61,32 @@ class PausedProvider implements ModelProvider {
   }
 }
 
+class ApprovalProvider implements ModelProvider {
+  calls: Array<{ request: ProviderRequest; options: ProviderStreamOptions }> = [];
+  private readonly call: ProviderEvent;
+  constructor(call: ProviderEvent) { this.call = call; }
+
+  async *stream(request: ProviderRequest, options: ProviderStreamOptions = {}): AsyncGenerator<ProviderEvent> {
+    this.calls.push({ request, options });
+    if (this.calls.length === 1) {
+      yield { type: 'provider.response.started', responseId: 'approval-response' };
+      yield this.call;
+      yield { type: 'provider.response.completed' };
+      return;
+    }
+    yield { type: 'provider.text.delta', delta: 'approval resolved' };
+    yield { type: 'provider.response.completed' };
+  }
+}
+
 async function tui(provider: ModelProvider) {
   const workspace = await mkdtemp(join(tmpdir(), 'george-tui-'));
+  await writeFile(join(workspace, 'BOOT.md'), 'fixture boot');
   const setup = await createTestRenderer({ width: 72, height: 18, kittyKeyboard: true });
-  const service = await createOneTurnApplicationService({ provider, workspace });
-  const app = new GeorgeTui({ renderer: setup.renderer, service, provider: 'LM Studio', model: 'test-model' });
-  return { workspace, setup, app };
+  const approvals = new PendingApprovalPort();
+  const service = await createOneTurnApplicationService({ provider, workspace, approvalPort: approvals });
+  const app = new GeorgeTui({ renderer: setup.renderer, service, provider: 'LM Studio', model: 'test-model', approvals });
+  return { workspace, setup, app, approvals };
 }
 
 async function cleanup(item: Awaited<ReturnType<typeof tui>>): Promise<void> {
@@ -163,4 +190,52 @@ test('Ctrl+C cancels an active turn, then exits and destroys the renderer while 
   assert.equal(item.setup.renderer.isDestroyed, false);
   item.setup.mockInput.pressCtrlC();
   assert.equal(item.setup.renderer.isDestroyed, true);
+});
+
+test('test renderer presents normalized approvals and allow, deny, and Ctrl+C keep the TUI usable', async (t) => {
+  const write = async (callId: string, path: string, content: string) => {
+    const item = await tui(new ApprovalProvider({ type: 'provider.tool.call', callId, name: 'write_file', arguments: JSON.stringify({ path, content }) }));
+    t.after(() => cleanup(item));
+    return item;
+  };
+  const allowed = await write('allow', 'allowed.txt', 'yes');
+  await allowed.setup.mockInput.typeText('write it');
+  allowed.setup.mockInput.pressEnter();
+  await allowed.setup.waitForFrame((frame) => frame.includes('Approval required'));
+  assert.match(allowed.setup.captureCharFrame(), /Target: allowed.txt/);
+  await allowed.setup.mockInput.typeText('next draft');
+  allowed.setup.mockInput.pressKey('a', { ctrl: true });
+  await allowed.app.waitForIdle();
+  assert.equal(await readFile(join(allowed.workspace, 'allowed.txt'), 'utf8'), 'yes');
+  assert.equal(allowed.app.input.plainText, 'next draft');
+
+  const denied = await write('deny', 'denied.txt', 'no');
+  execFileSync('git', ['init', '--quiet'], { cwd: denied.workspace });
+  await writeFile(join(denied.workspace, 'denied.txt'), 'before');
+  await denied.setup.mockInput.typeText('deny it');
+  denied.setup.mockInput.pressEnter();
+  await denied.setup.waitForFrame((frame) => frame.includes('[Ctrl+A]llow once'));
+  assert.match(denied.setup.captureCharFrame(), /Target: denied.txt \(already dirty\)/);
+  denied.setup.mockInput.pressKey('d', { ctrl: true });
+  await denied.app.waitForIdle();
+  assert.equal(await readFile(join(denied.workspace, 'denied.txt'), 'utf8'), 'before');
+
+  const cancelled = await write('cancel', 'cancelled.txt', 'never');
+  await cancelled.setup.mockInput.typeText('cancel it');
+  cancelled.setup.mockInput.pressEnter();
+  await cancelled.setup.waitForFrame((frame) => frame.includes('Approval required'));
+  cancelled.setup.resize(48, 12);
+  cancelled.setup.mockInput.pressCtrlC();
+  await cancelled.app.waitForIdle();
+  assert.equal(cancelled.app.session.events.at(-1)?.type, 'turn.cancelled');
+  assert.ok(cancelled.app.input.width > 0 && cancelled.app.input.height >= 3);
+
+  const process = await tui(new ApprovalProvider({ type: 'provider.tool.call', callId: 'process', name: 'run_process', arguments: '{"executable":"node","arguments":["-e","0"]}' }));
+  t.after(() => cleanup(process));
+  await process.setup.mockInput.typeText('show process');
+  process.setup.mockInput.pressEnter();
+  await process.setup.waitForFrame((frame) => frame.includes('not OS/workspace sandboxed'));
+  assert.match(process.setup.captureCharFrame(), /Executable: node/);
+  process.setup.mockInput.pressKey('d', { ctrl: true });
+  await process.app.waitForIdle();
 });

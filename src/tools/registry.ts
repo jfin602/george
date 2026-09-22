@@ -35,6 +35,7 @@ export type ToolDefinition = Readonly<{
 export type ToolExecutionOptions = Readonly<{ signal?: AbortSignal }>;
 export type ToolCall = Readonly<{ callId: string; name: string; arguments: string }>;
 export type ToolResult = ProviderToolResult;
+export type ValidatedToolCall = Readonly<{ definition: ToolDefinition; arguments: JsonObject }>;
 
 function schemaJson(schema: ToolInputSchema): JsonObject {
   return schema as unknown as JsonObject;
@@ -89,7 +90,7 @@ export class ToolRegistry {
     this.definitions = definitions.map(({ name, description, inputSchema }) => ({ name, description, inputSchema: schemaJson(inputSchema) }));
   }
 
-  validate(call: ToolCall): ToolDefinition | ToolResult {
+  validate(call: ToolCall): ValidatedToolCall | ToolResult {
     const definition = this.byName.get(call.name);
     if (!definition) return { callId: call.callId, name: call.name, result: { ok: false, error: validationError(`Unknown tool: ${call.name}.`) } };
 
@@ -102,16 +103,15 @@ export class ToolRegistry {
     if (!valid(definition.inputSchema, arguments_)) {
       return { callId: call.callId, name: call.name, result: { ok: false, error: validationError(`Tool ${call.name} arguments do not match its input schema.`) } };
     }
-    return definition;
+    return { definition, arguments: arguments_ as JsonObject };
   }
 
   async dispatch(call: ToolCall, options: ToolExecutionOptions = {}): Promise<ToolResult> {
     const definition = this.validate(call);
     if ('callId' in definition) return definition;
     if (options.signal?.aborted) throw cancellationError(options.signal)!;
-    const arguments_ = JSON.parse(call.arguments) as JsonObject;
     try {
-      const value = await definition.execute(arguments_, options);
+      const value = await definition.definition.execute(definition.arguments, options);
       if (options.signal?.aborted) throw cancellationError(options.signal)!;
       return { callId: call.callId, name: call.name, result: { ok: true, value } };
     } catch (error) {

@@ -1,4 +1,5 @@
 import type { GeorgeErrorShape } from './errors.ts';
+import type { ApprovalRequest } from './approval.ts';
 
 export type ProviderUsage = Readonly<{
   inputTokens?: number;
@@ -32,6 +33,9 @@ export type ApplicationEvent =
       arguments: string;
     }>
   | Readonly<{ type: 'tool.started'; turnId: string; callId: string; name: string }>
+  | Readonly<{ type: 'approval.requested'; turnId: string; callId: string; request: ApprovalRequest }>
+  | Readonly<{ type: 'approval.allowed'; turnId: string; callId: string; request: ApprovalRequest }>
+  | Readonly<{ type: 'approval.denied'; turnId: string; callId: string; request: ApprovalRequest }>
   | Readonly<{
       type: 'tool.completed';
       turnId: string;

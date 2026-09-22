@@ -9,7 +9,7 @@ import {
 } from '@opentui/core';
 
 import { type AgentLoopApplicationService } from '../application/index.ts';
-import { createSession, type ApplicationEvent, type Session, type TranscriptEntry } from '../core/index.ts';
+import { createSession, type ApprovalRequest, type ApprovalResolver, type ApplicationEvent, type Session, type TranscriptEntry } from '../core/index.ts';
 
 export const COMPOSER_KEY_BINDINGS: TextareaKeyBinding[] = [
   { name: 'return', action: 'submit' },
@@ -22,6 +22,7 @@ export type GeorgeTuiOptions = Readonly<{
   provider: string;
   model: string;
   workspace?: string;
+  approvals: ApprovalResolver;
 }>;
 
 function transcriptText(entries: readonly TranscriptEntry[]): string {
@@ -32,10 +33,13 @@ function activityFor(event: ApplicationEvent): string | undefined {
   switch (event.type) {
     case 'provider.response.started': return 'Thinking…';
     case 'provider.response.completed': return 'Response complete';
-    case 'tool.requested': return `Read-only tool requested: ${event.name}`;
-    case 'tool.started': return `Running read-only tool: ${event.name}`;
-    case 'tool.completed': return `Read-only tool completed: ${event.name}`;
-    case 'tool.failed': return `Read-only tool failed: ${event.name}`;
+    case 'tool.requested': return `Tool requested: ${event.name}`;
+    case 'tool.started': return `Running tool: ${event.name}`;
+    case 'tool.completed': return `Tool completed: ${event.name}`;
+    case 'tool.failed': return `Tool failed: ${event.name}`;
+    case 'approval.requested': return `Approval required: ${event.request.toolName}`;
+    case 'approval.allowed': return `Approved once: ${event.request.toolName}`;
+    case 'approval.denied': return `Denied: ${event.request.toolName}`;
     case 'turn.cancelled': return 'Turn cancelled';
     case 'turn.failed': return `Failed: ${event.error.message}`;
     default: return undefined;
@@ -52,16 +56,20 @@ export class GeorgeTui {
   private readonly transcriptView: TextRenderable;
   private readonly statusView: TextRenderable;
   private readonly activityView: TextRenderable;
+  private readonly approvalView: TextRenderable;
   private readonly statusDetails: string;
+  private readonly approvals: ApprovalResolver;
   private readonly done: Promise<void>;
   private resolveDone!: () => void;
   private controller: AbortController | undefined;
   private active: Promise<void> | undefined;
+  private pendingApproval: ApprovalRequest | undefined;
   private closed = false;
 
   constructor(options: GeorgeTuiOptions) {
     this.renderer = options.renderer;
     this.service = options.service;
+    this.approvals = options.approvals;
     this.session = createSession({ workspace: options.workspace ?? options.service.workspace.root });
     this.statusDetails = `${options.provider} · ${options.model} · ${this.session.workspace}`;
     this.done = new Promise<void>((resolve) => { this.resolveDone = resolve; });
@@ -76,6 +84,8 @@ export class GeorgeTui {
     layout.add(this.transcript);
     this.activityView = new TextRenderable(this.renderer, { id: 'activity', width: '100%', height: 1, flexShrink: 0, content: 'Idle' });
     layout.add(this.activityView);
+    this.approvalView = new TextRenderable(this.renderer, { id: 'approval', width: '100%', height: 0, flexShrink: 0, content: '' });
+    layout.add(this.approvalView);
     this.input = new TextareaRenderable(this.renderer, {
       id: 'input', height: 3, minHeight: 3, maxHeight: 6, wrapMode: 'word', placeholder: 'Message George (Enter submits, Shift+Enter adds a line)', keyBindings: COMPOSER_KEY_BINDINGS,
       onSubmit: () => { void this.submit(); },
@@ -86,6 +96,12 @@ export class GeorgeTui {
       if (key.ctrl && key.name === 'c') {
         key.preventDefault();
         this.ctrlC();
+      } else if (this.pendingApproval && key.ctrl && key.name === 'a') {
+        key.preventDefault();
+        this.decide('allow_once');
+      } else if (this.pendingApproval && key.ctrl && key.name === 'd') {
+        key.preventDefault();
+        this.decide('deny');
       }
     });
     this.renderer.on(CliRenderEvents.RESIZE, () => this.renderer.requestRender());
@@ -152,6 +168,16 @@ export class GeorgeTui {
 
   private render(event: ApplicationEvent): void {
     this.transcriptView.content = transcriptText(this.session.transcript);
+    if (event.type === 'approval.requested') {
+      this.pendingApproval = event.request;
+      this.approvalView.content = this.approvalText(event.request);
+      this.approvalView.height = 6;
+    }
+    if (event.type === 'approval.allowed' || event.type === 'approval.denied' || event.type === 'turn.cancelled') {
+      this.pendingApproval = undefined;
+      this.approvalView.content = '';
+      this.approvalView.height = 0;
+    }
     const activity = activityFor(event);
     if (activity) this.activityView.content = activity;
     this.renderer.requestRender();
@@ -159,6 +185,18 @@ export class GeorgeTui {
 
   private status(state: string): string {
     return `${state} · ${this.statusDetails}`;
+  }
+
+  private decide(decision: 'allow_once' | 'deny'): void {
+    const request = this.pendingApproval;
+    if (request && this.approvals.decide(request.id, decision)) this.activityView.content = decision === 'allow_once' ? `Approved once: ${request.toolName}` : `Denied: ${request.toolName}`;
+  }
+
+  private approvalText(request: ApprovalRequest): string {
+    const detail = request.target
+      ? `Target: ${request.target.path}${request.target.alreadyDirty ? ' (already dirty)' : ''}`
+      : `Executable: ${request.process!.executable}\nArgv: ${JSON.stringify(request.process!.argv)}\nCwd: ${request.process!.cwd}\nWarning: ${request.process!.warning}`;
+    return `Approval required — ${request.toolName} (${request.risk})\n${detail}\n[Ctrl+A]llow once  [Ctrl+D]eny`;
   }
 
   private finish(): void {

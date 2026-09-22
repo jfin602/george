@@ -1,7 +1,7 @@
 import { createCliRenderer } from '@opentui/core';
 
 import { createAgentLoopApplicationService } from '../application/index.ts';
-import { resolveGeorgeConfig } from '../core/index.ts';
+import { PendingApprovalPort, resolveGeorgeConfig } from '../core/index.ts';
 import { LmStudioResponsesProvider } from '../provider/index.ts';
 import { GeorgeTui } from './app.ts';
 
@@ -12,9 +12,11 @@ async function main(): Promise<void> {
     model: process.env.GEORGE_MODEL,
   });
   if (!config.provider.model) throw new Error('Set GEORGE_MODEL before starting George.');
+  const approvals = new PendingApprovalPort();
   const service = await createAgentLoopApplicationService({
     provider: new LmStudioResponsesProvider(config.provider),
     workspace: config.workspace,
+    approvalPort: approvals,
   });
   const renderer = await createCliRenderer({ exitOnCtrlC: false });
   let tui: GeorgeTui | undefined;
@@ -24,6 +26,7 @@ async function main(): Promise<void> {
       service,
       provider: 'LM Studio',
       model: config.provider.model,
+      approvals,
     });
     await tui.run();
   } finally {
