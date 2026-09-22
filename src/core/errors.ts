@@ -2,6 +2,7 @@ export type GeorgeErrorCode =
   | 'cancelled'
   | 'configuration'
   | 'provider'
+  | 'tool'
   | 'validation';
 
 export type GeorgeErrorShape = Readonly<{

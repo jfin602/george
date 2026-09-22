@@ -23,4 +23,11 @@ export type ApplicationEvent =
   | Readonly<{ type: 'input.submitted'; text: string }>
   | Readonly<{ type: 'turn.completed'; turnId: string }>
   | Readonly<{ type: 'turn.cancelled'; turnId: string; error: GeorgeErrorShape }>
-  | Readonly<{ type: 'turn.failed'; turnId: string; error: GeorgeErrorShape }>;
+  | Readonly<{ type: 'turn.failed'; turnId: string; error: GeorgeErrorShape }>
+  | Readonly<{
+      type: 'tool.deferred';
+      turnId: string;
+      callId: string;
+      name: string;
+      arguments: string;
+    }>;

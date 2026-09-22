@@ -1,0 +1,240 @@
+import { open, opendir, stat } from 'node:fs/promises';
+import { spawn } from 'node:child_process';
+import { relative } from 'node:path';
+
+import {
+  GeorgeError,
+  assertCanonicalWorkspace,
+  cancellationError,
+  resolveWorkspacePath,
+  type Workspace,
+} from '../core/index.ts';
+
+export const READ_ONLY_TOOL_DEFINITIONS = [
+  { name: 'read_file', description: 'Read a bounded text file from the workspace.' },
+  { name: 'list_directory', description: 'List bounded direct entries in a workspace directory.' },
+  { name: 'search_text', description: 'Search bounded workspace text without executing a shell.' },
+  { name: 'git_status', description: 'Read Git status using a fixed read-only command.' },
+  { name: 'git_diff', description: 'Read Git diff using a fixed read-only command.' },
+] as const;
+
+export type ReadOnlyToolCall =
+  | Readonly<{ name: 'read_file'; path: string }>
+  | Readonly<{ name: 'list_directory'; path: string }>
+  | Readonly<{ name: 'search_text'; query: string; path?: string }>
+  | Readonly<{ name: 'git_status' }>
+  | Readonly<{ name: 'git_diff' }>;
+
+export type ReadOnlyToolResult =
+  | Readonly<{ name: 'read_file'; path: string; text: string; bytes: number; truncated: boolean }>
+  | Readonly<{
+      name: 'list_directory';
+      path: string;
+      entries: readonly Readonly<{ name: string; kind: 'file' | 'directory' | 'symlink' | 'other' }>[];
+      truncated: boolean;
+    }>
+  | Readonly<{
+      name: 'search_text';
+      path: string;
+      matches: readonly Readonly<{ path: string; line: number; text: string }>[];
+      scannedFiles: number;
+      scannedBytes: number;
+      truncated: boolean;
+    }>
+  | GitResult;
+
+export type GitResult = Readonly<{
+  name: 'git_status' | 'git_diff';
+  stdout: string;
+  stderr: string;
+  exitCode: number | null;
+  stdoutTruncated: boolean;
+  stderrTruncated: boolean;
+}>;
+
+export type ReadOnlyToolLimits = Readonly<{
+  maxReadBytes?: number;
+  maxListEntries?: number;
+  maxSearchFiles?: number;
+  maxSearchBytes?: number;
+  maxSearchResults?: number;
+  maxGitOutputBytes?: number;
+  gitTimeoutMs?: number;
+}>;
+
+type Limits = Required<ReadOnlyToolLimits>;
+
+const DEFAULT_LIMITS: Limits = {
+  maxReadBytes: 64 * 1024,
+  maxListEntries: 256,
+  maxSearchFiles: 1_000,
+  maxSearchBytes: 1024 * 1024,
+  maxSearchResults: 100,
+  maxGitOutputBytes: 256 * 1024,
+  gitTimeoutMs: 10_000,
+};
+
+const MAX_LIMITS: Limits = {
+  maxReadBytes: 1024 * 1024,
+  maxListEntries: 10_000,
+  maxSearchFiles: 10_000,
+  maxSearchBytes: 16 * 1024 * 1024,
+  maxSearchResults: 1_000,
+  maxGitOutputBytes: 1024 * 1024,
+  gitTimeoutMs: 30_000,
+};
+
+function limits(input: ReadOnlyToolLimits): Limits {
+  return Object.fromEntries(Object.entries(DEFAULT_LIMITS).map(([key, fallback]) => {
+    const value = input[key as keyof ReadOnlyToolLimits] ?? fallback;
+    const maximum = MAX_LIMITS[key as keyof Limits];
+    if (!Number.isInteger(value) || value < 1) {
+      throw new GeorgeError('configuration', `${key} must be a positive integer.`);
+    }
+    return [key, Math.min(value, maximum)];
+  })) as Limits;
+}
+
+async function boundedRead(path: string, maxBytes: number): Promise<{ text: string; bytes: number; truncated: boolean }> {
+  const handle = await open(path, 'r');
+  try {
+    const buffer = Buffer.alloc(maxBytes + 1);
+    const { bytesRead } = await handle.read(buffer, 0, buffer.length, 0);
+    const bytes = Math.min(bytesRead, maxBytes);
+    return { text: buffer.subarray(0, bytes).toString('utf8'), bytes, truncated: bytesRead > maxBytes };
+  } finally {
+    await handle.close();
+  }
+}
+
+function relativePath(workspace: Workspace, path: string): string {
+  return relative(workspace.root, path) || '.';
+}
+
+async function runGit(
+  workspace: Workspace,
+  args: readonly string[],
+  outputLimit: number,
+  timeoutMs: number,
+  signal?: AbortSignal,
+): Promise<Omit<GitResult, 'name'>> {
+  return new Promise((resolve, reject) => {
+    const child = spawn('git', args, { cwd: workspace.root, shell: false, stdio: ['ignore', 'pipe', 'pipe'] });
+    let stdout: Buffer<ArrayBufferLike> = Buffer.alloc(0);
+    let stderr: Buffer<ArrayBufferLike> = Buffer.alloc(0);
+    let stdoutTruncated = false;
+    let stderrTruncated = false;
+    let timedOut = false;
+    const append = (current: Buffer<ArrayBufferLike>, chunk: Buffer<ArrayBufferLike>, mark: (value: boolean) => void): Buffer<ArrayBufferLike> => {
+      if (current.length >= outputLimit) {
+        mark(true);
+        return current;
+      }
+      const next = Buffer.concat([current, chunk.subarray(0, outputLimit - current.length)]);
+      if (next.length < current.length + chunk.length) mark(true);
+      return next;
+    };
+    const timeout = setTimeout(() => { timedOut = true; child.kill(); }, timeoutMs);
+    const cancelled = () => child.kill();
+    signal?.addEventListener('abort', cancelled, { once: true });
+    child.stdout.on('data', (chunk: Buffer) => { stdout = append(stdout, chunk, (value) => { stdoutTruncated = value; }); });
+    child.stderr.on('data', (chunk: Buffer) => { stderr = append(stderr, chunk, (value) => { stderrTruncated = value; }); });
+    child.on('error', (error) => {
+      clearTimeout(timeout);
+      signal?.removeEventListener('abort', cancelled);
+      reject(signal?.aborted
+        ? cancellationError(signal)
+        : new GeorgeError('tool', 'Unable to start read-only Git.', { cause: error }));
+    });
+    child.on('close', (exitCode) => {
+      clearTimeout(timeout);
+      signal?.removeEventListener('abort', cancelled);
+      if (signal?.aborted) return reject(cancellationError(signal));
+      if (timedOut) return reject(new GeorgeError('tool', `Read-only Git timed out after ${timeoutMs} ms.`));
+      resolve({ stdout: stdout.toString('utf8'), stderr: stderr.toString('utf8'), exitCode, stdoutTruncated, stderrTruncated });
+    });
+  });
+}
+
+export type ReadOnlyToolExecutor = Readonly<{
+  workspace: Workspace;
+  definitions: typeof READ_ONLY_TOOL_DEFINITIONS;
+  execute: (call: ReadOnlyToolCall, options?: Readonly<{ signal?: AbortSignal }>) => Promise<ReadOnlyToolResult>;
+}>;
+
+export function createReadOnlyToolExecutor(
+  workspace: Workspace,
+  configuredLimits: ReadOnlyToolLimits = {},
+): ReadOnlyToolExecutor {
+  const bounded = limits(configuredLimits);
+  const execute = async (call: ReadOnlyToolCall, options: Readonly<{ signal?: AbortSignal }> = {}): Promise<ReadOnlyToolResult> => {
+    if (options.signal?.aborted) throw cancellationError(options.signal);
+    await assertCanonicalWorkspace(workspace);
+    switch (call.name) {
+      case 'read_file': {
+        const path = await resolveWorkspacePath(workspace, call.path);
+        if (!(await stat(path)).isFile()) throw new GeorgeError('validation', 'Path must name a file.');
+        return { name: call.name, path: relativePath(workspace, path), ...await boundedRead(path, bounded.maxReadBytes) };
+      }
+      case 'list_directory': {
+        const path = await resolveWorkspacePath(workspace, call.path);
+        if (!(await stat(path)).isDirectory()) throw new GeorgeError('validation', 'Path must name a directory.');
+        const directory = await opendir(path);
+        const entries: Array<{ name: string; kind: 'file' | 'directory' | 'symlink' | 'other' }> = [];
+        let truncated = false;
+        try {
+          for await (const entry of directory) {
+            if (entries.length === bounded.maxListEntries) { truncated = true; break; }
+            entries.push({
+              name: entry.name,
+              kind: entry.isFile() ? 'file' : entry.isDirectory() ? 'directory' : entry.isSymbolicLink() ? 'symlink' : 'other',
+            });
+          }
+        } finally {
+          await directory.close().catch(() => undefined);
+        }
+        return { name: call.name, path: relativePath(workspace, path), entries, truncated };
+      }
+      case 'search_text': {
+        if (!call.query) throw new GeorgeError('validation', 'Search query must not be empty.');
+        const root = await resolveWorkspacePath(workspace, call.path ?? '.');
+        if (!(await stat(root)).isDirectory()) throw new GeorgeError('validation', 'Search path must name a directory.');
+        const matches: Array<{ path: string; line: number; text: string }> = [];
+        let scannedFiles = 0;
+        let scannedBytes = 0;
+        let truncated = false;
+        const walk = async (directory: string): Promise<void> => {
+          const handle = await opendir(directory);
+          try {
+            for await (const entry of handle) {
+              if (truncated) return;
+              const path = `${directory}/${entry.name}`;
+              if (entry.isSymbolicLink()) continue;
+              if (entry.isDirectory()) await walk(path);
+              if (!entry.isFile()) continue;
+              if (scannedFiles === bounded.maxSearchFiles || scannedBytes === bounded.maxSearchBytes) { truncated = true; return; }
+              const available = bounded.maxSearchBytes - scannedBytes;
+              const content = await boundedRead(path, available);
+              scannedFiles += 1;
+              scannedBytes += content.bytes;
+              if (content.truncated) truncated = true;
+              for (const [index, text] of content.text.split(/\r?\n/).entries()) {
+                if (text.includes(call.query)) matches.push({ path: relativePath(workspace, path), line: index + 1, text });
+                if (matches.length === bounded.maxSearchResults) { truncated = true; return; }
+              }
+            }
+          } finally {
+            await handle.close().catch(() => undefined);
+          }
+        };
+        await walk(root);
+        return { name: call.name, path: relativePath(workspace, root), matches, scannedFiles, scannedBytes, truncated };
+      }
+      case 'git_status':
+        return { name: call.name, ...await runGit(workspace, ['status', '--short', '--branch'], bounded.maxGitOutputBytes, bounded.gitTimeoutMs, options.signal) };
+      case 'git_diff':
+        return { name: call.name, ...await runGit(workspace, ['diff', '--no-ext-diff'], bounded.maxGitOutputBytes, bounded.gitTimeoutMs, options.signal) };
+    }
+  };
+  return { workspace, definitions: READ_ONLY_TOOL_DEFINITIONS, execute };
+}
