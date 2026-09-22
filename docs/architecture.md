@@ -5,7 +5,7 @@ Status: INITIAL ARCHITECTURE CONTRACT
 ## Shape
 
 ```text
-CLI / future Tauri / future network client
+OpenTUI / future Tauri / future network client
                  |
           application service
                  |
@@ -25,7 +25,24 @@ CLI / future Tauri / future network client
 
 Owns the turn loop: assemble input, request/stream a provider response, collect assistant output, validate tool calls, dispatch permitted tools, append structured tool results, and continue until completion, cancellation, budget exhaustion, or error.
 
-It does not know terminal rendering, Tauri windows, HTTP routes, or LM Studio-specific wire details.
+It does not know terminal rendering, OpenTUI widgets, Tauri windows, HTTP routes, or LM Studio-specific wire details.
+
+## TUI adapter
+
+The initial user interface uses `@opentui/core` directly from TypeScript, without React.
+
+It should provide a Codex-style terminal experience:
+- owned screen regions and in-place redraw;
+- streamed assistant text;
+- visible tool/activity lifecycle;
+- persistent multiline-capable input;
+- status/model/workspace information;
+- scrollback/history navigation;
+- terminal resize handling;
+- Ctrl+C/task cancellation semantics;
+- clean restoration of terminal state on normal exit and handled failure.
+
+The TUI consumes application/agent events and emits user commands. It must not implement provider protocol, tool policy, context assembly, or agent-loop decisions.
 
 ## Provider layer
 
@@ -57,7 +74,7 @@ Persist enough to reconstruct user/assistant turns, relevant normalized provider
 
 ## Interfaces
 
-The CLI is an adapter. A later daemon may expose the application service over localhost. A Tauri UI or trusted remote client can then use that transport without moving agent logic into UI code.
+OpenTUI is the first presentation adapter. A later daemon may expose the application service over localhost. A Tauri UI or trusted remote client can then use that transport without moving agent logic into UI code.
 
 ## Trust boundaries
 
@@ -71,13 +88,15 @@ MVP: one active agent run per session/workspace. Do not add queues or multi-agen
 
 ## Configuration
 
-Layer configuration as safe built-in defaults, user-level George config, workspace config where allowed, then explicit CLI overrides. Secrets come from environment/OS-backed mechanisms and are never committed.
+Layer configuration as safe built-in defaults, user-level George config, workspace config where allowed, then explicit CLI/TUI launch overrides. Secrets come from environment/OS-backed mechanisms and are never committed.
 
 ## Technology
 
 - Node.js 24;
 - TypeScript;
 - ESM;
+- `@opentui/core` for the initial TUI;
+- no React requirement in the initial TUI;
 - Node test runner initially;
 - minimal production dependencies;
 - no required browser runtime;
