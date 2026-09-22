@@ -11,7 +11,11 @@ Before substantial repository-aware planning, implementation, review, architectu
 
 ## Current state
 
-George is at initial repository bootstrap. Phase 1 is the next implementation gate.
+Phase 1 implementation is complete. Its deterministic qualification is Green,
+but Phase 1 is not stability qualified: native-terminal and live
+LM Studio/Qwen evidence remain recorded Evidence Gaps in
+`docs/phase-1-closeout.md`. Phase 2 is the next implementation gate; do not
+reinterpret either gap as a pass.
 
 The high-level product and architecture direction is locked; implementation details should stay deliberately small until Phase 1 proves the local agent loop.
 

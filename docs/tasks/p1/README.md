@@ -1,11 +1,15 @@
 # Phase 1 Task Stack
 
-Status: READY FOR EXECUTION
+Status: IMPLEMENTATION COMPLETE — NOT STABILITY QUALIFIED
 
 Phase: 1 — Local Agent Foundation + TUI  
 Execution folder: `p1`  
 Baseline package: `0.1.0`  
 Baseline main: `c47cf78d36326bf0a5bd1c13186c56003db9fe2a`
+
+P1–P6 closeout is recorded in `docs/phase-1-closeout.md`. Deterministic
+qualification is Green; native-terminal and live LM Studio/Qwen qualification
+remain Evidence Gaps. They are not passes or waived evidence.
 
 Current authority:
 - `BOOT.md`;
