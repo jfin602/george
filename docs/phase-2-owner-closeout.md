@@ -7,7 +7,7 @@ Phase: 2 — Safe Tool Loop
 Accepted implementation candidate: `79834552775a2ae4c01d7796f5005ba16450e260` (`0.2.5`)  
 P6 qualification marker: `57ccc6a1b77d99258d4e08e2ca122faa110bbc42` (`0.2.6`)  
 Formal P7 closeout marker: `0e8a766a77170a07bc290ff346b2d7d5c9a273c6` (`0.2.7`)  
-Phase 3 package-baseline transition: `0.3.0` (transition provenance recorded after the baseline commit)
+Phase 3 package-baseline transition: `ce0d6b4a81000ed60f58772a67cd2a783998fbd6` (`0.3.0`)
 
 This record captures the owner's explicit `/closeout phase 2` decision on 2026-09-22.
 

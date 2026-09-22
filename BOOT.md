@@ -25,7 +25,7 @@ P6 qualification marker: `57ccc6a1b77d99258d4e08e2ca122faa110bbc42` at package `
 Formal P7 closeout marker: `0e8a766a77170a07bc290ff346b2d7d5c9a273c6` at package `0.2.7`.  
 Formal Phase 2 closeout: `docs/phase-2-closeout.md`.  
 Phase 2 owner closeout: `docs/phase-2-owner-closeout.md`.  
-Phase 3 baseline transition: package `0.3.0` (transition provenance is recorded in the owner closeout after the baseline commit).
+Phase 3 baseline transition: `ce0d6b4a81000ed60f58772a67cd2a783998fbd6` at package `0.3.0`.
 
 The owner explicitly accepts the recorded Phase 1 and Phase 2 native-terminal/live LM Studio/Qwen Evidence Gaps for roadmap progression. They remain Evidence Gaps, not Green evidence.
 
