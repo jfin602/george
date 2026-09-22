@@ -1,6 +1,6 @@
 # Phase 2 Task Stack
 
-Status: READY FOR EXECUTION
+Status: IMPLEMENTATION COMPLETE; FORMAL EVIDENCE RECORDED; OWNER CLOSEOUT PENDING
 
 Phase: 2 — Safe Tool Loop  
 Execution folder: `p2`  
@@ -50,6 +50,8 @@ Run including formal evidence closeout:
 `npm run codex:phase -- p2 --closeout`
 
 The exact runner owns staging/commits/version verification and rejects `package-lock.json`.
+
+Formal Phase-2 evidence closeout: `docs/phase-2-closeout.md`. Native-terminal and live LM Studio/Qwen evidence remain Evidence Gaps; this pointer does not owner-close Phase 2 or advance the roadmap.
 
 ## Safety ordering
 
