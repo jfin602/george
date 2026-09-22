@@ -25,10 +25,12 @@ The model provider is replaceable. LM Studio/Qwen is the first provider, not an 
 
 ## Locked stack direction
 
-- Runtime: Node.js 24.
+- Runtime: Node.js 26.4.0 or later within the Node 26 major line.
 - Language: TypeScript.
+- Module system: ESM.
 - Initial interface: Codex-style interactive terminal UI, not a print-only CLI.
 - TUI renderer: `@opentui/core`, used directly without React initially.
+- OpenTUI Node launch paths must include `--experimental-ffi`; this is part of the runtime contract rather than an operator-memory requirement.
 - TUI behavior: owns/redraws terminal regions in place, streams assistant output, shows live tool activity/status, keeps persistent interactive input, supports scrollback/resize/cancellation, and restores the terminal cleanly on exit.
 - Core: reusable library modules independent from TUI rendering.
 - Inference: provider interface; first adapter is LM Studio Responses API.
