@@ -1,21 +1,27 @@
 {
   "name": "george",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "private": true,
   "type": "module",
   "engines": {
     "node": ">=26.4.0 <27"
   },
   "scripts": {
-    "test": "node --test test/unit/*.test.ts test/unit/**/*.test.ts",
+    "start": "node --experimental-ffi src/tui/main.ts",
+    "tui": "node --experimental-ffi src/tui/main.ts",
+    "test": "node --experimental-ffi --test test/unit/*.test.ts test/unit/**/*.test.ts",
     "test:core": "node --test test/unit/core/**/*.test.ts",
     "test:provider": "node --test test/unit/provider/**/*.test.ts",
+    "test:tui": "node --experimental-ffi --test test/unit/tui/**/*.test.ts",
     "typecheck": "tsc --noEmit",
     "check": "npm run typecheck && npm test",
     "test:runner": "node --test test/unit/codex-phase-prompt-grammar.test.ts test/unit/codex-phase-runner.test.ts",
     "codex:phase": "node scripts/codex-phase.mjs",
     "codex:phase:validate": "node scripts/validate-codex-phase.mjs",
     "smoke:lm-studio": "node scripts/lm-studio-smoke.ts"
+  },
+  "dependencies": {
+    "@opentui/core": "^0.5.12"
   },
   "devDependencies": {
     "@types/node": "^26.6.2",

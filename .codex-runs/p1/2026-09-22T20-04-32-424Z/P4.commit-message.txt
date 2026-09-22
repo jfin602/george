@@ -1,0 +1,5 @@
+0.1.4
+
+Implemented the OpenTUI presentation adapter in [src/tui/app.ts](/home/jfin/dev/george/src/tui/app.ts) with FFI-enabled `start`/`tui` scripts, version `0.1.4`, renderer tests, and architecture boundary guard.
+
+Validated: `npm test` (118 passing), `npm run test:tui`, core/provider suites, typecheck, `git diff --check`; no `package-lock.json`. No commit created.
