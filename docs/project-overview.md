@@ -30,7 +30,9 @@ The agent loop talks to a typed model-provider interface. LM Studio's OpenAI-com
 
 ### Real developer tools
 
-Initial tools cover file discovery/reading, bounded writes/patching, text search, shell/process execution, Git status/diff/history, and tests/builds/typechecks through process execution.
+George's mature tool surface includes file discovery/reading, bounded writes/patching, text search, shell/process execution, Git operations, and validation commands.
+
+Phase 1 intentionally implements only the read-only foundation: file read/list, text search, and Git status/diff. Phase 2 owns arbitrary process execution, writes/patches, permissions/approvals, and the autonomous model -> tool -> result -> model loop.
 
 Later optional tools may include Chrome DevTools, Parallel Search, GitHub, and MCP.
 
@@ -54,6 +56,8 @@ Core APIs should permit a later daemon/server transport so another local UI or t
 
 If a GUI becomes justified, Tauri is the preferred direction: a lightweight native shell over George's reusable core/daemon interfaces. Electron is not the default.
 
-## Initial success condition
+## Phase 1 success condition
 
-The first meaningful milestone is a reliable Codex-style local terminal experience where George can open a repository, load its instructions, stream a bounded task through local Qwen/LM Studio, visibly present agent/tool activity, execute the Phase-1 permitted tools, continue until a clear stop condition, and report what actually happened without the TUI owning agent logic.
+Phase 1 proves a reliable Codex-style local terminal foundation where George can open a repository, load its instructions, stream one bounded model turn through local Qwen/LM Studio, visibly present agent/read-only-tool activity, and expose independently testable read-only tool infrastructure without embedding agent logic in the TUI.
+
+Phase 1 does not claim a complete autonomous tool-call cycle. Phase 2 owns repeated model -> tool -> result -> model execution and write/process capabilities.
