@@ -1,13 +1,14 @@
 {
   "name": "george",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "type": "module",
   "engines": {
     "node": ">=26.4.0 <27"
   },
   "scripts": {
-    "test": "node --test test/unit/**/*.test.ts",
+    "test": "node --test test/unit/*.test.ts test/unit/**/*.test.ts",
+    "test:core": "node --test test/unit/core/**/*.test.ts",
     "typecheck": "tsc --noEmit",
     "check": "npm run typecheck && npm test",
     "test:runner": "node --test test/unit/codex-phase-prompt-grammar.test.ts test/unit/codex-phase-runner.test.ts",
@@ -15,7 +16,7 @@
     "codex:phase:validate": "node scripts/validate-codex-phase.mjs"
   },
   "devDependencies": {
-    "@types/node": "^24.10.1",
+    "@types/node": "^26.6.2",
     "typescript": "5.9.3"
   }
 }

@@ -1,0 +1,9 @@
+Implemented P1 foundation, uncommitted.
+
+- Node `v26.10.0`; package `0.1.1`; Node-26 typings and strict npm no-lock/engine policy added.
+- Added dependency-free config, events, cancellation/errors, and in-memory session core with focused tests.
+- `npm test` now truthfully runs all 94 deterministic unit tests; runner source unchanged.
+
+Verified: `test:runner` 90/90, `test:core` 4/4, `typecheck`, `npm test`, `npm run check`, phase grammar validation, no `package-lock.json`, and `git diff --check`.
+
+Pre-task HEAD: `d2142b9762fef54ec8bed9cac064c00612952875`. No commit created.
