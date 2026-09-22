@@ -44,6 +44,8 @@ It should provide a Codex-style terminal experience:
 
 The TUI consumes application/agent events and emits user commands. It must not implement provider protocol, tool policy, context assembly, or agent-loop decisions.
 
+The supported Node host is Node.js 26.4.0 or later within the Node 26 major line. George remains ESM. Native OpenTUI launch paths must invoke Node with `--experimental-ffi`; package scripts/entrypoints should encode that requirement so normal users do not need to remember it manually.
+
 ## Provider layer
 
 Defines a model-provider interface around capabilities George needs rather than mirroring one vendor SDK everywhere.
@@ -92,10 +94,11 @@ Layer configuration as safe built-in defaults, user-level George config, workspa
 
 ## Technology
 
-- Node.js 24;
+- Node.js >=26.4.0 <27;
 - TypeScript;
 - ESM;
 - `@opentui/core` for the initial TUI;
+- `--experimental-ffi` on native OpenTUI Node launch paths;
 - no React requirement in the initial TUI;
 - Node test runner initially;
 - minimal production dependencies;
