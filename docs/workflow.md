@@ -28,6 +28,41 @@ Do not jump from a substantial idea directly to implementation prompts.
 
 `/prompt-write` distills the accepted plan into the smallest precise implementation brief. Do not copy planning analysis wholesale.
 
+## Phase runner
+
+George uses the exact Petri Codex phase runner currently stored in:
+- `scripts/codex-phase.mjs`;
+- `scripts/codex-phase-core.mjs`;
+- `scripts/validate-codex-phase.mjs`.
+
+Validate a generated stack with:
+
+`npm run codex:phase:validate -- <folder>`
+
+Run implementation prompts with:
+
+`npm run codex:phase -- <folder>`
+
+Run implementation plus closeout with:
+
+`npm run codex:phase -- <folder> --closeout`
+
+The runner owns prompt execution, Git staging/commit boundaries, version verification, resume semantics, and prompt grammar. Do not silently fork runner behavior in project docs.
+
+## Prompt metadata
+
+Because George intentionally uses the exact Petri runner, every newly generated prompt must include exactly one canonical line:
+
+`- Browser required: yes.`
+
+or:
+
+`- Browser required: no.`
+
+Use `yes` only when the prompt genuinely requires direct browser execution/evidence and therefore cannot be truthfully completed by the ordinary CLI phase runner. Browser-required prompts are manual handoff points.
+
+Phase 1 has no browser requirement; all Phase 1 prompts should use `Browser required: no.`
+
 ## Material-gate rule
 
 Return `Planning needed` only when the approved plan no longer safely fits current source, a trust/security boundary is unresolved, or proceeding would silently change approved scope.
@@ -53,13 +88,19 @@ Every correction stack must repair the defect, add a permanent executable regres
 
 Use `docs/tasks/p1`, `docs/tasks/p2`, etc. Planning records live under `docs/planning/p1-<slug>/`.
 
-Early package versions follow `0.<phase>.<prompt>` for workflow compatibility and may be revisited before public release.
+Early package versions follow `0.<phase>.<prompt>` for runner compatibility and may be revisited before public release.
 
-## Prompt metadata
+## Test-command truth
 
-If/when George ports Petri's automated phase runner, generated prompts should explicitly classify special execution requirements rather than relying on hidden assumptions.
+Command names are evidence only for what they actually execute.
 
-Do not copy Petri's browser-required rule mechanically into George before George actually has a browser-execution distinction.
+At bootstrap:
+- `npm run test:runner` exercises the ported phase-runner tests;
+- `npm test` currently targets `test/unit/**/*.test.ts`;
+- `npm run typecheck` performs TypeScript static checking;
+- `npm run check` currently composes typecheck plus `npm test`.
+
+Phase 1 must establish explicit commands/coverage for any provider, TUI, or integration evidence it introduces. Do not describe `npm test` as provider/TUI/integration qualification unless its implementation actually includes those tests.
 
 ## Closeout truth
 
