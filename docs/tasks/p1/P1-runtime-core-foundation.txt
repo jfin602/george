@@ -1,0 +1,38 @@
+TASK: Phase 1 / P1 — Runtime and core foundation
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Terra High`.
+- Browser required: no.
+
+VERSIONING
+- This prompt's assigned project version is `0.1.1`.
+
+GOAL
+
+Establish George's supported Node-26 repository/runtime foundation and dependency-free core contracts. Read `BOOT.md`, `AGENTS.md`, the Phase-1 authority docs, `docs/tasks/p1/prompt-assessment.md`, and `docs/tasks/p1/implementation-plan.md` before editing.
+
+Hard preflight: verify the executing runtime is Node >=26.4.0 <27. If it is not, stop without pretending qualification succeeded.
+
+Implement the smallest clean foundation for later prompts:
+- preserve TypeScript + ESM and the exact Petri phase-runner source files;
+- update Node typings/tooling for the Node-26 runtime;
+- add repository npm configuration that prevents `package-lock.json` creation and enforces the supported engine on installs;
+- keep the runner's no-package-lock behavior unchanged;
+- create typed George configuration, normalized application/provider event contracts, cancellation/error shapes, and a basic in-memory session/transcript representation;
+- default the LM Studio base URL contract to `http://127.0.0.1:1234`, but do not hard-code a model/quantization ID;
+- provide explicit validation for workspace/model/base-url configuration primitives, including a Phase-1 loopback-only provider URL policy;
+- establish truthful named test commands for the current core/runner coverage without claiming provider/TUI/integration evidence that does not exist yet.
+
+Do not implement LM Studio wire parsing, OpenTUI, filesystem/Git tools, arbitrary process execution, writes, or the autonomous tool loop in this prompt.
+
+Set `package.json` version to `0.1.1`.
+
+Required proof:
+- exact phase-runner tests pass unchanged under Node 26;
+- focused new core/config/session tests pass;
+- TypeScript typecheck passes;
+- ordinary deterministic test command(s) pass;
+- no `package-lock.json` exists;
+- `git diff --check` passes.
+
+If current source materially contradicts the approved Phase-1 architecture, stop with `Planning needed` rather than silently changing scope.
