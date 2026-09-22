@@ -10,11 +10,13 @@ George will own the harness so local-model behavior, tool protocol, context, per
 
 ## Decisions
 
-### TypeScript + Node.js 24
+### TypeScript + Node.js 26
 
-Use TypeScript on Node 24 for the core.
+Use TypeScript on Node.js 26.4.0 or later within the Node 26 major line for the core and TUI host.
 
 George is primarily I/O and orchestration; inference runs in LM Studio outside George's hot compute path. Node is strong for subprocesses, streaming HTTP/SSE, files, JSON, Git tooling, terminal applications, and future network protocols.
+
+The runtime moved from the original Node-24 bootstrap decision because current `@opentui/core` requires Node.js 26.4.0 or later for its Node host. George keeps one JavaScript runtime rather than introducing Bun only for presentation.
 
 ### Codex-style TUI first
 
@@ -27,6 +29,8 @@ The TUI should rewrite owned terminal regions in place, stream assistant output,
 Use `@opentui/core` as the Phase 1 production TUI dependency. Use the core TypeScript API directly; do not add React initially.
 
 OpenTUI is strictly a presentation adapter. Agent behavior, model protocol, tool policy, context, and sessions remain outside TUI components.
+
+George remains ESM. Native OpenTUI Node launch paths must supply `--experimental-ffi` automatically through repository scripts/entrypoints rather than relying on the operator to remember the flag.
 
 ### Phase 1 tool-loop boundary
 
@@ -58,7 +62,11 @@ George uses the exact Petri phase runner. Prompt grammar and execution semantics
 
 Every Phase 1 prompt must include `Browser required: no.`
 
+Before implementation proceeds past the runtime-foundation prompt, the exact runner test suite must pass under the supported Node 26 runtime. Do not modify runner source merely to satisfy the runtime move unless a real incompatibility is observed and separately approved.
+
 Before execution, validate the stack with `npm run codex:phase:validate -- p1`. Execute with `npm run codex:phase -- p1`, optionally adding `--closeout` when the closeout prompt should run automatically.
+
+The exact runner rejects `package-lock.json`. Dependency installation in Phase 1 must therefore preserve that contract: do not commit or leave a package lock behind, and do not silently change runner behavior to accommodate one.
 
 ### Testing truth
 
@@ -83,8 +91,9 @@ Prefer Node built-ins and small libraries. `@opentui/core` is explicitly approve
 ## Phase 1 acceptance direction
 
 Phase 1 should prove:
-- repository bootstraps and typechecks/tests;
-- phase-runner grammar/tests remain Green;
+- repository bootstraps and typechecks/tests under supported Node 26;
+- phase-runner grammar/tests remain Green under Node 26;
+- native OpenTUI launch paths encode `--experimental-ffi`;
 - TUI starts/restores terminal state correctly;
 - TUI can select/display a workspace and model/provider status;
 - streamed model text updates in place without corrupting input;
@@ -96,7 +105,8 @@ Phase 1 should prove:
 - read-only tools can be represented/executed safely and visibly;
 - deterministic tests do not require LM Studio;
 - provider/TUI/integration evidence is named by commands that actually execute it;
-- a separate live smoke proves the supported local setup without becoming the ordinary test suite.
+- a separate live smoke proves the supported local setup without becoming the ordinary test suite;
+- no `package-lock.json` exists after runner-owned prompt completion.
 
 ## Deferred decisions
 
