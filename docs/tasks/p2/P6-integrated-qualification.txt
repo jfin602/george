@@ -1,0 +1,60 @@
+TASK: Phase 2 / P6 — Integrated safe tool loop qualification
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Terra High`.
+- Browser required: no.
+
+VERSIONING
+- This prompt's assigned project version is `0.2.6`.
+
+GOAL
+
+Qualify the exact integrated Phase-2 candidate and perform only bounded evidence-driven hardening. Do not expand the approved Safe Tool Loop scope.
+
+Start by reading `BOOT.md`, current product/architecture/workflow/stability contracts, the Phase-2 decision record, assessment/implementation plan, and exact P1-P5 source/tests.
+
+Deterministic evidence must exercise every implemented Phase-2 layer:
+- exact Petri phase-runner tests;
+- core/config/session tests;
+- provider SSE + custom-tool + tool-result continuation tests;
+- canonical registry/schema validation and migrated read-only tools;
+- workspace write/patch and Git dirty-state safeguards;
+- process argv/cwd/output/environment/timeout/cancellation/descendant cleanup;
+- multi-round agent-loop fixture-repository integration;
+- approval policy and allow/deny/cancel behavior;
+- OpenTUI test-renderer approval/tool lifecycle plus existing draft/resize/exit behavior;
+- architecture boundaries;
+- TypeScript typecheck;
+- broad deterministic aggregate command if present;
+- `git diff --check`;
+- explicit no-`package-lock.json` check.
+
+Audit the negative cases required by `docs/stability-contract.md`: repository/model text cannot widen policy, invalid calls cannot reach executors, workspace-native filesystem escape fails closed, unrestricted environment secrets are not inherited/exposed, read-only tools cannot mutate, pre-existing Git work survives relevant paths, and no prompt-owned background/descendant process remains.
+
+Native/process evidence:
+- record exact Node version and operating platform;
+- exercise real timeout/cancellation/descendant cleanup on the exact candidate;
+- if a genuine usable TTY is available, exercise native OpenTUI startup, one read-only loop, one approval allow/deny/cancel path, resize where practical, and terminal restoration;
+- if genuine TTY evidence is unavailable, record that layer as `Evidence Gap`.
+
+Live-model evidence:
+- if LM Studio is reachable on the configured loopback endpoint and an explicit supported Qwen model ID is available, run the opt-in live read-only tool-cycle smoke against the exact candidate;
+- verify the live path actually advertises a tool, receives a model tool call, executes the bounded fixture tool, returns the result, and reaches a final model response;
+- record endpoint/model/runtime plus bounded timing/usage/result evidence when available;
+- do not log secrets or unrestricted prompt/repository contents;
+- if LM Studio/model is unavailable, record `Evidence Gap`; do not download a substitute model or alter provider architecture to fabricate a pass.
+
+Allow at most two substantial correction cycles for Phase-2 defects discovered by this qualification. Every correction must add/retain a permanent executable regression detector for the defect class, rerun affected focused evidence first, then rerun the broad deterministic matrix. If a finding requires changing locked architecture or pulling Phase-3/4 scope forward, stop `Not Green / Planning needed`.
+
+Create `docs/tasks/p2/P6-qualification-evidence.md` with exact source SHA/package/runtime and per-layer Green / Not Green / Evidence Gap results.
+
+Set `package.json` version to `0.2.6`.
+
+Required final state:
+- evidence file matches the exact final source;
+- deterministic required layers are Green or truthfully Not Green;
+- process cleanup/environment/Git preservation claims are backed by actual tests/evidence;
+- live/native gaps remain gaps when unavailable;
+- typecheck and `git diff --check` pass when implementation is Green enough to hand off;
+- no `package-lock.json` exists;
+- no stray prompt-owned child processes remain.

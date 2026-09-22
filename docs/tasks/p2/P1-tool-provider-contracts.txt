@@ -1,0 +1,36 @@
+TASK: Phase 2 / P1 — Canonical tool registry and provider tool protocol
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Terra High`.
+- Browser required: no.
+
+VERSIONING
+- This prompt's assigned project version is `0.2.1`.
+
+GOAL
+
+Establish the Phase-2 canonical tool and provider contracts without starting autonomous execution. Read `BOOT.md`, `AGENTS.md`, the Phase-2 decision record, `docs/tasks/p2/prompt-assessment.md`, and `docs/tasks/p2/implementation-plan.md`; inspect the current Phase-1 provider/read-only-tool/application tests before editing.
+
+Implement one George-owned tool registry contract with stable name, description, provider-facing JSON-compatible input schema, permission/risk class, runtime argument validation, executor, and normalized result/error shape.
+
+Migrate the existing `read_file`, `list_directory`, `search_text`, `git_status`, and `git_diff` behavior through that canonical registry without weakening byte/result/time limits, fixed read-only Git argv, workspace canonicalization, traversal rejection, symlink rejection, cancellation, or dirty-tree preservation. Avoid two competing dispatch systems.
+
+Unknown tools, malformed JSON, missing/incorrect fields, and unexpected fields must fail before executor invocation. Keep provider-facing schema and runtime validation in demonstrable parity; prefer a small dependency-free implementation unless a focused dependency is materially justified. Preserve the no-`package-lock.json` contract.
+
+Evolve George's provider abstraction so callers can supply normalized available tools and normalized tool-result continuation data while preserving tool call IDs and provider response identity needed for continuation.
+
+Extend the LM Studio `/v1/responses` adapter to serialize custom function-tool definitions and structured tool outputs/continuations using its OpenAI-compatible wire protocol. Provider-specific field names and `previous_response_id`-style state remain inside the LM Studio adapter; George's normalized events remain authoritative. Existing text-only streaming requests must continue to work unchanged.
+
+Do not implement the autonomous model -> tool -> model loop, write/patch tools, arbitrary process execution, approval UI, or network tools in this prompt.
+
+Set `package.json` version to `0.2.1`.
+
+Required proof:
+- focused registry tests prove valid dispatch and rejection-before-execution for unknown/malformed/schema-invalid calls;
+- existing read-only limits/workspace/Git tests remain Green through the canonical registry;
+- deterministic LM Studio fixtures prove exact tool-definition request shape, call/response identity, tool-result continuation shape, multiple tools, and unchanged text streaming/error/cancellation behavior;
+- core/provider/application/TUI boundary tests remain Green;
+- typecheck, broad applicable deterministic tests, and `git diff --check` pass;
+- no `package-lock.json` exists.
+
+If current source materially contradicts the approved Phase-2 contracts, stop with `Planning needed` rather than silently changing scope.

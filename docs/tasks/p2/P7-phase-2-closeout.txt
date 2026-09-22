@@ -1,0 +1,42 @@
+TASK: Phase 2 / P7 — Phase 2 evidence closeout
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Terra Medium`.
+- Browser required: no.
+
+VERSIONING
+- This prompt's assigned project version is `0.2.7`.
+
+GOAL
+
+Perform an evidence-only Phase-2 closeout from the exact P6 candidate and its durable qualification evidence.
+
+Read `BOOT.md`, current product/architecture/workflow/stability contracts, the Phase-2 decision record, assessment/implementation plan, exact P1-P6 source/test state, and `docs/tasks/p2/P6-qualification-evidence.md`.
+
+Audit and report:
+- provider custom-tool schema and structured tool-result continuation;
+- canonical tool registry and rejection-before-execution validation;
+- autonomous read-only model -> tool -> result -> model cycling;
+- sequential ordering and hard loop guard;
+- workspace write/patch bounds, preconditions, atomicity and escape rejection;
+- Git dirty-state preservation and absence of mutating Git behavior;
+- process explicit-argv/no-implicit-shell behavior, sanitized environment, output bounds, timeout/cancellation/descendant cleanup and truthful non-sandbox boundary;
+- approval policy separation from OpenTUI, allow-once/deny/cancel semantics, dirty-target/process-warning presentation;
+- structured session/tool/approval failure evidence;
+- deterministic fixture-repository and TUI qualification;
+- native terminal and live LM Studio/Qwen tool-cycle evidence;
+- exact phase-runner and no-package-lock invariants;
+- every deferred Phase-3/4 feature remains deferred.
+
+Do not repair implementation, add features, broaden tests merely to manufacture a pass, or implement/advance Phase-3 behavior.
+
+Create/update `docs/phase-2-closeout.md` with explicit Implementation Complete / Stability Qualified state and Green / Not Green / Evidence Gap truth. Narrowly update Phase-2 task/router status only when required to point at this formal evidence record. Do **not** mark Phase 2 owner-closed or move `BOOT.md`/roadmap to Phase 3; owner closeout and the Phase-3 baseline transition are separate decisions.
+
+Set `package.json` version to `0.2.7`.
+
+Required proof:
+- closeout claims trace to actual P6/current evidence;
+- missing native/live/process evidence is never relabeled Green;
+- no Phase-3 product scope is added;
+- documentation `git diff --check` passes;
+- no `package-lock.json` exists.

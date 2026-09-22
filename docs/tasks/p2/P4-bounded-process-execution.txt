@@ -1,0 +1,53 @@
+TASK: Phase 2 / P4 — Bounded arbitrary process execution
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Terra High`.
+- Browser required: no.
+
+VERSIONING
+- This prompt's assigned project version is `0.2.4`.
+
+GOAL
+
+Implement Phase-2 arbitrary process execution as an approval-required tool executor, but keep it unavailable to the active model loop until P5 installs the approval gate. Read current Phase-2 authority and inspect the registry/workspace/cancellation code before editing.
+
+Implement and register `run_process` with an explicit executable, argument vector, optional relative workspace cwd, and optional bounded requested timeout. Bound executable/argument lengths/counts and timeout. Model arguments must not supply arbitrary environment variables.
+
+Execution requirements:
+- use Node process APIs with `shell: false`; never silently interpolate a shell command string;
+- if shell semantics are needed later, an explicit shell executable/argv must itself be the approved process call;
+- resolve cwd beneath the canonical workspace and require it to be a directory;
+- close/noninteractive stdin by default;
+- capture bounded stdout/stderr with truncation flags plus exit code and terminating signal;
+- normalize spawn failure, nonzero exit, timeout and cancellation without losing evidence;
+- no child is intentionally unrefed or left as a background task.
+
+Environment requirements:
+- construct child environment from a small trusted allowlist of platform necessities plus only trusted George-side additions;
+- do not spread unrestricted `process.env`;
+- preserve enough PATH/temp/home/locale behavior for ordinary local development where justified;
+- ensure token/key-style or arbitrary sentinel variables are not inherited by default;
+- never log a full environment dump.
+
+Timeout/cancellation must terminate the direct child and perform best-effort descendant-process cleanup on the supported platform. Add deterministic descendant fixtures and prove no prompt-owned descendant silently survives where the platform supports that assertion. Use truthful platform-specific behavior rather than claiming universal OS sandboxing.
+
+Keep the documented trust boundary explicit: workspace cwd is **not** an OS sandbox; once approved, an arbitrary child process can exercise permissions of George's host user.
+
+Register `run_process` as `process`/approval-required risk, but **do not advertise it through the active agent-loop tool set in P4**.
+
+Do not add implicit network tools, interactive PTY support, detached jobs, process persistence/resume, containers, or sandbox infrastructure.
+
+Set `package.json` version to `0.2.4`.
+
+Required proof:
+- literal argv behavior demonstrates shell metacharacters are not interpreted;
+- cwd traversal/escape rejection;
+- bounded stdout/stderr and truncation;
+- exit code/signal capture;
+- stdin is noninteractive/closed as contracted;
+- timeout and AbortSignal cancellation;
+- supported-platform descendant cleanup fixture;
+- sentinel secret environment variable is absent while required executable lookup still works;
+- executor is not advertised to the live model loop yet;
+- existing read/write/provider/agent/TUI suites, typecheck and `git diff --check` remain Green;
+- no `package-lock.json` exists.

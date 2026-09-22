@@ -1,0 +1,53 @@
+TASK: Phase 2 / P5 — Approval gate and full OpenTUI integration
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Terra High`.
+- Browser required: no.
+
+VERSIONING
+- This prompt's assigned project version is `0.2.5`.
+
+GOAL
+
+Install the presentation-independent approval boundary, activate the full Phase-2 tool registry through George's canonical agent loop, and extend OpenTUI to render/resolve approvals without moving policy into the UI. Read all current Phase-2 authority and inspect P1-P4 contracts/tests first.
+
+Introduce an approval port/request shape owned by core/application code. The default Phase-2 policy is:
+- read-only workspace tools: allow automatically;
+- `write_file` and `apply_patch`: ask;
+- `run_process`: ask;
+- destructive filesystem, outside-workspace native filesystem, and network-native capabilities: unavailable/denied.
+
+Approval scope is exactly one normalized call: allow-once or deny. No remembered grants or workspace policy profiles.
+
+Invalid/unknown/schema-invalid calls must fail before approval is requested. A denial must not execute the tool; where safe, return a structured denied tool result to the model so it can adapt. Cancellation while an approval request is pending cancels the run.
+
+Wire P3 write/patch and P4 process definitions into the normal model-advertised registry only through this approval-aware dispatch path. Preserve sequential model-order execution and the P2 hard loop guard.
+
+Approval metadata must include enough normalized information for a meaningful decision:
+- tool name and risk class;
+- write/patch target path plus pre-existing dirty marker when known;
+- process executable, argv and cwd;
+- explicit process warning that arbitrary approved commands are not OS/workspace sandboxed.
+
+Extend the existing OpenTUI adapter so it renders pending approval state and returns allow-once/deny decisions through the application approval port. Keep provider parsing, tool validation, permission policy and execution out of TUI modules.
+
+Preserve all existing UI behavior: streaming transcript, persistent draft input, multiline submit semantics, scrollback, resize, active Ctrl+C cancellation, idle exit and terminal restoration. Ctrl+C during approval wait must cancel the active run. A repeated risky call must ask again after an earlier allow-once.
+
+Use scripted approval fixtures for core/application integration and OpenTUI's supported test renderer for deterministic UI/input tests. Avoid brittle decorative assertions.
+
+Do not add remembered approvals, destructive delete tools, mutating Git, browser/network tools, PTY/interactive process support, daemon/Tauri work, or Phase-3 validation/persistence features.
+
+Set `package.json` version to `0.2.5`.
+
+Required proof:
+- read-only calls run without approval and risky calls cannot execute without an explicit decision;
+- allow-once executes exactly one call; a later risky call asks again;
+- denial never executes and is represented to the model as contracted;
+- cancellation while waiting for approval terminates cleanly;
+- already-dirty write target is visible in approval metadata/UI;
+- process approval visibly includes executable/argv/cwd and the non-sandbox warning;
+- test-renderer allow/deny/cancel flows preserve transcript/draft/resize behavior;
+- the normal George TUI entry path now uses the full approval-aware Phase-2 agent loop;
+- architecture guard still prevents core/provider/application from importing OpenTUI;
+- focused, integration, broad deterministic, typecheck and `git diff --check` evidence pass;
+- no `package-lock.json` exists.

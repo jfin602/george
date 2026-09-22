@@ -1,0 +1,55 @@
+TASK: Phase 2 / P3 — Workspace write patch and Git safeguards
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Terra High`.
+- Browser required: no.
+
+VERSIONING
+- This prompt's assigned project version is `0.2.3`.
+
+GOAL
+
+Implement bounded George-native workspace mutation and Git dirty-state safeguards while keeping risky tools unavailable to the live model loop until P5 approval integration. Read current Phase-2 authority and inspect the P1/P2 registry/loop contracts first.
+
+Add safe resolution for a not-yet-existing final file: the requested path must be relative, non-NUL, non-traversing, and its existing parent chain must canonicalize beneath the workspace. Reject symlink-parent escape, directory targets and ambiguous/outside paths.
+
+Implement and register approval-required `write_file` and `apply_patch` tools.
+
+`write_file` requirements:
+- bounded text content and resulting file size;
+- create a new file only beneath an existing safe parent;
+- overwriting an existing file requires an exact current-content precondition such as SHA-256;
+- missing/stale overwrite precondition fails before mutation;
+- use atomic sibling-temp replacement or an equivalent fail-closed atomic strategy where practical;
+- preserve relevant existing file mode on replacement;
+- cancellation/failure leaves neither partial target bytes nor stray temp artifacts.
+
+`apply_patch` requirements:
+- workspace-bounded text file only;
+- exact current-content precondition required;
+- deterministic ordered exact-text edits or an equivalently strict in-process representation; do not invoke an external shell patch command;
+- expected old fragments must satisfy an explicit unambiguous-match rule;
+- validate the entire edit set in memory before touching disk;
+- one atomic final replacement only after every edit validates;
+- any mismatch/ambiguity fails with zero partial edits.
+
+Bound edit count, per-edit input and final size.
+
+Add read-only machine-readable Git working-tree snapshot support for mutating runs/targets. Non-Git workspaces remain valid. Expose enough information to identify whether a target was already dirty before George's mutation. Never reset, clean, checkout, stash, commit, or add general mutating Git behavior.
+
+Register these tools with `write`/approval-required risk metadata, but **do not advertise them through the active agent-loop tool set in P3**. They become live only after P5 installs the approval gate.
+
+Set `package.json` version to `0.2.3`.
+
+Required proof:
+- safe new-file creation and preconditioned existing-file overwrite;
+- hash/precondition mismatch performs no mutation;
+- patch success plus missing/ambiguous edit failure with no partial application;
+- absolute/traversal/NUL/symlink-parent/workspace-escape denial;
+- bounded mutation input/output;
+- failure/cancellation temp-file cleanup;
+- Git dirty-state detection and preservation in fixture repositories, including already-dirty target files;
+- no mutating Git command is introduced;
+- P2 read-only agent-loop and provider/TUI regressions remain Green;
+- typecheck and `git diff --check` pass;
+- no `package-lock.json` exists.

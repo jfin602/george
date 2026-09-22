@@ -1,0 +1,50 @@
+TASK: Phase 2 / P2 — Autonomous bounded read-only agent loop
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Terra High`.
+- Browser required: no.
+
+VERSIONING
+- This prompt's assigned project version is `0.2.2`.
+
+GOAL
+
+Replace Phase 1's one-request/deferred-tool boundary with George's single canonical bounded agent loop, initially advertising only the read-only registry from P1. Read the Phase-2 assessment/plan and inspect P1 contracts/tests before editing.
+
+Do not leave a second competing loop beside `OneTurnApplicationService`: evolve/replace it with one reusable application service. A compatibility export is acceptable only if it delegates to the canonical implementation. Keep the service independent of OpenTUI and LM Studio wire types.
+
+For each submitted user turn:
+- assemble George-owned instructions, bounded repository instructions and current conversation state;
+- advertise the active read-only tool schemas;
+- stream a provider response and collect its ordered tool calls;
+- after that response completes, validate and execute calls sequentially in model order;
+- emit structured tool requested/started/completed/failed events and retain them in session evidence;
+- return normalized results with the original call IDs to the provider;
+- continue until a provider response completes with no tool calls.
+
+Unknown tools, malformed JSON, schema-invalid arguments and recoverable executor failures must never invoke the wrong executor. Where safe, encode them as bounded structured failed tool results so the model can correct itself.
+
+Add a configurable positive hard ceiling on total tool calls/rounds. Every proposed call, including invalid/rejected calls, must consume the guard so malformed loops cannot bypass it. Exhaustion terminates the turn with a structured failure.
+
+Cancellation must work during provider streaming and tool execution. Preserve existing transcript semantics, provider failure normalization, repository-instruction trust ordering, and TUI draft/resize/cancellation behavior.
+
+Add a deterministic fixture-repository integration suite with a scripted multi-response provider and a truthful `test:integration` command. Expand the broad deterministic aggregate command only if its implementation truly includes that integration suite; keep `test:runner` truth explicit.
+
+Add an opt-in live LM Studio/Qwen read-only tool-cycle smoke command for later qualification. It must be excluded from ordinary deterministic tests, use explicit model/base-url configuration, operate on a disposable/bounded fixture workspace, and avoid logging secrets or unrestricted repository context.
+
+Do not add writes, arbitrary process execution, approval UI, mutating Git, browser/web tools, persistence/resume, or Phase-3 validation workflow.
+
+Set `package.json` version to `0.2.2`.
+
+Required proof:
+- deterministic read tool -> result -> second provider response -> final answer;
+- multiple tool rounds and multiple same-response calls execute sequentially in provider order;
+- original call IDs/results reach provider continuation correctly;
+- unknown/malformed/schema-invalid calls never execute and can recover through structured results;
+- recoverable tool failure can return to the model;
+- hard loop-limit exhaustion is deterministic;
+- cancellation/provider-failure paths terminate cleanly;
+- session/application events retain intermediate tool evidence;
+- normal OpenTUI path now consumes the canonical application service without owning loop logic;
+- focused, integration, existing regression, typecheck and `git diff --check` evidence pass;
+- no `package-lock.json` exists.
