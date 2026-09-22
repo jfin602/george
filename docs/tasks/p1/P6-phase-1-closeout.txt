@@ -1,0 +1,39 @@
+TASK: Phase 1 / P6 — Phase 1 evidence closeout
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Terra Medium`.
+- Browser required: no.
+
+VERSIONING
+- This prompt's assigned project version is `0.1.6`.
+
+GOAL
+
+Perform an evidence-only Phase-1 closeout from the exact P5 candidate and its durable qualification evidence.
+
+Read `BOOT.md`, the current product/architecture/workflow/stability contracts, Phase-1 assessment/plan, all P1-P5 source/test state, and `docs/tasks/p1/P5-qualification-evidence.md`.
+
+Audit and report:
+- Node >=26.4/OpenTUI/FFI runtime contract;
+- TUI -> application -> core/provider/tool layering;
+- LM Studio Responses streaming and normalized events;
+- workspace instruction discovery/trust ordering;
+- read-only filesystem/search/Git boundaries;
+- one-provider-request/no-autonomous-tool-loop Phase-1 boundary;
+- deterministic test coverage and exact runner compatibility;
+- native terminal and live LM Studio/Qwen evidence;
+- package-lock invariant;
+- all known Not Green items and Evidence Gaps.
+
+Do not repair implementation, add features, broaden tests merely to manufacture a pass, or implement Phase-2 behavior.
+
+Create/update `docs/phase-1-closeout.md` with explicit Implementation Complete / Stability Qualified state and Green / Not Green / Evidence Gap truth. Narrowly update Phase-1 task/router status where required so future work starts from accurate authority.
+
+Set `package.json` version to `0.1.6`.
+
+Required proof:
+- closeout claims are traceable to actual P5/current evidence;
+- no missing evidence is relabeled Green;
+- no Phase-2 scope is added;
+- documentation `git diff --check` passes;
+- no `package-lock.json` exists.
