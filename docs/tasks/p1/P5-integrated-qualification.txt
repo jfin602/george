@@ -1,0 +1,50 @@
+TASK: Phase 1 / P5 — Integrated local qualification and hardening
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Terra High`.
+- Browser required: no.
+
+VERSIONING
+- This prompt's assigned project version is `0.1.5`.
+
+GOAL
+
+Qualify the exact integrated Phase-1 candidate and perform only bounded evidence-driven hardening. Do not expand Phase-1 scope.
+
+Start by reading the Phase-1 authority, prompt assessment, implementation plan, and exact current source/tests.
+
+Deterministic evidence must exercise all named Phase-1 layers that actually exist:
+- exact phase-runner tests;
+- core/config/session tests;
+- provider/SSE tests;
+- workspace/read-only-tool/application integration tests;
+- OpenTUI test-renderer tests;
+- TypeScript typecheck;
+- the repository's broad deterministic aggregate command if one now exists;
+- `git diff --check`;
+- explicit no-`package-lock.json` check.
+
+Native/runtime evidence:
+- record exact Node version;
+- verify the normal George TUI launch path supplies `--experimental-ffi`;
+- if this execution environment provides a genuine usable TTY, exercise native OpenTUI startup, one text submission, cancellation/exit and terminal restoration; exercise resize when practical;
+- if genuine TTY evidence cannot be obtained, record that portion as `Evidence Gap` rather than fabricating a pass.
+
+Live-model evidence:
+- if LM Studio is reachable on the configured loopback endpoint and an explicit model ID is available, run the opt-in live smoke against the exact candidate and record endpoint, model ID, success/failure, timing and usage when available;
+- do not log secrets or unrestricted prompt/context content;
+- do not download a substitute model or change provider architecture if LM Studio/model is unavailable; record `Evidence Gap`.
+
+Allow at most two substantial correction cycles for defects discovered by this qualification. After a correction, rerun the affected focused evidence first and then the broad deterministic matrix. If a finding requires changing the locked architecture or the P1/P2 scope boundary, stop `Not Green / Planning needed`.
+
+Write `docs/tasks/p1/P5-qualification-evidence.md` with the exact source baseline/package/runtime and per-layer Green / Not Green / Evidence Gap results.
+
+Set `package.json` version to `0.1.5`.
+
+Required final state:
+- evidence file matches the exact final source;
+- deterministic required layers are Green or truthfully Not Green;
+- live/native gaps are preserved as gaps;
+- typecheck and `git diff --check` pass when implementation is Green enough to hand off;
+- no `package-lock.json` exists;
+- no stray prompt-owned child/native processes remain.
