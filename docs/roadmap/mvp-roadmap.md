@@ -2,19 +2,19 @@
 
 Status: INITIAL ROADMAP
 
-The roadmap deliberately proves the agent loop and its real interactive terminal surface before adding networking or a desktop GUI.
+The roadmap deliberately proves the provider, read-only tool foundation, and real interactive terminal surface before autonomous editing, networking, or a desktop GUI.
 
 ## Phase 1 — Local Agent Foundation + TUI
 
-Goal: establish a small, testable Node/TypeScript core, a Codex-style OpenTUI interface, and one streamed local-model turn.
+Goal: establish a small, testable Node/TypeScript core, a Codex-style OpenTUI interface, one streamed local-model turn, and independently testable read-only tools.
 
 Scope:
 - Node 24 + TypeScript + ESM repository baseline;
-- `@opentui/core` presentation dependency, without React initially;
+- `@opentui/core` production presentation dependency, without React initially;
 - interactive TUI entry point;
 - in-place terminal redraw and clean terminal restoration;
 - persistent input plus streamed assistant output;
-- visible model/workspace/status and live agent/tool activity;
+- visible model/workspace/status and live agent/read-only-tool activity;
 - scrollback, resize handling, and cancellation;
 - strict separation between TUI adapter and agent/application core;
 - configuration loading;
@@ -26,17 +26,19 @@ Scope:
 - BOOT/AGENTS-style instruction discovery;
 - read-only tools: file read/list, text search, Git status/diff;
 - deterministic provider/tool/TUI-state fixtures where practical;
-- one bounded live LM Studio/Qwen smoke path.
+- explicit test commands that truthfully distinguish unit, runner, provider/TUI/integration, and live-smoke evidence as those layers are introduced;
+- one bounded live LM Studio/Qwen smoke path;
+- every generated P1 prompt uses `Browser required: no.` so the exact phase runner can execute the entire stack.
 
-Non-goals: writes, arbitrary shell, autonomous multi-turn editing, browser, web search, daemon, Tauri desktop GUI.
+Non-goals: writes, arbitrary shell/process execution, autonomous multi-turn tool-call cycling, browser, web search, daemon, Tauri desktop GUI.
 
 ## Phase 2 — Safe Tool Loop
 
 Goal: let the model repeatedly call tools under explicit policy.
 
 Scope:
-- tool registry/schema;
-- multi-turn tool-call loop;
+- tool registry/schema completion for executable calls;
+- autonomous model -> tool -> result -> model loop;
 - process execution with timeout/cancellation;
 - write/patch tools;
 - permission classes and approvals rendered through the TUI;
