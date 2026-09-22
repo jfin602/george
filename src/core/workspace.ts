@@ -1,11 +1,18 @@
-import { open, realpath, stat } from 'node:fs/promises';
-import { isAbsolute, relative, resolve, sep } from 'node:path';
+import { lstat, open, realpath, stat } from 'node:fs/promises';
+import { basename, dirname, isAbsolute, relative, resolve, sep } from 'node:path';
 
 import { GeorgeError } from './errors.ts';
 
 export const DEFAULT_INSTRUCTION_BYTES = 32 * 1024;
 
 export type Workspace = Readonly<{ root: string }>;
+
+export type WorkspaceMutationPath = Readonly<{
+  path: string;
+  relativePath: string;
+  exists: boolean;
+  mode?: number;
+}>;
 
 export type RepositoryInstruction = Readonly<{
   path: 'BOOT.md' | 'AGENTS.md';
@@ -77,6 +84,34 @@ export async function resolveWorkspacePath(workspace: Workspace, path: string): 
     throw validationError('Resolved path escapes the workspace.');
   }
   return resolved;
+}
+
+/** Resolves a file target even when its final path does not exist. */
+export async function resolveWorkspaceMutationPath(workspace: Workspace, path: string): Promise<WorkspaceMutationPath> {
+  await assertCanonicalWorkspace(workspace);
+  if (/[\\/]$/.test(path)) throw validationError('Workspace mutation path must name a file.');
+  const candidate = rejectWorkspaceEscape(workspace, path);
+  const target = await lstat(candidate).catch((error: NodeJS.ErrnoException) => {
+    if (error.code === 'ENOENT') return undefined;
+    throw new GeorgeError('validation', 'Unable to inspect workspace mutation path.', { cause: error });
+  });
+  if (target?.isDirectory()) throw validationError('Path must not name a directory.');
+  if (target?.isSymbolicLink()) throw validationError('Path must not name a symbolic link.');
+  if (target && !target.isFile()) throw validationError('Path must name a regular file.');
+
+  let parent: string;
+  try {
+    parent = await realpath(dirname(candidate));
+  } catch (error) {
+    throw new GeorgeError('validation', 'Workspace mutation parent must exist.', { cause: error });
+  }
+  const outside = relative(workspace.root, parent);
+  if (outside === '..' || outside.startsWith(`..${sep}`) || isAbsolute(outside) || !(await stat(parent)).isDirectory()) {
+    throw validationError('Workspace mutation parent escapes the workspace.');
+  }
+  const name = basename(candidate);
+  if (!name || name === '.') throw validationError('Path must name a file.');
+  return { path: resolve(parent, name), relativePath: relative(workspace.root, resolve(parent, name)), exists: Boolean(target), ...(target ? { mode: target.mode & 0o777 } : {}) };
 }
 
 async function readBounded(path: string, maxBytes: number): Promise<{ text: string; bytes: number; truncated: boolean }> {
