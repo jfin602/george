@@ -6,7 +6,7 @@ Closed: 2026-09-22
 Phase: 1 — Local Agent Foundation + TUI  
 Accepted implementation candidate: `dc2dcfcb6563b884cddecc143b1d136ea9c752db` (`0.1.5`)  
 Formal P6 closeout marker: `39e6a3f178779e2f3a632a6b487fa548bc7d890c` (`0.1.6`)  
-Phase 2 package-baseline transition: `0.2.0`
+Phase 2 package-baseline transition: `da599d1c39baf57bbf58bf3a885c8717595759c1` (`0.2.0`)
 
 This record captures the owner's explicit `/closeout phase 1` decision on 2026-09-22.
 
