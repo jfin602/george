@@ -1,0 +1,7 @@
+Completed P5 qualification; no correction cycle was needed.
+
+- Set package version to `0.1.5`.
+- Added [P5-qualification-evidence.md](/home/jfin/dev/george/docs/tasks/p1/P5-qualification-evidence.md).
+- Green: focused suites, phase validation, typecheck, aggregate `npm run check` (118 passing), FFI launch scripts, diff check, no lockfile, no TUI/smoke child processes.
+- Evidence gaps preserved: no usable TTY; LM Studio endpoint/model unavailable.
+- No commit created.
