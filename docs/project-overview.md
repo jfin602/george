@@ -50,6 +50,16 @@ Phase 2 owns the first safe autonomous tool loop: tool-schema advertisement, cal
 
 Later optional tools may include Chrome DevTools, Parallel Search, GitHub, and MCP.
 
+### Extensible without delegated authority
+
+George supports portable skills, lifecycle hooks, commands, and plugin packages so new development workflows and integrations can be added without rewriting the agent core.
+
+Skills contribute declarative instructions/workflows. Hooks react to George-owned lifecycle events. Plugins package extension contributions. Executable plugin tools must register through George's canonical typed tool boundary.
+
+Extension discovery or installation does not delegate George's authority. Repository/workspace extension content remains untrusted relative to George policy, and no skill, hook, plugin manifest, compatibility adapter, or model instruction may raise filesystem, process, network, secret-access, or approval permissions by instruction alone.
+
+Skill discovery must remain token-conscious: compact metadata may be indexed broadly, while full skill bodies are loaded only when activated or selected rather than being permanently injected into every model request.
+
 ### Explicit permissions
 
 Tool execution is governed by George, not by arbitrary model text. George must distinguish read-only actions from writes, process execution, destructive actions, network actions, and actions outside the active workspace. Permission policy is configurable and visible.

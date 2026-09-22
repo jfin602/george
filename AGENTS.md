@@ -35,6 +35,8 @@ Implementation agents should execute already-resolved, bounded plans and verify 
 - Session state must retain enough evidence to diagnose failed agent/tool turns.
 - Distinguish always-on model instructions from retrievable project knowledge; do not solve context problems by permanently injecting documentation that can be routed or retrieved when needed.
 - Prefer executable policy over repeated prompt prose for constraints George can enforce directly.
+- Skills are declarative context/workflow contributions; discover them cheaply and load full skill bodies just in time rather than injecting every installed skill into every model request.
+- Skills, hooks, plugins, and compatibility adapters cannot expand George's executable permission ceiling; executable contributions must use George's normal tool/process/approval boundaries.
 - Prefer standard library/native platform capabilities before dependencies.
 - Keep the first implementation local and single-user.
 

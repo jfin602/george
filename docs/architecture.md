@@ -122,6 +122,55 @@ Context policy must be testable independently from inference.
 
 Phase 2 only adds the minimum tool-schema/result material required for the safe loop. It must not be expanded to implement the Phase 3 instruction compiler, project-knowledge routing, or general context budgeting.
 
+## Skills and extension model
+
+George treats extensibility as a layered capability rather than a reason to weaken the core trust model.
+
+The extension concepts are distinct:
+- **skills** contribute declarative model-facing instructions and workflows;
+- **hooks** react to defined George lifecycle events;
+- **commands** provide explicit user-facing activation surfaces;
+- **tools** provide executable capabilities through George's canonical tool registry;
+- **plugins** package one or more of those contributions.
+
+A plugin is a package/container, not an authority boundary. Installing or discovering a plugin does not itself grant filesystem, process, network, secret, or approval authority.
+
+### Skill registry
+
+Phase 3 owns the first skill substrate.
+
+Target skill sources are:
+- built-in George skills;
+- optional user-global skills, for example under `~/.config/george/skills/` on Linux;
+- optional workspace-native skills under `.george/skills/`;
+- later plugin-provided skills.
+
+George should support the portable directory shape `skills/<name>/SKILL.md`. Compatible skill metadata should understand at least a stable name and description, with optional argument/help metadata where present. Unknown noncritical metadata should be ignored safely rather than making an otherwise portable skill unusable.
+
+Skill discovery must be token-conscious. George may index compact metadata for discovered skills, but it must not inject every installed `SKILL.md` body into every provider request. Full skill bodies are loaded just in time when explicitly activated or otherwise selected by a later bounded routing mechanism.
+
+Phase 3 requires deterministic explicit activation and stable skill identity. Automatic semantic skill selection may be added later after the deterministic path is qualified.
+
+Internally, plugin-provided skills should support namespaced identities such as `plugin:skill`. An unqualified skill name may resolve only when unambiguous; collisions must fail visibly rather than silently choosing one source.
+
+Skill content is model-facing guidance only. It cannot raise George's executable permission ceiling, register an executor by instruction, or bypass tool validation/approval. Workspace/repository skill content remains untrusted relative to George-owned policy.
+
+### Hook bus
+
+George should define its own normalized lifecycle hook model rather than adopting another host's lifecycle as the core contract.
+
+Candidate lifecycle boundaries include session start/end, user input, context assembly, provider request/response, tool before/after, and turn completion. Exact event names and payloads are implementation decisions for the hook-runtime phase.
+
+Phase 4 owns executable hook runtime behavior because hooks require the same reliability properties as other long-running executable work: deterministic ordering, timeout, cancellation, bounded input/output, structured success/failure evidence, failure isolation, sanitized environment handling, and recovery semantics.
+
+A hook cannot silently suppress George policy or convert declarative extension content into executable authority. Process-backed hooks remain subject to George's process trust boundary; tool-like hook actions must use the canonical tool/approval path.
+
+### Compatibility adapters
+
+Portable `SKILL.md` support is the preferred first compatibility surface.
+
+Host-specific plugin manifests and hook formats may later be translated through compatibility adapters into George's extension model. George should not clone Codex, Claude, Ponytail, or another host's plugin API as its internal contract. Compatibility layers map foreign concepts into George skills, hooks, commands, and tools while preserving George's trust and permission rules.
+
 ## Tool registry
 
 Every executable tool is registered through one stable typed contract containing:
@@ -215,9 +264,9 @@ OpenTUI is the first presentation adapter. A later daemon may expose the applica
 
 ## Trust boundaries
 
-Treat user intent, George policy/config, repository content/instructions, model output, tool arguments, local environment/secrets, child processes, and external network content as separate trust domains.
+Treat user intent, George policy/config, repository content/instructions, discovered skill/plugin content, model output, tool arguments, executable hooks, local environment/secrets, child processes, and external network content as separate trust domains.
 
-Repository files and model output cannot grant themselves additional permissions.
+Repository files, skills, plugin metadata, hooks, and model output cannot grant themselves additional permissions.
 
 Network access is a tool/capability decision, not implicit model authority.
 

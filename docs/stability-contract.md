@@ -35,6 +35,35 @@ When Phase 3 introduces instruction precedence and budgeting, deterministic cove
 
 Raw source byte limits are not by themselves sufficient evidence of useful token budgeting. Qualification should measure the provider-facing assembled context at the layer where its size can be meaningfully compared.
 
+### Extension qualification
+
+Skill behavior must be deterministic enough to test independently from model inference.
+
+When Phase 3 introduces the skill registry, deterministic coverage must include:
+- discovery precedence across built-in, user-global, and workspace sources;
+- stable source identity and explicit collision handling;
+- malformed or missing skill metadata/body behavior;
+- oversized skill bodies and context-budget exhaustion;
+- compact metadata/catalog behavior without loading every discovered skill body;
+- full skill body loading only when activated/selected;
+- activation state not leaking unexpectedly into unrelated turns;
+- workspace/repository skill text being unable to raise process, filesystem, network, secret-access, or approval permissions;
+- at least one portable external-skill fixture proving that compatibility does not require a George-specific skill format.
+
+When Phase 4 introduces executable hooks, deterministic/integration coverage must additionally include:
+- lifecycle ordering;
+- enable/disable behavior;
+- timeout and cancellation;
+- malformed hook output;
+- hook crash/failure isolation;
+- duplicate registration/conflict behavior;
+- bounded output and sanitized environment behavior;
+- interrupted/resumed-session evidence where applicable;
+- hook inability to bypass the ToolRegistry, process trust boundary, or approval policy;
+- one failing hook not corrupting unrelated extension state or the surrounding agent run.
+
+Plugin packaging and external adapters introduced later inherit the same regression-permanence, permission, secrets, network, and failure-isolation requirements as equivalent built-in capabilities.
+
 ### Provider contract
 
 Use deterministic/mock provider fixtures for ordinary tests and bounded live LM Studio qualification when provider integration changes.

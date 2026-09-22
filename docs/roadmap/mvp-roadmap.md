@@ -113,16 +113,21 @@ Scope:
 - deterministic instruction trust/precedence, stable ordering, and duplicate suppression where possible;
 - separation of always-on active instructions from just-in-time project-document retrieval/routing;
 - provider-independent assembled context without requiring LLM summarization for instruction compilation;
+- portable skill registry and discovery with `skills/<name>/SKILL.md` compatibility;
+- built-in, user-global, and workspace skill sources with deterministic source identity and collision handling;
+- compact bounded skill metadata/catalog exposure without injecting every installed skill body into every request;
+- explicit just-in-time skill activation/loading through the same trust, precedence, and context-budget machinery as other model-facing instructions;
+- no executable authority granted by declarative skill content;
 - changed-file tracking;
 - validation command workflow;
 - completion summaries;
 - session persistence/resume semantics;
 - correction/regression testing discipline;
-- first end-to-end coding qualification against a disposable fixture repo.
+- first end-to-end coding qualification against a disposable fixture repo, including at least one portable external-skill fixture.
 
 ## Phase 4 — Reliability + Long Runs
 
-Goal: support longer autonomous local jobs safely.
+Goal: support longer autonomous local jobs safely and establish George's lifecycle hook runtime.
 
 Scope:
 - compaction/summarization;
@@ -132,13 +137,29 @@ Scope:
 - child-process cleanup hardening;
 - observability/logging;
 - performance baselines including TUI responsiveness under streaming;
-- extended Qwen qualification.
+- extended Qwen qualification;
+- normalized George lifecycle hook bus;
+- deterministic hook ordering and enable/disable state;
+- hook timeout/cancellation and bounded input/output;
+- structured hook result/error events and failure isolation;
+- sanitized executable-hook environment and preservation of George's existing process/tool permission boundaries;
+- recovery evidence sufficient to diagnose failed hooks without corrupting the surrounding agent run.
 
-## Phase 5 — External Tool Adapters
+## Phase 5 — Plugins + External Adapters
 
-Goal: add network/browser intelligence without contaminating the core.
+Goal: package extensions and add network/browser intelligence without contaminating the core or weakening George's trust boundaries.
 
-Candidates: Parallel Search, Chrome DevTools, GitHub, and MCP. Each adapter gets an explicit trust/permission boundary and can be disabled independently.
+Scope:
+- George-native plugin discovery and manifest contract;
+- plugin install/enable/disable lifecycle;
+- plugin-provided skills, hooks, commands, and tool contributions;
+- compatibility adapters for portable or host-specific extension formats where semantics can be translated safely;
+- plugin-provided executable tools registered through the canonical ToolRegistry and normal permission policy;
+- Parallel Search, Chrome DevTools, GitHub, and MCP adapters;
+- explicit trust/permission boundaries for every executable or network-capable adapter;
+- independently disableable extension/adaptor capabilities.
+
+The exact George plugin manifest schema is intentionally deferred until this phase; Phase 3 should prove the skill substrate and Phase 4 should prove hook lifecycle semantics before packaging freezes those interfaces.
 
 ## Phase 6 — Local Daemon
 
