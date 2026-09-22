@@ -1,5 +1,6 @@
 import {
   asGeorgeError,
+  cancellationError,
   type GeorgeErrorShape,
   type JsonObject,
   type JsonValue,
@@ -88,7 +89,7 @@ export class ToolRegistry {
     this.definitions = definitions.map(({ name, description, inputSchema }) => ({ name, description, inputSchema: schemaJson(inputSchema) }));
   }
 
-  async dispatch(call: ToolCall, options: ToolExecutionOptions = {}): Promise<ToolResult> {
+  validate(call: ToolCall): ToolDefinition | ToolResult {
     const definition = this.byName.get(call.name);
     if (!definition) return { callId: call.callId, name: call.name, result: { ok: false, error: validationError(`Unknown tool: ${call.name}.`) } };
 
@@ -101,8 +102,18 @@ export class ToolRegistry {
     if (!valid(definition.inputSchema, arguments_)) {
       return { callId: call.callId, name: call.name, result: { ok: false, error: validationError(`Tool ${call.name} arguments do not match its input schema.`) } };
     }
+    return definition;
+  }
+
+  async dispatch(call: ToolCall, options: ToolExecutionOptions = {}): Promise<ToolResult> {
+    const definition = this.validate(call);
+    if ('callId' in definition) return definition;
+    if (options.signal?.aborted) throw cancellationError(options.signal)!;
+    const arguments_ = JSON.parse(call.arguments) as JsonObject;
     try {
-      return { callId: call.callId, name: call.name, result: { ok: true, value: await definition.execute(arguments_ as JsonObject, options) } };
+      const value = await definition.execute(arguments_, options);
+      if (options.signal?.aborted) throw cancellationError(options.signal)!;
+      return { callId: call.callId, name: call.name, result: { ok: true, value } };
     } catch (error) {
       const normalized = asGeorgeError(error, 'tool');
       if (normalized.code === 'cancelled') throw normalized;

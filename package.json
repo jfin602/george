@@ -1,6 +1,6 @@
 {
   "name": "george",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "private": true,
   "type": "module",
   "engines": {
@@ -9,7 +9,8 @@
   "scripts": {
     "start": "node --experimental-ffi src/tui/main.ts",
     "tui": "node --experimental-ffi src/tui/main.ts",
-    "test": "node --experimental-ffi --test test/unit/*.test.ts test/unit/**/*.test.ts",
+    "test": "node --experimental-ffi --test test/unit/*.test.ts test/unit/**/*.test.ts test/integration/**/*.test.ts",
+    "test:integration": "node --test test/integration/**/*.test.ts",
     "test:core": "node --test test/unit/core/**/*.test.ts",
     "test:provider": "node --test test/unit/provider/**/*.test.ts",
     "test:tui": "node --experimental-ffi --test test/unit/tui/**/*.test.ts",
@@ -18,7 +19,7 @@
     "test:runner": "node --test test/unit/codex-phase-prompt-grammar.test.ts test/unit/codex-phase-runner.test.ts",
     "codex:phase": "node scripts/codex-phase.mjs",
     "codex:phase:validate": "node scripts/validate-codex-phase.mjs",
-    "smoke:lm-studio": "node scripts/lm-studio-smoke.ts"
+    "smoke:lm-studio": "node scripts/lm-studio-tool-cycle-smoke.ts"
   },
   "dependencies": {
     "@opentui/core": "^0.5.12"

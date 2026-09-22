@@ -25,9 +25,24 @@ export type ApplicationEvent =
   | Readonly<{ type: 'turn.cancelled'; turnId: string; error: GeorgeErrorShape }>
   | Readonly<{ type: 'turn.failed'; turnId: string; error: GeorgeErrorShape }>
   | Readonly<{
-      type: 'tool.deferred';
+      type: 'tool.requested';
       turnId: string;
       callId: string;
       name: string;
       arguments: string;
+    }>
+  | Readonly<{ type: 'tool.started'; turnId: string; callId: string; name: string }>
+  | Readonly<{
+      type: 'tool.completed';
+      turnId: string;
+      callId: string;
+      name: string;
+      result: Readonly<{ ok: true; value: import('./provider.ts').JsonValue }>;
+    }>
+  | Readonly<{
+      type: 'tool.failed';
+      turnId: string;
+      callId: string;
+      name: string;
+      result: Readonly<{ ok: false; error: Readonly<{ code: string; message: string }> }>;
     }>;

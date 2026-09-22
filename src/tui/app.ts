@@ -8,7 +8,7 @@ import {
   type KeyBinding as TextareaKeyBinding,
 } from '@opentui/core';
 
-import { type OneTurnApplicationService } from '../application/index.ts';
+import { type AgentLoopApplicationService } from '../application/index.ts';
 import { createSession, type ApplicationEvent, type Session, type TranscriptEntry } from '../core/index.ts';
 
 export const COMPOSER_KEY_BINDINGS: TextareaKeyBinding[] = [
@@ -18,7 +18,7 @@ export const COMPOSER_KEY_BINDINGS: TextareaKeyBinding[] = [
 
 export type GeorgeTuiOptions = Readonly<{
   renderer: CliRenderer;
-  service: OneTurnApplicationService;
+  service: AgentLoopApplicationService;
   provider: string;
   model: string;
   workspace?: string;
@@ -32,20 +32,23 @@ function activityFor(event: ApplicationEvent): string | undefined {
   switch (event.type) {
     case 'provider.response.started': return 'Thinking…';
     case 'provider.response.completed': return 'Response complete';
-    case 'tool.deferred': return `Read-only tool deferred: ${event.name}`;
+    case 'tool.requested': return `Read-only tool requested: ${event.name}`;
+    case 'tool.started': return `Running read-only tool: ${event.name}`;
+    case 'tool.completed': return `Read-only tool completed: ${event.name}`;
+    case 'tool.failed': return `Read-only tool failed: ${event.name}`;
     case 'turn.cancelled': return 'Turn cancelled';
     case 'turn.failed': return `Failed: ${event.error.message}`;
     default: return undefined;
   }
 }
 
-/** A presentation-only adapter from one-turn events to OpenTUI renderables. */
+/** A presentation-only adapter from canonical agent-loop events to OpenTUI renderables. */
 export class GeorgeTui {
   readonly input: TextareaRenderable;
   readonly transcript: ScrollBoxRenderable;
   readonly session: Session;
   private readonly renderer: CliRenderer;
-  private readonly service: OneTurnApplicationService;
+  private readonly service: AgentLoopApplicationService;
   private readonly transcriptView: TextRenderable;
   private readonly statusView: TextRenderable;
   private readonly activityView: TextRenderable;

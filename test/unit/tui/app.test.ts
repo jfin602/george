@@ -43,7 +43,7 @@ class PausedProvider implements ModelProvider {
   async *stream(request: ProviderRequest, options: ProviderStreamOptions = {}): AsyncGenerator<ProviderEvent> {
     this.calls.push({ request, options });
     yield { type: 'provider.response.started' };
-    if (this.tool) yield { type: 'provider.tool.call', callId: 'call-1', name: 'read_file', arguments: '{"path":"BOOT.md"}' };
+    if (this.tool && this.calls.length === 1) yield { type: 'provider.tool.call', callId: 'call-1', name: 'read_file', arguments: '{"path":"BOOT.md"}' };
     this.started.resolve();
     await Promise.race([
       this.release.promise,
@@ -79,10 +79,10 @@ test('test renderer shows identity, configuration, streamed text, and read-only 
   item.setup.mockInput.pressEnter();
   await provider.started.promise;
   await item.setup.flush();
-  assert.match(item.setup.captureCharFrame(), /Read-only tool deferred: read_file/);
   provider.release.resolve();
   await item.app.waitForIdle();
   await item.setup.flush();
+  assert.equal(item.app.session.events.some((event) => event.type === 'tool.completed'), true);
   const frame = item.setup.captureCharFrame();
   assert.match(frame, /You/);
   assert.match(frame, /Inspect BOOT/);

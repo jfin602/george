@@ -66,20 +66,29 @@ test('one-turn service keeps George context first and invokes the provider exact
   assert.deepEqual(session.transcript, [{ role: 'user', text: 'Hi' }, { role: 'assistant', text: 'Hello.' }]);
 });
 
-test('tool calls are retained as deferred output and never start a model-tool-model loop', async (t) => {
+test('compatibility factory delegates to the canonical tool loop', async (t) => {
   const root = await workspace();
   t.after(() => rm(root, { recursive: true, force: true }));
-  const provider = new ScriptedProvider([
-    { type: 'provider.tool.call', callId: 'call-1', name: 'read_file', arguments: '{"path":"BOOT.md"}' },
-    { type: 'provider.response.completed' },
-  ]);
+  const provider = new class implements ModelProvider {
+    calls: Array<{ request: ProviderRequest; options: ProviderStreamOptions }> = [];
+    async *stream(request: ProviderRequest, options: ProviderStreamOptions = {}): AsyncGenerator<ProviderEvent> {
+      this.calls.push({ request, options });
+      if (this.calls.length === 1) {
+        yield { type: 'provider.response.started', responseId: 'response-1' };
+        yield { type: 'provider.tool.call', callId: 'call-1', name: 'read_file', arguments: '{"path":"BOOT.md"}' };
+        yield { type: 'provider.response.completed' };
+        return;
+      }
+      yield { type: 'provider.text.delta', delta: 'Read.' };
+      yield { type: 'provider.response.completed' };
+    }
+  }();
   const service = await createOneTurnApplicationService({ provider, workspace: root });
   const events = await collect(service.run({ session: createSession({ workspace: root }), input: 'Read boot', turnId: 'turn-2' }));
 
-  assert.equal(provider.calls.length, 1);
-  assert.deepEqual(events.filter((event) => event.type === 'tool.deferred'), [
-    { type: 'tool.deferred', turnId: 'turn-2', callId: 'call-1', name: 'read_file', arguments: '{"path":"BOOT.md"}' },
-  ]);
+  assert.equal(provider.calls.length, 2);
+  assert.equal(provider.calls[1]?.request.continuation?.toolResults[0]?.callId, 'call-1');
+  assert.equal(events.some((event) => event.type === 'tool.completed'), true);
   assert.equal(events.some((event) => event.type === 'turn.completed'), true);
 });
 

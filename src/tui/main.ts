@@ -1,6 +1,6 @@
 import { createCliRenderer } from '@opentui/core';
 
-import { createOneTurnApplicationService } from '../application/index.ts';
+import { createAgentLoopApplicationService } from '../application/index.ts';
 import { resolveGeorgeConfig } from '../core/index.ts';
 import { LmStudioResponsesProvider } from '../provider/index.ts';
 import { GeorgeTui } from './app.ts';
@@ -12,7 +12,7 @@ async function main(): Promise<void> {
     model: process.env.GEORGE_MODEL,
   });
   if (!config.provider.model) throw new Error('Set GEORGE_MODEL before starting George.');
-  const service = await createOneTurnApplicationService({
+  const service = await createAgentLoopApplicationService({
     provider: new LmStudioResponsesProvider(config.provider),
     workspace: config.workspace,
   });
