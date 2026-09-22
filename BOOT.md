@@ -31,7 +31,9 @@ The owner explicitly accepts the recorded Phase 1 and Phase 2 native-terminal/li
 
 **Phase 3 — Coding Workflow — is the current implementation gate.**
 
-No dedicated Phase 3 decision record exists yet. Until one is approved, the current roadmap plus product/architecture/stability contracts are the Phase 3 authority.
+Phase 3 decision authority: `docs/planning/p3-coding-workflow/decision-record.md`.
+
+That approved decision record, together with the current product, architecture, stability, and roadmap contracts, is the implementation authority for Phase 3.
 
 ## Core premise
 
@@ -66,6 +68,7 @@ Read:
 - workflow: `docs/workflow.md`;
 - stability/testing: `docs/stability-contract.md`;
 - roadmap: `docs/roadmap/mvp-roadmap.md`;
+- Phase 3 decision authority: `docs/planning/p3-coding-workflow/decision-record.md`;
 - Phase 2 closeout/history when needed: `docs/phase-2-closeout.md`, `docs/phase-2-owner-closeout.md`, `docs/planning/p2-safe-tool-loop/decision-record.md`;
 - Phase 1 closeout/history when needed: `docs/phase-1-owner-closeout.md`, `docs/planning/p1-local-agent-foundation/decision-record.md`.
 

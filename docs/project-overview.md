@@ -115,3 +115,18 @@ Phase 2 succeeds when George can safely complete deterministic multi-step tool l
 - prove the behavior with deterministic fixture/provider tests plus clearly separated live evidence where available.
 
 Phase 2 does not yet own context compaction, durable resume, comprehensive changed-file summaries, validation-command orchestration, browser/network tools, a daemon, desktop UI, or multi-agent scheduling.
+
+## Phase 3 success condition
+
+Phase 3 succeeds when George can complete a bounded coding task in a disposable repository through one provider-independent workflow that:
+
+- assembles compact model context from George-owned instructions, current user intent, user-global/personality input, workspace instructions, routed project guidance, conversation state, and activated skills under explicit precedence and context budgets;
+- exposes observable provider-facing context size and does not silently present truncated critical instructions as complete;
+- discovers portable skills cheaply, loads a selected skill body just in time, and prevents declarative extension content from expanding executable authority;
+- tracks a pre-run repository baseline and reports observed changed files without claiming unsupported attribution for arbitrary process side effects;
+- runs requested validation through George's existing process/tool/approval boundary and records the resulting evidence;
+- persists normalized session history outside the repository and can resume from completed durable history without automatically replaying interrupted writes, processes, approvals, or provider continuations;
+- emits a structured completion result covering observed changes, validation, unresolved failures/warnings, and the final assistant response;
+- proves the workflow with deterministic fixture coverage, including pre-existing dirty work and at least one portable external-skill fixture.
+
+Phase 3 does not add LLM-based compaction, automatic semantic skill routing, executable hooks, plugin packaging, browser/network adapters, daemon mode, or multi-agent scheduling.

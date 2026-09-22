@@ -102,28 +102,49 @@ Non-goals:
 
 Status: CURRENT IMPLEMENTATION GATE — baseline package `0.3.0`
 
-Goal: make George useful for bounded implementation tasks.
+Goal: make George useful for bounded implementation tasks without weakening the Phase 2 tool/permission boundary.
+
+Decision authority: `docs/planning/p3-coding-workflow/decision-record.md`.
 
 Scope:
-- token-aware context budgeting with observable instruction/context size;
-- compact George-owned model instructions with code-enforced policy kept out of prompt text where practical;
+- provider-independent deterministic context assembly rather than raw instruction concatenation;
+- compact George-owned model instructions, keeping code-enforced policy out of prompt text where practical;
 - optional user-global instructions and small user-owned personality loading;
 - George-native workspace instructions via `.george/instructions.md`;
-- compatible `AGENTS.md` / `BOOT.md` discovery and routing;
-- deterministic instruction trust/precedence, stable ordering, and duplicate suppression where possible;
-- separation of always-on active instructions from just-in-time project-document retrieval/routing;
-- provider-independent assembled context without requiring LLM summarization for instruction compilation;
+- compatible root `AGENTS.md` / `BOOT.md` discovery, with routing documents used to identify just-in-time project knowledge rather than injecting every referenced document permanently;
+- explicit trust/precedence across George invariants, current user intent, workspace/project guidance, user-global defaults, and personality;
+- stable source identity/order and deterministic duplicate suppression where possible;
+- token-oriented provider-facing context budgets with observable estimated size and actual provider usage when reported;
+- explicit omit/defer/fail behavior for budget exhaustion instead of silently treating partial critical instructions as complete;
 - portable skill registry and discovery with `skills/<name>/SKILL.md` compatibility;
-- built-in, user-global, and workspace skill sources with deterministic source identity and collision handling;
+- built-in, user-global, and workspace skill sources with deterministic source identity and visible collision handling;
 - compact bounded skill metadata/catalog exposure without injecting every installed skill body into every request;
-- explicit just-in-time skill activation/loading through the same trust, precedence, and context-budget machinery as other model-facing instructions;
+- explicit just-in-time skill activation, scoped to the current user turn across that turn's provider/tool rounds;
 - no executable authority granted by declarative skill content;
-- changed-file tracking;
-- validation command workflow;
-- completion summaries;
-- session persistence/resume semantics;
+- mutating-run workspace/Git baseline capture and observed changed-file accounting that preserves pre-existing dirty work;
+- validation-command workflow through the existing canonical process/tool/approval boundary;
+- structured completion evidence covering observed changes, validation, unresolved failures/warnings, and final assistant output;
+- schema-versioned filesystem session persistence outside the repository by default;
+- resume from durable completed history, with interrupted side effects surfaced but never silently replayed;
 - correction/regression testing discipline;
-- first end-to-end coding qualification against a disposable fixture repo, including at least one portable external-skill fixture.
+- first end-to-end coding qualification against a disposable fixture repo, including pre-existing dirty work and at least one portable external-skill fixture.
+
+Success condition:
+- a deterministic disposable repository can be opened, context assembled under the documented precedence/budget contract, a portable skill activated, files changed through approved tools, validation run through the normal process boundary, completion evidence produced, session state persisted, and a later turn resumed from durable completed history;
+- the run preserves pre-existing dirty work and accurately separates it from newly observed changes;
+- interruption/resume tests prove incomplete writes/processes/approvals/provider continuations are not automatically replayed;
+- provider/TUI code remains adapters over reusable context, session, tool, and coding-workflow services.
+
+Non-goals:
+- LLM-based compaction/summarization;
+- automatic semantic skill selection;
+- executable lifecycle hooks;
+- George plugin manifest/package lifecycle;
+- browser/web/network tools or Parallel/GitHub/MCP adapters;
+- remembered approval profiles or OS/container sandboxing;
+- general mutating Git commands;
+- crash-safe side-effect replay/reconciliation;
+- daemon/server mode, Tauri, or multi-agent scheduling.
 
 ## Phase 4 — Reliability + Long Runs
 

@@ -114,6 +114,8 @@ Phase 3 should replace raw instruction concatenation with a deterministic instru
 7. records enough context-size/source information for diagnostics;
 8. produces provider-independent assembled context.
 
+Phase 3 context budgeting is token-oriented, not merely byte-oriented. When an exact tokenizer for the active provider/model is unavailable, George may use a deterministic documented estimate, but diagnostics must label estimated counts as estimates. Actual provider usage may be recorded separately when the provider reports it. Budget exhaustion must omit/defer lower-priority material explicitly or fail closed for required material; George must not silently cut a critical instruction source and present the fragment as the complete source.
+
 Human-readable Markdown remains an authoring format, not a requirement that every byte be permanently injected. LLM-based summarization is not required for Phase 3 instruction assembly; any later compaction/summarization must preserve critical instructions and remain independently testable.
 
 The current Phase 1 behavior that loads bounded raw root `BOOT.md` and `AGENTS.md` content directly into a turn is a bootstrap implementation, not the intended mature context architecture.
@@ -149,7 +151,7 @@ George should support the portable directory shape `skills/<name>/SKILL.md`. Com
 
 Skill discovery must be token-conscious. George may index compact metadata for discovered skills, but it must not inject every installed `SKILL.md` body into every provider request. Full skill bodies are loaded just in time when explicitly activated or otherwise selected by a later bounded routing mechanism.
 
-Phase 3 requires deterministic explicit activation and stable skill identity. Automatic semantic skill selection may be added later after the deterministic path is qualified.
+Phase 3 requires deterministic explicit activation and stable skill identity. An activated skill body is scoped to the current user turn and remains available across that turn's provider/tool rounds; it does not become sticky context for unrelated later turns unless the user explicitly activates it again or a later approved configuration mechanism says otherwise. Automatic semantic skill selection may be added later after the deterministic path is qualified.
 
 Internally, plugin-provided skills should support namespaced identities such as `plugin:skill`. An unqualified skill name may resolve only when unambiguous; collisions must fail visibly rather than silently choosing one source.
 
@@ -250,13 +252,29 @@ Phase 2 must preserve pre-existing changes:
 
 Comprehensive changed-file tracking and final summaries remain Phase 3.
 
+## Coding workflow evidence
+
+Phase 3 promotes coding-task bookkeeping into structured harness evidence rather than leaving it only in assistant prose.
+
+At the beginning of a mutating coding run, George captures an observable workspace/Git baseline when available. George-native write/patch tools record their own direct effects. At completion, George reconciles the observed repository state against the baseline so the final result can distinguish pre-existing dirty state from newly observed changes.
+
+Arbitrary approved child processes may modify files beyond what George can attribute precisely. George may report that such files changed during the run, but must not claim a process definitely caused a specific change unless the evidence supports that attribution.
+
+Validation commands do not receive a privileged executor. They use the canonical process/tool/approval path, including existing argv, cwd, environment, timeout, cancellation, and approval rules. George records validation intent, command identity, terminal result, exit/signal state, and bounded output evidence separately from ordinary narrative completion text.
+
+The application layer should produce a structured completion result that can be rendered by OpenTUI or future clients. It includes observed changed files, validation results, unresolved failures/warnings, and the final assistant response. Presentation adapters may format this evidence, but must not become its source of truth.
+
 ## Session/event store
 
-Start with local filesystem persistence using structured append-friendly records where practical.
+Phase 3 introduces durable local session state using filesystem-backed storage outside the active repository. On Linux, the preferred default follows the user state directory convention (for example `$XDG_STATE_HOME/george`, falling back to `~/.local/state/george`). Equivalent platform-appropriate user state locations may be used elsewhere. Repository-local session files are not the default.
 
-Persist enough to reconstruct user/assistant turns, relevant normalized provider events, tool requests/results, approval requests/decisions, errors, changed-file summary when available, and validation evidence. Do not persist secrets or unrestricted environment dumps.
+Persisted session data is schema-versioned and binds the session to its canonical workspace identity. Append-friendly normalized events remain the durable evidence source where practical; derived transcript/summary views may be reconstructed from that evidence rather than becoming an independent authority.
 
-Phase 2 may continue using in-memory session state where the current implementation does, but its event model must already carry enough structured tool/approval evidence for later durable persistence. Durable resume semantics remain Phase 3.
+Persist enough to reconstruct completed user/assistant turns, normalized provider events needed for diagnosis, tool requests/results, approval decisions, context/source diagnostics, activated-skill identity, observed change summaries, validation evidence, interruption state, and completion state. Do not persist secrets, unrestricted environment dumps, or unbounded process output.
+
+Phase 3 resume means **continue from durable completed history**, not replay an interrupted side effect. If a prior turn ended while a write, process, approval request, or provider continuation was in flight, the resumed session exposes that turn as interrupted and starts subsequent work from a new turn. George must not silently re-run the incomplete write/process, synthesize an approval, or depend on a provider-native continuation identifier as the only recoverable state.
+
+Exact crash-safe replay/reconciliation of partially completed long-running work belongs to Phase 4. Phase 3 only needs deterministic durable history, interruption visibility, and safe non-replay resume semantics.
 
 ## Interfaces
 

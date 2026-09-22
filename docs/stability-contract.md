@@ -111,7 +111,33 @@ Live-model tests supplement this evidence but do not replace deterministic cover
 
 Verify interrupted runs remain inspectable, retain structured tool/approval/failure evidence, and do not duplicate writes/tool effects silently.
 
-Durable resume semantics are not required until their roadmap phase, but Phase 2 event history must preserve enough information to diagnose a failed loop.
+Phase 3 durable-session qualification must additionally prove:
+- persisted session data is schema-versioned and stored outside the fixture repository by default;
+- a persisted session remains bound to the canonical workspace it was created for;
+- completed conversation/tool/context/skill/validation/change evidence can be reconstructed after reopening;
+- malformed or unsupported persisted state fails visibly rather than being partially trusted;
+- interrupted write, process, approval, or provider-continuation state is surfaced as interrupted and is not automatically replayed on resume;
+- resume begins subsequent work as a new turn from durable normalized history;
+- secrets, unrestricted environment dumps, and unbounded process output are not introduced into persisted state.
+
+Crash-safe side-effect replay/reconciliation remains a Phase 4 concern; Phase 3 evidence must not imply that capability exists.
+
+### Phase 3 coding-workflow qualification
+
+The first full coding-workflow fixture must exercise the integrated path rather than proving each feature only in isolation. Deterministic coverage must include:
+- a repository with pre-existing dirty work;
+- assembled context using the documented precedence and budget rules;
+- at least one portable external `SKILL.md` fixture activated just in time;
+- one or more approved workspace mutations;
+- observed changed-file accounting that keeps pre-existing and newly observed changes distinguishable;
+- at least one validation command executed through the canonical process/tool/approval path;
+- structured validation and completion evidence;
+- durable session persistence followed by a resumed later turn;
+- no unexpected skill activation leakage into that unrelated resumed turn;
+- an interrupted-side-effect case proving resume does not replay the incomplete operation;
+- preservation of the Phase 2 permission, workspace, process, and Git safeguards throughout the flow.
+
+Changed-file evidence must distinguish observation from attribution. When an approved arbitrary process may have changed files, tests and completion reporting must not claim precise causal attribution without supporting evidence.
 
 ### Live local-model qualification
 
