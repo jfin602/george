@@ -16,9 +16,13 @@ George exists because a capable local model is most useful when paired with a st
 
 The normal MVP path runs on the developer's machine. Repository contents, prompts, tool results, and model inference stay local unless the user explicitly invokes a network-backed tool/provider.
 
-### CLI-first, UI-independent core
+### Codex-style TUI first, UI-independent core
 
-The MVP is a terminal application. The core agent engine must be usable without a graphical interface and must not depend on browser state. A future desktop application is an adapter over the same core.
+The MVP interface is an interactive terminal application that behaves like a modern coding-agent TUI rather than a print-and-scroll command.
+
+It must support in-place redraws, streaming assistant output, live tool/progress state, persistent interactive input, scrollback, resize handling, cancellation, and clean terminal restoration.
+
+The initial renderer is `@opentui/core` used directly from TypeScript without React. OpenTUI is a presentation dependency only: the core agent engine must remain usable without it, must not depend on terminal state, and must be reusable by a future daemon or Tauri desktop application.
 
 ### Provider independence
 
@@ -40,7 +44,7 @@ A failed tool call, malformed model response, timeout, cancellation, or provider
 
 ### Small dependency surface
 
-Prefer Node standard library and focused dependencies. Do not introduce a framework, database, browser runtime, queue, or distributed system before a current requirement needs it.
+Prefer Node standard library and focused dependencies. OpenTUI is an approved Phase 1 presentation dependency. Do not introduce React, a database, browser runtime, queue, or distributed system before a current requirement needs it.
 
 ### Networking-ready, not networking-first
 
@@ -52,4 +56,4 @@ If a GUI becomes justified, Tauri is the preferred direction: a lightweight nati
 
 ## Initial success condition
 
-The first meaningful milestone is a reliable local loop where George can open a repository, load its instructions, send a bounded task to local Qwen through LM Studio, receive streamed text/tool calls, execute permitted tools, feed results back, continue until a clear stop condition, and report what changed and what validation actually ran.
+The first meaningful milestone is a reliable Codex-style local terminal experience where George can open a repository, load its instructions, stream a bounded task through local Qwen/LM Studio, visibly present agent/tool activity, execute the Phase-1 permitted tools, continue until a clear stop condition, and report what actually happened without the TUI owning agent logic.
