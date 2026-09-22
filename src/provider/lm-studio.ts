@@ -218,13 +218,29 @@ export class LmStudioResponsesProvider implements ModelProvider {
     try {
       let response: Response;
       try {
+        const continuation = request.continuation;
         response = await fetch(new URL('/v1/responses', this.baseUrl), {
           method: 'POST',
           headers: { 'content-type': 'application/json', accept: 'text/event-stream' },
           body: JSON.stringify({
             model: this.model,
             ...(request.instructions === undefined ? {} : { instructions: request.instructions }),
-            input: request.input,
+            input: continuation === undefined
+              ? request.input
+              : continuation.toolResults.map((toolResult) => ({
+                  type: 'function_call_output',
+                  call_id: toolResult.callId,
+                  output: JSON.stringify(toolResult.result),
+                })),
+            ...(continuation === undefined ? {} : { previous_response_id: continuation.responseId }),
+            ...(request.tools === undefined ? {} : {
+              tools: request.tools.map((tool) => ({
+                type: 'function',
+                name: tool.name,
+                description: tool.description,
+                parameters: tool.inputSchema,
+              })),
+            }),
             stream: true,
           }),
           signal,

@@ -5,8 +5,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 
-import { resolveWorkspaceRoot } from '../../../src/core/index.ts';
-import { createReadOnlyToolExecutor } from '../../../src/tools/index.ts';
+import { GeorgeError, resolveWorkspaceRoot } from '../../../src/core/index.ts';
+import { createReadOnlyToolExecutor, ToolRegistry } from '../../../src/tools/index.ts';
 
 async function fixture(): Promise<string> {
   const root = await mkdtemp(join(tmpdir(), 'george-tools-'));
@@ -74,4 +74,59 @@ test('Git stdout and stderr capture are bounded', async (t) => {
   assert.deepEqual(result, {
     name: 'git_status', stdout: '123', stderr: 'abc', exitCode: 0, stdoutTruncated: true, stderrTruncated: true,
   });
+});
+
+test('canonical registry validates JSON and schema before executor invocation', async () => {
+  let executions = 0;
+  const registry = new ToolRegistry([{
+    name: 'bounded_echo',
+    description: 'Return one required string.',
+    permission: 'read',
+    inputSchema: {
+      type: 'object',
+      properties: { value: { type: 'string', minLength: 1 } },
+      required: ['value'],
+      additionalProperties: false,
+    },
+    execute: async (arguments_) => {
+      executions += 1;
+      return { value: arguments_.value as string };
+    },
+  }]);
+
+  const invalid = await Promise.all([
+    registry.dispatch({ callId: 'unknown', name: 'missing', arguments: '{}' }),
+    registry.dispatch({ callId: 'malformed', name: 'bounded_echo', arguments: '{' }),
+    registry.dispatch({ callId: 'missing', name: 'bounded_echo', arguments: '{}' }),
+    registry.dispatch({ callId: 'wrong-type', name: 'bounded_echo', arguments: '{"value":1}' }),
+    registry.dispatch({ callId: 'unexpected', name: 'bounded_echo', arguments: '{"value":"ok","extra":true}' }),
+  ]);
+  assert.equal(executions, 0);
+  assert.ok(invalid.every((result) => !result.result.ok));
+
+  assert.deepEqual(await registry.dispatch({ callId: 'valid', name: 'bounded_echo', arguments: '{"value":"ok"}' }), {
+    callId: 'valid', name: 'bounded_echo', result: { ok: true, value: { value: 'ok' } },
+  });
+  assert.equal(executions, 1);
+});
+
+test('read-only compatibility calls use the canonical registry definitions', async (t) => {
+  const root = await fixture();
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const executor = createReadOnlyToolExecutor(await resolveWorkspaceRoot(root));
+  assert.deepEqual(executor.definitions.map(({ name, inputSchema }) => ({ name, inputSchema })), [
+    { name: 'read_file', inputSchema: { type: 'object', properties: { path: { type: 'string', minLength: 1 } }, required: ['path'], additionalProperties: false } },
+    { name: 'list_directory', inputSchema: { type: 'object', properties: { path: { type: 'string', minLength: 1 } }, required: ['path'], additionalProperties: false } },
+    { name: 'search_text', inputSchema: { type: 'object', properties: { query: { type: 'string', minLength: 1 }, path: { type: 'string', minLength: 1 } }, required: ['query'], additionalProperties: false } },
+    { name: 'git_status', inputSchema: { type: 'object', properties: {}, additionalProperties: false } },
+    { name: 'git_diff', inputSchema: { type: 'object', properties: {}, additionalProperties: false } },
+  ]);
+  assert.equal((await executor.registry.dispatch({ callId: 'read', name: 'read_file', arguments: '{"path":"first.txt"}' })).result.ok, true);
+  assert.equal((await executor.registry.dispatch({ callId: 'bad', name: 'read_file', arguments: '{"path":"first.txt","extra":true}' })).result.ok, false);
+  const cancellation = new AbortController();
+  cancellation.abort();
+  await assert.rejects(
+    () => executor.execute({ name: 'read_file', path: 'first.txt' }, { signal: cancellation.signal }),
+    (error: unknown) => error instanceof GeorgeError && error.code === 'cancelled',
+  );
 });

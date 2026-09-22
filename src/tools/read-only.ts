@@ -7,16 +7,36 @@ import {
   assertCanonicalWorkspace,
   cancellationError,
   resolveWorkspacePath,
+  type JsonObject,
   type Workspace,
 } from '../core/index.ts';
+import { ToolRegistry, type ToolDefinition } from './registry.ts';
 
 export const READ_ONLY_TOOL_DEFINITIONS = [
-  { name: 'read_file', description: 'Read a bounded text file from the workspace.' },
-  { name: 'list_directory', description: 'List bounded direct entries in a workspace directory.' },
-  { name: 'search_text', description: 'Search bounded workspace text without executing a shell.' },
-  { name: 'git_status', description: 'Read Git status using a fixed read-only command.' },
-  { name: 'git_diff', description: 'Read Git diff using a fixed read-only command.' },
-] as const;
+  {
+    name: 'read_file', description: 'Read a bounded text file from the workspace.', permission: 'read',
+    inputSchema: { type: 'object', properties: { path: { type: 'string', minLength: 1 } }, required: ['path'], additionalProperties: false },
+  },
+  {
+    name: 'list_directory', description: 'List bounded direct entries in a workspace directory.', permission: 'read',
+    inputSchema: { type: 'object', properties: { path: { type: 'string', minLength: 1 } }, required: ['path'], additionalProperties: false },
+  },
+  {
+    name: 'search_text', description: 'Search bounded workspace text without executing a shell.', permission: 'read',
+    inputSchema: {
+      type: 'object', properties: { query: { type: 'string', minLength: 1 }, path: { type: 'string', minLength: 1 } },
+      required: ['query'], additionalProperties: false,
+    },
+  },
+  {
+    name: 'git_status', description: 'Read Git status using a fixed read-only command.', permission: 'read',
+    inputSchema: { type: 'object', properties: {}, additionalProperties: false },
+  },
+  {
+    name: 'git_diff', description: 'Read Git diff using a fixed read-only command.', permission: 'read',
+    inputSchema: { type: 'object', properties: {}, additionalProperties: false },
+  },
+] as const satisfies readonly Omit<ToolDefinition, 'execute'>[];
 
 export type ReadOnlyToolCall =
   | Readonly<{ name: 'read_file'; path: string }>
@@ -111,6 +131,10 @@ function relativePath(workspace: Workspace, path: string): string {
   return relative(workspace.root, path) || '.';
 }
 
+function resultJson(result: ReadOnlyToolResult): JsonObject {
+  return result as unknown as JsonObject;
+}
+
 async function runGit(
   workspace: Workspace,
   args: readonly string[],
@@ -158,7 +182,8 @@ async function runGit(
 
 export type ReadOnlyToolExecutor = Readonly<{
   workspace: Workspace;
-  definitions: typeof READ_ONLY_TOOL_DEFINITIONS;
+  registry: ToolRegistry;
+  definitions: ToolRegistry['definitions'];
   execute: (call: ReadOnlyToolCall, options?: Readonly<{ signal?: AbortSignal }>) => Promise<ReadOnlyToolResult>;
 }>;
 
@@ -167,7 +192,7 @@ export function createReadOnlyToolExecutor(
   configuredLimits: ReadOnlyToolLimits = {},
 ): ReadOnlyToolExecutor {
   const bounded = limits(configuredLimits);
-  const execute = async (call: ReadOnlyToolCall, options: Readonly<{ signal?: AbortSignal }> = {}): Promise<ReadOnlyToolResult> => {
+  const executeRaw = async (call: ReadOnlyToolCall, options: Readonly<{ signal?: AbortSignal }> = {}): Promise<ReadOnlyToolResult> => {
     if (options.signal?.aborted) throw cancellationError(options.signal);
     await assertCanonicalWorkspace(workspace);
     switch (call.name) {
@@ -236,5 +261,33 @@ export function createReadOnlyToolExecutor(
         return { name: call.name, ...await runGit(workspace, ['diff', '--no-ext-diff'], bounded.maxGitOutputBytes, bounded.gitTimeoutMs, options.signal) };
     }
   };
-  return { workspace, definitions: READ_ONLY_TOOL_DEFINITIONS, execute };
+  const registry = new ToolRegistry([
+    {
+      ...READ_ONLY_TOOL_DEFINITIONS[0],
+      execute: async (arguments_, options) => resultJson(await executeRaw({ name: 'read_file', path: arguments_.path as string }, options)),
+    },
+    {
+      ...READ_ONLY_TOOL_DEFINITIONS[1],
+      execute: async (arguments_, options) => resultJson(await executeRaw({ name: 'list_directory', path: arguments_.path as string }, options)),
+    },
+    {
+      ...READ_ONLY_TOOL_DEFINITIONS[2],
+      execute: async (arguments_, options) => resultJson(await executeRaw({ name: 'search_text', query: arguments_.query as string, ...(typeof arguments_.path === 'string' ? { path: arguments_.path } : {}) }, options)),
+    },
+    {
+      ...READ_ONLY_TOOL_DEFINITIONS[3],
+      execute: async (_arguments, options) => resultJson(await executeRaw({ name: 'git_status' }, options)),
+    },
+    {
+      ...READ_ONLY_TOOL_DEFINITIONS[4],
+      execute: async (_arguments, options) => resultJson(await executeRaw({ name: 'git_diff' }, options)),
+    },
+  ]);
+  const execute = async (call: ReadOnlyToolCall, options: Readonly<{ signal?: AbortSignal }> = {}): Promise<ReadOnlyToolResult> => {
+    const { name, ...arguments_ } = call;
+    const result = await registry.dispatch({ callId: 'read-only-compatibility', name, arguments: JSON.stringify(arguments_) }, options);
+    if (!result.result.ok) throw new GeorgeError(result.result.error.code as GeorgeError['code'], result.result.error.message);
+    return result.result.value as ReadOnlyToolResult;
+  };
+  return { workspace, registry, definitions: registry.definitions, execute };
 }
