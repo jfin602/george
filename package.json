@@ -9,7 +9,10 @@
   "scripts": {
     "test": "node --test test/unit/**/*.test.ts",
     "typecheck": "tsc --noEmit",
-    "check": "npm run typecheck && npm test"
+    "check": "npm run typecheck && npm test",
+    "test:runner": "node --test test/unit/codex-phase-prompt-grammar.test.ts test/unit/codex-phase-runner.test.ts",
+    "codex:phase": "node scripts/codex-phase.mjs",
+    "codex:phase:validate": "node scripts/validate-codex-phase.mjs"
   },
   "devDependencies": {
     "@types/node": "^24.10.1",
