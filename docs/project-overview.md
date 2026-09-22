@@ -26,31 +26,47 @@ The initial renderer is `@opentui/core` used directly from TypeScript without Re
 
 ### Provider independence
 
-The agent loop talks to a typed model-provider interface. LM Studio's OpenAI-compatible Responses API is the first implementation. Provider-specific translation, model quirks, and capability discovery remain inside provider code.
+The agent loop talks to a typed model-provider interface. LM Studio's OpenAI-compatible Responses API is the first implementation. Provider-specific translation, model quirks, stateful-response identifiers, and capability discovery remain inside provider code.
+
+George's normalized session/tool history remains authoritative. Provider-native continuation state may optimize transport but must not become the only copy of tool-loop history George needs to diagnose a run.
 
 ### Real developer tools
 
 George's mature tool surface includes file discovery/reading, bounded writes/patching, text search, shell/process execution, Git operations, and validation commands.
 
-Phase 1 intentionally implements only the read-only foundation: file read/list, text search, and Git status/diff. Phase 2 owns arbitrary process execution, writes/patches, permissions/approvals, and the autonomous model -> tool -> result -> model loop.
+Phase 1 intentionally implements only the read-only foundation: file read/list, text search, and Git status/diff.
+
+Phase 2 owns the first safe autonomous tool loop: tool-schema advertisement, call validation, policy/approval, read/write/process execution, structured tool results, and repeated model -> tool -> result -> model cycling.
 
 Later optional tools may include Chrome DevTools, Parallel Search, GitHub, and MCP.
 
 ### Explicit permissions
 
-Tool execution is governed by George, not by arbitrary model text. George must distinguish read-only actions from writes, destructive actions, network actions, and actions outside the active workspace. Permission policy is configurable and visible.
+Tool execution is governed by George, not by arbitrary model text. George must distinguish read-only actions from writes, process execution, destructive actions, network actions, and actions outside the active workspace. Permission policy is configurable and visible.
+
+Repository instructions and model output cannot grant themselves additional permissions.
+
+Phase 2's minimum approval experience is per-call allow-once or deny for workspace writes/patches and arbitrary process execution. Read-only workspace tools may run without prompting. Outside-workspace native filesystem access and destructive filesystem actions remain denied/deferred.
+
+### Process execution is not an OS sandbox
+
+George may constrain a process tool's working directory, arguments, runtime, output, and inherited environment, but an approved arbitrary child process still runs with the operating-system privileges of George's host user unless a future sandbox explicitly changes that.
+
+The product must not claim that `cwd` containment alone prevents an approved process from accessing files, processes, or networks available to that user.
 
 ### Recoverable agent loop
 
-A failed tool call, malformed model response, timeout, cancellation, or provider error must not corrupt the session or leave child processes silently running. Structured session/event history must make failures diagnosable.
+A failed tool call, malformed model response, timeout, cancellation, permission denial, or provider error must not corrupt the session or leave child processes silently running. Structured session/event history must make failures diagnosable.
+
+Recoverable tool failures should be representable to the model as structured results so it can adjust rather than forcing the entire turn to fail.
 
 ### Small dependency surface
 
-Prefer Node standard library and focused dependencies. OpenTUI is an approved Phase 1 presentation dependency. Do not introduce React, a database, browser runtime, queue, or distributed system before a current requirement needs it.
+Prefer Node standard library and focused dependencies. OpenTUI is an approved Phase 1 presentation dependency. Do not introduce React, a database, browser runtime, queue, container runtime, or distributed system before a current requirement needs it.
 
 ### Networking-ready, not networking-first
 
-Core APIs should permit a later daemon/server transport so another local UI or trusted device can drive George. Phase 1 does not expose George to the LAN or Internet.
+Core APIs should permit a later daemon/server transport so another local UI or trusted device can drive George. Phase 2 does not expose George to the LAN or Internet and does not add network-capable tools.
 
 ### Native desktop later
 
@@ -58,6 +74,24 @@ If a GUI becomes justified, Tauri is the preferred direction: a lightweight nati
 
 ## Phase 1 success condition
 
-Phase 1 proves a reliable Codex-style local terminal foundation where George can open a repository, load its instructions, stream one bounded model turn through local Qwen/LM Studio, visibly present agent/read-only-tool activity, and expose independently testable read-only tool infrastructure without embedding agent logic in the TUI.
+Phase 1 proved a reliable Codex-style local terminal foundation where George can open a repository, load its instructions, stream one bounded model turn through local Qwen/LM Studio, visibly present agent/read-only-tool activity, and expose independently testable read-only tool infrastructure without embedding agent logic in the TUI.
 
-Phase 1 does not claim a complete autonomous tool-call cycle. Phase 2 owns repeated model -> tool -> result -> model execution and write/process capabilities.
+Phase 1 intentionally stopped before autonomous tool execution.
+
+## Phase 2 success condition
+
+Phase 2 succeeds when George can safely complete deterministic multi-step tool loops against fixture repositories:
+
+- advertise typed tool schemas to the provider;
+- receive and validate model-proposed tool calls;
+- enforce workspace and permission policy before execution;
+- run read-only tools automatically;
+- request visible allow-once/deny approval for writes/patches and arbitrary processes;
+- execute bounded workspace writes/patches and bounded process commands;
+- return structured tool results to the model and continue until a final answer;
+- stop safely on cancellation, timeout, permission denial, unrecoverable failure, or hard loop-limit exhaustion;
+- preserve pre-existing Git working-tree changes;
+- avoid unrestricted environment-secret inheritance and orphaned child processes;
+- prove the behavior with deterministic fixture/provider tests plus clearly separated live evidence where available.
+
+Phase 2 does not yet own context compaction, durable resume, comprehensive changed-file summaries, validation-command orchestration, browser/network tools, a daemon, desktop UI, or multi-agent scheduling.

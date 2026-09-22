@@ -40,17 +40,61 @@ Non-goals: writes, arbitrary shell/process execution, autonomous multi-turn tool
 
 Status: CURRENT IMPLEMENTATION GATE — baseline package `0.2.0`
 
-Goal: let the model repeatedly call tools under explicit policy.
+Goal: turn the Phase 1 one-turn foundation into a bounded, permission-controlled autonomous tool loop without prematurely building the complete coding workflow.
+
+Decision authority: `docs/planning/p2-safe-tool-loop/decision-record.md`.
 
 Scope:
-- tool registry/schema completion for executable calls;
-- autonomous model -> tool -> result -> model loop;
-- process execution with timeout/cancellation;
-- write/patch tools;
-- permission classes and approvals rendered through the TUI;
-- Git dirty-state safeguards;
-- structured errors;
-- fixture-repository integration tests.
+- evolve the provider/core contract so George can advertise typed tool schemas and submit structured tool results/continuations;
+- canonical tool registry with stable name, description, input schema, risk/permission class, executor, and normalized result/error shape;
+- migrate Phase 1 read-only tools through the canonical registry;
+- autonomous model -> tool -> result -> model loop owned by George;
+- unknown-tool, JSON-parse, and schema validation before executor invocation;
+- sequential tool execution in model order;
+- simple configurable hard ceiling on tool rounds/calls;
+- structured tool lifecycle and approval events;
+- minimum permission policy:
+  - read-only workspace tools allowed;
+  - workspace writes/patches ask;
+  - arbitrary process execution asks;
+  - destructive filesystem actions denied/deferred;
+  - outside-workspace native filesystem access denied;
+  - network-native tools unavailable;
+- TUI approval presentation with allow-once/deny behavior and cancellation while waiting;
+- bounded workspace-native `write_file` / patch behavior with traversal and symlink-escape protection, bounded input, safe/preconditioned application, and no silent partial patching;
+- arbitrary process execution using explicit executable/argument arrays, `shell: false` by default, workspace-bounded `cwd`, closed stdin, bounded output, timeout/cancellation, exit/signal capture, sanitized environment inheritance, and best-effort descendant cleanup;
+- truthful process trust boundary: approved arbitrary child processes are not an OS sandbox and may exercise host-user privileges;
+- capture/preserve pre-existing Git dirty state; no reset/clean/stash/checkout behavior and no general mutating Git toolset;
+- recoverable tool failures/permission denials represented as structured loop results where semantics permit;
+- fixture-repository integration tests for read/write/process/permission/tool-loop behavior;
+- bounded live LM Studio/Qwen tool-cycle qualification when the supported local setup is available;
+- native-terminal approval/tool lifecycle qualification when a genuine usable TTY is available;
+- evidence gaps remain evidence gaps rather than being inferred Green.
+
+Success condition:
+- a deterministic fixture can drive George through multiple model/tool rounds to a final answer;
+- tool calls are schema-validated and permission-gated;
+- approved writes/processes run within George's documented controls;
+- denial, malformed calls, timeout, cancellation, tool failure, and loop exhaustion terminate or recover predictably;
+- pre-existing user changes remain intact;
+- no unrestricted environment dump or silent orphaned process is introduced;
+- the TUI remains an adapter over reusable application/core behavior.
+
+Non-goals:
+- delete/rm-style destructive filesystem tools;
+- remembered approval profiles;
+- OS/container sandboxing;
+- general mutating Git operations;
+- comprehensive changed-file tracking/final summaries;
+- validation-command orchestration;
+- context budgeting/compaction;
+- durable session resume/recovery;
+- retries/backoff for long autonomous jobs;
+- browser/web/network tools;
+- MCP/GitHub/Parallel adapters;
+- daemon/server mode;
+- Tauri;
+- multi-agent scheduling.
 
 ## Phase 3 — Coding Workflow
 
@@ -72,10 +116,10 @@ Goal: support longer autonomous local jobs safely.
 
 Scope:
 - compaction/summarization;
-- budgets/limits;
+- budgets/limits beyond the Phase 2 hard loop guard;
 - retries/backoff;
 - crash/interruption recovery;
-- child-process cleanup;
+- child-process cleanup hardening;
 - observability/logging;
 - performance baselines including TUI responsiveness under streaming;
 - extended Qwen qualification.

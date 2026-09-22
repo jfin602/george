@@ -21,27 +21,64 @@ Unit/integration tests cover parsers, schemas, permission decisions, context ass
 
 Use deterministic/mock provider fixtures for ordinary tests and bounded live LM Studio qualification when provider integration changes.
 
-Verify Responses API request shape, SSE parsing, streamed text, tool-call events, cancellation, timeout/error normalization, and malformed/incomplete streams.
+Verify Responses API request shape, tool-schema advertisement, SSE parsing, streamed text, tool-call events, tool-result continuation, cancellation, timeout/error normalization, malformed/incomplete streams, and duplicate/incomplete function-call handling.
 
 ### Tool execution
 
-Integrated tests prove read/write boundaries, command argument handling, timeout/cancellation, exit-code/stdout/stderr capture, child-process cleanup, Git dirty-state preservation, patch failure behavior, and permission denials.
+Integrated tests prove:
+- read/write workspace boundaries;
+- argument/schema validation before executor invocation;
+- command argument handling without implicit shell interpolation;
+- timeout/cancellation;
+- exit-code/stdout/stderr capture and output bounds;
+- child-process-tree cleanup;
+- sanitized environment inheritance;
+- Git dirty-state preservation;
+- patch/precondition failure behavior;
+- permission denials;
+- symlink/traversal rejection;
+- no silent partial writes.
+
+An approved arbitrary process is not considered workspace-sandboxed unless a real OS sandbox was actually used and tested.
 
 ### Agent-loop qualification
 
 Use small fixture repositories and deterministic scripted model responses to exercise multi-turn tool loops without depending on model nondeterminism.
 
+Phase 2 deterministic coverage must include:
+- model -> read tool -> result -> model -> final answer;
+- multiple ordered tool rounds;
+- multiple calls in model order;
+- unknown tool;
+- malformed JSON arguments;
+- schema-invalid arguments;
+- approval allow-once and denial;
+- recoverable tool failure returned to the model;
+- hard loop-limit exhaustion;
+- cancellation while waiting for approval;
+- cancellation while a process is active.
+
 Live-model tests supplement this evidence but do not replace deterministic coverage.
 
 ### Session/recovery qualification
 
-Verify interrupted runs remain inspectable, resumable only where semantics are safe, and do not duplicate writes/tool effects silently.
+Verify interrupted runs remain inspectable, retain structured tool/approval/failure evidence, and do not duplicate writes/tool effects silently.
+
+Durable resume semantics are not required until their roadmap phase, but Phase 2 event history must preserve enough information to diagnose a failed loop.
 
 ### Live local-model qualification
 
 For release candidates that change the live agent path, exercise the exact supported LM Studio/Qwen configuration and record the model/provider/runtime used.
 
+For Phase 2, attempt one bounded live tool-use cycle that proves tool schemas are accepted, a tool call can be returned to George, and a structured result can continue to a final response.
+
 A model producing plausible text is not sufficient evidence that tool loops, permissions, cancellation, or recovery work.
+
+### Native TUI qualification
+
+When approval or tool lifecycle UI changes, exercise the real supported terminal path where available: tool request presentation, allow/deny interaction, cancellation, continued streaming, draft preservation, resize behavior, and terminal restoration.
+
+A test renderer remains useful deterministic evidence but is not automatically proof of native-terminal behavior.
 
 ## Regression permanence
 
@@ -58,11 +95,21 @@ An unexpected test failure makes that validation run Not Green. A later passing 
 Changes touching tool execution, filesystem scope, network access, secrets, or permissions must include adversarial/negative cases.
 
 At minimum, test that repository/model-provided text cannot silently:
-- expand workspace scope;
+- expand workspace-native filesystem scope;
 - bypass permission policy;
-- expose environment secrets;
+- expose unrestricted environment secrets;
 - turn a read-only tool into a write;
-- leave uncontrolled background processes.
+- invoke unknown executors;
+- bypass schema validation;
+- leave uncontrolled background/descendant processes.
+
+Process qualification must distinguish policy controls from sandbox guarantees. A bounded `cwd` is not evidence that an arbitrary child process cannot access resources elsewhere on the host.
+
+## Git/user-work preservation
+
+Any phase that mutates files must prove pre-existing user work survives success, failure, denial, timeout, and cancellation paths relevant to the change.
+
+Tests should use fixture repositories with known dirty files and verify George never resets, cleans, stashes, checks out, or overwrites them without an explicit tool/write action and applicable approval.
 
 ## Performance
 

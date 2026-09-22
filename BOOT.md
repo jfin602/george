@@ -22,6 +22,8 @@ The owner explicitly accepts the recorded native-terminal and live LM Studio/Qwe
 
 **Phase 2 — Safe Tool Loop — is the current implementation gate.**
 
+Phase 2 decision authority: `docs/planning/p2-safe-tool-loop/decision-record.md`.
+
 The high-level product and architecture direction remains locked; new work must preserve the accepted Phase 1 boundaries unless Phase 2 explicitly changes them.
 
 ## Core premise
@@ -57,7 +59,8 @@ Read:
 - workflow: `docs/workflow.md`;
 - stability/testing: `docs/stability-contract.md`;
 - roadmap: `docs/roadmap/mvp-roadmap.md`;
-- Phase 1 decisions: `docs/planning/p1-local-agent-foundation/decision-record.md`.
+- Phase 2 decisions: `docs/planning/p2-safe-tool-loop/decision-record.md`;
+- Phase 1 decisions/history when needed: `docs/planning/p1-local-agent-foundation/decision-record.md`, `docs/phase-1-owner-closeout.md`.
 
 ## Workflow
 
