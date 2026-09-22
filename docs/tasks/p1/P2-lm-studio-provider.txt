@@ -1,0 +1,40 @@
+TASK: Phase 1 / P2 — LM Studio Responses provider
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Terra High`.
+- Browser required: no.
+
+VERSIONING
+- This prompt's assigned project version is `0.1.2`.
+
+GOAL
+
+Implement George's provider boundary and first LM Studio adapter over the OpenAI-compatible `/v1/responses` streaming API. Read the current Phase-1 assessment/plan and inspect the P1 contracts before editing.
+
+Keep LM Studio/OpenAI wire details isolated behind George-owned provider types. Prefer platform `fetch`/streams and Node primitives; do not add a provider SDK unless current source proves it materially necessary.
+
+Required behavior:
+- one streamed Responses request to the configured loopback LM Studio base URL;
+- explicit configured model ID, with no hard-coded Qwen quantization/model default in core architecture;
+- George instructions/input mapped into the provider request without leaking provider-specific types upstream;
+- incremental SSE parsing that tolerates arbitrary chunk boundaries, CRLF, blank separators, and multiline data;
+- normalize text deltas, completion/usage, function/tool-call data needed by later phases, and provider failures into the P1 event contracts;
+- AbortSignal cancellation and bounded request timeout;
+- structured failure for non-2xx responses, malformed/incomplete streams, provider error events, and missing completion;
+- Phase-1 provider URLs remain loopback-only;
+- local default requires no API key and logs no secrets.
+
+Add deterministic local HTTP/SSE fixture tests that do not require LM Studio.
+
+Also add an opt-in live smoke command that is excluded from ordinary deterministic tests. It must accept base URL/model configuration explicitly, send a tiny prompt, verify a streamed completion, and report bounded endpoint/model/timing/usage evidence without dumping secrets or unrestricted context.
+
+Do not implement autonomous tool dispatch, filesystem tools, OpenTUI, remote providers, or web access.
+
+Set `package.json` version to `0.1.2`.
+
+Required proof:
+- focused provider tests cover request shape, split SSE chunks, text streaming, tool/function-call normalization, abort, timeout, non-2xx, provider-error and malformed/incomplete stream paths;
+- the live smoke is opt-in only;
+- existing core/runner tests remain Green;
+- typecheck and `git diff --check` pass;
+- no `package-lock.json` exists.
