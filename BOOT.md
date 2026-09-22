@@ -19,17 +19,7 @@ The high-level product and architecture direction is locked; implementation deta
 
 George is a local-first coding agent harness. The first supported brain is Qwen3-Coder running locally through LM Studio's OpenAI-compatible Responses API.
 
-George owns:
-- repository/project instruction loading;
-- conversation and context management;
-- tool definitions and execution;
-- shell/process lifecycle;
-- filesystem reads/writes and patching;
-- Git inspection and search;
-- test/build execution;
-- permissions and trust boundaries;
-- streaming, retries, cancellation, and recovery;
-- session persistence.
+George owns repository/project instruction loading, context, tools, process lifecycle, filesystem/Git work, validation, permissions, streaming/recovery, and session persistence.
 
 The model provider is replaceable. LM Studio/Qwen is the first provider, not an architectural dependency that may leak throughout the system.
 
@@ -37,13 +27,15 @@ The model provider is replaceable. LM Studio/Qwen is the first provider, not an 
 
 - Runtime: Node.js 24.
 - Language: TypeScript.
-- Interface: CLI first.
-- Core: reusable library modules independent from CLI rendering.
+- Initial interface: Codex-style interactive terminal UI, not a print-only CLI.
+- TUI renderer: `@opentui/core`, used directly without React initially.
+- TUI behavior: owns/redraws terminal regions in place, streams assistant output, shows live tool activity/status, keeps persistent interactive input, supports scrollback/resize/cancellation, and restores the terminal cleanly on exit.
+- Core: reusable library modules independent from TUI rendering.
 - Inference: provider interface; first adapter is LM Studio Responses API.
 - Persistence: simple local filesystem state first; no database until justified.
 - Desktop: deferred; Tauri is the preferred later native shell.
 - Networking: architecture must permit a later daemon/server mode without rewriting the agent core.
-- Browser UI: not required for the core or CLI.
+- Browser UI: not required for the core or TUI.
 - Electron: not the default desktop direction.
 
 ## Current authority
