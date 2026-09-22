@@ -1,0 +1,7 @@
+0.1.2
+
+Implemented P2 provider boundary and LM Studio Responses SSE adapter; package version is `0.1.2`.
+
+Validated: `npm run check` (103 tests), `npm run test:runner` (90 tests), `git diff --check`, and no `package-lock.json`. Live smoke is opt-in: `npm run smoke:lm-studio -- --base-url … --model …`.
+
+No commit created. Pre-task HEAD: `16c0c0162963bf3311883edca525fd7224039d8c`.

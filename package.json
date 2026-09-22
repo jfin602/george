@@ -1,6 +1,6 @@
 {
   "name": "george",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "private": true,
   "type": "module",
   "engines": {
@@ -9,11 +9,13 @@
   "scripts": {
     "test": "node --test test/unit/*.test.ts test/unit/**/*.test.ts",
     "test:core": "node --test test/unit/core/**/*.test.ts",
+    "test:provider": "node --test test/unit/provider/**/*.test.ts",
     "typecheck": "tsc --noEmit",
     "check": "npm run typecheck && npm test",
     "test:runner": "node --test test/unit/codex-phase-prompt-grammar.test.ts test/unit/codex-phase-runner.test.ts",
     "codex:phase": "node scripts/codex-phase.mjs",
-    "codex:phase:validate": "node scripts/validate-codex-phase.mjs"
+    "codex:phase:validate": "node scripts/validate-codex-phase.mjs",
+    "smoke:lm-studio": "node scripts/lm-studio-smoke.ts"
   },
   "devDependencies": {
     "@types/node": "^26.6.2",
