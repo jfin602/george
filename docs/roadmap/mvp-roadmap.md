@@ -2,15 +2,21 @@
 
 Status: INITIAL ROADMAP
 
-The roadmap deliberately proves the agent loop before adding UI or networking.
+The roadmap deliberately proves the agent loop and its real interactive terminal surface before adding networking or a desktop GUI.
 
-## Phase 1 — Local Agent Foundation
+## Phase 1 — Local Agent Foundation + TUI
 
-Goal: establish a small, testable Node/TypeScript core and prove one streamed local-model turn.
+Goal: establish a small, testable Node/TypeScript core, a Codex-style OpenTUI interface, and one streamed local-model turn.
 
 Scope:
 - Node 24 + TypeScript + ESM repository baseline;
-- CLI entry point;
+- `@opentui/core` presentation dependency, without React initially;
+- interactive TUI entry point;
+- in-place terminal redraw and clean terminal restoration;
+- persistent input plus streamed assistant output;
+- visible model/workspace/status and live agent/tool activity;
+- scrollback, resize handling, and cancellation;
+- strict separation between TUI adapter and agent/application core;
 - configuration loading;
 - typed provider interface;
 - LM Studio Responses API adapter;
@@ -19,10 +25,10 @@ Scope:
 - repository root selection;
 - BOOT/AGENTS-style instruction discovery;
 - read-only tools: file read/list, text search, Git status/diff;
-- deterministic provider/tool fixtures;
+- deterministic provider/tool/TUI-state fixtures where practical;
 - one bounded live LM Studio/Qwen smoke path.
 
-Non-goals: writes, arbitrary shell, autonomous multi-turn editing, browser, web search, daemon, GUI.
+Non-goals: writes, arbitrary shell, autonomous multi-turn editing, browser, web search, daemon, Tauri desktop GUI.
 
 ## Phase 2 — Safe Tool Loop
 
@@ -33,7 +39,7 @@ Scope:
 - multi-turn tool-call loop;
 - process execution with timeout/cancellation;
 - write/patch tools;
-- permission classes and approvals;
+- permission classes and approvals rendered through the TUI;
 - Git dirty-state safeguards;
 - structured errors;
 - fixture-repository integration tests.
@@ -63,20 +69,14 @@ Scope:
 - crash/interruption recovery;
 - child-process cleanup;
 - observability/logging;
-- performance baselines;
+- performance baselines including TUI responsiveness under streaming;
 - extended Qwen qualification.
 
 ## Phase 5 — External Tool Adapters
 
 Goal: add network/browser intelligence without contaminating the core.
 
-Candidates:
-- Parallel Search;
-- Chrome DevTools;
-- GitHub;
-- MCP.
-
-Each adapter gets an explicit trust/permission boundary and can be disabled independently.
+Candidates: Parallel Search, Chrome DevTools, GitHub, and MCP. Each adapter gets an explicit trust/permission boundary and can be disabled independently.
 
 ## Phase 6 — Local Daemon
 
@@ -99,6 +99,7 @@ Goal: provide a polished native application without rewriting the agent.
 Direction:
 - Tauri shell;
 - reuse daemon/application-service interfaces;
+- preserve the same event/command semantics proven by the OpenTUI adapter;
 - session/task UI;
 - permission prompts;
 - tool/event inspection;
@@ -106,11 +107,4 @@ Direction:
 
 ## Later
 
-Only after the local product is reliable:
-- trusted LAN clients;
-- phone/secondary-device control;
-- multiple workspaces/runs;
-- remote inference providers;
-- richer MCP ecosystem;
-- scheduling/background jobs;
-- multi-agent experiments.
+Only after the local product is reliable: trusted LAN clients, phone/secondary-device control, multiple workspaces/runs, remote inference providers, richer MCP ecosystem, scheduling/background jobs, and multi-agent experiments.
