@@ -1,10 +1,12 @@
 # George MVP Roadmap
 
-Status: INITIAL ROADMAP
+Status: CURRENT ROADMAP — PHASE 1 OWNER-CLOSED; PHASE 2 CURRENT
 
 The roadmap deliberately proves the provider, read-only tool foundation, and real interactive terminal surface before autonomous editing, networking, or a desktop GUI.
 
 ## Phase 1 — Local Agent Foundation + TUI
+
+Status: OWNER-CLOSED WITH ACCEPTED NATIVE-TERMINAL / LIVE-MODEL EVIDENCE GAPS
 
 Goal: establish a small, testable Node/TypeScript core, a Codex-style OpenTUI interface, one streamed local-model turn, and independently testable read-only tools.
 
@@ -35,6 +37,8 @@ Scope:
 Non-goals: writes, arbitrary shell/process execution, autonomous multi-turn tool-call cycling, browser, web search, daemon, Tauri desktop GUI.
 
 ## Phase 2 — Safe Tool Loop
+
+Status: CURRENT IMPLEMENTATION GATE — baseline package `0.2.0`
 
 Goal: let the model repeatedly call tools under explicit policy.
 
