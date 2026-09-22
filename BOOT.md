@@ -13,18 +13,25 @@ Before substantial repository-aware planning, implementation, review, architectu
 
 Phase 1 — Local Agent Foundation + TUI — is owner-closed.
 
-Accepted implementation candidate: `dc2dcfcb6563b884cddecc143b1d136ea9c752db` at package `0.1.5`.  
-Formal P6 closeout marker: `39e6a3f178779e2f3a632a6b487fa548bc7d890c` at package `0.1.6`.  
-Owner closeout: `docs/phase-1-owner-closeout.md`.  
+Accepted Phase 1 implementation candidate: `dc2dcfcb6563b884cddecc143b1d136ea9c752db` at package `0.1.5`.  
+Formal Phase 1 P6 closeout marker: `39e6a3f178779e2f3a632a6b487fa548bc7d890c` at package `0.1.6`.  
+Phase 1 owner closeout: `docs/phase-1-owner-closeout.md`.  
 Phase 2 baseline transition: `da599d1c39baf57bbf58bf3a885c8717595759c1` at package `0.2.0`.
 
-The owner explicitly accepts the recorded native-terminal and live LM Studio/Qwen Evidence Gaps for roadmap progression. They remain Evidence Gaps, not Green evidence.
+Phase 2 — Safe Tool Loop — is owner-closed.
 
-**Phase 2 — Safe Tool Loop — is the current implementation gate.**
+Accepted Phase 2 implementation candidate: `79834552775a2ae4c01d7796f5005ba16450e260` at package `0.2.5`.  
+P6 qualification marker: `57ccc6a1b77d99258d4e08e2ca122faa110bbc42` at package `0.2.6`.  
+Formal P7 closeout marker: `0e8a766a77170a07bc290ff346b2d7d5c9a273c6` at package `0.2.7`.  
+Formal Phase 2 closeout: `docs/phase-2-closeout.md`.  
+Phase 2 owner closeout: `docs/phase-2-owner-closeout.md`.  
+Phase 3 baseline transition: package `0.3.0` (transition provenance is recorded in the owner closeout after the baseline commit).
 
-Phase 2 decision authority: `docs/planning/p2-safe-tool-loop/decision-record.md`.
+The owner explicitly accepts the recorded Phase 1 and Phase 2 native-terminal/live LM Studio/Qwen Evidence Gaps for roadmap progression. They remain Evidence Gaps, not Green evidence.
 
-The high-level product and architecture direction remains locked; new work must preserve the accepted Phase 1 boundaries unless Phase 2 explicitly changes them.
+**Phase 3 — Coding Workflow — is the current implementation gate.**
+
+No dedicated Phase 3 decision record exists yet. Until one is approved, the current roadmap plus product/architecture/stability contracts are the Phase 3 authority.
 
 ## Core premise
 
@@ -59,8 +66,8 @@ Read:
 - workflow: `docs/workflow.md`;
 - stability/testing: `docs/stability-contract.md`;
 - roadmap: `docs/roadmap/mvp-roadmap.md`;
-- Phase 2 decisions: `docs/planning/p2-safe-tool-loop/decision-record.md`;
-- Phase 1 decisions/history when needed: `docs/planning/p1-local-agent-foundation/decision-record.md`, `docs/phase-1-owner-closeout.md`.
+- Phase 2 closeout/history when needed: `docs/phase-2-closeout.md`, `docs/phase-2-owner-closeout.md`, `docs/planning/p2-safe-tool-loop/decision-record.md`;
+- Phase 1 closeout/history when needed: `docs/phase-1-owner-closeout.md`, `docs/planning/p1-local-agent-foundation/decision-record.md`.
 
 ## Workflow
 

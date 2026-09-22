@@ -1,8 +1,8 @@
 # George MVP Roadmap
 
-Status: CURRENT ROADMAP — PHASE 1 OWNER-CLOSED; PHASE 2 CURRENT
+Status: CURRENT ROADMAP — PHASE 2 OWNER-CLOSED; PHASE 3 CURRENT
 
-The roadmap deliberately proves the provider, read-only tool foundation, and real interactive terminal surface before autonomous editing, networking, or a desktop GUI.
+The roadmap deliberately proves the provider, read-only tool foundation, real interactive terminal surface, and safe autonomous tool execution before broader coding workflow, networking, or a desktop GUI.
 
 ## Phase 1 — Local Agent Foundation + TUI
 
@@ -38,11 +38,13 @@ Non-goals: writes, arbitrary shell/process execution, autonomous multi-turn tool
 
 ## Phase 2 — Safe Tool Loop
 
-Status: CURRENT IMPLEMENTATION GATE — baseline package `0.2.0`
+Status: OWNER-CLOSED WITH ACCEPTED NATIVE-TERMINAL / LIVE-MODEL EVIDENCE GAPS
 
 Goal: turn the Phase 1 one-turn foundation into a bounded, permission-controlled autonomous tool loop without prematurely building the complete coding workflow.
 
-Decision authority: `docs/planning/p2-safe-tool-loop/decision-record.md`.
+Decision authority: `docs/planning/p2-safe-tool-loop/decision-record.md`.  
+Formal evidence: `docs/phase-2-closeout.md`.  
+Owner closeout: `docs/phase-2-owner-closeout.md`.
 
 Scope:
 - evolve the provider/core contract so George can advertise typed tool schemas and submit structured tool results/continuations;
@@ -97,6 +99,8 @@ Non-goals:
 - multi-agent scheduling.
 
 ## Phase 3 — Coding Workflow
+
+Status: CURRENT IMPLEMENTATION GATE — baseline package `0.3.0`
 
 Goal: make George useful for bounded implementation tasks.
 
