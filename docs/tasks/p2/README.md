@@ -1,11 +1,13 @@
 # Phase 2 Task Stack
 
-Status: IMPLEMENTATION COMPLETE; FORMAL EVIDENCE RECORDED; OWNER CLOSEOUT PENDING
+Status: OWNER-CLOSED WITH ACCEPTED EVIDENCE GAPS
 
 Phase: 2 — Safe Tool Loop  
 Execution folder: `p2`  
 Baseline package: `0.2.0`  
 Baseline main: `30f6ff7e5dc10b701e2a153aed13b982f06c4368`
+
+P1-P7 formal closeout is recorded in `docs/phase-2-closeout.md`. Owner closeout is recorded in `docs/phase-2-owner-closeout.md`. Deterministic qualification is Green; native-terminal and live LM Studio/Qwen qualification remain Evidence Gaps accepted for roadmap progression, not relabeled passes.
 
 Current authority:
 - `BOOT.md`;
@@ -35,28 +37,20 @@ Every prompt is:
 
 `Browser required: no.`
 
-## Execution
+## Evidence
 
-Validate grammar:
+Qualification: `docs/tasks/p2/P6-qualification-evidence.md`.
 
-`npm run codex:phase:validate -- p2`
+Formal evidence closeout: `docs/phase-2-closeout.md`.
 
-Run P1-P6:
+Owner closeout: `docs/phase-2-owner-closeout.md`.
 
-`npm run codex:phase -- p2`
-
-Run including formal evidence closeout:
-
-`npm run codex:phase -- p2 --closeout`
-
-The exact runner owns staging/commits/version verification and rejects `package-lock.json`.
-
-Formal Phase-2 evidence closeout: `docs/phase-2-closeout.md`. Native-terminal and live LM Studio/Qwen evidence remain Evidence Gaps; this pointer does not owner-close Phase 2 or advance the roadmap.
+Deterministic Phase-2 evidence is Green. Native-terminal and live LM Studio/Qwen tool-cycle evidence remain Evidence Gaps accepted for roadmap progression, not relabeled passes.
 
 ## Safety ordering
 
-P3 write/patch and P4 process executors are deliberately implemented before they are advertised to the model. P5 adds the approval port/policy and only then activates these risky tools in the normal agent loop.
+P3 write/patch and P4 process executors were deliberately implemented before they were advertised to the model. P5 added the approval port/policy and only then activated those risky tools in the normal agent loop.
 
 ## Phase boundary
 
-Phase 2 proves the safe autonomous tool loop. Phase 3 owns the broader coding workflow: context budgeting, instruction precedence, comprehensive changed-file tracking, validation workflow, completion summaries, durable session persistence/resume, and first full disposable-repository coding qualification.
+Phase 2 proves the safe autonomous tool loop. Phase 3 owns the broader coding workflow: context budgeting/instruction assembly, changed-file tracking, validation workflow, completion summaries, durable session persistence/resume, and first full disposable-repository coding qualification.
