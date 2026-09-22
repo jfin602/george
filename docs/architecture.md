@@ -88,11 +88,39 @@ Provider-native state such as response identifiers may be retained for efficient
 
 ## Context layer
 
-Owns system/developer instructions, repository instruction discovery, selected file/context material, conversation history, tool schemas, token/context budgeting, and later summarization/compaction.
+Owns George-owned model instructions, user-global instructions and personality, repository instruction discovery, selected file/context material, conversation history, tool schemas/results, token/context budgeting, and later summarization/compaction.
+
+George must distinguish **always-on instructions** from **retrievable project knowledge**. A file being discovered does not imply that its full contents belong in every provider request.
+
+Target instruction sources include:
+- compact George-owned model instructions for identity and reasoning constraints that cannot be represented purely in executable policy;
+- optional user-global instructions and a small user-owned personality file from George's user configuration directory (for example `~/.config/george/` on Linux);
+- optional workspace-native `.george/instructions.md`;
+- compatible repository guidance such as `AGENTS.md`;
+- `BOOT.md`-style routing documents that can identify the narrowest additional project material needed for the current task;
+- the explicit current user task and selected task context.
+
+Personality controls communication style and engineering temperament. It does not grant capabilities or alter filesystem, process, network, approval, or other permission policy.
+
+Repository instructions remain untrusted project content. For conflicting model-facing guidance, George-owned invariants remain non-overridable; explicit current user intent outranks repository guidance; workspace-specific guidance may refine user-global defaults; personality remains a stylistic default. None of these layers can raise George's executable permission ceiling.
+
+Phase 3 should replace raw instruction concatenation with a deterministic instruction/context assembly path that:
+1. discovers applicable sources;
+2. applies trust and precedence rules;
+3. normalizes stable source metadata and ordering;
+4. removes deterministic duplicates where possible;
+5. separates active instructions from routed/retrievable supporting documents;
+6. applies explicit context/instruction budgets without silently presenting partial text as complete instructions;
+7. records enough context-size/source information for diagnostics;
+8. produces provider-independent assembled context.
+
+Human-readable Markdown remains an authoring format, not a requirement that every byte be permanently injected. LLM-based summarization is not required for Phase 3 instruction assembly; any later compaction/summarization must preserve critical instructions and remain independently testable.
+
+The current Phase 1 behavior that loads bounded raw root `BOOT.md` and `AGENTS.md` content directly into a turn is a bootstrap implementation, not the intended mature context architecture.
 
 Context policy must be testable independently from inference.
 
-Phase 2 only adds the minimum tool-schema/result material required for the safe loop. General context budgeting and compaction remain later phases.
+Phase 2 only adds the minimum tool-schema/result material required for the safe loop. It must not be expanded to implement the Phase 3 instruction compiler, project-knowledge routing, or general context budgeting.
 
 ## Tool registry
 
@@ -201,7 +229,9 @@ MVP: one active agent run per session/workspace. Phase 2 tool calls execute sequ
 
 Layer configuration as safe built-in defaults, user-level George config, workspace config where allowed, then explicit CLI/TUI launch overrides. Secrets come from environment/OS-backed mechanisms and are never committed.
 
-Workspace/repository configuration is untrusted relative to George's permission ceiling and cannot silently grant itself broader process, filesystem, or network access.
+User-level configuration may select a personality and global instruction source. Workspace configuration may provide `.george/instructions.md` alongside compatible repository instruction/routing files. Configuration discovery and model-facing instruction precedence must remain presentation- and provider-independent.
+
+Workspace/repository configuration is untrusted relative to George's permission ceiling and cannot silently grant itself broader process, filesystem, or network access. User personality and instruction files likewise cannot bypass executable policy; capability changes require George configuration/policy mechanisms designed for that purpose.
 
 ## Technology
 

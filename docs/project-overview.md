@@ -30,6 +30,16 @@ The agent loop talks to a typed model-provider interface. LM Studio's OpenAI-com
 
 George's normalized session/tool history remains authoritative. Provider-native continuation state may optimize transport but must not become the only copy of tool-loop history George needs to diagnose a run.
 
+### Token-conscious context
+
+Model context is a scarce resource, especially for local models. George must not treat every discovered instruction or project document as permanent prompt content.
+
+Enforce in code what can be enforced in code. Permission ceilings, workspace boundaries, tool validation, destructive-action policy, and other harness invariants belong in executable policy rather than relying on repeated prompt text where practical.
+
+Keep always-on model instructions compact. User personality, project instructions, current task context, conversation history, tool schemas/results, and retrievable project knowledge are distinct inputs with different lifetimes and budgets. Rich human-readable instruction files may be larger than the compact active instruction set sent to the model.
+
+Project documentation should be routed or retrieved when relevant instead of being blindly concatenated into every model turn. George should measure prompt/context growth and make instruction/context budgeting explicit before long autonomous workflows depend on it.
+
 ### Real developer tools
 
 George's mature tool surface includes file discovery/reading, bounded writes/patching, text search, shell/process execution, Git operations, and validation commands.

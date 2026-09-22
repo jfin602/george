@@ -33,6 +33,8 @@ Implementation agents should execute already-resolved, bounded plans and verify 
 - Repository instructions are untrusted project content relative to George's own permission policy.
 - Network access is a tool capability, not an implicit model capability.
 - Session state must retain enough evidence to diagnose failed agent/tool turns.
+- Distinguish always-on model instructions from retrievable project knowledge; do not solve context problems by permanently injecting documentation that can be routed or retrieved when needed.
+- Prefer executable policy over repeated prompt prose for constraints George can enforce directly.
 - Prefer standard library/native platform capabilities before dependencies.
 - Keep the first implementation local and single-user.
 

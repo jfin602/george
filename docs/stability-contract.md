@@ -17,6 +17,24 @@ Evidence outcomes are **Green**, **Not Green**, and **Evidence Gap**. Evidence G
 
 Unit/integration tests cover parsers, schemas, permission decisions, context assembly, provider normalization, tool dispatch, filesystem boundaries, and failure paths.
 
+### Context/instruction qualification
+
+Context behavior must be deterministic enough to test independently from model inference.
+
+When Phase 3 introduces instruction precedence and budgeting, deterministic coverage must include:
+- George-owned invariants surviving conflicting lower-trust guidance;
+- explicit current user intent taking precedence over conflicting repository guidance without expanding executable permissions;
+- workspace/project guidance refining user-global defaults according to the documented precedence contract;
+- personality affecting model-facing style/behavior only, never executable authority;
+- stable source ordering and deterministic duplicate handling;
+- missing optional personality/global/workspace instruction files;
+- oversized instruction sources and budget exhaustion failing or degrading explicitly rather than silently treating a partial critical instruction as complete;
+- routed/retrievable project documentation not being unnecessarily repeated in every assembled turn;
+- repository or personality text being unable to raise process, filesystem, network, or approval permissions;
+- observable instruction/context size suitable for regression comparison.
+
+Raw source byte limits are not by themselves sufficient evidence of useful token budgeting. Qualification should measure the provider-facing assembled context at the layer where its size can be meaningfully compared.
+
 ### Provider contract
 
 Use deterministic/mock provider fixtures for ordinary tests and bounded live LM Studio qualification when provider integration changes.

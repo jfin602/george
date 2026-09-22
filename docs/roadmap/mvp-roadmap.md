@@ -101,8 +101,14 @@ Non-goals:
 Goal: make George useful for bounded implementation tasks.
 
 Scope:
-- context budgeting;
-- project instruction precedence;
+- token-aware context budgeting with observable instruction/context size;
+- compact George-owned model instructions with code-enforced policy kept out of prompt text where practical;
+- optional user-global instructions and small user-owned personality loading;
+- George-native workspace instructions via `.george/instructions.md`;
+- compatible `AGENTS.md` / `BOOT.md` discovery and routing;
+- deterministic instruction trust/precedence, stable ordering, and duplicate suppression where possible;
+- separation of always-on active instructions from just-in-time project-document retrieval/routing;
+- provider-independent assembled context without requiring LLM summarization for instruction compilation;
 - changed-file tracking;
 - validation command workflow;
 - completion summaries;
