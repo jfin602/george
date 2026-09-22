@@ -1,0 +1,49 @@
+TASK: Phase 1 / P3 — Workspace, read-only tools, and one-turn service
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Terra High`.
+- Browser required: no.
+
+VERSIONING
+- This prompt's assigned project version is `0.1.3`.
+
+GOAL
+
+Build the Phase-1 workspace/context boundary, read-only developer tools, and reusable one-provider-request application service. Read current authority and inspect the P1/P2 contracts before editing.
+
+Workspace/context requirements:
+- resolve one canonical workspace root;
+- discover root `BOOT.md` first and root `AGENTS.md` second when present;
+- bound instruction bytes and preserve deterministic ordering;
+- keep repository-provided instructions below George's own policy/context authority;
+- do not add recursive/nested instruction precedence yet.
+
+Read-only tools:
+- typed definitions/results for file read, directory/list discovery, bounded text search, Git status, and Git diff;
+- canonical realpath workspace enforcement;
+- reject traversal, absolute-path escape, and symlink escape;
+- bound read bytes, listing entries, search work/results, Git stdout/stderr and command duration;
+- implement text search without exposing arbitrary shell execution;
+- Git tools may invoke only fixed read-only argument vectors with `shell: false`, workspace cwd and cancellation/timeout;
+- preserve dirty working trees and never run mutating Git commands.
+
+Application service:
+- accept a user submission/session snapshot and invoke the configured provider exactly once;
+- assemble George-owned context, bounded repository instructions, conversation/user input, then stream normalized application events;
+- cleanly represent completion, cancellation and failure;
+- if the provider produces a tool/function call, expose/retain it as deferred Phase-1 output but do not execute it and do not make a second provider request;
+- expose the read-only tool executor as reusable infrastructure for Phase 2 and deterministic tests, not as an autonomous loop.
+
+Do not add writes/patches, arbitrary shell/process execution, permission prompts, OpenTUI, or daemon/network services.
+
+Set `package.json` version to `0.1.3`.
+
+Required proof:
+- instruction ordering/size limits;
+- traversal and symlink-escape denial;
+- bounded read/list/search behavior;
+- fixed read-only Git status/diff behavior and dirty-tree preservation;
+- one-request application flow for text, cancellation, provider failure, and tool-call output;
+- explicit test that no model -> tool -> result -> model loop occurs;
+- existing provider/core/runner tests, typecheck and `git diff --check` pass;
+- no `package-lock.json` exists.
