@@ -11,13 +11,18 @@ Before substantial repository-aware planning, implementation, review, architectu
 
 ## Current state
 
-Phase 1 implementation is complete. Its deterministic qualification is Green,
-but Phase 1 is not stability qualified: native-terminal and live
-LM Studio/Qwen evidence remain recorded Evidence Gaps in
-`docs/phase-1-closeout.md`. Phase 2 is the next implementation gate; do not
-reinterpret either gap as a pass.
+Phase 1 — Local Agent Foundation + TUI — is owner-closed.
 
-The high-level product and architecture direction is locked; implementation details should stay deliberately small until Phase 1 proves the local agent loop.
+Accepted implementation candidate: `dc2dcfcb6563b884cddecc143b1d136ea9c752db` at package `0.1.5`.  
+Formal P6 closeout marker: `39e6a3f178779e2f3a632a6b487fa548bc7d890c` at package `0.1.6`.  
+Owner closeout: `docs/phase-1-owner-closeout.md`.  
+Phase 2 baseline transition: `da599d1c39baf57bbf58bf3a885c8717595759c1` at package `0.2.0`.
+
+The owner explicitly accepts the recorded native-terminal and live LM Studio/Qwen Evidence Gaps for roadmap progression. They remain Evidence Gaps, not Green evidence.
+
+**Phase 2 — Safe Tool Loop — is the current implementation gate.**
+
+The high-level product and architecture direction remains locked; new work must preserve the accepted Phase 1 boundaries unless Phase 2 explicitly changes them.
 
 ## Core premise
 
