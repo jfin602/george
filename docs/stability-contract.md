@@ -157,6 +157,34 @@ Phase 4 durable-session qualification must additionally prove:
 
 Crash-safe side-effect replay/reconciliation remains a Phase 5 concern; Phase 4 evidence must not imply that capability exists.
 
+### Phase 5 long-run reliability qualification
+
+Phase 5 long-run behavior must be deterministic enough to validate the policy and evidence model independently from live-model quality.
+
+Coverage must additionally prove:
+- provider-facing compaction preserves George-owned invariants, explicit current user intent, applicable current project guidance, unresolved failures/validation evidence, pending approvals, interrupted/ambiguous side effects, and current recovery state;
+- each compaction checkpoint is schema/version identified and retains provenance for the durable history range it summarizes;
+- multiple compaction cycles do not replace or silently mutate canonical normalized history;
+- compaction failure and context/budget exhaustion degrade or terminate explicitly rather than presenting truncated critical state as complete;
+- run soft-pressure behavior and hard budget exhaustion are deterministic and model/repository/extension content cannot expand configured limits;
+- replay-safe retry classification is explicit, retry/backoff is bounded and cancellable, and every attempt/exhaustion outcome is observable;
+- writes, patches, approvals, arbitrary processes, and other ambiguous side effects are never transparently retried;
+- interrupted recovery can classify proven-complete, proven-incomplete, interrupted, and outcome-unknown operations from durable plus observable evidence without rewriting earlier events;
+- recovery leaves ambiguous process side effects explicit rather than claiming universal exactly-once behavior;
+- child-process cleanup/cancellation retains structured evidence for success, failure, and uncertainty without implying workspace or OS sandboxing;
+- diagnostic logging uses stable session/turn/operation correlation, bounded/redacted fields, and bounded retention;
+- diagnostic observability does not automatically expose raw file/write/patch bodies, unrestricted stdout/stderr, unrestricted environment state, secrets, or provider payloads;
+- lifecycle hooks obey deterministic ordering and enable/disable state;
+- duplicate/conflicting hook registration is handled deterministically and visibly;
+- hook timeout, cancellation, malformed output, crash/failure isolation, bounded I/O, and sanitized environment behavior are covered;
+- hook execution cannot bypass ToolRegistry validation, process trust boundaries, approval policy, workspace rules, or canonical session/validation evidence;
+- one failing hook cannot corrupt unrelated hook state or the surrounding agent run;
+- repeated long-run operation is characterized for context growth, compaction cost, memory growth, durable session/log growth, cleanup/recovery cost, and hook overhead;
+- OpenTUI remains usable under representative long streaming plus large chronological work-log updates;
+- one integrated deterministic long coding workflow crosses context pressure, compacts, continues tool use, validates, persists, and completes truthfully;
+- one integrated interrupted workflow reopens and reconciles without blind side-effect replay;
+- all applicable Phase 2 permission/process/Git safeguards, Phase 3 context trust/precedence rules, and Phase 4 durable-session/evidence semantics remain intact.
+
 ### Phase 4 coding-workflow qualification
 
 The first full coding-workflow fixture must exercise the integrated path rather than proving each feature only in isolation. Deterministic coverage must include:
@@ -178,6 +206,8 @@ Changed-file evidence must distinguish observation from attribution. When an app
 
 For release candidates that change the live agent path, exercise the exact supported LM Studio/Qwen configuration and record the model/provider/runtime used.
 
+For Phase 5, when the supported local setup is available, exercise the pinned Qwen3-Coder/LM Studio profile through a representative longer coding run that crosses context pressure, performs at least one compaction, continues useful tool work afterward, validates, and reaches truthful completion. Separately characterize one bounded interruption/reopen/reconciliation path. Record compaction count/provenance, context diagnostics before/after pressure, retry/recovery events where exercised, validation outcome, and any Evidence Gaps. Deterministic fixtures remain the correctness authority.
+
 For Phase 3, when the supported local setup is available, record the exact Qwen model/quant/runtime profile and compare George's estimated provider-facing size with provider-reported usage where available. Include at least one representative ordinary-context tool cycle and, when feasible without manufacturing product behavior, one bounded higher-context/pressure characterization. Live behavior characterizes the profile; deterministic fixtures remain the correctness authority.
 
 For Phase 2, attempt one bounded live tool-use cycle that proves tool schemas are accepted, a tool call can be returned to George, and a structured result can continue to a final response.
@@ -189,6 +219,8 @@ A model producing plausible text is not sufficient evidence that tool loops, per
 When approval or tool lifecycle UI changes, exercise the real supported terminal path where available: tool request presentation, allow/deny interaction, cancellation, continued streaming, draft preservation, resize behavior, and terminal restoration.
 
 A test renderer remains useful deterministic evidence but is not automatically proof of native-terminal behavior.
+
+For Phase 5, native-terminal qualification should additionally characterize responsiveness during representative long streaming plus accumulated execution/work-log history, including cancellation and terminal restoration under that load.
 
 ## Regression permanence
 
@@ -240,7 +272,7 @@ At minimum, deterministic and integrated coverage should include:
 
 ## Performance
 
-Measure where architecture can regress materially: prompt/context size, time-to-first-token, tool-loop latency, process cleanup, memory growth, session-log growth, and, when implemented, project-graph indexing/update cost.
+Measure where architecture can regress materially: prompt/context size and growth, compaction cost, time-to-first-token, tool-loop latency, process cleanup, interruption/recovery/reopen cost, hook overhead, memory growth, session-log/diagnostic-log growth, OpenTUI responsiveness under long streaming/work-log load, and, when implemented, project-graph indexing/update cost.
 
 Do not establish hard performance budgets until baseline measurements exist; once adopted, keep them versioned and explicit.
 
