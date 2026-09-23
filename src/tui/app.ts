@@ -14,7 +14,7 @@ import {
 } from '@opentui/core';
 
 import { CodingWorkflowApplicationService, type AgentLoopApplicationService } from '../application/index.ts';
-import { createSession, type ApprovalRequest, type ApprovalResolver, type ApplicationEvent, type ContextDiagnostics, type Session, type TranscriptEntry, type WorkItem } from '../core/index.ts';
+import { createSession, type ApprovalRequest, type ApprovalResolver, type ApplicationEvent, type ContextDiagnostics, type Measurement, type Session, type TranscriptEntry, type WorkItem } from '../core/index.ts';
 
 export const COMPOSER_KEY_BINDINGS: TextareaKeyBinding[] = [
   { name: 'return', action: 'submit' },
@@ -59,6 +59,8 @@ export type GeorgeTuiOptions = Readonly<{
   approvals: ApprovalResolver;
   clipboard?: Clipboard;
   thinkingClock?: ThinkingClock;
+  /** Optional derived timing observer; presentation timing never changes canonical response timing. */
+  onMeasurement?: (measurement: Measurement) => void;
 }>;
 
 export type TranscriptDiagnosticEntry = Readonly<{
@@ -287,6 +289,7 @@ export class GeorgeTui {
   private readonly clipboard: Clipboard;
   private readonly ownsClipboard: boolean;
   private readonly thinkingClock: ThinkingClock;
+  private readonly onMeasurement: ((measurement: Measurement) => void) | undefined;
   private readonly done: Promise<void>;
   private resolveDone!: () => void;
   private controller: AbortController | undefined;
@@ -306,6 +309,7 @@ export class GeorgeTui {
     this.clipboard = options.clipboard ?? createHostClipboard();
     this.ownsClipboard = options.clipboard === undefined;
     this.thinkingClock = options.thinkingClock ?? { setInterval, clearInterval };
+    this.onMeasurement = options.onMeasurement;
     const agent = options.service instanceof CodingWorkflowApplicationService ? options.service.agent : options.service;
     this.session = options.session ?? createSession({ workspace: options.workspace ?? agent.workspace.root });
     this.statusDetails = `${options.provider} · ${options.model} · session ${this.session.id} · ${this.session.workspace}`;
@@ -573,6 +577,7 @@ export class GeorgeTui {
   }
 
   private async revealAssistant(text: string): Promise<void> {
+    const startedAt = Date.now();
     const index = this.session.transcript.length - 1;
     if (!text || this.session.transcript[index]?.role !== 'assistant') return;
     this.revealedAssistant = { index, text: '' };
@@ -586,6 +591,7 @@ export class GeorgeTui {
     }
     this.revealedAssistant = undefined;
     this.refreshTranscript();
+    try { this.onMeasurement?.({ workload: 'opentui', name: 'final_response.reveal_duration', value: Math.max(0, Date.now() - startedAt), unit: 'ms', fields: { bytes: Buffer.byteLength(text, 'utf8') } }); } catch { /* Presentation measurements cannot disrupt the transcript. */ }
   }
 
   private async revealPause(): Promise<void> {

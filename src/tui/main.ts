@@ -1,7 +1,7 @@
 import { createCliRenderer } from '@opentui/core';
 
 import { createCodingWorkflowApplicationService } from '../application/index.ts';
-import { LocalSessionStore, PendingApprovalPort, resolveGeorgeConfig } from '../core/index.ts';
+import { DiagnosticSink, LocalSessionStore, PendingApprovalPort, resolveGeorgeConfig } from '../core/index.ts';
 import { LmStudioResponsesProvider } from '../provider/index.ts';
 import { GeorgeTui } from './app.ts';
 
@@ -23,6 +23,7 @@ async function main(): Promise<void> {
   });
   const approvals = new PendingApprovalPort();
   const store = new LocalSessionStore();
+  const diagnostics = new DiagnosticSink();
   const session = resume === undefined ? undefined : await store.open(resume, config.workspace);
   const service = await createCodingWorkflowApplicationService({
     provider: new LmStudioResponsesProvider(config.provider),
@@ -32,6 +33,7 @@ async function main(): Promise<void> {
     runBudget: config.runBudget,
     userConfigRoot: config.userConfigRoot,
     sessionStore: store,
+    diagnostics,
   });
   if (session) {
     await service.agent.recover(session);
@@ -46,6 +48,7 @@ async function main(): Promise<void> {
       provider: 'LM Studio',
       model: config.provider.model,
       approvals,
+      onMeasurement: (measurement) => diagnostics.measure(measurement),
       session,
     });
     await tui.run();

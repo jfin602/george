@@ -127,7 +127,7 @@ class FailingThinkingProvider implements ModelProvider {
 async function tui(
   provider: ModelProvider,
   options: Omit<OneTurnServiceOptions, 'provider' | 'workspace' | 'approvalPort'> = {},
-  uiOptions: Pick<GeorgeTuiOptions, 'clipboard' | 'thinkingClock'> = {},
+  uiOptions: Pick<GeorgeTuiOptions, 'clipboard' | 'thinkingClock' | 'onMeasurement'> = {},
 ) {
   const workspace = await mkdtemp(join(tmpdir(), 'george-tui-'));
   await writeFile(join(workspace, 'BOOT.md'), 'fixture boot');
@@ -168,7 +168,8 @@ test('test renderer shows identity, configuration, streamed text, and read-only 
 
 test('committed final answers reveal progressively without delaying canonical durability, and cancellation stops the reveal', async (t) => {
   const answer = `START ${'x'.repeat(3_000)} END`;
-  const item = await tui(new ScriptedProvider([{ type: 'provider.text.delta', delta: answer }, { type: 'provider.response.completed' }]));
+  const measurements: import('../../../src/core/index.ts').Measurement[] = [];
+  const item = await tui(new ScriptedProvider([{ type: 'provider.text.delta', delta: answer }, { type: 'provider.response.completed' }]), {}, { onMeasurement: (measurement) => measurements.push(measurement) });
   const state = await mkdtemp(join(tmpdir(), 'george-tui-reveal-'));
   t.after(async () => {
     await cleanup(item);
@@ -183,6 +184,7 @@ test('committed final answers reveal progressively without delaying canonical du
   item.app.escape();
   await item.app.waitForIdle();
   assert.ok(Date.now() - began < 2_000);
+  assert.equal(measurements.some((item) => item.name === 'final_response.reveal_duration' && item.unit === 'ms'), true);
 
   const store = new LocalSessionStore({ root: state });
   await store.save(item.app.session);

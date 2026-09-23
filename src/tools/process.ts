@@ -47,7 +47,7 @@ export type ProcessToolResult = Readonly<{
   exitCode: number | null;
   signal: string | null;
   outcome: 'completed' | 'failed' | 'timed_out' | 'spawn_failed';
-  cleanup?: Readonly<{ attempted: true; outcome: 'completed' | 'uncertain'; platform: 'linux' | 'win32' | 'unsupported' }>;
+  cleanup?: Readonly<{ attempted: true; outcome: 'completed' | 'uncertain'; platform: 'linux' | 'win32' | 'unsupported'; durationMs: number }>;
 }>;
 
 export type ProcessToolLimits = Readonly<{
@@ -154,17 +154,19 @@ async function signalProcesses(processes: readonly LinuxIdentity[], signal: Node
 }
 
 async function terminateTree(pid: number): Promise<NonNullable<ProcessToolResult['cleanup']>> {
+  const startedAt = Date.now();
+  const done = (outcome: 'completed' | 'uncertain', platform: 'linux' | 'win32' | 'unsupported') => ({ attempted: true as const, outcome, platform, durationMs: Math.max(0, Date.now() - startedAt) });
   if (platform() === 'win32') {
     await new Promise<void>((resolve) => {
       const taskkill = spawn('taskkill', ['/pid', String(pid), '/T', '/F'], { shell: false, stdio: 'ignore', windowsHide: true });
       taskkill.once('error', () => resolve());
       taskkill.once('close', () => resolve());
     });
-    return { attempted: true, outcome: 'uncertain', platform: 'win32' };
+    return done('uncertain', 'win32');
   }
-  if (platform() !== 'linux') return { attempted: true, outcome: 'uncertain', platform: 'unsupported' };
+  if (platform() !== 'linux') return done('uncertain', 'unsupported');
   const root = await linuxIdentity(pid);
-  if (!root) return { attempted: true, outcome: 'completed', platform: 'linux' };
+  if (!root) return done('completed', 'linux');
   await signalProcesses([root], 'SIGSTOP');
   const targets = [...await linuxDescendants(pid).catch(() => []), root];
   await signalProcesses(targets, 'SIGTERM');
@@ -174,7 +176,7 @@ async function terminateTree(pid: number): Promise<NonNullable<ProcessToolResult
     const current = await linuxIdentity(target.pid);
     return current?.startTime === target.startTime;
   }));
-  return { attempted: true, outcome: survivors.some(Boolean) ? 'uncertain' : 'completed', platform: 'linux' };
+  return done(survivors.some(Boolean) ? 'uncertain' : 'completed', 'linux');
 }
 
 export class ProcessCancellationError extends GeorgeError {
@@ -236,7 +238,7 @@ export function createProcessToolExecutor(workspace: Workspace, configuredLimits
       let settled = false;
       let termination: Promise<NonNullable<ProcessToolResult['cleanup']>> | undefined;
       const stop = (): Promise<NonNullable<ProcessToolResult['cleanup']>> => termination ??= (async () => {
-        if (child.pid === undefined) return { attempted: true, outcome: 'uncertain', platform: 'unsupported' };
+        if (child.pid === undefined) return { attempted: true, outcome: 'uncertain', platform: 'unsupported', durationMs: 0 };
         return terminateTree(child.pid);
       })();
       const timeout = setTimeout(() => { timedOut = true; void stop(); }, timeoutMs);

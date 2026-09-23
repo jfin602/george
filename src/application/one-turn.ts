@@ -27,6 +27,7 @@ import {
   type ApplicationEvent,
   type ContextDiagnostics,
   type ContextProfile,
+  type DiagnosticObserver,
   type GeorgeErrorShape,
   type ModelProvider,
   type ProviderContinuation,
@@ -76,6 +77,8 @@ export type OneTurnServiceOptions = Readonly<{
   retrySleeper?: RetrySleeper;
   approvalPort?: ApprovalPort;
   hooks?: readonly HookRegistration[];
+  /** Derived observability only; it cannot affect session, provider, or tool execution. */
+  diagnostics?: DiagnosticObserver;
 }>;
 
 export type AgentLoopServiceOptions = OneTurnServiceOptions;
@@ -182,6 +185,7 @@ export class AgentLoopApplicationService {
   private readonly retrySleeper: RetrySleeper;
   private readonly recovery: RecoveryCoordinator;
   readonly hooks: HookRegistry;
+  private readonly diagnostics: DiagnosticObserver | undefined;
   private readonly projections = new WeakMap<Session, WorkProjection>();
   readonly workspace: Workspace;
 
@@ -203,6 +207,7 @@ export class AgentLoopApplicationService {
     providerRetryPolicy: ProviderRetryPolicy,
     retrySleeper: RetrySleeper,
     hooks: HookRegistry,
+    diagnostics?: DiagnosticObserver,
   ) {
     this.provider = provider;
     this.workspace = workspace;
@@ -222,6 +227,7 @@ export class AgentLoopApplicationService {
     this.retrySleeper = retrySleeper;
     this.recovery = new RecoveryCoordinator(workspace);
     this.hooks = hooks;
+    this.diagnostics = diagnostics;
   }
 
   async skillCatalog(): Promise<SkillCatalog> {
@@ -330,14 +336,17 @@ export class AgentLoopApplicationService {
     const events = event.type === 'turn.completed' || event.type === 'turn.cancelled' || event.type === 'turn.failed'
       ? [...projected, event] : [event, ...projected];
     for (const item of events) appendSessionEvent(session, item);
+    try { this.diagnostics?.observe(session, event); } catch { /* Diagnostics are derived and cannot interrupt canonical execution. */ }
     return events;
   }
 
   /** Appends only read-observed recovery decisions; it never replays an operation. */
   async recover(session: Session): Promise<readonly ApplicationEvent[]> {
+    const startedAt = this.clock();
     const events: ApplicationEvent[] = [];
     for (const decision of await this.recovery.observe(session)) events.push(...this.record(session, decision));
     session.interruptions = classifySessionInterruptions(session.events);
+    try { this.diagnostics?.measure({ workload: 'agent-loop', name: 'recovery.reopen_latency', value: Math.max(0, this.clock() - startedAt), unit: 'ms', fields: { decisions: events.filter((event) => event.type === 'recovery.decision').length } }); } catch { /* Diagnostics are derived and cannot interrupt recovery. */ }
     return events;
   }
 
@@ -674,6 +683,7 @@ export async function createAgentLoopApplicationService(
     validateProviderRetryPolicy(options.providerRetryPolicy ?? DEFAULT_PROVIDER_RETRY_POLICY),
     options.retrySleeper ?? sleepForRetry,
     (() => { const hooks = new HookRegistry(); for (const hook of options.hooks ?? []) hooks.register(hook); return hooks; })(),
+    options.diagnostics,
   );
 }
 

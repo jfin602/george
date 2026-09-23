@@ -1,6 +1,7 @@
 export * from './cancellation.ts';
 export * from './approval.ts';
 export * from './config.ts';
+export * from './diagnostics.ts';
 export * from './errors.ts';
 export * from './events.ts';
 export * from './hooks.ts';
