@@ -10,6 +10,7 @@ import {
   resolveWorkspaceRoot,
   resolveWorkspaceMutationPath,
   resolveWorkspacePath,
+  resolveGeorgeUserConfigRoot,
   validateContextProfile,
   type ApprovalPort,
   type ApprovalRequest,
@@ -25,6 +26,7 @@ import {
 } from '../core/index.ts';
 import { assembleContext, ContextAssemblyError, type AssembledContext } from '../context/index.ts';
 import { join } from 'node:path';
+import { defaultSkillRoots, SkillRegistry, type SkillCatalog, type SkillRoots } from '../skills/index.ts';
 import {
   createProcessToolExecutor,
   createReadOnlyToolExecutor,
@@ -43,6 +45,10 @@ export type OneTurnServiceOptions = Readonly<{
   georgeInstructions?: string;
   contextProfile?: ContextProfile;
   userConfigRoot?: string;
+  skillRoots?: Partial<SkillRoots>;
+  maxSkillBytes?: number;
+  maxSkillMetadataBytes?: number;
+  maxSkills?: number;
   maxContextSourceBytes?: number;
   readOnlyLimits?: ReadOnlyToolLimits;
   maxToolCalls?: number;
@@ -69,6 +75,7 @@ export type OneTurnSubmission = Readonly<{
   signal?: AbortSignal;
   timeoutMs?: number;
   routedDocuments?: readonly string[];
+  activatedSkills?: readonly string[];
 }>;
 
 function conversation(transcript: readonly TranscriptEntry[]): string {
@@ -109,6 +116,7 @@ export class AgentLoopApplicationService {
   private readonly maxToolCalls: number;
   private readonly maxToolRounds: number;
   private readonly approvalPort: ApprovalPort;
+  private readonly skills: SkillRegistry;
   readonly workspace: Workspace;
 
   constructor(
@@ -122,6 +130,7 @@ export class AgentLoopApplicationService {
     maxToolCalls: number,
     maxToolRounds: number,
     approvalPort: ApprovalPort,
+    skills: SkillRegistry,
   ) {
     this.provider = provider;
     this.workspace = workspace;
@@ -133,6 +142,11 @@ export class AgentLoopApplicationService {
     this.maxToolCalls = maxToolCalls;
     this.maxToolRounds = maxToolRounds;
     this.approvalPort = approvalPort;
+    this.skills = skills;
+  }
+
+  async skillCatalog(): Promise<SkillCatalog> {
+    return this.skills.catalog();
   }
 
   private async approvalRequest(callId: string, validated: ValidatedToolCall, signal?: AbortSignal): Promise<ApprovalRequest | undefined> {
@@ -171,12 +185,14 @@ export class AgentLoopApplicationService {
       if (submission.signal?.aborted) throw cancellationError(submission.signal);
       let context: AssembledContext;
       try {
+        const activatedSkills = submission.activatedSkills === undefined ? undefined : await this.skills.activate(submission.activatedSkills);
         context = await assembleContext({
           invariants: this.georgeInstructions, userInput: submission.input,
           ...(priorTranscript.length === 0 ? {} : { conversation: conversation(priorTranscript) }),
           workspace: this.workspace,
           ...(this.userConfigRoot === undefined ? {} : { userGlobalInstructionsPath: join(this.userConfigRoot, 'instructions.md'), personalityPath: join(this.userConfigRoot, 'personality.md') }),
           ...(submission.routedDocuments === undefined ? {} : { routedDocuments: submission.routedDocuments }),
+          ...(activatedSkills === undefined ? {} : { activatedSkills }),
           normalizedToolDefinitions: JSON.stringify(this.registry.definitions), maxTokens: this.profile.providerInputTokens, optionalMaxTokens: this.profile.softPressureTokens,
           ...(this.maxContextSourceBytes === undefined ? {} : { maxSourceBytes: this.maxContextSourceBytes }),
         });
@@ -288,6 +304,9 @@ export async function createAgentLoopApplicationService(
   const readOnly = createReadOnlyToolExecutor(workspace, options.readOnlyLimits);
   const mutation = createWorkspaceMutationToolExecutor(workspace);
   const process = createProcessToolExecutor(workspace);
+  const userConfigRoot = options.userConfigRoot ?? resolveGeorgeUserConfigRoot();
+  const roots = defaultSkillRoots(userConfigRoot, workspace.root);
+  const skills = new SkillRegistry({ ...roots, ...options.skillRoots }, { maxSkillBytes: options.maxSkillBytes, maxMetadataBytes: options.maxSkillMetadataBytes, maxSkills: options.maxSkills });
   return new AgentLoopApplicationService(
     options.provider,
     workspace,
@@ -299,6 +318,7 @@ export async function createAgentLoopApplicationService(
     positive(options.maxToolCalls, DEFAULT_MAX_TOOL_CALLS, 'maxToolCalls'),
     positive(options.maxToolRounds, DEFAULT_MAX_TOOL_ROUNDS, 'maxToolRounds'),
     options.approvalPort ?? denyApprovalPort,
+    skills,
   );
 }
 

@@ -101,3 +101,23 @@ test('required sources fail the budget while optional sources are omitted whole 
   assert.equal(constrained.sources.find((source) => source.id === 'user:global-instructions')?.disposition, 'omitted');
   assert.doesNotMatch(constrained.rendered.guidance, /global material|routed material/);
 });
+
+test('activated skill origins have explicit precedence below current user intent', async (t) => {
+  const root = await fixture();
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const context = await assemble(root, {
+    activatedSkills: [
+      { id: 'user:style', origin: 'user', text: 'user skill' },
+      { id: 'workspace:repo', origin: 'workspace', text: 'workspace skill' },
+      { id: 'builtin:base', origin: 'builtin', text: 'builtin skill' },
+    ],
+  });
+  const skills = context.sources.filter((source) => source.kind === 'activated-skill');
+  assert.deepEqual(skills.map((source) => [source.id, source.origin, source.trust, source.precedence]), [
+    ['skill:builtin:base', 'builtin-skill', 'builtin-skill', 20],
+    ['skill:workspace:repo', 'workspace-skill', 'workspace-skill', 30],
+    ['skill:user:style', 'user-skill', 'user-skill', 40],
+  ]);
+  assert.ok(context.rendered.guidance.indexOf('invariant') < context.rendered.guidance.indexOf('builtin skill'));
+  assert.match(context.rendered.conversation, /user task/);
+});

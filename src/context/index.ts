@@ -26,8 +26,8 @@ export type ContextSourceKind =
   | 'activated-skill'
   | 'tool-definition-overhead';
 
-export type ContextSourceOrigin = 'george' | 'user' | 'workspace' | 'skill' | 'tooling';
-export type ContextTrust = 'invariant' | 'user-intent' | 'workspace-untrusted' | 'user-default' | 'personality' | 'tooling';
+export type ContextSourceOrigin = 'george' | 'user' | 'workspace' | 'builtin-skill' | 'user-skill' | 'workspace-skill' | 'tooling';
+export type ContextTrust = 'invariant' | 'user-intent' | 'workspace-untrusted' | 'user-default' | 'personality' | 'builtin-skill' | 'user-skill' | 'workspace-skill' | 'tooling';
 export type ContextDisposition = 'active' | 'routed' | 'omitted' | 'deferred' | 'duplicate' | 'failed';
 
 export type ContextSource = Readonly<{
@@ -55,7 +55,7 @@ export type ContextFileLoad = Readonly<
 export type ActivatedContextSkill = Readonly<{
   id: string;
   text: string;
-  origin?: ContextSourceOrigin;
+  origin: 'builtin' | 'user' | 'workspace';
 }>;
 
 export type ContextAssemblyOptions = Readonly<{
@@ -275,7 +275,12 @@ export async function assembleContext(options: ContextAssemblyOptions): Promise<
     loadBoundedContextFile(options.personalityPath, maxSourceBytes),
   ));
   for (const [order, skill] of (options.activatedSkills ?? []).entries()) {
-    candidates.push(optional({ id: `skill:${skill.id}`, kind: 'activated-skill', origin: skill.origin ?? 'skill', trust: 'workspace-untrusted', precedence: 35, order, required: false, channel: 'guidance' }, skill.text));
+    const source = skill.origin === 'builtin'
+      ? { origin: 'builtin-skill' as const, trust: 'builtin-skill' as const, precedence: 20 }
+      : skill.origin === 'user'
+        ? { origin: 'user-skill' as const, trust: 'user-skill' as const, precedence: 40 }
+        : { origin: 'workspace-skill' as const, trust: 'workspace-skill' as const, precedence: 30 };
+    candidates.push(optional({ id: `skill:${skill.id}`, kind: 'activated-skill', ...source, order, required: false, channel: 'guidance' }, skill.text));
   }
 
   const ordered = candidates.sort((left, right) => left.precedence - right.precedence || left.order - right.order || left.id.localeCompare(right.id));
