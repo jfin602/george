@@ -1,0 +1,50 @@
+TASK: Phase 5 / P7 — Integrated Phase 5 qualification
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Terra High`.
+- Browser required: no.
+
+VERSIONING
+- This prompt's assigned project version is `0.5.7`.
+
+GOAL
+
+Qualify and narrowly harden the exact Phase-5 reliability + long-runs candidate from P1-P6. Do not broaden product scope.
+
+Read `BOOT.md`, all current product/architecture/workflow/stability contracts, the Phase-5 decision record, assessment/implementation plan, and exact P1-P6 source/tests.
+
+Build/run the deterministic Phase-5 qualification matrix required by `docs/stability-contract.md`.
+
+Create at least one integrated disposable Git-repository/session fixture that begins from qualified Phase-4 behavior and then accumulates enough completed history to cross configured context pressure; creates a versioned provenance-bearing compaction checkpoint; retains canonical transcript/events; keeps a recent raw tail; continues useful provider/tool work after compaction; performs approved mutation/process activity; validates through the canonical process/approval boundary; persists structured completion; and reopens cleanly.
+
+Exercise multiple compaction cycles or an equivalent deterministic checkpoint-chain case and prove no silent transcript/history replacement, skipped coverage, authority promotion, or critical unresolved-state loss.
+
+Exercise P1 budgets using deterministic small limits: soft pressure, provider/tool/process/context accounting where implemented, wall-clock/cancellation behavior, and explicit hard exhaustion.
+
+Exercise P3 retries with a provider failure before response-start that succeeds after bounded backoff. Separately fail after response-start/output and prove there is no automatic retry, duplicate assistant transcript, or duplicate tool side effect.
+
+Exercise interruption/reconciliation for mutation, process, approval, and provider continuation. Prove positive write reconciliation only from matching safe hash/byte evidence; ambiguous patch/process outcomes remain explicit; prior history is not rewritten; no write/process/approval/provider continuation is blindly replayed.
+
+Exercise process timeout/cancellation/descendant cleanup on the supported local platform and record cleanup success/failure/uncertainty without claiming OS sandboxing or unsupported cross-platform proof.
+
+Exercise every normalized hook boundary implemented in P5. Cover deterministic ordering, enable/disable, duplicate/conflict behavior, timeout/cancellation, malformed output, one failing hook, process-hook approval, recursive-hook suppression, bounded payloads, sanitized environment, and inability to bypass ToolRegistry/approval/canonical evidence.
+
+Exercise P6 diagnostics: correlation, redaction, sink-failure isolation, rotation/retention, and repeated-run session/log/memory growth characterization. Verify secrets/raw bodies/provider payloads are absent.
+
+Exercise OpenTUI test-renderer behavior with representative long execution/work history plus streaming, cancellation, approvals, draft preservation, resize, scrollback/selection, and clean shutdown. Do not turn test-renderer evidence into native-terminal evidence.
+
+Run focused Phase-5 tests plus Phase-2 tool/process/approval, Phase-3 context/skills, Phase-4 sessions/workflow/progress/TUI/integration, exact runner tests, typecheck, broad deterministic aggregate checks, `git diff --check`, and explicit no-`package-lock.json`.
+
+Record exact Node/npm/platform versions.
+
+If a genuine usable TTY is available, exercise the real OpenTUI long-history/streaming responsiveness path, cancellation/approval/recovery interaction, and terminal restoration; otherwise record Evidence Gap.
+
+If loopback LM Studio and the pinned/default `qwen3-coder-30b-a3b-instruct@q4_k_m` are available, run a bounded live longer coding flow through the exact Phase-5 path that crosses pressure, compacts, continues tool use, validates, and completes. Separately exercise one bounded reopen/recovery characterization. Record exact model/provider/runtime, estimated/provider-reported context usage when available, compaction count/provenance, retry/recovery events actually exercised, validation, and final outcome. Otherwise record Evidence Gap. Deterministic fixtures remain correctness authority.
+
+Permit at most two substantial evidence-driven correction cycles. Every correction adds a permanent executable regression guard for the defect class and reruns focused plus broad affected evidence.
+
+Create `docs/tasks/p5/P7-qualification-evidence.md` tied to the exact final candidate with per-layer Green / Not Green / Evidence Gap truth. Do not relabel missing native/live evidence Green.
+
+Set `package.json` version to `0.5.7`.
+
+Do not implement Phase-6 plugins/browser/network/external adapters, utility-model specialization, daemon/background-job ownership, Tauri, scheduling, or multi-agent behavior.
