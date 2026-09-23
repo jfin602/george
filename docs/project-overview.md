@@ -94,6 +94,20 @@ Core APIs should permit a later daemon/server transport so another local UI or t
 
 If a GUI becomes justified, Tauri is the preferred direction: a lightweight native shell over George's reusable core/daemon interfaces. Electron is not the default.
 
+### Living project map later
+
+Post-MVP, George should help developers understand not only which files changed, but how those changes alter the software system in the target project being worked on.
+
+The long-term project-map capability should maintain a presentation-independent software graph for the active target repository. It should combine deterministic structural evidence from code and configuration with a higher-level semantic architecture model and task/runtime evidence where available.
+
+The project map is not a diagram of George itself. It describes the target software George is inspecting and modifying.
+
+The map must not degrade into a giant file/dependency graph or a fresh LLM-generated diagram treated as truth on every turn. Deterministic relationships such as files, imports, exports, symbols, routes, schemas, and other statically recoverable structure remain distinct from higher-level semantic interpretations such as "simulation engine", "renderer", "authentication", or "persistence". Model-derived semantic relationships must remain attributable and distinguishable from deterministic evidence.
+
+Coding work should eventually be able to project task impact onto this model so a developer can see expected, current, and validated architectural changes rather than only a flat changed-file list. The underlying graph must remain reusable by terminal, daemon, desktop, or browser presentation adapters.
+
+Derived project-map state should live in George's own workspace-scoped state by default rather than silently writing metadata into the target repository. A project-owned committed architecture description may be supported later only through an explicit workflow.
+
 ## Phase 1 success condition
 
 Phase 1 proved a reliable Codex-style local terminal foundation where George can open a repository, load its instructions, stream one bounded model turn through local Qwen/LM Studio, visibly present agent/read-only-tool activity, and expose independently testable read-only tool infrastructure without embedding agent logic in the TUI.
