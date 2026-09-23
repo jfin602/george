@@ -19,6 +19,17 @@ export const COMPOSER_KEY_BINDINGS: TextareaKeyBinding[] = [
   { name: 'a', ctrl: true, action: 'select-all' },
 ];
 
+export const NEON_THEME = {
+  background: '#050815',
+  panel: '#071735',
+  focusedPanel: '#0b2553',
+  foreground: '#d8f7ff',
+  muted: '#7daac7',
+  blue: '#1687ff',
+  cyan: '#48e8ff',
+  border: '#1976d2',
+} as const;
+
 type Clipboard = Pick<HostClipboardService, 'read' | 'writeText' | 'dispose'>;
 
 export type GeorgeTuiOptions = Readonly<{
@@ -109,28 +120,32 @@ export class GeorgeTui {
     this.statusDetails = `${options.provider} · ${options.model} · ${this.session.workspace}`;
     this.done = new Promise<void>((resolve) => { this.resolveDone = resolve; });
 
-    const layout = new BoxRenderable(this.renderer, { id: 'george', width: '100%', height: '100%', flexDirection: 'column', padding: 1 });
-    layout.add(new TextRenderable(this.renderer, { id: 'header', width: '100%', height: 1, flexShrink: 0, content: 'George — local coding agent' }));
-    this.statusView = new TextRenderable(this.renderer, { id: 'status', width: '100%', height: 1, flexShrink: 0, content: this.status('Ready') });
+    const layout = new BoxRenderable(this.renderer, { id: 'george', width: '100%', height: '100%', flexDirection: 'column', padding: 1, backgroundColor: NEON_THEME.background, shouldFill: true });
+    layout.add(new TextRenderable(this.renderer, { id: 'header', width: '100%', height: 1, flexShrink: 0, fg: NEON_THEME.cyan, content: 'George — local coding agent' }));
+    this.statusView = new TextRenderable(this.renderer, { id: 'status', width: '100%', height: 1, flexShrink: 0, fg: NEON_THEME.blue, content: this.status('Ready') });
     layout.add(this.statusView);
-    this.contextView = new TextRenderable(this.renderer, { id: 'context', width: '100%', height: 2, flexShrink: 0, content: 'Context: awaiting first turn' });
+    this.contextView = new TextRenderable(this.renderer, { id: 'context', width: '100%', height: 2, flexShrink: 0, fg: NEON_THEME.muted, content: 'Context: awaiting first turn' });
     layout.add(this.contextView);
-    this.transcript = new ScrollBoxRenderable(this.renderer, { id: 'transcript', flexGrow: 1, scrollY: true, stickyScroll: true, stickyStart: 'bottom', border: true, title: 'Transcript' });
-    this.transcriptView = new TextRenderable(this.renderer, { id: 'transcript-text', content: '' });
+    this.transcript = new ScrollBoxRenderable(this.renderer, { id: 'transcript', flexGrow: 1, scrollY: true, stickyScroll: true, stickyStart: 'bottom', border: true, borderColor: NEON_THEME.border, focusedBorderColor: NEON_THEME.cyan, backgroundColor: NEON_THEME.panel, title: 'Transcript', titleColor: NEON_THEME.cyan });
+    this.transcriptView = new TextRenderable(this.renderer, { id: 'transcript-text', fg: NEON_THEME.foreground, content: '' });
     this.transcript.add(this.transcriptView);
     layout.add(this.transcript);
-    this.activityView = new TextRenderable(this.renderer, { id: 'activity', width: '100%', height: 1, flexShrink: 0, content: 'Idle' });
+    this.activityView = new TextRenderable(this.renderer, { id: 'activity', width: '100%', height: 1, flexShrink: 0, fg: NEON_THEME.cyan, content: 'Idle' });
     layout.add(this.activityView);
-    this.approvalView = new TextRenderable(this.renderer, { id: 'approval', width: '100%', height: 0, flexShrink: 0, content: '' });
+    this.approvalView = new TextRenderable(this.renderer, { id: 'approval', width: '100%', height: 0, flexShrink: 0, fg: NEON_THEME.cyan, content: '' });
     layout.add(this.approvalView);
-    this.commandView = new TextRenderable(this.renderer, { id: 'commands', width: '100%', height: 0, flexShrink: 0, content: '' });
+    this.commandView = new TextRenderable(this.renderer, { id: 'commands', width: '100%', height: 0, flexShrink: 0, fg: NEON_THEME.blue, content: '' });
     layout.add(this.commandView);
-    this.composerOverflowView = new TextRenderable(this.renderer, { id: 'composer-overflow', width: '100%', height: 0, flexShrink: 0, content: '' });
+    this.composerOverflowView = new TextRenderable(this.renderer, { id: 'composer-overflow', width: '100%', height: 0, flexShrink: 0, fg: NEON_THEME.muted, content: '' });
     layout.add(this.composerOverflowView);
-    this.composerKeysView = new TextRenderable(this.renderer, { id: 'composer-keys', width: '100%', height: 1, flexShrink: 0, content: 'Enter send · Ctrl+A all · Ctrl+C copy · Ctrl+V paste · Esc exit' });
+    this.composerKeysView = new TextRenderable(this.renderer, { id: 'composer-keys', width: '100%', height: 1, flexShrink: 0, fg: NEON_THEME.muted, content: 'Enter send · Ctrl+A all · Ctrl+C copy · Ctrl+V paste · Esc exit' });
     layout.add(this.composerKeysView);
     this.input = new TextareaRenderable(this.renderer, {
       id: 'input', height: 5, minHeight: 5, maxHeight: 10, wrapMode: 'word', placeholder: 'Message George', keyBindings: COMPOSER_KEY_BINDINGS,
+      backgroundColor: NEON_THEME.panel, textColor: NEON_THEME.foreground,
+      focusedBackgroundColor: NEON_THEME.focusedPanel, focusedTextColor: NEON_THEME.foreground,
+      placeholderColor: NEON_THEME.muted, selectionBg: NEON_THEME.blue, selectionFg: NEON_THEME.background,
+      cursorColor: NEON_THEME.cyan,
       onSubmit: () => { void this.submit(); },
       onContentChange: () => this.updateComposerOverflow(),
       onCursorChange: () => this.updateComposerOverflow(),

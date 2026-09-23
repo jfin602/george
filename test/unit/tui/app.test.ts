@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 
+import { RGBA } from '@opentui/core';
 import { createTestRenderer } from '@opentui/core/testing';
 
 import {
@@ -16,7 +17,7 @@ import {
   type ProviderStreamOptions,
 } from '../../../src/core/index.ts';
 import { createOneTurnApplicationService, type OneTurnServiceOptions } from '../../../src/application/index.ts';
-import { GeorgeTui, type GeorgeTuiOptions } from '../../../src/tui/app.ts';
+import { GeorgeTui, NEON_THEME, type GeorgeTuiOptions } from '../../../src/tui/app.ts';
 
 class ScriptedProvider implements ModelProvider {
   calls: Array<{ request: ProviderRequest; options: ProviderStreamOptions }> = [];
@@ -117,6 +118,16 @@ test('test renderer shows identity, configuration, streamed text, and read-only 
   const frame = item.setup.captureCharFrame();
   assert.match(item.app.session.transcript.map((entry) => entry.text).join('\n'), /Inspect BOOT/);
   assert.match(frame, /streamed answer/);
+});
+
+test('uses the blue neon palette for the transcript and focused composer', async (t) => {
+  const item = await tui(new ScriptedProvider([]));
+  t.after(() => cleanup(item));
+
+  assert.deepEqual(item.app.transcript.backgroundColor.toInts(), RGBA.fromHex(NEON_THEME.panel).toInts());
+  assert.deepEqual(item.app.transcript.borderColor.toInts(), RGBA.fromHex(NEON_THEME.border).toInts());
+  assert.deepEqual(item.app.input.backgroundColor.toInts(), RGBA.fromHex(NEON_THEME.panel).toInts());
+  assert.deepEqual(item.app.input.cursorColor.toInts(), RGBA.fromHex(NEON_THEME.cyan).toInts());
 });
 
 test('Enter submits while Shift+Enter uses the OpenTUI Textarea newline binding', async (t) => {
