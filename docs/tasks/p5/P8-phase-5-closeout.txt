@@ -1,0 +1,31 @@
+TASK: Phase 5 / P8 — Phase 5 closeout validation
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Terra Medium`.
+- Browser required: no.
+
+VERSIONING
+- This prompt's assigned project version is `0.5.8`.
+
+GOAL
+
+Perform an evidence-only Phase-5 closeout from the exact P7 candidate and its qualification evidence.
+
+Read `BOOT.md`, current product/architecture/workflow/stability contracts, the Phase-5 decision record, assessment/implementation plan, exact P1-P7 source/test state, and `docs/tasks/p5/P7-qualification-evidence.md`.
+
+Audit and report: application-owned finite run budgets/accounting and hard exhaustion; canonical-vs-derived evidence separation; provider-facing compaction trigger/checkpoints/provenance/recent raw tail/multiple-cycle behavior; critical/current/unresolved-state preservation; durable compatibility; replay-safe retry/backoff/attempt identity/cancellation/no partial-response retry; interruption intent/reconciliation classifications/no blind replay; process cleanup/identity uncertainty and non-sandbox truth; lifecycle hook event contract/order/enable-disable/conflicts/timeout/cancellation/failure isolation/process approval/recursion suppression/non-authority; structured diagnostic correlation/redaction/rotation/sink-failure isolation; measured context/compaction/provider/tool/cleanup/recovery/hook/memory/session/log behavior; OpenTUI long-history deterministic rendering; integrated long coding workflow; native/live evidence; and preservation of Phase-2/3/4 safeguards.
+
+Do not repair implementation, add features, broaden tests merely to manufacture a pass, or advance Phase-6 behavior.
+
+Create/update `docs/phase-5-closeout.md` with explicit Implementation Complete / Stability Qualified state and Green / Not Green / Evidence Gap truth. Narrowly update Phase-5 task/router status only when required to point at the formal evidence record.
+
+Do **not** mark Phase 5 owner-closed or move `BOOT.md`/roadmap to Phase 6; owner closeout and any Phase-6 baseline transition remain separate decisions.
+
+Set `package.json` version to `0.5.8`.
+
+Required proof:
+- closeout claims trace to actual P7/current evidence;
+- missing native/live evidence is never relabeled Green;
+- no Phase-6+ product scope is added;
+- documentation `git diff --check` passes;
+- no `package-lock.json` exists.
