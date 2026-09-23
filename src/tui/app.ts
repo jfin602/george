@@ -19,7 +19,7 @@ export const COMPOSER_KEY_BINDINGS: TextareaKeyBinding[] = [
   { name: 'a', ctrl: true, action: 'select-all' },
 ];
 
-type Clipboard = Pick<HostClipboardService, 'read' | 'dispose'>;
+type Clipboard = Pick<HostClipboardService, 'read' | 'writeText' | 'dispose'>;
 
 export type GeorgeTuiOptions = Readonly<{
   renderer: CliRenderer;
@@ -87,6 +87,7 @@ export class GeorgeTui {
   private readonly approvalView: TextRenderable;
   private readonly commandView: TextRenderable;
   private readonly composerOverflowView: TextRenderable;
+  private readonly composerKeysView: TextRenderable;
   private readonly statusDetails: string;
   private readonly approvals: ApprovalResolver;
   private readonly clipboard: Clipboard;
@@ -126,8 +127,10 @@ export class GeorgeTui {
     layout.add(this.commandView);
     this.composerOverflowView = new TextRenderable(this.renderer, { id: 'composer-overflow', width: '100%', height: 0, flexShrink: 0, content: '' });
     layout.add(this.composerOverflowView);
+    this.composerKeysView = new TextRenderable(this.renderer, { id: 'composer-keys', width: '100%', height: 1, flexShrink: 0, content: 'Enter send · Ctrl+A all · Ctrl+C copy · Ctrl+V paste · Esc exit' });
+    layout.add(this.composerKeysView);
     this.input = new TextareaRenderable(this.renderer, {
-      id: 'input', height: 5, minHeight: 5, maxHeight: 10, wrapMode: 'word', placeholder: 'Message George (Enter submits, Ctrl+A selects all, Ctrl+V pastes, Shift+Enter adds a line)', keyBindings: COMPOSER_KEY_BINDINGS,
+      id: 'input', height: 5, minHeight: 5, maxHeight: 10, wrapMode: 'word', placeholder: 'Message George', keyBindings: COMPOSER_KEY_BINDINGS,
       onSubmit: () => { void this.submit(); },
       onContentChange: () => this.updateComposerOverflow(),
       onCursorChange: () => this.updateComposerOverflow(),
@@ -135,9 +138,9 @@ export class GeorgeTui {
     layout.add(this.input);
     this.renderer.root.add(layout);
     this.renderer._internalKeyInput.onInternal('keypress', (key) => {
-      if (key.ctrl && key.name === 'c') {
+      if (key.name === 'escape') {
         key.preventDefault();
-        this.ctrlC();
+        this.escape();
       } else if (this.pendingApproval && key.ctrl && key.name === 'a') {
         key.preventDefault();
         this.decide('allow_once');
@@ -147,6 +150,9 @@ export class GeorgeTui {
       } else if (key.ctrl && key.name === 'v') {
         key.preventDefault();
         void this.pasteClipboard();
+      } else if (key.ctrl && key.name === 'c' && this.input.getSelectedText()) {
+        key.preventDefault();
+        void this.copySelection();
       }
     });
     this.renderer.on(CliRenderEvents.RESIZE, () => {
@@ -209,7 +215,7 @@ export class GeorgeTui {
     await this.active;
   }
 
-  ctrlC(): boolean {
+  escape(): boolean {
     if (this.controller) {
       this.activityView.content = 'Cancelling…';
       this.controller.abort();
@@ -243,6 +249,11 @@ export class GeorgeTui {
     if (result.status !== 'read') return;
     this.input.insertText(new TextDecoder().decode(result.representation.bytes));
     this.renderer.requestRender();
+  }
+
+  private async copySelection(): Promise<void> {
+    const text = this.input.getSelectedText();
+    if (text) await this.clipboard.writeText(text);
   }
 
   private updateComposerOverflow(): void {

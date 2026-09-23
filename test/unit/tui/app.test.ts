@@ -115,7 +115,7 @@ test('test renderer shows identity, configuration, streamed text, and read-only 
   await item.setup.flush();
   assert.equal(item.app.session.events.some((event) => event.type === 'tool.completed'), true);
   const frame = item.setup.captureCharFrame();
-  assert.match(frame, /Inspect BOOT/);
+  assert.match(item.app.session.transcript.map((entry) => entry.text).join('\n'), /Inspect BOOT/);
   assert.match(frame, /streamed answer/);
 });
 
@@ -135,12 +135,17 @@ test('Enter submits while Shift+Enter uses the OpenTUI Textarea newline binding'
   assert.equal(item.app.input.plainText, '');
 });
 
-test('composer accepts terminal paste and explicit Ctrl+V clipboard paste', async (t) => {
+test('composer shows its key ledger and supports terminal paste, Ctrl+V, and Ctrl+C copy', async (t) => {
   const clipboardText = 'clipboard\ntext';
+  const copied: string[] = [];
   const item = await tui(new ScriptedProvider([]), {}, {
     clipboard: {
       async read() {
         return { status: 'read', representation: { mimeType: 'text/plain', bytes: new TextEncoder().encode(clipboardText) } };
+      },
+      async writeText(text) {
+        copied.push(text);
+        return { status: 'written' };
       },
       async dispose() {},
     },
@@ -151,6 +156,11 @@ test('composer accepts terminal paste and explicit Ctrl+V clipboard paste', asyn
   item.setup.mockInput.pressKey('v', { ctrl: true });
   await item.setup.flush();
   assert.equal(item.app.input.plainText, `terminal\npaste${clipboardText}`);
+  assert.match(item.setup.captureCharFrame(), /Ctrl\+C copy.*Esc exit/);
+  item.setup.mockInput.pressKey('a', { ctrl: true });
+  item.setup.mockInput.pressKey('c', { ctrl: true });
+  await item.setup.flush();
+  assert.deepEqual(copied, [`terminal\npaste${clipboardText}`]);
 });
 
 test('composer selects all with Ctrl+A, clears with Backspace, and marks hidden lines', async (t) => {
@@ -288,7 +298,7 @@ test('transcript scrollback and renderer resize retain a coherent conversation l
   assert.match(item.setup.captureCharFrame(), /Transcript/);
 });
 
-test('Ctrl+C cancels an active turn, then exits and destroys the renderer while idle', async (t) => {
+test('Esc cancels an active turn, then exits and destroys the renderer while idle', async (t) => {
   const provider = new PausedProvider();
   const item = await tui(provider);
   t.after(async () => {
@@ -299,17 +309,17 @@ test('Ctrl+C cancels an active turn, then exits and destroys the renderer while 
   await item.setup.mockInput.typeText('cancel me');
   item.setup.mockInput.pressEnter();
   await provider.started.promise;
-  item.setup.mockInput.pressCtrlC();
+  item.setup.mockInput.pressEscape();
   await item.app.waitForIdle();
   assert.equal(provider.calls[0]?.options.signal?.aborted, true);
   assert.equal(item.setup.renderer.isDestroyed, false);
   assert.equal(item.app.session.events.at(-1)?.type, 'turn.cancelled');
   assert.equal(item.setup.renderer.isDestroyed, false);
-  item.setup.mockInput.pressCtrlC();
+  item.setup.mockInput.pressEscape();
   assert.equal(item.setup.renderer.isDestroyed, true);
 });
 
-test('test renderer presents normalized approvals and allow, deny, and Ctrl+C keep the TUI usable', async (t) => {
+test('test renderer presents normalized approvals and allow, deny, and Esc keep the TUI usable', async (t) => {
   const write = async (callId: string, path: string, content: string) => {
     const item = await tui(new ApprovalProvider({ type: 'provider.tool.call', callId, name: 'write_file', arguments: JSON.stringify({ path, content }) }));
     t.after(() => cleanup(item));
@@ -342,7 +352,7 @@ test('test renderer presents normalized approvals and allow, deny, and Ctrl+C ke
   cancelled.setup.mockInput.pressEnter();
   await cancelled.setup.waitForFrame((frame) => frame.includes('Approval required'));
   cancelled.setup.resize(48, 12);
-  cancelled.setup.mockInput.pressCtrlC();
+  cancelled.setup.mockInput.pressEscape();
   await cancelled.app.waitForIdle();
   assert.equal(cancelled.app.session.events.at(-1)?.type, 'turn.cancelled');
   assert.ok(cancelled.app.input.width > 0 && cancelled.app.input.height >= 3);
