@@ -218,7 +218,7 @@ export class WorkProjection {
         return [this.activityEvent(event.turnId, 'validation', `Validation ${event.status}`), ...this.update({ id: `${event.turnId}:validation:${event.callId}`, turnId: event.turnId, operationId: event.callId, category: 'validation', status, summary: `Validation ${event.status}`, details }), ...(status === 'failed' ? this.progressEvent(event.turnId, 'recovery', 'Validation failed; recovery may be needed') : this.progressEvent(event.turnId, 'validation', 'Validation completed'))];
       }
       case 'workflow.completed': {
-        const status: WorkStatus = event.completion.terminalState === 'completed' ? 'succeeded' : event.completion.terminalState;
+        const status: WorkStatus = event.completion.terminalState === 'completed' ? 'succeeded' : event.completion.terminalState === 'budget_exhausted' ? 'failed' : event.completion.terminalState;
         return [this.activityEvent(event.turnId, 'completion', `Workflow ${event.completion.terminalState}`), ...this.progressEvent(event.turnId, 'completion', `Workflow ${event.completion.terminalState}`), ...this.update({ id: `${event.turnId}:completion`, turnId: event.turnId, operationId: 'completion', category: 'completion', status, summary: `Workflow ${event.completion.terminalState}`, details: { count: event.completion.changes.length } })];
       }
       case 'turn.cancelled': return this.stopTurn(event.turnId, 'cancelled', 'Turn cancelled');

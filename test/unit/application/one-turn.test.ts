@@ -68,7 +68,7 @@ test('one-turn service keeps George context first and invokes the provider exact
   assert.doesNotMatch(provider.calls[0]?.request.instructions ?? '', /Repository boot\./);
   assert.match(provider.calls[0]?.request.input ?? '', /\[conversation:current-user-input; user-intent\]\nHi/);
   assert.deepEqual(events.filter((event) => !['context.source', 'activity.updated', 'progress.milestone', 'work.updated'].includes(event.type)).map((event) => event.type), [
-    'turn.started', 'input.submitted', 'context.assembled', 'provider.response.started', 'provider.text.delta', 'provider.response.completed', 'assistant.response.completed', 'turn.completed',
+    'turn.started', 'reliability.run.started', 'budget.state', 'input.submitted', 'context.assembled', 'budget.state', 'budget.state', 'provider.attempt.started', 'provider.response.started', 'provider.text.delta', 'provider.response.completed', 'budget.state', 'assistant.response.completed', 'turn.completed',
   ]);
   assert.deepEqual(session.transcript, [{ role: 'user', text: 'Hi' }, { role: 'assistant', text: 'Hello.' }]);
 });
@@ -284,4 +284,75 @@ test('one-turn service reports cancellation and provider failure without a retry
   const partialEvents = await collect(partialService.run({ session: partialSession, input: 'Fail after text', turnId: 'turn-5' }));
   assert.equal(partialEvents.some((event) => event.type === 'assistant.response.completed'), false);
   assert.deepEqual(partialSession.transcript, [{ role: 'user', text: 'Fail after text' }]);
+});
+
+test('run budgets expose pressure, provider usage, and explicit exhaustion without committing provisional text', async (t) => {
+  const root = await workspace();
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const provider = new class implements ModelProvider {
+    calls = 0;
+    async *stream(): AsyncGenerator<ProviderEvent> {
+      this.calls += 1;
+      if (this.calls === 1) {
+        yield { type: 'provider.response.started', responseId: 'first' };
+        yield { type: 'provider.text.delta', delta: 'provisional' };
+        yield { type: 'provider.tool.call', callId: 'read', name: 'read_file', arguments: '{"path":"BOOT.md"}' };
+      }
+      yield { type: 'provider.response.completed', usage: { inputTokens: 7, outputTokens: 3 } };
+    }
+  }();
+  const service = await createOneTurnApplicationService({
+    provider, workspace: root,
+    runBudget: {
+      providerAttempts: 1, toolExecutions: 2, retryAttempts: 1, compactionAttempts: 1, compactionCheckpoints: 1,
+      processExecutions: 1, processRuntimeMs: 1, wallClockMs: 1_000, contextTokens: 100_000,
+      providerInputTokens: 100, providerOutputTokens: 100, softLimitPercent: 80,
+    },
+    clock: () => 0,
+  });
+  const session = createSession({ workspace: root });
+  const events = await collect(service.run({ session, input: 'read once', turnId: 'budget-turn' }));
+  assert.equal(provider.calls, 1);
+  assert.equal(events.some((event) => event.type === 'budget.pressure' && event.dimensions.includes('providerAttempts')), true);
+  assert.equal(events.some((event) => event.type === 'budget.exhausted' && event.dimension === 'providerAttempts'), true);
+  const states = events.filter((event): event is Extract<typeof event, { type: 'budget.state' }> => event.type === 'budget.state');
+  assert.equal(states.some((event) => event.budget.consumed.providerInputTokens === 7 && event.budget.consumed.providerOutputTokens === 3), true);
+  assert.equal(events.at(-1)?.type, 'turn.failed');
+  assert.equal(events.at(-1)?.type === 'turn.failed' && events.at(-1).error.code, 'budget');
+  assert.deepEqual(session.transcript, [{ role: 'user', text: 'read once' }]);
+});
+
+test('cancellation wins before a wall-clock budget check', async (t) => {
+  const root = await workspace();
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const controller = new AbortController();
+  controller.abort('stop');
+  const service = await createOneTurnApplicationService({
+    provider: new ScriptedProvider([{ type: 'provider.response.completed' }]), workspace: root,
+    runBudget: { providerAttempts: 1, toolExecutions: 1, retryAttempts: 1, compactionAttempts: 1, compactionCheckpoints: 1, processExecutions: 1, processRuntimeMs: 1, wallClockMs: 1, contextTokens: 1_000_000, providerInputTokens: 1, providerOutputTokens: 1, softLimitPercent: 80 },
+    clock: () => 10,
+  });
+  const events = await collect(service.run({ session: createSession({ workspace: root }), input: 'stop', signal: controller.signal }));
+  assert.equal(events.at(-1)?.type, 'turn.cancelled');
+  assert.equal(events.some((event) => event.type === 'budget.exhausted'), false);
+});
+
+test('wall-clock budget is checked after a provider wait', async (t) => {
+  const root = await workspace();
+  t.after(() => rm(root, { recursive: true, force: true }));
+  let now = 0;
+  const provider = new class implements ModelProvider {
+    async *stream(): AsyncGenerator<ProviderEvent> {
+      yield { type: 'provider.response.completed' };
+      now = 2;
+    }
+  }();
+  const service = await createOneTurnApplicationService({
+    provider, workspace: root,
+    runBudget: { providerAttempts: 1, toolExecutions: 1, retryAttempts: 1, compactionAttempts: 1, compactionCheckpoints: 1, processExecutions: 1, processRuntimeMs: 1, wallClockMs: 1, contextTokens: 1_000_000, providerInputTokens: 1, providerOutputTokens: 1, softLimitPercent: 80 },
+    clock: () => now,
+  });
+  const events = await collect(service.run({ session: createSession({ workspace: root }), input: 'wait' }));
+  assert.equal(events.some((event) => event.type === 'budget.exhausted' && event.dimension === 'wallClockMs'), true);
+  assert.equal(events.at(-1)?.type === 'turn.failed' && events.at(-1).error.code, 'budget');
 });

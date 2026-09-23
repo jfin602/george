@@ -4,6 +4,7 @@ export * from './config.ts';
 export * from './errors.ts';
 export * from './events.ts';
 export * from './provider.ts';
+export * from './run-budget.ts';
 export * from './session.ts';
 export * from './session-store.ts';
 export * from './workspace.ts';

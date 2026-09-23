@@ -6,6 +6,7 @@ import { basename, isAbsolute, join, resolve } from 'node:path';
 import { GeorgeError } from './errors.ts';
 import type { ContextProfile } from './config.ts';
 import type { ApplicationEvent, ContextDiagnostics, ProviderUsage } from './events.ts';
+import type { RunBudgetDimension, RunBudgetSnapshot } from './run-budget.ts';
 import type { TranscriptEntry, Session, SessionInterruption } from './session.ts';
 import { resolveWorkspaceRoot } from './workspace.ts';
 
@@ -178,13 +179,18 @@ function safeWorkflowCompletion(value: Extract<ApplicationEvent, { type: 'workfl
   });
   const warnings = boundedArray(completion.warnings, 'workflow warnings', 128).map((warning) => boundedMessage(string(warning, 'workflow warning')));
   const terminalState = string(completion.terminalState, 'workflow terminal state', 32);
-  if (!['completed', 'failed', 'cancelled'].includes(terminalState)) invalid('workflow terminal state is invalid.');
-  return { baselineAvailable: bool(completion.baselineAvailable, 'workflow baseline availability'), finalStateAvailable: bool(completion.finalStateAvailable, 'workflow final state availability'), changes, directMutations, validations, warnings, terminalState: terminalState as 'completed' | 'failed' | 'cancelled', finalAssistantResponse: boundedMessage(string(completion.finalAssistantResponse, 'workflow final response')) };
+  if (!['completed', 'failed', 'cancelled', 'budget_exhausted'].includes(terminalState)) invalid('workflow terminal state is invalid.');
+  return { baselineAvailable: bool(completion.baselineAvailable, 'workflow baseline availability'), finalStateAvailable: bool(completion.finalStateAvailable, 'workflow final state availability'), changes, directMutations, validations, warnings, terminalState: terminalState as 'completed' | 'failed' | 'cancelled' | 'budget_exhausted', finalAssistantResponse: boundedMessage(string(completion.finalAssistantResponse, 'workflow final response')) };
 }
 
 /** Drops file bodies, write/patch arguments, environment data, and process output. */
 function durableEvent(event: ApplicationEvent): ApplicationEvent | undefined {
   switch (event.type) {
+    case 'reliability.run.started': return { type: event.type, turnId: string(event.turnId, 'turn ID', 256), runId: identifier(event.runId, 'run ID'), budget: safeBudget(event.budget) };
+    case 'provider.attempt.started': return { type: event.type, turnId: string(event.turnId, 'turn ID', 256), runId: identifier(event.runId, 'run ID'), attemptId: identifier(event.attemptId, 'provider attempt ID') };
+    case 'budget.state': return { type: event.type, turnId: string(event.turnId, 'turn ID', 256), runId: identifier(event.runId, 'run ID'), budget: safeBudget(event.budget) };
+    case 'budget.pressure': return { type: event.type, turnId: string(event.turnId, 'turn ID', 256), runId: identifier(event.runId, 'run ID'), dimensions: boundedArray(event.dimensions, 'budget pressure dimensions', 11).map((dimension) => safeBudgetDimension(dimension)), budget: safeBudget(event.budget) };
+    case 'budget.exhausted': return { type: event.type, turnId: string(event.turnId, 'turn ID', 256), runId: identifier(event.runId, 'run ID'), dimension: safeBudgetDimension(event.dimension), budget: safeBudget(event.budget) };
     case 'input.submitted': return undefined; // Completed user input lives only in the canonical transcript.
     case 'assistant.response.completed': return { type: event.type, turnId: string(event.turnId, 'turn ID', 256), text: boundedMessage(string(event.text, 'assistant response')) };
     case 'provider.text.delta': return undefined; // The clean transcript is authoritative for completed assistant text.
@@ -228,6 +234,27 @@ function safeUsage(usage: ProviderUsage): ProviderUsage {
     }
   }
   return result;
+}
+
+const BUDGET_DIMENSIONS = ['providerAttempts', 'toolExecutions', 'retryAttempts', 'compactionAttempts', 'compactionCheckpoints', 'processExecutions', 'processRuntimeMs', 'wallClockMs', 'contextTokens', 'providerInputTokens', 'providerOutputTokens'] as const;
+
+function safeBudgetDimension(value: unknown): RunBudgetDimension {
+  return oneOf(value, 'budget dimension', BUDGET_DIMENSIONS);
+}
+
+function safeBudget(value: RunBudgetSnapshot): RunBudgetSnapshot {
+  const budget = record(value, 'run budget');
+  exactKeys(budget, ['runId', 'limits', 'consumed', 'elapsedMs'], 'run budget');
+  const limits = record(budget.limits, 'run budget limits');
+  const consumed = record(budget.consumed, 'run budget consumption');
+  exactKeys(limits, BUDGET_DIMENSIONS, 'run budget limits');
+  exactKeys(consumed, BUDGET_DIMENSIONS, 'run budget consumption');
+  return {
+    runId: identifier(budget.runId, 'run ID'),
+    limits: Object.fromEntries(BUDGET_DIMENSIONS.map((dimension) => [dimension, boundedInteger(limits[dimension], `run budget limit ${dimension}`)])) as RunBudgetSnapshot['limits'],
+    consumed: Object.fromEntries(BUDGET_DIMENSIONS.map((dimension) => [dimension, boundedInteger(consumed[dimension], `run budget consumption ${dimension}`)])) as RunBudgetSnapshot['consumed'],
+    elapsedMs: boundedInteger(budget.elapsedMs, 'run budget elapsed time'),
+  };
 }
 
 function safeApproval(request: ApplicationEvent extends never ? never : Extract<ApplicationEvent, { type: 'approval.requested' }>['request']): Extract<ApplicationEvent, { type: 'approval.requested' }>['request'] {

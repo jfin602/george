@@ -108,3 +108,22 @@ test('durable evidence is bounded, excludes raw payloads, and classifies incompl
   assert.deepEqual(reopened.transcript, []);
   await assert.rejects(readFile(join(workspace, 'never-created.txt')), /ENOENT/);
 });
+
+test('durable sessions retain only bounded normalized run-budget evidence', async () => {
+  const { workspace, state } = await fixture();
+  const store = new LocalSessionStore({ root: state });
+  const session = createSession({ id: 'budget-session', workspace });
+  const budget = {
+    runId: 'run-1', elapsedMs: 4,
+    limits: { providerAttempts: 2, toolExecutions: 2, retryAttempts: 1, compactionAttempts: 1, compactionCheckpoints: 1, processExecutions: 1, processRuntimeMs: 10, wallClockMs: 20, contextTokens: 10, providerInputTokens: 10, providerOutputTokens: 10 },
+    consumed: { providerAttempts: 2, toolExecutions: 0, retryAttempts: 0, compactionAttempts: 0, compactionCheckpoints: 0, processExecutions: 0, processRuntimeMs: 0, wallClockMs: 4, contextTokens: 4, providerInputTokens: 0, providerOutputTokens: 0 },
+  } as const;
+  appendSessionEvent(session, { type: 'reliability.run.started', turnId: 'turn-1', runId: 'run-1', budget });
+  appendSessionEvent(session, { type: 'budget.pressure', turnId: 'turn-1', runId: 'run-1', dimensions: ['providerAttempts'], budget });
+  appendSessionEvent(session, { type: 'budget.exhausted', turnId: 'turn-1', runId: 'run-1', dimension: 'providerAttempts', budget });
+  await store.save(session);
+  const reopened = await store.open('budget-session', workspace);
+  assert.deepEqual(reopened.events.map((event) => event.type), ['reliability.run.started', 'budget.pressure', 'budget.exhausted']);
+  const serialized = await readFile(join(state, 'budget-session.json'), 'utf8');
+  assert.doesNotMatch(serialized, /provider payload|stdout|environment/i);
+});

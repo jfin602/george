@@ -5,13 +5,19 @@ import {
   appendSessionEvent,
   cancellationError,
   DEFAULT_CONTEXT_PROFILE,
+  DEFAULT_RUN_BUDGET,
   denyApprovalPort,
   GeorgeError,
   resolveWorkspaceRoot,
   resolveWorkspaceMutationPath,
   resolveWorkspacePath,
   resolveGeorgeUserConfigRoot,
+  RunBudget,
+  type RunBudgetClock,
+  type RunBudgetConfig,
+  type RunBudgetDimension,
   validateContextProfile,
+  validateRunBudget,
   type ApprovalPort,
   type ApprovalRequest,
   type ApplicationEvent,
@@ -54,6 +60,8 @@ export type OneTurnServiceOptions = Readonly<{
   readOnlyLimits?: ReadOnlyToolLimits;
   maxToolCalls?: number;
   maxToolRounds?: number;
+  runBudget?: RunBudgetConfig;
+  clock?: RunBudgetClock;
   approvalPort?: ApprovalPort;
 }>;
 
@@ -68,6 +76,7 @@ export type ProcessSubmission = Readonly<{
   timeoutMs?: number;
   callId?: string;
   signal?: AbortSignal;
+  budget?: RunBudget;
 }>;
 
 const DEFAULT_MAX_TOOL_CALLS = 32;
@@ -87,6 +96,7 @@ export type OneTurnSubmission = Readonly<{
   timeoutMs?: number;
   routedDocuments?: readonly string[];
   activatedSkills?: readonly string[];
+  budget?: RunBudget;
 }>;
 
 function conversation(transcript: readonly TranscriptEntry[]): string {
@@ -128,6 +138,8 @@ export class AgentLoopApplicationService {
   private readonly maxToolRounds: number;
   private readonly approvalPort: ApprovalPort;
   private readonly skills: SkillRegistry;
+  private readonly runBudget: RunBudgetConfig;
+  private readonly clock: RunBudgetClock;
   private readonly projections = new WeakMap<Session, WorkProjection>();
   readonly workspace: Workspace;
 
@@ -143,6 +155,8 @@ export class AgentLoopApplicationService {
     maxToolRounds: number,
     approvalPort: ApprovalPort,
     skills: SkillRegistry,
+    runBudget: RunBudgetConfig,
+    clock: RunBudgetClock,
   ) {
     this.provider = provider;
     this.workspace = workspace;
@@ -155,10 +169,35 @@ export class AgentLoopApplicationService {
     this.maxToolRounds = maxToolRounds;
     this.approvalPort = approvalPort;
     this.skills = skills;
+    this.runBudget = runBudget;
+    this.clock = clock;
   }
 
   async skillCatalog(): Promise<SkillCatalog> {
     return this.skills.catalog();
+  }
+
+  /** Each application invocation gets fresh accounting; no process-global budget exists. */
+  createRunBudget(): RunBudget {
+    return new RunBudget(randomUUID(), this.runBudget, this.clock);
+  }
+
+  private *consumeBudget(
+    session: Session,
+    turnId: string,
+    budget: RunBudget,
+    dimension: RunBudgetDimension,
+    amount = 1,
+    signal?: AbortSignal,
+  ): Generator<ApplicationEvent> {
+    if (signal?.aborted) throw cancellationError(signal);
+    const decision = budget.consume(dimension, amount);
+    yield* this.record(session, { type: 'budget.state', turnId, runId: budget.id, budget: decision.snapshot });
+    if (decision.pressure.length) yield* this.record(session, { type: 'budget.pressure', turnId, runId: budget.id, dimensions: decision.pressure, budget: decision.snapshot });
+    if (decision.exhausted) {
+      yield* this.record(session, { type: 'budget.exhausted', turnId, runId: budget.id, dimension: decision.exhausted, budget: decision.snapshot });
+      throw new GeorgeError('budget', `Run budget exhausted: ${decision.exhausted}.`);
+    }
   }
 
   /** Records one authoritative event and its display-safe projections without touching the transcript. */
@@ -211,6 +250,7 @@ export class AgentLoopApplicationService {
     turnId: string,
     call: { callId: string; name: string; arguments: string },
     signal?: AbortSignal,
+    budget?: RunBudget,
   ): AsyncGenerator<ApplicationEvent, import('../tools/index.ts').ToolResult> {
     const emit = (event: ApplicationEvent): readonly ApplicationEvent[] => this.record(session, event);
     yield* emit({ type: 'tool.requested', turnId, callId: call.callId, name: call.name, arguments: call.arguments });
@@ -240,10 +280,16 @@ export class AgentLoopApplicationService {
       }
       yield* emit({ type: 'approval.allowed', turnId, callId: call.callId, request });
     }
+    if (budget) {
+      yield* this.consumeBudget(session, turnId, budget, 'toolExecutions', 1, signal);
+      if (call.name === 'run_process') yield* this.consumeBudget(session, turnId, budget, 'processExecutions', 1, signal);
+    }
     yield* emit({ type: 'tool.started', turnId, callId: call.callId, name: call.name });
+    const startedAt = call.name === 'run_process' ? this.clock() : undefined;
     const result = await this.registry.dispatch(call, { signal });
     if (result.result.ok) yield* emit({ type: 'tool.completed', turnId, callId: call.callId, name: call.name, result: result.result });
     else yield* emit({ type: 'tool.failed', turnId, callId: call.callId, name: call.name, result: result.result });
+    if (budget && startedAt !== undefined) yield* this.consumeBudget(session, turnId, budget, 'processRuntimeMs', Math.max(0, Math.floor(this.clock() - startedAt)), signal);
     return result;
   }
 
@@ -253,13 +299,16 @@ export class AgentLoopApplicationService {
       callId: submission.callId ?? randomUUID(), name: 'run_process',
       arguments: JSON.stringify({ executable: submission.executable, arguments: submission.arguments, ...(submission.cwd === undefined ? {} : { cwd: submission.cwd }), ...(submission.timeoutMs === undefined ? {} : { timeoutMs: submission.timeoutMs }) }),
     };
-    return yield* this.executeTool(submission.session, submission.turnId, call, submission.signal);
+    return yield* this.executeTool(submission.session, submission.turnId, call, submission.signal, submission.budget ?? this.createRunBudget());
   }
 
   async *run(submission: AgentLoopSubmission): AsyncGenerator<ApplicationEvent> {
     const turnId = submission.turnId ?? randomUUID();
+    const budget = submission.budget ?? this.createRunBudget();
     const emit = (event: ApplicationEvent): readonly ApplicationEvent[] => this.record(submission.session, event);
     yield* emit({ type: 'turn.started', turnId });
+    yield* emit({ type: 'reliability.run.started', turnId, runId: budget.id, budget: budget.snapshot() });
+    yield* emit({ type: 'budget.state', turnId, runId: budget.id, budget: budget.snapshot() });
     const priorTranscript = [...submission.session.transcript];
     yield* emit({ type: 'input.submitted', text: submission.input });
     try {
@@ -308,11 +357,15 @@ export class AgentLoopApplicationService {
       }
       if (submission.signal?.aborted) throw cancellationError(submission.signal);
       yield* emit({ type: 'context.assembled', turnId, diagnostics: contextDiagnostics(context, this.profile) });
+      yield* this.consumeBudget(submission.session, turnId, budget, 'contextTokens', context.estimatedTokens, submission.signal);
       const baseRequest = { instructions: context.rendered.guidance, input: context.rendered.conversation, tools: this.registry.definitions };
       let continuation: ProviderContinuation | undefined;
       let toolCalls = 0;
       let toolRounds = 0;
       while (true) {
+        yield* this.consumeBudget(submission.session, turnId, budget, 'providerAttempts', 1, submission.signal);
+        const attemptId = randomUUID();
+        yield* emit({ type: 'provider.attempt.started', turnId, runId: budget.id, attemptId });
         const calls: Array<Extract<ApplicationEvent, { type: 'provider.tool.call' }>> = [];
         let text = '';
         let responseId: string | undefined;
@@ -327,8 +380,11 @@ export class AgentLoopApplicationService {
           if (event.type === 'provider.text.delta') text += event.delta;
           if (event.type === 'provider.tool.call') calls.push(event);
           if (event.type === 'provider.response.completed') completed = true;
+          if (event.type === 'provider.response.completed' && event.usage?.inputTokens !== undefined) yield* this.consumeBudget(submission.session, turnId, budget, 'providerInputTokens', event.usage.inputTokens, submission.signal);
+          if (event.type === 'provider.response.completed' && event.usage?.outputTokens !== undefined) yield* this.consumeBudget(submission.session, turnId, budget, 'providerOutputTokens', event.usage.outputTokens, submission.signal);
           if (event.type === 'provider.error') throw event.error;
         }
+        yield* this.consumeBudget(submission.session, turnId, budget, 'wallClockMs', 0, submission.signal);
         if (!completed) throw { code: 'provider', message: 'Provider stream ended without a completion event.' } satisfies GeorgeErrorShape;
         if (calls.length === 0) {
           if (text) yield* emit({ type: 'assistant.response.completed', turnId, text });
@@ -355,7 +411,7 @@ export class AgentLoopApplicationService {
             yield* emit({ type: 'tool.failed', turnId, callId: call.callId, name: call.name, result });
             throw new GeorgeError('tool', result.error.message);
           }
-          const iterator = this.executeTool(submission.session, turnId, call, submission.signal);
+          const iterator = this.executeTool(submission.session, turnId, call, submission.signal, budget);
           let next = await iterator.next();
           while (!next.done) {
             yield next.value;
@@ -403,6 +459,8 @@ export async function createAgentLoopApplicationService(
     positive(options.maxToolRounds, DEFAULT_MAX_TOOL_ROUNDS, 'maxToolRounds'),
     options.approvalPort ?? denyApprovalPort,
     skills,
+    validateRunBudget(options.runBudget ?? DEFAULT_RUN_BUDGET),
+    options.clock ?? Date.now,
   );
 }
 

@@ -29,6 +29,7 @@ async function main(): Promise<void> {
     workspace: config.workspace,
     approvalPort: approvals,
     contextProfile: config.context.profile,
+    runBudget: config.runBudget,
     userConfigRoot: config.userConfigRoot,
     sessionStore: store,
   });

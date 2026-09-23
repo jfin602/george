@@ -1,4 +1,5 @@
 export type GeorgeErrorCode =
+  | 'budget'
   | 'cancelled'
   | 'configuration'
   | 'provider'

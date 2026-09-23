@@ -1,6 +1,7 @@
 import type { GeorgeErrorShape } from './errors.ts';
 import type { ApprovalRequest } from './approval.ts';
 import type { ContextProfile } from './config.ts';
+import type { RunBudgetDimension, RunBudgetSnapshot } from './run-budget.ts';
 
 export type ProviderUsage = Readonly<{
   inputTokens?: number;
@@ -59,7 +60,7 @@ export type WorkflowCompletion = Readonly<{
   directMutations: readonly Readonly<{ tool: 'write_file' | 'apply_patch'; path: string; bytes: number; sha256: string }>[];
   validations: readonly WorkflowValidation[];
   warnings: readonly string[];
-  terminalState: 'completed' | 'failed' | 'cancelled';
+  terminalState: 'completed' | 'failed' | 'cancelled' | 'budget_exhausted';
   finalAssistantResponse: string;
 }>;
 
@@ -111,6 +112,11 @@ export type ProviderEvent =
 
 export type ApplicationEvent =
   | ProviderEvent
+  | Readonly<{ type: 'reliability.run.started'; turnId: string; runId: string; budget: RunBudgetSnapshot }>
+  | Readonly<{ type: 'provider.attempt.started'; turnId: string; runId: string; attemptId: string }>
+  | Readonly<{ type: 'budget.state'; turnId: string; runId: string; budget: RunBudgetSnapshot }>
+  | Readonly<{ type: 'budget.pressure'; turnId: string; runId: string; dimensions: readonly RunBudgetDimension[]; budget: RunBudgetSnapshot }>
+  | Readonly<{ type: 'budget.exhausted'; turnId: string; runId: string; dimension: RunBudgetDimension; budget: RunBudgetSnapshot }>
   | Readonly<{ type: 'turn.started'; turnId: string }>
   | Readonly<{ type: 'input.submitted'; text: string }>
   | Readonly<{ type: 'assistant.response.completed'; turnId: string; text: string }>

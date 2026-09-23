@@ -2,6 +2,7 @@ import { homedir } from 'node:os';
 import { join, resolve } from 'node:path';
 
 import { GeorgeError } from './errors.ts';
+import { DEFAULT_RUN_BUDGET, type RunBudgetConfig, validateRunBudget } from './run-budget.ts';
 
 export const DEFAULT_LM_STUDIO_BASE_URL = 'http://127.0.0.1:1234';
 export const DEFAULT_LM_STUDIO_MODEL_ID = 'qwen3-coder-30b-a3b-instruct@q4_k_m';
@@ -32,6 +33,7 @@ export type GeorgeConfig = Readonly<{
   workspace: string;
   userConfigRoot: string;
   context: Readonly<{ profile: ContextProfile }>;
+  runBudget: RunBudgetConfig;
   provider: Readonly<{
     baseUrl: URL;
     model: string;
@@ -46,6 +48,7 @@ export type GeorgeConfigInput = Readonly<{
   providerTimeoutMs?: number;
   userConfigRoot?: string;
   contextProfile?: ContextProfile;
+  runBudget?: RunBudgetConfig;
 }>;
 
 export type GeorgeConfigEnvironment = Readonly<{
@@ -163,6 +166,7 @@ export function resolveGeorgeConfig(
       ? resolveGeorgeUserConfigRoot(variables, environment.platform, environment.homeDirectory)
       : validateUserConfigRoot(input.userConfigRoot, cwd),
     context: { profile: validateContextProfile(input.contextProfile ?? DEFAULT_CONTEXT_PROFILE) },
+    runBudget: validateRunBudget(input.runBudget ?? DEFAULT_RUN_BUDGET),
     provider: {
       baseUrl: validateProviderBaseUrl(
         input.baseUrl ?? DEFAULT_LM_STUDIO_BASE_URL,

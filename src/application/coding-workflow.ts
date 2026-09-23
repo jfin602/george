@@ -107,6 +107,7 @@ export class CodingWorkflowApplicationService {
 
   async run(submission: CodingWorkflowSubmission): Promise<CodingWorkflowCompletion> {
     const turnId = submission.turnId ?? randomUUID();
+    const budget = this.agent.createRunBudget();
     const warnings: string[] = [];
     let baseline: GitWorkingTreeSnapshot | undefined;
     try { baseline = await captureGitWorkingTreeSnapshot(this.agent.workspace, undefined, { signal: submission.signal }); }
@@ -121,7 +122,7 @@ export class CodingWorkflowApplicationService {
       try { await this.store.save(submission.session); }
       catch (error) { persistenceFailure ??= bounded(asGeorgeError(error).message); }
     };
-    for await (const event of this.agent.run({ ...submission, turnId })) {
+    for await (const event of this.agent.run({ ...submission, turnId, budget })) {
       events.push(event);
       const mutation = directMutation(event);
       if (mutation) directMutations.push(mutation);
@@ -136,7 +137,7 @@ export class CodingWorkflowApplicationService {
       const validationEvents: ApplicationEvent[] = [];
       let failure: unknown;
       try {
-        for await (const event of this.agent.runProcess({ session: submission.session, turnId, callId, ...request, signal: submission.signal })) {
+        for await (const event of this.agent.runProcess({ session: submission.session, turnId, callId, ...request, signal: submission.signal, budget })) {
           validationEvents.push(event);
           await observe([event]);
         }
@@ -159,7 +160,8 @@ export class CodingWorkflowApplicationService {
     if (persistenceFailure) warnings.push(`Session evidence could not be persisted: ${persistenceFailure}`);
     const terminalEvent = events.at(-1);
     const terminalState = terminalEvent?.type === 'turn.cancelled' || validations.some((validation) => validation.status === 'cancelled')
-      ? 'cancelled' : terminalEvent?.type === 'turn.failed' || validations.some((validation) => validation.status !== 'passed') ? 'failed' : 'completed';
+      ? 'cancelled' : terminalEvent?.type === 'turn.failed' && terminalEvent.error.code === 'budget' ? 'budget_exhausted'
+        : terminalEvent?.type === 'turn.failed' || validations.some((validation) => validation.status !== 'passed') ? 'failed' : 'completed';
     const completion: CodingWorkflowCompletion = {
       turnId, baseline, finalState, baselineAvailable: baseline !== undefined, finalStateAvailable: finalState !== undefined,
       changes: changes(baseline, finalState, directMutations), directMutations, validations, warnings, terminalState,
