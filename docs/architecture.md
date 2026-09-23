@@ -48,6 +48,25 @@ Phase 2 uses a simple configurable hard ceiling on tool rounds/calls to prevent 
 
 Tool execution is sequential in Phase 2. Parallel tool execution is deferred until ordering semantics and real need justify it.
 
+## Progress and status events
+
+George's normalized application event stream is the presentation-independent source for visible work state.
+
+The event model distinguishes:
+- authoritative lifecycle/evidence events such as provider, tool, approval, validation, session, and completion state;
+- high-frequency activity state suitable for a single live indicator;
+- lower-frequency progress milestones intended to help the user understand meaningful phases of ongoing work.
+
+Phase 4 progress is harness-generated from George-owned workflow state. It is not model reasoning and is not a request for chain-of-thought. Routine progress should not require a model tool call or additional inference round.
+
+Progress events use bounded categories/messages and may coalesce repeated low-value operations. They may summarize authoritative lifecycle events, but authoritative evidence remains separately available and progress text must not be used as the only proof that an operation succeeded or failed.
+
+Progress/status events are excluded from assistant transcript and provider-facing conversation/context assembly. Rendering a progress message must not consume future model context merely because the user saw it.
+
+OpenTUI, future Tauri clients, and future daemon/network clients consume the same normalized progress semantics. Presentation adapters decide layout only.
+
+If progress history is persisted, resume reconstructs it as historical evidence only. The active status for a reopened session starts from the resumed runtime state; stale prior-run activity is never shown as currently executing.
+
 ## TUI adapter
 
 The initial user interface uses `@opentui/core` directly from TypeScript, without React.
@@ -56,6 +75,7 @@ It should provide a Codex-style terminal experience:
 - owned screen regions and in-place redraw;
 - streamed assistant text;
 - visible tool/activity lifecycle;
+- a bounded recent-progress/work log for meaningful harness-generated milestones;
 - visible permission requests with normalized tool/arguments and affected path or process command;
 - allow-once/deny input for Phase 2 approvals;
 - persistent multiline-capable input;

@@ -1,6 +1,6 @@
 # George MVP Roadmap
 
-Status: CURRENT ROADMAP — PHASE 2 OWNER-CLOSED; PHASE 3 CURRENT
+Status: CURRENT ROADMAP — PHASE 3 OWNER-CLOSED; PHASE 4 CURRENT
 
 The roadmap deliberately proves the provider, read-only tool foundation, real interactive terminal surface, and safe autonomous tool execution before broader coding workflow, networking, or a desktop GUI.
 
@@ -100,11 +100,13 @@ Non-goals:
 
 ## Phase 3 — Context + Skills
 
-Status: CURRENT IMPLEMENTATION GATE — baseline package `0.3.0`
+Status: OWNER-CLOSED WITH ACCEPTED NATIVE-TERMINAL / LIVE-MODEL EVIDENCE GAPS
 
 Goal: give George a deterministic, token-conscious, provider-independent context and declarative-skill substrate without weakening the Phase 2 tool/permission boundary.
 
-Decision authority: `docs/planning/p3-context-skills/decision-record.md`.
+Decision authority: `docs/planning/p3-context-skills/decision-record.md`.  
+Formal evidence: `docs/phase-3-closeout.md`.  
+Owner closeout: `docs/phase-3-owner-closeout.md`.
 
 Scope:
 - provider-independent deterministic context assembly rather than raw instruction concatenation;
@@ -150,7 +152,7 @@ Non-goals:
 
 ## Phase 4 — Coding Workflow + Sessions
 
-Status: PLANNED — baseline established after Phase 3 owner closeout
+Status: CURRENT IMPLEMENTATION GATE — baseline package `0.4.0`
 
 Goal: turn the Phase 3 context-aware safe agent into a durable bounded coding workflow that can modify, validate, report, persist, and safely resume work.
 
@@ -163,6 +165,11 @@ Scope:
 - conservative attribution when approved arbitrary child processes may have modified files;
 - validation-command workflow through the existing canonical process/tool/approval boundary;
 - structured validation evidence;
+- normalized presentation-independent progress/status event stream;
+- deterministic harness-generated progress milestones for context, inspection, editing, validation, recovery, and completion;
+- separate high-frequency activity state and lower-frequency user-facing progress, with bounded/coalesced messages;
+- OpenTUI recent-progress/work-log rendering without moving progress semantics into the TUI;
+- progress/status events excluded from assistant transcript and provider-facing model context;
 - structured completion evidence covering observed changes, validation, unresolved failures/warnings, completion state, and final assistant output;
 - schema-versioned filesystem session persistence outside the repository by default;
 - canonical workspace identity binding;
@@ -176,7 +183,8 @@ Success condition:
 - the run accurately separates pre-existing dirty work from newly observed changes without overclaiming process attribution;
 - normalized session state persists outside the repository and a later turn can reopen completed history;
 - interruption/resume tests prove incomplete writes, processes, approvals, and provider continuations are not automatically replayed;
-- provider/TUI code remains adapters over reusable context, session, tool, and coding-workflow services.
+- users receive meaningful harness-generated progress while a coding turn runs, without progress polluting the assistant transcript/model context or replacing authoritative tool/validation evidence;
+- provider/TUI code remains adapters over reusable context, session, tool, progress, and coding-workflow services.
 
 Non-goals:
 - LLM-based compaction/summarization;
@@ -252,6 +260,69 @@ Direction:
 - permission prompts;
 - tool/event inspection;
 - model/provider controls.
+
+## Post-MVP — Local Web Research + Utility Model
+
+Goal: give George a primarily self-hosted web-research path that uses local compute for search-result digestion and context compaction while keeping paid research providers optional.
+
+This work intentionally follows the MVP. It should build on the Phase 5 compaction/reliability substrate and the Phase 6 network/browser adapter boundaries rather than introducing a parallel research architecture.
+
+Direction:
+- add a provider-independent web-research orchestration layer over George's canonical tool and permission boundaries;
+- use a locally hosted SearXNG instance as the preferred first search-discovery backend, with search providers remaining replaceable;
+- keep search discovery separate from page retrieval, extraction, semantic compaction, and final reasoning;
+- provide bounded `web_search` and `web_fetch`-style capabilities rather than implicit unrestricted model network access;
+- retrieve ordinary pages through bounded HTTP first, then perform deterministic DOM/article cleanup before model inference;
+- use browser rendering only as a fallback for pages whose useful content cannot be obtained through the normal fetch/extraction path;
+- introduce an optional secondary local utility-model role, separate from George's primary reasoning/coding model, for narrow tasks such as relevance extraction, page compaction, result reranking, long-log compaction, diff summarization, and similar low-cost context preparation;
+- keep utility-model output as derived, bounded context rather than executable authority: the utility model cannot invoke tools, grant permissions, or override George/user/project instructions;
+- preserve source identity, URLs, titles, dates when available, and enough provenance for the primary model to distinguish source evidence from generated summaries;
+- treat all fetched web content as untrusted data and prevent page text or prompt-injection content from becoming higher-authority George instructions;
+- cap search-result counts, fetched bytes, rendered-page resources, per-source context contribution, utility-model output, timeouts, retries, and total research budget;
+- allow iterative search/refinement when local discovery is insufficient;
+- retain Parallel Search or similar services as optional, independently disableable escalation providers for difficult research rather than making a paid API the default web brain;
+- keep search, fetch, browser, extraction, utility inference, and premium-research providers independently replaceable and observable.
+
+Candidate flow:
+
+```text
+primary model / George
+        |
+        +--> search discovery
+        |      +--> local SearXNG (preferred default)
+        |      +--> optional external search providers
+        |
+        +--> bounded page fetch
+        |      +--> HTTP fetch
+        |      +--> deterministic article/DOM extraction
+        |      +--> browser fallback when required
+        |
+        +--> local utility model
+        |      +--> relevance extraction
+        |      +--> semantic compaction
+        |      +--> reranking / evidence shaping
+        |
+        +--> compact source-attributed evidence
+               |
+               +--> primary reasoning/coding model
+
+Optional escalation: Parallel Search or another premium research adapter.
+```
+
+Qualification direction:
+- common technical/documentation research can complete without a paid research API when public search/fetch sources are sufficient;
+- the primary model receives materially less irrelevant page content than raw-fetch ingestion while important facts, numbers, dates, caveats, and source provenance survive compaction;
+- hostile page text cannot register tools, expand permissions, or override instruction precedence;
+- JS-heavy/browser-fallback behavior is bounded and does not become the default fetch path;
+- disabling SearXNG, the utility model, browser rendering, or a premium provider produces explicit degradation/fallback behavior rather than hidden coupling;
+- local-vs-premium research quality, latency, context usage, and external API cost can be measured before choosing defaults.
+
+Non-goals for the initial post-MVP implementation:
+- crawling or indexing a private copy of the public web;
+- giving either the primary or utility model unrestricted sockets/network access;
+- allowing the utility model to execute tools or make permission decisions;
+- replacing deterministic HTML/DOM cleanup with an LLM when normal parsing is sufficient;
+- requiring Parallel or another paid provider for ordinary web research.
 
 ## Later
 

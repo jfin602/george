@@ -27,15 +27,21 @@ Formal Phase 2 closeout: `docs/phase-2-closeout.md`.
 Phase 2 owner closeout: `docs/phase-2-owner-closeout.md`.  
 Phase 3 baseline transition: `ce0d6b4a81000ed60f58772a67cd2a783998fbd6` at package `0.3.0`.
 
-The owner explicitly accepts the recorded Phase 1 and Phase 2 native-terminal/live LM Studio/Qwen Evidence Gaps for roadmap progression. They remain Evidence Gaps, not Green evidence.
+Phase 3 — Context + Skills — is owner-closed.
 
-**Phase 3 — Context + Skills — is the current implementation gate.**
+Accepted Phase 3 implementation candidate: `2d8b5a9f4ce0cab87b9694843b14f8885b1f4b55` at package `0.3.5`.  
+Formal Phase 3 P6 closeout marker: `1c5b03d787d07e9a43190f8caf1da838732b0920` at package `0.3.6`.  
+Formal Phase 3 closeout: `docs/phase-3-closeout.md`.  
+Phase 3 owner closeout: `docs/phase-3-owner-closeout.md`.  
+Phase 4 baseline transition: package `0.4.0`.
 
-Phase 3 decision authority: `docs/planning/p3-context-skills/decision-record.md`.
+The owner explicitly accepts the recorded Phase 1, Phase 2, and Phase 3 native-terminal/live LM Studio/Qwen Evidence Gaps for roadmap progression. They remain Evidence Gaps, not Green evidence.
 
-Phase 4 — Coding Workflow + Sessions — follows Phase 3 and owns mutation bookkeeping, validation/completion evidence, durable sessions, and safe non-replay resume semantics.
+**Phase 4 — Coding Workflow + Sessions — is the current implementation gate.**
 
-The approved Phase 3 decision record, together with the current product, architecture, stability, and roadmap contracts, is the implementation authority for the current gate.
+Phase 4 decision authority: `docs/planning/p4-coding-workflow-sessions/decision-record.md`.
+
+The approved Phase 4 decision record, together with the current product, architecture, stability, and roadmap contracts, is the implementation authority for the current gate.
 
 ## Core premise
 
@@ -70,8 +76,8 @@ Read:
 - workflow: `docs/workflow.md`;
 - stability/testing: `docs/stability-contract.md`;
 - roadmap: `docs/roadmap/mvp-roadmap.md`;
-- Phase 3 decision authority: `docs/planning/p3-context-skills/decision-record.md`;
-- planned Phase 4 decision authority: `docs/planning/p4-coding-workflow-sessions/decision-record.md`;
+- Phase 4 decision authority: `docs/planning/p4-coding-workflow-sessions/decision-record.md`;
+- Phase 3 closeout/history when needed: `docs/phase-3-closeout.md`, `docs/phase-3-owner-closeout.md`, `docs/planning/p3-context-skills/decision-record.md`;
 - superseded combined Phase 3 record/history when needed: `docs/planning/p3-coding-workflow/decision-record.md`;
 - Phase 2 closeout/history when needed: `docs/phase-2-closeout.md`, `docs/phase-2-owner-closeout.md`, `docs/planning/p2-safe-tool-loop/decision-record.md`;
 - Phase 1 closeout/history when needed: `docs/phase-1-owner-closeout.md`, `docs/planning/p1-local-agent-foundation/decision-record.md`.

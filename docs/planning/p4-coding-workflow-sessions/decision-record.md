@@ -1,8 +1,8 @@
 # Phase 4 Decision Record — Coding Workflow + Sessions
 
-Status: APPROVED DIRECTION FOR PLANNED PHASE
+Status: APPROVED DIRECTION
 
-Baseline: established after Phase 3 owner closeout  
+Baseline: package `0.4.0`  
 Roadmap gate: Phase 4 — Coding Workflow + Sessions
 
 ## Problem
@@ -19,7 +19,28 @@ Phase 4 owns mutation bookkeeping, validation/completion evidence, durable local
 
 The application/core owns the sequence that uses the qualified Phase 3 context, runs the existing agent/tool loop, records observed changes and validation evidence, persists durable session state, and produces structured completion evidence.
 
-OpenTUI renders that state and accepts user/approval input. Provider adapters translate inference protocol. Neither becomes the owner of context precedence, session persistence, changed-file accounting, validation policy, or completion semantics.
+OpenTUI renders that state and accepts user/approval input. Provider adapters translate inference protocol. Neither becomes the owner of context precedence, session persistence, changed-file accounting, validation policy, progress semantics, or completion semantics.
+
+### Progress is a first-class application stream
+
+Phase 4 adds presentation-independent progress/status events owned by the application/core rather than inventing human-facing work state inside OpenTUI.
+
+George distinguishes two cadences:
+
+- **activity** is high-frequency lifecycle state such as provider thinking, a tool starting/completing, or an approval wait;
+- **progress** is a lower-frequency human-facing milestone such as assembling context, inspecting repository state, editing, validating, recovering from a failed validation, or preparing completion evidence.
+
+Progress messages are deterministic harness output derived from George-owned workflow/lifecycle state. Phase 4 does not add a model-facing `report_progress` tool and does not require the model to spend inference/tool rounds narrating routine work. Model-authored progress commentary may be reconsidered with Phase 5 long-run orchestration.
+
+Progress is not assistant transcript, hidden reasoning, chain-of-thought, validation evidence, or model-facing context. It must never be fed back into later provider requests merely because it was shown to the user.
+
+The normalized progress contract should carry a turn identity, a small stable category such as context/inspection/editing/validation/recovery/completion, and a bounded user-facing message. Exact event/type names may follow source conventions, but the semantics are presentation-independent so future Tauri/daemon clients can render the same stream.
+
+Authoritative tool/provider/validation/session events remain the source of truth. Progress may summarize or derive from them but must not become a competing authority. Repeated low-value lifecycle churn may be coalesced so progress remains useful rather than noisy.
+
+OpenTUI should retain its fast-changing activity indicator and additionally render a small recent-progress/work log for meaningful milestones.
+
+Durable sessions may retain bounded progress history where useful for diagnosis, but reopening a session must not present a stale status such as "Running tests..." as currently active.
 
 ### Changed-file accounting is evidence, not guesswork
 
@@ -112,6 +133,11 @@ Deterministic Phase 4 coverage must prove at minimum:
 - changed-file observation that does not overclaim process attribution;
 - validation through the canonical process/approval boundary;
 - structured completion evidence;
+- presentation-independent progress events in meaningful lifecycle order, with bounded/coalesced messages and separate high-frequency activity state;
+- progress/status text never entering assistant transcript or provider-facing context;
+- validation failure/recovery, cancellation, and terminal completion producing truthful progress without replacing the underlying authoritative evidence;
+- persisted/resumed sessions never presenting stale prior-run activity as currently active;
+- progress messages not exposing raw file bodies, process output, unrestricted environment data, or secrets merely because those values exist in underlying tool events;
 - one end-to-end disposable-repository workflow using the qualified Phase 3 context/skill substrate, approved mutation, validation, completion, persistence, and resumed later work;
 - preservation of the Phase 2 permission, workspace, process, and Git safeguards throughout the flow.
 

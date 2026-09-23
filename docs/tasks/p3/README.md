@@ -1,6 +1,6 @@
 # Phase 3 Task Stack
 
-Status: P1-P5 COMPLETE; P6 CLOSEOUT RECORDED — IMPLEMENTATION COMPLETE, STABILITY QUALIFICATION HAS EVIDENCE GAPS
+Status: OWNER-CLOSED WITH ACCEPTED NATIVE-TERMINAL / LIVE-MODEL EVIDENCE GAPS
 
 Phase: 3 — Context + Skills  
 Execution folder: `p3`  
@@ -27,6 +27,8 @@ Current authority:
 - P4 / `0.3.4` — OpenTUI skill commands and profile/context/activation observability.
 - P5 / `0.3.5` — integrated Phase-3 profile/context/skills qualification and bounded hardening.
 - P6 / `0.3.6` — evidence-only Phase-3 closeout; formal record: [`docs/phase-3-closeout.md`](../../phase-3-closeout.md).
+
+Owner closeout: [`docs/phase-3-owner-closeout.md`](../../phase-3-owner-closeout.md).
 
 P1-P5 use Terra High. P6 uses Terra Medium.
 
