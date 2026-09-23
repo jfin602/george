@@ -17,6 +17,8 @@ Create a reusable provider-/presentation-independent hook registry with explicit
 
 Freeze the smallest justified normalized lifecycle event set around current behavior, covering appropriate boundaries for session start/reopen/end where available, turn/user-input start, context assembly, provider request/response, tool before/after, and turn completion.
 
+Make the provider/assistant distinction explicit in the hook contract. Provider-round lifecycle/output evidence may describe a provisional round, while canonical assistant-response commit occurs only when the completed round is tool-free. Hooks must not reinterpret provisional provider text as canonical history, manufacture a final assistant response, force presentation reveal state into session truth, or bypass the existing round-buffering rule.
+
 Each hook has stable ID, lifecycle event, explicit deterministic order/priority, enable/disable state, and bounded configuration. Duplicate/conflicting identity behavior must fail or resolve visibly and deterministically.
 
 Support bounded in-process hooks for deterministic testing and process-backed executable hooks sufficient to prove the runtime contract.
