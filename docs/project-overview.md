@@ -82,6 +82,16 @@ A failed tool call, malformed model response, timeout, cancellation, permission 
 
 Recoverable tool failures should be representable to the model as structured results so it can adjust rather than forcing the entire turn to fail.
 
+### Bounded long-run autonomy
+
+Long autonomous work remains bounded, inspectable, and evidence-driven.
+
+George's durable normalized session/event history remains authoritative across context compaction, retries, interruption recovery, hooks, logs, and provider-native continuation state. Provider-facing summaries and other derived views may reduce working context, but they must not silently replace canonical evidence or remove current safety-relevant state.
+
+Automatic retries are allowed only when George can establish replay safety. Ambiguous side effects are reconciled from durable and observable evidence or remain explicitly unknown; they are not blindly repeated. Long-run budgets, cancellation, cleanup, and recovery remain application-owned controls that repository/model/extension text cannot expand.
+
+Long-running Phase 5 work remains an attached local George run. A persistent detached service/background-job owner is a later daemon concern.
+
 ### Small dependency surface
 
 Prefer Node standard library and focused dependencies. OpenTUI is an approved Phase 1 presentation dependency. Do not introduce React, a database, browser runtime, queue, container runtime, or distributed system before a current requirement needs it.
@@ -161,3 +171,19 @@ Phase 4 succeeds when George can complete a bounded coding task in a disposable 
 - proves the workflow with deterministic integrated fixture coverage.
 
 Phase 4 does not add LLM-based compaction, automatic semantic skill routing, executable hooks, plugin packaging, browser/network adapters, crash-safe side-effect reconciliation, long-job retries/backoff, daemon mode, or multi-agent scheduling.
+
+## Phase 5 success condition
+
+Phase 5 succeeds when George can run materially longer local coding jobs through one provider-independent reliability layer that:
+
+- compacts older completed provider-facing history under context pressure while preserving canonical normalized session/event history and provenance;
+- keeps George-owned invariants, current user intent, applicable project guidance, unresolved validation/failure state, pending approvals, and ambiguous/interrupted side effects available when safety or correctness requires them;
+- enforces explicit long-run budgets and bounded cancellable retry/backoff without transparently replaying ambiguous side effects;
+- reopens interrupted work and reconciles what can be proven complete/incomplete while leaving uncertain outcomes explicit;
+- hardens child-process cleanup without claiming an OS sandbox or unsupported exactly-once execution;
+- emits bounded/redacted diagnostic observability correlated to authoritative session/turn/operation identities;
+- runs deterministic bounded lifecycle hooks with ordering, enable/disable state, timeout/cancellation, failure isolation, sanitized environments, and no ability to bypass George policy/tool/approval boundaries;
+- characterizes memory/session growth, context/compaction cost, recovery cost, hook overhead, and OpenTUI responsiveness before freezing hard performance thresholds;
+- proves the long-run path with deterministic integrated fixtures plus separately classified pinned Qwen3-Coder/LM Studio and native-terminal qualification where available.
+
+Phase 5 does not add a utility-model runtime, automatic semantic skill routing, plugin packaging/install lifecycle, browser/network adapters, daemon/background-job ownership, a sandbox, Tauri, scheduling, or multi-agent execution.
