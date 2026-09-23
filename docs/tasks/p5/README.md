@@ -1,6 +1,6 @@
 # Phase 5 Task Stack
 
-Status: FORMAL P8 CLOSEOUT RECORDED — OWNER CLOSEOUT PENDING
+Status: OWNER-CLOSED WITH NATIVE-TERMINAL EVIDENCE GAP AND LIVE-MODEL NOT-GREEN RESULT
 
 Phase: 5 — Reliability + Long Runs  
 Execution folder: `p5`  
@@ -32,8 +32,9 @@ Current authority:
 
 P1-P7 use Terra High. P8 uses Terra Medium.
 
-Formal implementation/stability evidence: `docs/phase-5-closeout.md`. This is
-not an owner closeout or a Phase-6 baseline transition.
+Formal implementation/stability evidence: `docs/phase-5-closeout.md`.  
+Owner closeout: `docs/phase-5-owner-closeout.md`.  
+Phase 6 baseline transition: `0.6.0`.
 
 Every prompt is:
 
