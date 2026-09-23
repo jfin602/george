@@ -59,6 +59,9 @@ export class RecoveryCoordinator {
     } else if (item.kind === 'process') {
       outcome = 'outcome_unknown';
       evidence = 'No verified live process identity is available after reopen; a persisted PID is never signalled.';
+    } else if (item.kind === 'external') {
+      outcome = 'outcome_unknown';
+      evidence = 'External outcome is unknown and is not replayed during recovery.';
     } else if (item.kind === 'approval') {
       evidence = 'Approval remained unresolved and is not reused.';
     } else {

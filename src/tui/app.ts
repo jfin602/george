@@ -533,7 +533,7 @@ export class GeorgeTui {
     if (event.type === 'approval.requested') {
       this.pendingApproval = event.request;
       this.approvalView.content = this.approvalText(event.request);
-      this.approvalView.height = 6;
+      this.approvalView.height = this.approvalHeight(event.request);
     }
     if (event.type === 'approval.allowed' || event.type === 'approval.denied' || event.type === 'turn.cancelled') {
       this.pendingApproval = undefined;
@@ -707,8 +707,24 @@ export class GeorgeTui {
   private approvalText(request: ApprovalRequest): string {
     const detail = request.target
       ? `Target: ${request.target.path}${request.target.alreadyDirty ? ' (already dirty)' : ''}`
-      : `Executable: ${request.process!.executable}\nArgv: ${JSON.stringify(request.process!.argv)}\nCwd: ${request.process!.cwd}\nWarning: ${request.process!.warning}`;
-    return `Approval required — ${request.toolName} (${request.risk})\n${detail}\n[Ctrl+A]llow once  [Ctrl+D]eny`;
+      : request.process
+        ? `Executable: ${request.process.executable}\nArgv: ${JSON.stringify(request.process.argv)}\nCwd: ${request.process.cwd}\nWarning: ${request.process.warning}`
+        : [
+          `Effect: ${request.execution.effect.replaceAll('_', ' ')}`,
+          ...(request.execution.descriptor?.service ? [`Service: ${request.execution.descriptor.service}`] : []),
+          ...(request.execution.descriptor?.origin ? [`Origin: ${request.execution.descriptor.origin}`] : []),
+          ...(request.execution.descriptor?.resource ? [`Resource: ${request.execution.descriptor.resource}`] : []),
+          ...(request.execution.descriptor?.operation ? [`Operation: ${request.execution.descriptor.operation}`] : []),
+          ...(request.execution.descriptor?.credentialConfigured === undefined ? [] : [`Credential configured: ${request.execution.descriptor.credentialConfigured ? 'yes' : 'no'}`]),
+          `Warning: ${request.execution.effect === 'unknown_external' ? 'External effect is unknown; outcome may be unknown if interrupted.' : 'External operation requires explicit approval.'}`,
+        ].join('\n');
+    return `Approval required — ${request.toolName} (${request.execution.effect.replaceAll('_', ' ')})\n${detail}\n[Ctrl+A]llow once  [Ctrl+D]eny`;
+  }
+
+  private approvalHeight(request: ApprovalRequest): number {
+    if (request.target || request.process) return 6; // Preserve the established local write/process layout.
+    const detail = request.execution.descriptor;
+    return Math.min(9, 4 + Number(detail?.service !== undefined) + Number(detail?.origin !== undefined) + Number(detail?.resource !== undefined) + Number(detail?.operation !== undefined) + Number(detail?.credentialConfigured !== undefined));
   }
 
   private finish(): void {

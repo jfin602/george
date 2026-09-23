@@ -14,26 +14,26 @@ import { ToolRegistry, type ToolDefinition } from './registry.ts';
 
 export const READ_ONLY_TOOL_DEFINITIONS = [
   {
-    name: 'read_file', description: 'Read a bounded text file from the workspace.', permission: 'read',
+    name: 'read_file', description: 'Read a bounded text file from the workspace.', execution: { effect: 'local_read', replaySafety: 'replay_safe', source: { kind: 'builtin' } },
     inputSchema: { type: 'object', properties: { path: { type: 'string', minLength: 1 } }, required: ['path'], additionalProperties: false },
   },
   {
-    name: 'list_directory', description: 'List bounded direct entries in a workspace directory.', permission: 'read',
+    name: 'list_directory', description: 'List bounded direct entries in a workspace directory.', execution: { effect: 'local_read', replaySafety: 'replay_safe', source: { kind: 'builtin' } },
     inputSchema: { type: 'object', properties: { path: { type: 'string' } }, additionalProperties: false },
   },
   {
-    name: 'search_text', description: 'Search bounded workspace text without executing a shell.', permission: 'read',
+    name: 'search_text', description: 'Search bounded workspace text without executing a shell.', execution: { effect: 'local_read', replaySafety: 'replay_safe', source: { kind: 'builtin' } },
     inputSchema: {
       type: 'object', properties: { query: { type: 'string', minLength: 1 }, path: { type: 'string', minLength: 1 } },
       required: ['query'], additionalProperties: false,
     },
   },
   {
-    name: 'git_status', description: 'Read Git status using a fixed read-only command.', permission: 'read',
+    name: 'git_status', description: 'Read Git status using a fixed read-only command.', execution: { effect: 'local_read', replaySafety: 'replay_safe', source: { kind: 'builtin' } },
     inputSchema: { type: 'object', properties: {}, additionalProperties: false },
   },
   {
-    name: 'git_diff', description: 'Read Git diff using a fixed read-only command.', permission: 'read',
+    name: 'git_diff', description: 'Read Git diff using a fixed read-only command.', execution: { effect: 'local_read', replaySafety: 'replay_safe', source: { kind: 'builtin' } },
     inputSchema: { type: 'object', properties: {}, additionalProperties: false },
   },
 ] as const satisfies readonly Omit<ToolDefinition, 'execute'>[];

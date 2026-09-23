@@ -16,7 +16,7 @@ import { ToolRegistry, type ToolDefinition } from './registry.ts';
 export const PROCESS_TOOL_DEFINITION = {
   name: 'run_process',
   description: 'Run an approval-required bounded process with a literal executable and argument vector. A workspace cwd is not an OS sandbox.',
-  permission: 'process',
+  execution: { effect: 'host_process', replaySafety: 'not_replay_safe', source: { kind: 'builtin' } },
   inputSchema: {
     type: 'object', properties: {
       executable: { type: 'string', minLength: 1, maxLength: 1024 },

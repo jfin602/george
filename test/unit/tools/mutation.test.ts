@@ -23,8 +23,8 @@ test('workspace mutation creates safely and overwrites only with an exact precon
   const root = await fixture();
   t.after(() => rm(root, { recursive: true, force: true }));
   const executor = createWorkspaceMutationToolExecutor(await resolveWorkspaceRoot(root));
-  assert.deepEqual(executor.registry.registrations.map(({ name, permission }) => ({ name, permission })), [
-    { name: 'write_file', permission: 'write' }, { name: 'apply_patch', permission: 'write' },
+  assert.deepEqual(executor.registry.registrations.map(({ name, execution }) => ({ name, effect: execution.effect })), [
+    { name: 'write_file', effect: 'workspace_mutation' }, { name: 'apply_patch', effect: 'workspace_mutation' },
   ]);
 
   const created = await executor.execute({ name: 'write_file', path: 'new.txt', content: 'first' });

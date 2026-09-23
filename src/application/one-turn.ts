@@ -51,6 +51,7 @@ import {
   captureGitWorkingTreeSnapshot,
   ToolRegistry,
   type ReadOnlyToolLimits,
+  type ToolDefinition,
   type ValidatedToolCall,
 } from '../tools/index.ts';
 
@@ -70,6 +71,8 @@ export type OneTurnServiceOptions = Readonly<{
   readOnlyLimits?: ReadOnlyToolLimits;
   /** Optional capability-reducing selection from George's canonical tool registry. */
   toolNames?: readonly string[];
+  /** George-owned registrations for a later explicit adapter boundary; provider metadata cannot add these. */
+  additionalTools?: readonly ToolDefinition[];
   maxToolCalls?: number;
   maxToolRounds?: number;
   runBudget?: RunBudgetConfig;
@@ -361,25 +364,28 @@ export class AgentLoopApplicationService {
 
   private async approvalRequest(callId: string, validated: ValidatedToolCall, signal?: AbortSignal): Promise<ApprovalRequest | undefined> {
     const { definition, arguments: arguments_ } = validated;
-    if (definition.permission === 'read') return undefined;
-    if (definition.permission === 'write') {
+    if (definition.execution.effect === 'local_read') return undefined;
+    if (definition.execution.effect === 'workspace_mutation') {
       const target = await resolveWorkspaceMutationPath(this.workspace, arguments_.path as string);
       const git = await captureGitWorkingTreeSnapshot(this.workspace, target.path, { signal });
       return {
-        id: callId, toolName: definition.name, risk: 'write', arguments: arguments_,
+        id: callId, toolName: definition.name, execution: definition.execution,
         target: { path: target.relativePath, alreadyDirty: git.target?.dirty ?? false },
       };
     }
-    const cwd = await resolveWorkspacePath(this.workspace, (arguments_.cwd as string | undefined) ?? '.');
-    return {
-      id: callId, toolName: definition.name, risk: 'process', arguments: arguments_,
-      process: {
-        executable: arguments_.executable as string,
-        argv: arguments_.arguments as string[],
-        cwd: cwd.slice(this.workspace.root.length + 1) || '.',
-        warning: 'Approved arbitrary processes are not OS/workspace sandboxed.',
-      },
-    };
+    if (definition.execution.effect === 'host_process') {
+      const cwd = await resolveWorkspacePath(this.workspace, (arguments_.cwd as string | undefined) ?? '.');
+      return {
+        id: callId, toolName: definition.name, execution: definition.execution,
+        process: {
+          executable: arguments_.executable as string,
+          argv: arguments_.arguments as string[],
+          cwd: cwd.slice(this.workspace.root.length + 1) || '.',
+          warning: 'Approved arbitrary processes are not OS/workspace sandboxed.',
+        },
+      };
+    }
+    return { id: callId, toolName: definition.name, execution: definition.execution };
   }
 
   /** Executes one registered call through the same validation, approval, and dispatch boundary as the model loop. */
@@ -394,12 +400,14 @@ export class AgentLoopApplicationService {
   ): AsyncGenerator<ApplicationEvent, import('../tools/index.ts').ToolResult> {
     const emit = (event: ApplicationEvent): readonly ApplicationEvent[] => this.record(session, event);
     const origin = hookId === undefined ? {} : { origin: { hookId } };
-    yield* emit({ type: 'tool.requested', turnId, callId: call.callId, name: call.name, arguments: call.arguments, ...origin });
+    const registration = this.registry.registration(call.name);
+    const execution = registration?.execution;
+    yield* emit({ type: 'tool.requested', turnId, callId: call.callId, name: call.name, arguments: call.arguments, ...(execution === undefined ? {} : { execution }), ...origin });
     if (!hookId && budget) yield* this.invokeHooks(session, { name: 'tool.before', sessionId: session.id, turnId, runId: budget.id, operation: { callId: call.callId, name: call.name } }, budget, signal);
     if (signal?.aborted) throw cancellationError(signal);
     const validation = this.registry.validate(call);
     if ('callId' in validation) {
-      yield* emit({ type: 'tool.failed', turnId, callId: call.callId, name: call.name, result: validation.result as Extract<typeof validation.result, { ok: false }>, ...origin });
+      yield* emit({ type: 'tool.failed', turnId, callId: call.callId, name: call.name, result: validation.result as Extract<typeof validation.result, { ok: false }>, ...(execution === undefined ? {} : { execution }), ...origin });
       return validation;
     }
     let request: ApprovalRequest | undefined;
@@ -409,7 +417,7 @@ export class AgentLoopApplicationService {
       const normalized = asGeorgeError(error, 'validation');
       if (normalized.code === 'cancelled') throw normalized;
       const result = { callId: call.callId, name: call.name, result: { ok: false as const, error: { code: normalized.code, message: normalized.message } } };
-      yield* emit({ type: 'tool.failed', turnId, callId: call.callId, name: call.name, result: result.result, ...origin });
+      yield* emit({ type: 'tool.failed', turnId, callId: call.callId, name: call.name, result: result.result, execution: validation.definition.execution, ...origin });
       return result;
     }
     if (request) {
@@ -418,7 +426,7 @@ export class AgentLoopApplicationService {
       if (decision !== 'allow_once') {
         yield* emit({ type: 'approval.denied', turnId, callId: call.callId, request, ...origin });
         const result = { callId: call.callId, name: call.name, result: { ok: false as const, error: { code: 'denied', message: `Approval denied for tool ${call.name}.` } } };
-        yield* emit({ type: 'tool.failed', turnId, callId: call.callId, name: call.name, result: result.result, ...origin });
+        yield* emit({ type: 'tool.failed', turnId, callId: call.callId, name: call.name, result: result.result, execution: validation.definition.execution, ...origin });
         return result;
       }
       yield* emit({ type: 'approval.allowed', turnId, callId: call.callId, request, ...origin });
@@ -435,11 +443,11 @@ export class AgentLoopApplicationService {
         : { name: 'apply_patch' as const, path: target.relativePath, precondition: validation.arguments.expectedSha256 as string, edits: (validation.arguments.edits as readonly unknown[]).length };
       if (intent) yield* emit({ type: 'recovery.intent', turnId, callId: call.callId, intent });
     }
-    yield* emit({ type: 'tool.started', turnId, callId: call.callId, name: call.name, ...origin });
+    yield* emit({ type: 'tool.started', turnId, callId: call.callId, name: call.name, execution: validation.definition.execution, ...origin });
     const startedAt = call.name === 'run_process' ? this.clock() : undefined;
     const result = await this.registry.dispatch(call, { signal, ...(input === undefined ? {} : { input }) });
-    if (result.result.ok) yield* emit({ type: 'tool.completed', turnId, callId: call.callId, name: call.name, result: result.result, ...origin });
-    else yield* emit({ type: 'tool.failed', turnId, callId: call.callId, name: call.name, result: result.result, ...origin });
+    if (result.result.ok) yield* emit({ type: 'tool.completed', turnId, callId: call.callId, name: call.name, result: result.result, execution: validation.definition.execution, ...origin });
+    else yield* emit({ type: 'tool.failed', turnId, callId: call.callId, name: call.name, result: result.result, execution: validation.definition.execution, ...origin });
     if (budget && startedAt !== undefined) yield* this.consumeBudget(session, turnId, budget, 'processRuntimeMs', Math.max(0, Math.floor(this.clock() - startedAt)), signal);
     if (!hookId && budget) yield* this.invokeHooks(session, { name: 'tool.after', sessionId: session.id, turnId, runId: budget.id, operation: { callId: call.callId, name: call.name } }, budget, signal);
     if (signal?.aborted) throw cancellationError(signal);
@@ -671,6 +679,7 @@ export async function createAgentLoopApplicationService(
     ...readOnly.registry.registrations,
     ...mutation.registry.registrations,
     ...process.registry.registrations,
+    ...(options.additionalTools ?? []),
   ]);
   return new AgentLoopApplicationService(
     options.provider,

@@ -115,7 +115,7 @@ test('durable evidence is bounded, excludes raw payloads, and classifies incompl
   appendSessionEvent(session, { type: 'tool.requested', turnId: 'turn-1', callId: 'process', name: 'run_process', arguments: '{"environment":"SECRET_ENV"}' });
   appendSessionEvent(session, {
     type: 'approval.requested', turnId: 'turn-1', callId: 'approval',
-    request: { id: 'approval', toolName: 'write_file', risk: 'write', arguments: { content: 'SECRET_APPROVAL_BODY' }, target: { path: 'never-created.txt', alreadyDirty: false } },
+    request: { id: 'approval', toolName: 'write_file', execution: { effect: 'workspace_mutation', replaySafety: 'not_replay_safe', source: { kind: 'builtin' } }, target: { path: 'never-created.txt', alreadyDirty: false } },
   });
   await store.save(session);
   const serialized = await readFile(join(state, 'session-1.json'), 'utf8');
@@ -177,4 +177,20 @@ test('durable hook evidence retains only bounded normalized outcome metadata', a
   assert.equal(reopened.events.at(-1)?.type === 'tool.started' && reopened.events.at(-1).origin?.hookId, 'audit-hook');
   const serialized = await readFile(join(state, 'hook-session.json'), 'utf8');
   assert.doesNotMatch(serialized, /stdout|environment|arguments/i);
+});
+
+test('durable external interruption retains only safe metadata and remains outcome unknown', async () => {
+  const { workspace, state } = await fixture();
+  const store = new LocalSessionStore({ root: state });
+  const session = createSession({ id: 'external-session', workspace });
+  appendSessionEvent(session, {
+    type: 'tool.started', turnId: 'turn-1', callId: 'remote', name: 'remote_fixture',
+    execution: { effect: 'remote_mutation', replaySafety: 'not_replay_safe', source: { kind: 'adapter', id: 'fixture' }, descriptor: { service: 'Fixture', origin: 'https://fixture.invalid', operation: 'change', credentialConfigured: true } },
+  });
+  await store.save(session);
+  const serialized = await readFile(join(state, 'external-session.json'), 'utf8');
+  assert.match(serialized, /remote_mutation|fixture\.invalid|credentialConfigured/);
+  assert.doesNotMatch(serialized, /SECRET|token|authorization/i);
+  const reopened = await store.open('external-session', workspace);
+  assert.deepEqual(reopened.interruptions, [{ kind: 'external', turnId: 'turn-1', callId: 'remote', name: 'remote_fixture' }]);
 });

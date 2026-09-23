@@ -6,9 +6,14 @@ import {
   type JsonValue,
   type ProviderToolDefinition,
   type ProviderToolResult,
+  type ToolEffect,
+  type ToolExecutionMetadata,
+  type ToolReplaySafety,
+  type ToolSource,
+  type ToolExecutionDescriptor,
 } from '../core/index.ts';
 
-export type ToolPermission = 'read' | 'write' | 'process';
+export type { ToolEffect, ToolExecutionMetadata, ToolExecutionDescriptor, ToolReplaySafety, ToolSource } from '../core/index.ts';
 
 export type ToolInputSchema =
   | Readonly<{
@@ -28,7 +33,7 @@ export type ToolDefinition = Readonly<{
   name: string;
   description: string;
   inputSchema: ToolInputSchema;
-  permission: ToolPermission;
+  execution: ToolExecutionMetadata;
   execute: (arguments_: JsonObject, options: ToolExecutionOptions) => Promise<JsonValue>;
 }>;
 
@@ -37,6 +42,37 @@ export type ToolExecutionOptions = Readonly<{ signal?: AbortSignal; input?: stri
 export type ToolCall = Readonly<{ callId: string; name: string; arguments: string }>;
 export type ToolResult = ProviderToolResult;
 export type ValidatedToolCall = Readonly<{ definition: ToolDefinition; arguments: JsonObject }>;
+
+const EFFECTS: readonly ToolEffect[] = ['local_read', 'workspace_mutation', 'host_process', 'external_read', 'remote_mutation', 'browser_observation', 'browser_interaction', 'unknown_external'];
+
+function boundedText(value: unknown, name: string, maximum = 256): string {
+  if (typeof value !== 'string' || !value.trim() || Buffer.byteLength(value, 'utf8') > maximum || /[\u0000-\u001f\u007f]/.test(value)) throw new Error(`Invalid tool execution ${name}.`);
+  return value;
+}
+
+/** Normalize once at registration so all event/approval consumers see safe George-owned metadata. */
+function executionMetadata(value: ToolExecutionMetadata): ToolExecutionMetadata {
+  if (!EFFECTS.includes(value.effect)) throw new Error('Invalid tool execution effect.');
+  if (value.replaySafety !== 'replay_safe' && value.replaySafety !== 'not_replay_safe') throw new Error('Invalid tool replay safety.');
+  const source = value.source;
+  if (source.kind === 'builtin') {
+    if (Object.keys(source).length !== 1) throw new Error('Invalid builtin tool source.');
+  } else if (source.kind === 'plugin') {
+    boundedText(source.id, 'plugin source', 128);
+  } else if (source.kind === 'adapter') {
+    boundedText(source.id, 'adapter source', 128);
+    if (source.server !== undefined) boundedText(source.server, 'adapter server', 128);
+  } else throw new Error('Invalid tool source.');
+  if (value.descriptor?.credentialConfigured !== undefined && typeof value.descriptor.credentialConfigured !== 'boolean') throw new Error('Invalid tool credential state.');
+  const descriptor = value.descriptor === undefined ? undefined : {
+    ...(value.descriptor.service === undefined ? {} : { service: boundedText(value.descriptor.service, 'service') }),
+    ...(value.descriptor.origin === undefined ? {} : { origin: boundedText(value.descriptor.origin, 'origin', 512) }),
+    ...(value.descriptor.resource === undefined ? {} : { resource: boundedText(value.descriptor.resource, 'resource', 512) }),
+    ...(value.descriptor.operation === undefined ? {} : { operation: boundedText(value.descriptor.operation, 'operation') }),
+    ...(value.descriptor.credentialConfigured === undefined ? {} : { credentialConfigured: value.descriptor.credentialConfigured }),
+  };
+  return { effect: value.effect, replaySafety: value.replaySafety, source, ...(descriptor === undefined ? {} : { descriptor }) };
+}
 
 function schemaJson(schema: ToolInputSchema): JsonObject {
   return schema as unknown as JsonObject;
@@ -84,12 +120,14 @@ export class ToolRegistry {
     const tools = new Map<string, ToolDefinition>();
     for (const definition of definitions) {
       if (!definition.name || tools.has(definition.name)) throw new Error(`Invalid duplicate tool name: ${definition.name}`);
-      tools.set(definition.name, definition);
+      tools.set(definition.name, { ...definition, execution: executionMetadata(definition.execution) });
     }
-    this.registrations = definitions;
+    this.registrations = [...tools.values()];
     this.byName = tools;
     this.definitions = definitions.map(({ name, description, inputSchema }) => ({ name, description, inputSchema: schemaJson(inputSchema) }));
   }
+
+  registration(name: string): ToolDefinition | undefined { return this.byName.get(name); }
 
   /** Returns a capability-reducing view of this registry using the original registrations. */
   select(names: readonly string[]): ToolRegistry {

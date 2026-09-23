@@ -7,6 +7,7 @@ import { GeorgeError } from './errors.ts';
 import type { ContextProfile } from './config.ts';
 import type { ApplicationEvent, ContextCheckpointEvidence, ContextDiagnostics, ProviderUsage } from './events.ts';
 import type { RunBudgetDimension, RunBudgetSnapshot } from './run-budget.ts';
+import type { ToolExecutionMetadata } from './execution.ts';
 import type { TranscriptEntry, Session, SessionInterruption } from './session.ts';
 import { resolveWorkspaceRoot } from './workspace.ts';
 
@@ -50,6 +51,33 @@ function safeHookOrigin(value: unknown): Readonly<{ hookId: string }> {
   const origin = record(value, 'hook origin');
   exactKeys(origin, ['hookId'], 'hook origin');
   return { hookId: identifier(origin.hookId, 'hook ID') };
+}
+
+function safeExecution(value: ToolExecutionMetadata): ToolExecutionMetadata {
+  const execution = record(value, 'tool execution');
+  exactKeys(execution, ['effect', 'replaySafety', 'source', ...(execution.descriptor === undefined ? [] : ['descriptor'])], 'tool execution');
+  const effect = oneOf(execution.effect, 'tool effect', ['local_read', 'workspace_mutation', 'host_process', 'external_read', 'remote_mutation', 'browser_observation', 'browser_interaction', 'unknown_external']);
+  const replaySafety = oneOf(execution.replaySafety, 'tool replay safety', ['replay_safe', 'not_replay_safe']);
+  const source = record(execution.source, 'tool source');
+  const kind = oneOf(source.kind, 'tool source kind', ['builtin', 'plugin', 'adapter']);
+  if (kind === 'builtin') exactKeys(source, ['kind'], 'builtin tool source');
+  else if (kind === 'plugin') exactKeys(source, ['kind', 'id'], 'plugin tool source');
+  else if (source.server === undefined) exactKeys(source, ['kind', 'id'], 'adapter tool source');
+  else exactKeys(source, ['kind', 'id', 'server'], 'adapter tool source');
+  const safeSource = kind === 'builtin' ? { kind } as const : kind === 'plugin'
+    ? { kind, id: identifier(source.id, 'plugin source ID') } as const
+    : { kind, id: identifier(source.id, 'adapter source ID'), ...(source.server === undefined ? {} : { server: identifier(source.server, 'adapter server ID') }) } as const;
+  if (execution.descriptor === undefined) return { effect, replaySafety, source: safeSource };
+  const descriptor = record(execution.descriptor, 'tool execution descriptor');
+  if (Object.keys(descriptor).some((key) => !['service', 'origin', 'resource', 'operation', 'credentialConfigured'].includes(key))) invalid('tool execution descriptor has an invalid shape.');
+  const text = (key: 'service' | 'origin' | 'resource' | 'operation', maximum = 512) => descriptor[key] === undefined ? undefined : boundedMessage(string(descriptor[key], `tool ${key}`, maximum));
+  return { effect, replaySafety, source: safeSource, descriptor: {
+    ...(text('service', 256) === undefined ? {} : { service: text('service', 256)! }),
+    ...(text('origin') === undefined ? {} : { origin: text('origin')! }),
+    ...(text('resource') === undefined ? {} : { resource: text('resource')! }),
+    ...(text('operation', 256) === undefined ? {} : { operation: text('operation', 256)! }),
+    ...(descriptor.credentialConfigured === undefined ? {} : { credentialConfigured: typeof descriptor.credentialConfigured === 'boolean' ? descriptor.credentialConfigured : invalid('tool credential state is invalid.') }),
+  } };
 }
 
 function record(value: unknown, name: string): Record<string, unknown> {
@@ -100,10 +128,6 @@ function boundedMessage(value: string): string {
 function safeError<T extends string>(error: { code: T; message: string }): { code: T; message: string } {
   string(error.code, 'error code', 128);
   return { code: error.code, message: boundedMessage(string(error.message, 'error message')) };
-}
-
-function safeArguments(): Record<string, never> {
-  return {};
 }
 
 function safeWorkDetails(value: unknown): Extract<ApplicationEvent, { type: 'work.updated' }>['item']['details'] {
@@ -234,15 +258,15 @@ function durableEvent(event: ApplicationEvent): ApplicationEvent | undefined {
     case 'recovery.intent': return { type: event.type, turnId: string(event.turnId, 'turn ID', 256), callId: string(event.callId, 'call ID', 256), intent: safeRecoveryIntent(event.intent) };
     case 'recovery.decision': return {
       type: event.type, turnId: string(event.turnId, 'turn ID', 256), ...(event.callId === undefined ? {} : { callId: string(event.callId, 'call ID', 256) }),
-      kind: oneOf(event.kind, 'recovery kind', ['mutation', 'process', 'approval', 'provider-continuation']), ...(event.name === undefined ? {} : { name: string(event.name, 'recovery name', 256) }),
+      kind: oneOf(event.kind, 'recovery kind', ['mutation', 'process', 'external', 'approval', 'provider-continuation']), ...(event.name === undefined ? {} : { name: string(event.name, 'recovery name', 256) }),
       outcome: oneOf(event.outcome, 'recovery outcome', ['confirmed_complete', 'confirmed_incomplete', 'interrupted', 'outcome_unknown']), evidence: boundedMessage(string(event.evidence, 'recovery evidence', 512)),
     };
     case 'context.source': return { type: event.type, turnId: string(event.turnId, 'turn ID', 256), sourceId: string(event.sourceId, 'context source ID', 1024), kind: string(event.kind, 'context source kind', 128), status: oneOf(event.status, 'context source status', ['loading', 'loaded', 'missing', 'oversized', 'failed']), ...(event.bytes === undefined ? {} : { bytes: boundedInteger(event.bytes, 'context source bytes') }) };
     case 'context.assembled': return { type: event.type, turnId: string(event.turnId, 'turn ID', 256), diagnostics: safeDiagnostics(event.diagnostics) };
-    case 'tool.requested': return { type: event.type, turnId: string(event.turnId, 'turn ID', 256), callId: string(event.callId, 'call ID', 256), name: string(event.name, 'tool name', 256), arguments: '{}', ...(event.origin === undefined ? {} : { origin: safeHookOrigin(event.origin) }) };
-    case 'tool.started': return { type: event.type, turnId: string(event.turnId, 'turn ID', 256), callId: string(event.callId, 'call ID', 256), name: string(event.name, 'tool name', 256), ...(event.origin === undefined ? {} : { origin: safeHookOrigin(event.origin) }) };
-    case 'tool.completed': return { type: event.type, turnId: string(event.turnId, 'turn ID', 256), callId: string(event.callId, 'call ID', 256), name: string(event.name, 'tool name', 256), result: { ok: true, value: {} }, ...(event.origin === undefined ? {} : { origin: safeHookOrigin(event.origin) }) };
-    case 'tool.failed': return { type: event.type, turnId: string(event.turnId, 'turn ID', 256), callId: string(event.callId, 'call ID', 256), name: string(event.name, 'tool name', 256), result: { ok: false, error: safeError(event.result.error) }, ...(event.origin === undefined ? {} : { origin: safeHookOrigin(event.origin) }) };
+    case 'tool.requested': return { type: event.type, turnId: string(event.turnId, 'turn ID', 256), callId: string(event.callId, 'call ID', 256), name: string(event.name, 'tool name', 256), arguments: '{}', ...(event.execution === undefined ? {} : { execution: safeExecution(event.execution) }), ...(event.origin === undefined ? {} : { origin: safeHookOrigin(event.origin) }) };
+    case 'tool.started': return { type: event.type, turnId: string(event.turnId, 'turn ID', 256), callId: string(event.callId, 'call ID', 256), name: string(event.name, 'tool name', 256), ...(event.execution === undefined ? {} : { execution: safeExecution(event.execution) }), ...(event.origin === undefined ? {} : { origin: safeHookOrigin(event.origin) }) };
+    case 'tool.completed': return { type: event.type, turnId: string(event.turnId, 'turn ID', 256), callId: string(event.callId, 'call ID', 256), name: string(event.name, 'tool name', 256), result: { ok: true, value: {} }, ...(event.execution === undefined ? {} : { execution: safeExecution(event.execution) }), ...(event.origin === undefined ? {} : { origin: safeHookOrigin(event.origin) }) };
+    case 'tool.failed': return { type: event.type, turnId: string(event.turnId, 'turn ID', 256), callId: string(event.callId, 'call ID', 256), name: string(event.name, 'tool name', 256), result: { ok: false, error: safeError(event.result.error) }, ...(event.execution === undefined ? {} : { execution: safeExecution(event.execution) }), ...(event.origin === undefined ? {} : { origin: safeHookOrigin(event.origin) }) };
     case 'approval.requested': case 'approval.allowed': case 'approval.denied': return {
       type: event.type, turnId: string(event.turnId, 'turn ID', 256), callId: string(event.callId, 'call ID', 256),
       request: safeApproval(event.request), ...(event.origin === undefined ? {} : { origin: safeHookOrigin(event.origin) }),
@@ -316,13 +340,12 @@ function safeCheckpoint(value: ContextCheckpointEvidence): ContextCheckpointEvid
 }
 
 function safeApproval(request: ApplicationEvent extends never ? never : Extract<ApplicationEvent, { type: 'approval.requested' }>['request']): Extract<ApplicationEvent, { type: 'approval.requested' }>['request'] {
-  const safe = { id: string(request.id, 'approval ID', 256), toolName: string(request.toolName, 'approval tool name', 256), risk: request.risk, arguments: safeArguments() } as const;
-  if (request.risk !== 'write' && request.risk !== 'process') invalid('approval risk is invalid.');
-  if (request.risk === 'write') {
+  const safe = { id: string(request.id, 'approval ID', 256), toolName: string(request.toolName, 'approval tool name', 256), execution: safeExecution(request.execution) } as const;
+  if (request.execution.effect === 'workspace_mutation') {
     if (!request.target || request.process || typeof request.target.alreadyDirty !== 'boolean') invalid('write approval has an invalid shape.');
     return { ...safe, target: { path: string(request.target.path, 'approval path', 4096), alreadyDirty: request.target.alreadyDirty } };
   }
-  if (request.risk === 'process') {
+  if (request.execution.effect === 'host_process') {
     if (!request.process || request.target) invalid('process approval has an invalid shape.');
     return {
       ...safe,
@@ -333,7 +356,8 @@ function safeApproval(request: ApplicationEvent extends never ? never : Extract<
       },
     };
   }
-  return invalid('approval risk is invalid.');
+  if (request.target || request.process) invalid('external approval has an invalid local target.');
+  return safe;
 }
 
 function boundedInteger(value: unknown, name: string, maximum = 1_000_000_000): number {
@@ -445,8 +469,14 @@ export function classifySessionInterruptions(events: readonly ApplicationEvent[]
   const interruptions: SessionInterruption[] = [];
   for (const event of tools.values()) {
     if (reconciled.has(event.callId)) continue;
-    if (event.name === 'write_file' || event.name === 'apply_patch') interruptions.push({ kind: 'mutation', turnId: event.turnId, callId: event.callId, name: event.name });
-    if (event.name === 'run_process') interruptions.push({ kind: 'process', turnId: event.turnId, callId: event.callId, name: event.name });
+    const effect = event.execution?.effect;
+    const kind = effect === 'workspace_mutation' ? 'mutation'
+      : effect === 'host_process' ? 'process'
+        : effect !== undefined && effect !== 'local_read' ? 'external'
+          // Legacy durable events lack execution metadata; retain prior classification only for them.
+          : event.name === 'write_file' || event.name === 'apply_patch' ? 'mutation'
+            : event.name === 'run_process' ? 'process' : undefined;
+    if (kind) interruptions.push({ kind, turnId: event.turnId, callId: event.callId, name: event.name });
   }
   for (const event of approvals.values()) if (!reconciled.has(event.callId)) interruptions.push({ kind: 'approval', turnId: event.turnId, callId: event.callId, name: event.request.toolName });
   for (const turnId of providerStarted) if (!reconciledProviderTurns.has(turnId)) interruptions.push({ kind: 'provider-continuation', ...(turnId === 'unknown' ? {} : { turnId }) });

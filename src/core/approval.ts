@@ -1,12 +1,12 @@
 import { cancellationError } from './cancellation.ts';
+import type { ToolExecutionMetadata } from './execution.ts';
 
 export type ApprovalDecision = 'allow_once' | 'deny';
 
 export type ApprovalRequest = Readonly<{
   id: string;
   toolName: string;
-  risk: 'write' | 'process';
-  arguments: Readonly<Record<string, unknown>>;
+  execution: ToolExecutionMetadata;
   target?: Readonly<{ path: string; alreadyDirty: boolean }>;
   process?: Readonly<{ executable: string; argv: readonly string[]; cwd: string; warning: string }>;
 }>;

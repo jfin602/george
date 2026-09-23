@@ -17,7 +17,7 @@ const SHA256_HEX = /^[a-f0-9]{64}$/;
 
 export const WORKSPACE_MUTATION_TOOL_DEFINITIONS = [
   {
-    name: 'write_file', description: 'Atomically write bounded text to a workspace file.', permission: 'write',
+    name: 'write_file', description: 'Atomically write bounded text to a workspace file.', execution: { effect: 'workspace_mutation', replaySafety: 'not_replay_safe', source: { kind: 'builtin' } },
     inputSchema: {
       type: 'object', properties: {
         path: { type: 'string', minLength: 1 }, content: { type: 'string', maxLength: 1024 * 1024 },
@@ -26,7 +26,7 @@ export const WORKSPACE_MUTATION_TOOL_DEFINITIONS = [
     },
   },
   {
-    name: 'apply_patch', description: 'Atomically apply bounded, unambiguous exact-text edits to a workspace text file.', permission: 'write',
+    name: 'apply_patch', description: 'Atomically apply bounded, unambiguous exact-text edits to a workspace text file.', execution: { effect: 'workspace_mutation', replaySafety: 'not_replay_safe', source: { kind: 'builtin' } },
     inputSchema: {
       type: 'object', properties: {
         path: { type: 'string', minLength: 1 }, expectedSha256: { type: 'string', minLength: 64, maxLength: 64 },

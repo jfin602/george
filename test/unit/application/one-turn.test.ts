@@ -8,6 +8,7 @@ import {
   GeorgeError,
   RunBudget,
   DEFAULT_CONTEXT_PROFILE,
+  PendingApprovalPort,
   createSession,
   type ModelProvider,
   type ProviderEvent,
@@ -15,6 +16,7 @@ import {
   type ProviderStreamOptions,
 } from '../../../src/core/index.ts';
 import { createOneTurnApplicationService } from '../../../src/application/index.ts';
+import type { ToolDefinition } from '../../../src/tools/index.ts';
 
 class ScriptedProvider implements ModelProvider {
   calls: Array<{ request: ProviderRequest; options: ProviderStreamOptions }> = [];
@@ -600,4 +602,35 @@ test('provider failures after response evidence never retry or commit provisiona
   assert.equal(events.some((event) => event.type === 'tool.requested'), false);
   assert.equal(events.some((event) => event.type === 'approval.requested'), false);
   assert.deepEqual(session.transcript, [{ role: 'user', text: 'partial' }]);
+});
+
+test('external effects stay approval-gated, carry bounded George metadata, and cancel while waiting', async (t) => {
+  const root = await workspace();
+  t.after(() => rm(root, { recursive: true, force: true }));
+  for (const effect of ['external_read', 'remote_mutation', 'browser_observation', 'browser_interaction', 'unknown_external'] as const) {
+    let executions = 0;
+    const tool: ToolDefinition = {
+      name: `external_${effect}`, description: 'External fixture.',
+      execution: { effect, replaySafety: effect === 'external_read' ? 'replay_safe' : 'not_replay_safe', source: { kind: 'adapter', id: 'fixture' }, descriptor: { service: 'Fixture', origin: 'https://fixture.invalid', resource: 'safe-resource', operation: 'inspect', credentialConfigured: true } },
+      inputSchema: { type: 'object', properties: {}, additionalProperties: false },
+      execute: async () => { executions += 1; return {}; },
+    };
+    const provider = new ScriptedProvider([{ type: 'provider.response.started', responseId: effect }, { type: 'provider.tool.call', callId: effect, name: tool.name, arguments: '{}' }, { type: 'provider.response.completed' }]);
+    const approvals = new PendingApprovalPort();
+    const controller = new AbortController();
+    const service = await createOneTurnApplicationService({ provider, workspace: root, approvalPort: approvals, additionalTools: [tool] });
+    const iterator = service.run({ session: createSession({ workspace: root }), input: effect, signal: controller.signal })[Symbol.asyncIterator]();
+    let next = await iterator.next();
+    while (!next.done && next.value.type !== 'approval.requested') next = await iterator.next();
+    assert.equal(next.value?.type, 'approval.requested');
+    if (next.value?.type === 'approval.requested') {
+      assert.equal(next.value.request.execution.effect, effect);
+      assert.equal(next.value.request.execution.descriptor?.service, 'Fixture');
+    }
+    assert.equal(provider.calls[0]?.request.tools.some((definition) => 'execution' in definition), false);
+    controller.abort(new GeorgeError('cancelled', 'stop approval'));
+    const remainder = await collect({ async *[Symbol.asyncIterator]() { for (;;) { const item = await iterator.next(); if (item.done) return; yield item.value; } } });
+    assert.equal(executions, 0);
+    assert.equal(remainder.at(-1)?.type, 'turn.cancelled');
+  }
 });

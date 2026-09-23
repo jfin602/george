@@ -83,7 +83,7 @@ test('canonical registry validates JSON and schema before executor invocation', 
   const registry = new ToolRegistry([{
     name: 'bounded_echo',
     description: 'Return one required string.',
-    permission: 'read',
+    execution: { effect: 'local_read', replaySafety: 'replay_safe', source: { kind: 'builtin' }, },
     inputSchema: {
       type: 'object',
       properties: { value: { type: 'string', minLength: 1 } },
@@ -116,8 +116,8 @@ test('registry selection preserves canonical registrations and cannot add author
   let reads = 0;
   let writes = 0;
   const registry = new ToolRegistry([
-    { name: 'read_file', description: 'Read.', permission: 'read', inputSchema: { type: 'object', properties: {}, additionalProperties: false }, execute: async () => { reads += 1; return {}; } },
-    { name: 'write_file', description: 'Write.', permission: 'write', inputSchema: { type: 'object', properties: {}, additionalProperties: false }, execute: async () => { writes += 1; return {}; } },
+    { name: 'read_file', description: 'Read.', execution: { effect: 'local_read', replaySafety: 'replay_safe', source: { kind: 'builtin' } }, inputSchema: { type: 'object', properties: {}, additionalProperties: false }, execute: async () => { reads += 1; return {}; } },
+    { name: 'write_file', description: 'Write.', execution: { effect: 'workspace_mutation', replaySafety: 'not_replay_safe', source: { kind: 'builtin' } }, inputSchema: { type: 'object', properties: {}, additionalProperties: false }, execute: async () => { writes += 1; return {}; } },
   ]);
   const selected = registry.select(['read_file']);
 

@@ -44,7 +44,7 @@ test('recovery confirms only exact writes, preserves history, and never replays 
   appendSessionEvent(unknown, { type: 'recovery.intent', turnId: 'turn', callId: 'patch', intent: { name: 'apply_patch', path: 'unknown.txt', precondition: sha256('before'), edits: 1 } });
   appendSessionEvent(unknown, { type: 'tool.started', turnId: 'turn', callId: 'patch', name: 'apply_patch' });
   appendSessionEvent(unknown, { type: 'tool.started', turnId: 'turn', callId: 'process', name: 'run_process' });
-  appendSessionEvent(unknown, { type: 'approval.requested', turnId: 'turn', callId: 'approval', request: { id: 'approval', toolName: 'write_file', risk: 'write', arguments: {}, target: { path: 'unknown.txt', alreadyDirty: true } } });
+  appendSessionEvent(unknown, { type: 'approval.requested', turnId: 'turn', callId: 'approval', request: { id: 'approval', toolName: 'write_file', execution: { effect: 'workspace_mutation', replaySafety: 'not_replay_safe', source: { kind: 'builtin' } }, target: { path: 'unknown.txt', alreadyDirty: true } } });
   appendSessionEvent(unknown, { type: 'provider.response.started', responseId: 'old-response' });
   unknown.interruptions = classifySessionInterruptions(unknown.events);
 

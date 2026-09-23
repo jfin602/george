@@ -144,7 +144,7 @@ test('interrupted durable operations reopen as history, never replay, and a late
   for (const [kind, event] of [
     ['mutation', { type: 'tool.started', turnId: 'old', callId: 'write', name: 'write_file' }],
     ['process', { type: 'tool.started', turnId: 'old', callId: 'process', name: 'run_process' }],
-    ['approval', { type: 'approval.requested', turnId: 'old', callId: 'approval', request: { id: 'approval', toolName: 'write_file', risk: 'write', arguments: {}, target: { path: 'never.txt', alreadyDirty: false } } }],
+    ['approval', { type: 'approval.requested', turnId: 'old', callId: 'approval', request: { id: 'approval', toolName: 'write_file', execution: { effect: 'workspace_mutation', replaySafety: 'not_replay_safe', source: { kind: 'builtin' } }, target: { path: 'never.txt', alreadyDirty: false } } }],
     ['provider-continuation', { type: 'provider.response.started', responseId: 'old-provider' }],
   ] as const) {
     const session = createSession({ id: `interrupted-${kind}`, workspace: root });

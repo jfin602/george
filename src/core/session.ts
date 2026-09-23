@@ -17,7 +17,7 @@ export type Session = {
 };
 
 export type SessionInterruption = Readonly<{
-  kind: 'mutation' | 'process' | 'approval' | 'provider-continuation';
+  kind: 'mutation' | 'process' | 'external' | 'approval' | 'provider-continuation';
   turnId?: string;
   callId?: string;
   name?: string;

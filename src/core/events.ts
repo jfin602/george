@@ -2,6 +2,7 @@ import type { GeorgeErrorShape } from './errors.ts';
 import type { ApprovalRequest } from './approval.ts';
 import type { ContextProfile } from './config.ts';
 import type { RunBudgetDimension, RunBudgetSnapshot } from './run-budget.ts';
+import type { ToolExecutionMetadata } from './execution.ts';
 
 export type ContextCheckpointEvidence = Readonly<{
   version: number;
@@ -153,16 +154,17 @@ export type ApplicationEvent =
   | Readonly<{ type: 'hook.started'; turnId?: string; hookId: string; event: string }>
   | Readonly<{ type: 'hook.completed'; turnId?: string; hookId: string; event: string; status: 'succeeded' | 'failed' | 'timed_out' | 'cancelled'; message?: string }>
   | Readonly<{ type: 'recovery.intent'; turnId: string; callId: string; intent: RecoveryIntent }>
-  | Readonly<{ type: 'recovery.decision'; turnId: string; callId?: string; kind: 'mutation' | 'process' | 'approval' | 'provider-continuation'; name?: string; outcome: RecoveryOutcome; evidence: string }>
+  | Readonly<{ type: 'recovery.decision'; turnId: string; callId?: string; kind: 'mutation' | 'process' | 'external' | 'approval' | 'provider-continuation'; name?: string; outcome: RecoveryOutcome; evidence: string }>
   | Readonly<{
       type: 'tool.requested';
       turnId: string;
       callId: string;
       name: string;
       arguments: string;
+      execution?: ToolExecutionMetadata;
       origin?: HookOrigin;
     }>
-  | Readonly<{ type: 'tool.started'; turnId: string; callId: string; name: string; origin?: HookOrigin }>
+  | Readonly<{ type: 'tool.started'; turnId: string; callId: string; name: string; execution?: ToolExecutionMetadata; origin?: HookOrigin }>
   | Readonly<{ type: 'approval.requested'; turnId: string; callId: string; request: ApprovalRequest; origin?: HookOrigin }>
   | Readonly<{ type: 'approval.allowed'; turnId: string; callId: string; request: ApprovalRequest; origin?: HookOrigin }>
   | Readonly<{ type: 'approval.denied'; turnId: string; callId: string; request: ApprovalRequest; origin?: HookOrigin }>
@@ -178,6 +180,7 @@ export type ApplicationEvent =
       callId: string;
       name: string;
       result: Readonly<{ ok: true; value: import('./provider.ts').JsonValue }>;
+      execution?: ToolExecutionMetadata;
       origin?: HookOrigin;
     }>
   | Readonly<{
@@ -186,5 +189,6 @@ export type ApplicationEvent =
       callId: string;
       name: string;
       result: Readonly<{ ok: false; error: Readonly<{ code: string; message: string }> }>;
+      execution?: ToolExecutionMetadata;
       origin?: HookOrigin;
     }>;

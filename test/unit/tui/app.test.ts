@@ -21,6 +21,7 @@ import {
 } from '../../../src/core/index.ts';
 import { createCodingWorkflowApplicationService, createOneTurnApplicationService, WorkProjection, type OneTurnServiceOptions } from '../../../src/application/index.ts';
 import { GeorgeTui, NEON_THEME, renderTranscript, type GeorgeTuiOptions, type ThinkingClock, type TranscriptWorkEntry } from '../../../src/tui/app.ts';
+import type { ToolDefinition } from '../../../src/tools/index.ts';
 
 class ScriptedProvider implements ModelProvider {
   calls: Array<{ request: ProviderRequest; options: ProviderStreamOptions }> = [];
@@ -908,4 +909,21 @@ test('test renderer presents normalized approvals and allow, deny, and Esc keep 
   assert.match(process.setup.captureCharFrame(), /Executable: node/);
   process.setup.mockInput.pressKey('d', { ctrl: true });
   await process.app.waitForIdle();
+});
+
+test('test renderer presents bounded generic external approval details', async (t) => {
+  const tool: ToolDefinition = {
+    name: 'fixture_external', description: 'Fixture external tool.',
+    execution: { effect: 'unknown_external', replaySafety: 'not_replay_safe', source: { kind: 'adapter', id: 'fixture' }, descriptor: { service: 'Fixture', origin: 'https://fixture.invalid', resource: 'safe', operation: 'inspect', credentialConfigured: true } },
+    inputSchema: { type: 'object', properties: {}, additionalProperties: false }, execute: async () => ({}),
+  };
+  const item = await tui(new ApprovalProvider({ type: 'provider.tool.call', callId: 'external', name: tool.name, arguments: '{}' }), { additionalTools: [tool] });
+  t.after(() => cleanup(item));
+  await item.setup.mockInput.typeText('show external');
+  item.setup.mockInput.pressEnter();
+  await item.setup.waitForFrame((frame) => frame.includes('External effect is unknown'));
+  const frame = item.setup.captureCharFrame();
+  assert.match(frame, /Service: Fixture[\s\S]*Origin: https:\/\/fixture\.invalid[\s\S]*Credential configured: yes/);
+  item.setup.mockInput.pressKey('d', { ctrl: true });
+  await item.app.waitForIdle();
 });

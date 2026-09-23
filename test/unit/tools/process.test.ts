@@ -24,7 +24,7 @@ test('process executor uses literal argv, bounded output, workspace cwd, closed 
   process.env.GEORGE_PROCESS_TEST_SECRET = 'must-not-leak';
   t.after(() => { process.env.GEORGE_PROCESS_TEST_SECRET = sentinel; });
   const executor = createProcessToolExecutor(await resolveWorkspaceRoot(root), { maxOutputBytes: 3 });
-  assert.deepEqual(executor.registry.registrations.map(({ name, permission }) => ({ name, permission })), [{ name: 'run_process', permission: 'process' }]);
+  assert.deepEqual(executor.registry.registrations.map(({ name, execution }) => ({ name, effect: execution.effect })), [{ name: 'run_process', effect: 'host_process' }]);
 
   const literal = await executor.execute(node(['-e', 'process.stdout.write(process.argv[1])', '$(touch escaped);$HOME']));
   assert.equal(literal.stdout, '$(t');
