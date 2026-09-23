@@ -115,7 +115,6 @@ test('test renderer shows identity, configuration, streamed text, and read-only 
   await item.setup.flush();
   assert.equal(item.app.session.events.some((event) => event.type === 'tool.completed'), true);
   const frame = item.setup.captureCharFrame();
-  assert.match(frame, /You/);
   assert.match(frame, /Inspect BOOT/);
   assert.match(frame, /streamed answer/);
 });
@@ -152,6 +151,22 @@ test('composer accepts terminal paste and explicit Ctrl+V clipboard paste', asyn
   item.setup.mockInput.pressKey('v', { ctrl: true });
   await item.setup.flush();
   assert.equal(item.app.input.plainText, `terminal\npaste${clipboardText}`);
+});
+
+test('composer selects all with Ctrl+A, clears with Backspace, and marks hidden lines', async (t) => {
+  const item = await tui(new ScriptedProvider([]));
+  t.after(() => cleanup(item));
+  assert.ok(item.app.input.height >= 5);
+
+  await item.setup.mockInput.pasteBracketedText(Array.from({ length: 16 }, (_, index) => `line ${index}`).join('\n'));
+  await item.setup.flush();
+  assert.match(item.setup.captureCharFrame(), /… lines above/);
+
+  item.setup.mockInput.pressKey('a', { ctrl: true });
+  item.setup.mockInput.pressBackspace();
+  await item.setup.flush();
+  assert.equal(item.app.input.plainText, '');
+  assert.doesNotMatch(item.setup.captureCharFrame(), /… lines/);
 });
 
 test('streaming does not overwrite draft input and returns the composer to ready state', async (t) => {

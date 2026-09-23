@@ -16,6 +16,7 @@ import { createSession, type ApprovalRequest, type ApprovalResolver, type Applic
 export const COMPOSER_KEY_BINDINGS: TextareaKeyBinding[] = [
   { name: 'return', action: 'submit' },
   { name: 'return', shift: true, action: 'newline' },
+  { name: 'a', ctrl: true, action: 'select-all' },
 ];
 
 type Clipboard = Pick<HostClipboardService, 'read' | 'dispose'>;
@@ -85,6 +86,7 @@ export class GeorgeTui {
   private readonly activityView: TextRenderable;
   private readonly approvalView: TextRenderable;
   private readonly commandView: TextRenderable;
+  private readonly composerOverflowView: TextRenderable;
   private readonly statusDetails: string;
   private readonly approvals: ApprovalResolver;
   private readonly clipboard: Clipboard;
@@ -122,9 +124,13 @@ export class GeorgeTui {
     layout.add(this.approvalView);
     this.commandView = new TextRenderable(this.renderer, { id: 'commands', width: '100%', height: 0, flexShrink: 0, content: '' });
     layout.add(this.commandView);
+    this.composerOverflowView = new TextRenderable(this.renderer, { id: 'composer-overflow', width: '100%', height: 0, flexShrink: 0, content: '' });
+    layout.add(this.composerOverflowView);
     this.input = new TextareaRenderable(this.renderer, {
-      id: 'input', height: 3, minHeight: 3, maxHeight: 6, wrapMode: 'word', placeholder: 'Message George (Enter submits, Ctrl+V pastes, Shift+Enter adds a line)', keyBindings: COMPOSER_KEY_BINDINGS,
+      id: 'input', height: 5, minHeight: 5, maxHeight: 10, wrapMode: 'word', placeholder: 'Message George (Enter submits, Ctrl+A selects all, Ctrl+V pastes, Shift+Enter adds a line)', keyBindings: COMPOSER_KEY_BINDINGS,
       onSubmit: () => { void this.submit(); },
+      onContentChange: () => this.updateComposerOverflow(),
+      onCursorChange: () => this.updateComposerOverflow(),
     });
     layout.add(this.input);
     this.renderer.root.add(layout);
@@ -143,7 +149,10 @@ export class GeorgeTui {
         void this.pasteClipboard();
       }
     });
-    this.renderer.on(CliRenderEvents.RESIZE, () => this.renderer.requestRender());
+    this.renderer.on(CliRenderEvents.RESIZE, () => {
+      this.updateComposerOverflow();
+      this.renderer.requestRender();
+    });
     this.renderer.on(CliRenderEvents.DESTROY, () => {
       this.controller?.abort();
       this.closed = true;
@@ -234,6 +243,14 @@ export class GeorgeTui {
     if (result.status !== 'read') return;
     this.input.insertText(new TextDecoder().decode(result.representation.bytes));
     this.renderer.requestRender();
+  }
+
+  private updateComposerOverflow(): void {
+    const above = this.input.scrollY > 0;
+    const below = this.input.scrollY + this.input.height < this.input.virtualLineCount;
+    const content = [above ? '… lines above' : '', below ? '… lines below' : ''].filter(Boolean).join('  ');
+    this.composerOverflowView.content = content;
+    this.composerOverflowView.height = content ? 1 : 0;
   }
 
   private render(event: ApplicationEvent): void {
