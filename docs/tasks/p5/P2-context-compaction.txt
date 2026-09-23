@@ -17,6 +17,8 @@ Introduce a provider-independent compactor boundary. Deterministic tests must in
 
 Compaction may summarize only eligible **completed older history**. Keep current user input, current-turn tool/recovery state, active George/project instructions, unresolved validation/failure evidence, pending approvals, and interrupted/ambiguous side-effect state outside an unconstrained summary.
 
+Eligible completed history includes only canonical committed assistant responses. Never compact, summarize, resurrect, or feed back provisional text from provider rounds that contained tool calls or ended in failure/cancellation. Work/progress rows, visual reveal state, failed-tool requested-argument diagnostics, and user-facing provider diagnostics are not conversation history merely because they are visible; include safety-relevant structured evidence only through its authoritative normalized source.
+
 When prior raw history materially causes soft/hard context pressure, build provider-facing history from:
 - a bounded compacted-history source;
 - a bounded recent raw-history tail;
