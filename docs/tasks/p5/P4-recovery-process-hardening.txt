@@ -1,0 +1,47 @@
+TASK: Phase 5 / P4 — Interruption reconciliation and process hardening
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Terra High`.
+- Browser required: no.
+
+VERSIONING
+- This prompt's assigned project version is `0.5.4`.
+
+GOAL
+
+Extend Phase-4 safe non-replay reopen into evidence-based interruption reconciliation and strengthen process cleanup without claiming sandboxing or universal exactly-once execution.
+
+Read the Phase-5 authority/assessment/plan and inspect exact P1-P3 state plus session interruption classification, mutation executor, process executor, workspace resolution, durable sanitization, work projection, and related tests.
+
+Add bounded recovery-intent evidence before side-effecting workspace mutations where it can be derived safely without persisting content/patch bodies.
+
+For `write_file`, retain enough safe intent metadata for later observation: canonical workspace-relative target, desired byte count/hash, and applicable bounded precondition identity. For `apply_patch`, retain only safe metadata that can be proven without storing old/new patch text; do not force a positive result when final state cannot be established.
+
+Add a provider-independent recovery coordinator that observes durable interruption + current workspace state and classifies each relevant operation as:
+- `confirmed_complete`;
+- `confirmed_incomplete`;
+- `interrupted`;
+- `outcome_unknown`.
+
+A write may be confirmed complete only when current canonical file bytes/hash prove the intended result. Ambiguous patch/process/provider/approval outcomes remain interrupted/unknown unless evidence establishes more.
+
+Recovery is read/observe/classify only. It must never automatically write, patch, rerun a process, synthesize/reuse approval, or submit an old provider continuation.
+
+Append recovery decisions/evidence as new normalized events. Never rewrite prior events. Project recovery progress/work through the existing presentation-independent mechanism.
+
+Harden in-run process-tree termination and expose bounded structured cleanup outcome/uncertainty for timeout/cancellation/error paths. Where post-interruption process observation/cleanup is attempted, require identity stronger than a persisted PID alone; never signal a possibly reused PID. Unsupported platform cases remain explicit Evidence Gap/outcome unknown.
+
+Preserve the existing truthful statement that approved processes run with host-user privileges and cwd is not an OS sandbox.
+
+Set `package.json` version to `0.5.4`.
+
+Required proof:
+- interrupted write reconciles complete only on exact desired hash/bytes match;
+- clearly absent/incomplete cases classify truthfully;
+- ambiguous patch/process/provider/approval state remains unknown/interrupted and is never replayed;
+- no recovery path mutates the workspace or reuses approval/provider continuation automatically;
+- recovery evidence is bounded, durable, and historical evidence is unchanged;
+- process timeout/cancellation cleans descendants on supported deterministic fixtures and reports cleanup result/uncertainty;
+- stale/unverified process identity is never killed after reopen;
+- dirty user work and Phase-2 process/tool boundaries remain preserved;
+- Phase-2/3/4 and P1-P3 regressions, typecheck, broad deterministic tests, `git diff --check`, and no-`package-lock.json` are Green.
