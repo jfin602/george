@@ -1,0 +1,47 @@
+TASK: Phase 5 / P2 — Provider-facing context compaction
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Terra High`.
+- Browser required: no.
+
+VERSIONING
+- This prompt's assigned project version is `0.5.2`.
+
+GOAL
+
+Add provider-facing completed-history compaction and provenance-bearing checkpoints over the P1 budget substrate while keeping canonical transcript/events authoritative and intact.
+
+Read the Phase-5 authority/assessment/plan and inspect exact P1 state plus current context assembler, session/transcript/store, provider interface, application loop, context tests, and Phase-4 reopen tests.
+
+Introduce a provider-independent compactor boundary. Deterministic tests must inject a scripted/deterministic compactor. The normal product path may use the already-selected model provider for semantic summarization with no tools advertised; do not create a dedicated utility-model runtime in Phase 5.
+
+Compaction may summarize only eligible **completed older history**. Keep current user input, current-turn tool/recovery state, active George/project instructions, unresolved validation/failure evidence, pending approvals, and interrupted/ambiguous side-effect state outside an unconstrained summary.
+
+When prior raw history materially causes soft/hard context pressure, build provider-facing history from:
+- a bounded compacted-history source;
+- a bounded recent raw-history tail;
+- the normal current task/input and current authoritative guidance.
+
+Extend context source/trust metadata so compacted model-derived history is visibly derived and cannot become instruction authority.
+
+A compaction checkpoint must be bounded and versioned, with stable ID, covered transcript/history range identity, digest/provenance, summary, estimated before/after size, and pressure/budget reason. Persist checkpoint/lifecycle evidence without deleting or rewriting canonical transcript/events.
+
+Reuse valid checkpoints. Multiple compaction cycles must remain traceable and must not duplicate or silently skip uncovered completed history.
+
+Compaction consumes the P1 budget and supports cancellation. A malformed/oversized/failed compaction must degrade explicitly: preserve canonical state and either use an allowed safe raw working set or end with explicit context/budget exhaustion. Never present a truncated critical source as complete.
+
+If durable schema evolution is required, keep Phase-4 schema-1 sessions readable through a deterministic compatibility/migration path.
+
+Set `package.json` version to `0.5.2`.
+
+Required proof:
+- ordinary low-pressure turns remain behaviorally unchanged;
+- raw conversation that would exceed/pressure the profile can compact and then reach the provider;
+- critical/current instruction and unresolved/recovery state remains outside the summarized range;
+- checkpoint provenance/digests/ranges are deterministic and bounded;
+- multiple compaction cycles preserve canonical transcript/events;
+- recent raw history remains present after compaction;
+- compaction cancellation/failure/oversize/budget exhaustion is explicit and safe;
+- compacted history never raises permission/instruction authority;
+- reopened durable sessions can reuse valid checkpoints and Phase-4 sessions remain readable;
+- Phase-2/3/4 regressions, typecheck, broad deterministic tests, `git diff --check`, and no-`package-lock.json` are Green.
