@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { chmod, mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
@@ -16,6 +16,7 @@ import {
   type ProviderStreamOptions,
 } from '../../../src/core/index.ts';
 import { createOneTurnApplicationService } from '../../../src/application/index.ts';
+import { PluginManager } from '../../../src/plugins/index.ts';
 import type { ToolDefinition } from '../../../src/tools/index.ts';
 
 class ScriptedProvider implements ModelProvider {
@@ -111,6 +112,61 @@ test('timed-out process hooks are isolated from the turn', async (t) => {
   assert.equal(events.some((event) => event.type === 'hook.completed' && event.hookId === 'slow' && event.status === 'timed_out'), true);
   assert.equal(events.at(-1)?.type, 'turn.completed');
   assert.equal(session.transcript.at(-1)?.text, 'still canonical');
+});
+
+test('enabled managed plugin contributions stay bounded, approved, lazy, and command-scoped', async (t) => {
+  const root = await workspace();
+  const source = join(root, 'plugin-source');
+  const state = join(root, 'plugin-state');
+  t.after(() => rm(root, { recursive: true, force: true }));
+  await mkdir(join(source, 'skills'), { recursive: true });
+  await mkdir(join(source, 'bin'), { recursive: true });
+  await writeFile(join(source, 'skills', 'review.md'), '---\nname: review\ndescription: plugin review\n---\nPLUGIN BODY\n');
+  await writeFile(join(source, 'bin', 'tool'), '#!/usr/bin/env node\nlet input="";process.stdin.on("data",x=>input+=x);process.stdin.on("end",()=>process.stdout.write(JSON.stringify({echo:JSON.parse(input).value})));\n');
+  await writeFile(join(source, 'bin', 'hook'), '#!/usr/bin/env node\nprocess.exit(1);\n');
+  await Promise.all([chmod(join(source, 'bin', 'tool'), 0o755), chmod(join(source, 'bin', 'hook'), 0o755)]);
+  await writeFile(join(source, 'george-plugin.json'), JSON.stringify({
+    manifestVersion: 1, id: 'fixture.plugin', version: '1.0.0',
+    skills: [{ id: 'review', path: 'skills/review.md' }],
+    hooks: [{ id: 'observe', event: 'turn.completed', path: 'bin/hook' }],
+    commands: [{ id: 'run-review', skill: 'review' }],
+    tools: [{ id: 'inspect', description: 'Inspect plugin input.', path: 'bin/tool', inputSchema: { type: 'object', properties: { value: { type: 'string', maxLength: 20 } }, required: ['value'], additionalProperties: false } }],
+  }));
+  const manager = new PluginManager({ root: state });
+  await manager.install(source);
+  const disabled = await createOneTurnApplicationService({ provider: new ScriptedProvider([{ type: 'provider.response.completed' }]), workspace: root, pluginManager: manager });
+  assert.equal((await disabled.skillCatalog()).skills.some((skill) => skill.id.startsWith('plugin:')), false);
+  assert.deepEqual(disabled.plugins.listCommands(), []);
+  await manager.enable('fixture.plugin');
+
+  class PluginProvider implements ModelProvider {
+    calls: ProviderRequest[] = [];
+    async *stream(request: ProviderRequest): AsyncGenerator<ProviderEvent> {
+      this.calls.push(request);
+      if (this.calls.length === 1) {
+        yield { type: 'provider.response.started', responseId: 'plugin-response' };
+        yield { type: 'provider.tool.call', callId: 'plugin-call', name: 'plugin:fixture.plugin:inspect', arguments: '{"value":"ok"}' };
+        yield { type: 'provider.response.completed' };
+      } else {
+        yield { type: 'provider.text.delta', delta: 'done' };
+        yield { type: 'provider.response.completed' };
+      }
+    }
+  }
+  const provider = new PluginProvider();
+  const approvals: string[] = [];
+  const service = await createOneTurnApplicationService({ provider, workspace: root, pluginManager: manager, approvalPort: { request: async (request) => { approvals.push(request.toolName); return 'allow_once'; } } });
+  assert.equal((await service.skillCatalog()).skills.some((skill) => skill.id === 'plugin:fixture.plugin:review'), true);
+  assert.equal(provider.calls.length, 0, 'catalog discovery does not activate a plugin body');
+  const submission = await service.plugins.activate('plugin:fixture.plugin:run-review', 'review this');
+  const events = await collect(service.run({ session: createSession({ workspace: root }), ...submission }));
+  assert.deepEqual(approvals, ['plugin:fixture.plugin:inspect', 'run_process']);
+  assert.equal(provider.calls[0]?.tools.some((tool) => tool.name === 'plugin:fixture.plugin:inspect'), true);
+  assert.match(provider.calls[0]?.instructions ?? '', /PLUGIN BODY/);
+  await collect(service.run({ session: createSession({ workspace: root }), input: 'ordinary' }));
+  assert.doesNotMatch(provider.calls[2]?.instructions ?? '', /PLUGIN BODY/, 'command activation is not sticky');
+  assert.equal(service.hooks.list().some((hook) => hook.id === 'plugin:fixture.plugin:observe'), true);
+  assert.equal(events.some((event) => event.type === 'hook.completed' && event.hookId === 'plugin:fixture.plugin:observe' && event.status === 'failed'), true);
 });
 
 test('provider-facing history compacts only completed older pairs, retains a raw tail, and reuses its checkpoint', async (t) => {

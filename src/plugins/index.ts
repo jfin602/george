@@ -20,6 +20,8 @@ export type PluginCommand = Readonly<{ id: string; skill: string }>;
 export type PluginTool = Readonly<{ id: string; description: string; path: string; arguments: readonly string[]; inputSchema: ToolInputSchema }>;
 export type PluginManifest = Readonly<{ manifestVersion: 1; id: string; version: string; skills: readonly PluginSkill[]; hooks: readonly PluginHook[]; commands: readonly PluginCommand[]; tools: readonly PluginTool[] }>;
 export type PluginRecord = Readonly<{ id: string; version: string; enabled: boolean; capabilityFingerprint: string }>;
+export type EnabledPlugin = Readonly<{ record: PluginRecord; root: string; manifest: PluginManifest }>;
+export type EnabledPluginCatalog = Readonly<{ plugins: readonly EnabledPlugin[]; issues: readonly Readonly<{ id: string; reason: string }>[] }>;
 export type PluginManagerOptions = Readonly<{
   root?: string;
   userConfigRoot?: string;
@@ -160,7 +162,9 @@ export function parsePluginManifest(source: string): PluginManifest {
   duplicate(all, 'plugin manifest');
   const version = text(manifest.version, 'plugin version', 128);
   if (!SEMVER.test(version)) invalid('plugin version must use semantic versioning.');
-  return { manifestVersion: 1, id: identifier(manifest.id, 'plugin ID', true), version, skills, hooks, commands, tools };
+  const id = identifier(manifest.id, 'plugin ID', true);
+  if ([...skills, ...hooks, ...commands, ...tools].some((item) => `plugin:${id}:${item.id}`.length > 128)) invalid('plugin contribution identity is too long when namespaced.');
+  return { manifestVersion: 1, id, version, skills, hooks, commands, tools };
 }
 
 export function pluginCapabilityFingerprint(manifest: PluginManifest): string {
@@ -322,6 +326,24 @@ export class PluginManager {
     }
   }
   async list(): Promise<readonly PluginRecord[]> { return Object.values((await this.state()).plugins).sort((a, b) => a.id.localeCompare(b.id)); }
+  /** Re-inspect enabled managed packages; one bad package cannot hide its healthy peers. */
+  async enabled(): Promise<EnabledPluginCatalog> {
+    const state = await this.state();
+    const plugins: EnabledPlugin[] = [];
+    const issues: { id: string; reason: string }[] = [];
+    for (const record of Object.values(state.plugins).filter((item) => item.enabled).sort((left, right) => left.id.localeCompare(right.id))) {
+      const root = managedPath(this.root, record.id);
+      try {
+        if (!contained(join(this.root, 'packages'), root)) invalid('managed plugin path escapes its root.');
+        const inspected = await this.inspect(root);
+        if (inspected.manifest.id !== record.id || inspected.manifest.version !== record.version || pluginCapabilityFingerprint(inspected.manifest) !== record.capabilityFingerprint) invalid('managed plugin package no longer matches its approved state.');
+        plugins.push({ record, root, manifest: inspected.manifest });
+      } catch (error) {
+        issues.push({ id: record.id, reason: error instanceof Error ? error.message : String(error) });
+      }
+    }
+    return { plugins, issues };
+  }
   async enable(id: string): Promise<PluginRecord> { return this.setEnabled(id, true); }
   async disable(id: string): Promise<PluginRecord> { return this.setEnabled(id, false); }
   private async setEnabled(id: string, enabled: boolean): Promise<PluginRecord> {

@@ -408,6 +408,40 @@ export class GeorgeTui {
       await this.showSkills();
       return;
     }
+    if (text.trim() === '/plugins') {
+      this.clearComposer();
+      await this.showPlugins();
+      return;
+    }
+    if (text.trim() === '/commands') {
+      this.clearComposer();
+      this.showCommands();
+      return;
+    }
+    if (text.trimStart().startsWith('/plugin')) {
+      const command = /^\/plugin\s+(install\s+\S+|enable\s+\S+|disable\s+\S+|uninstall\s+\S+)\s*$/.exec(text);
+      if (!command) { this.showCommand('Usage: /plugin install|enable|disable|uninstall <path-or-id>'); return; }
+      const [action, value] = command[1]!.split(/\s+/, 2) as [string, string];
+      try {
+        const plugins = this.agent().plugins;
+        if (action === 'install') await plugins.install(value);
+        else if (action === 'enable') await plugins.enable(value);
+        else if (action === 'disable') await plugins.disable(value);
+        else await plugins.uninstall(value);
+        this.clearComposer();
+        this.showCommand(`Plugin ${action} completed. Restart George to refresh enabled contributions.`);
+      } catch (error) { this.showCommand(`Plugin ${action} failed: ${error instanceof Error ? bounded(error.message, 180) : 'failed'}`); }
+      return;
+    }
+    if (text.trimStart().startsWith('/command')) {
+      const command = /^\/command\s+(plugin:\S+)\s+([\s\S]*\S)\s*$/.exec(text);
+      if (!command) { this.showCommand('Usage: /command <plugin:command> <message>'); return; }
+      try {
+        const submission = await this.agent().plugins.activate(command[1]!, command[2]!);
+        await this.start(submission.input, submission.activatedSkills);
+      } catch (error) { this.showCommand(`Command activation: ${error instanceof Error ? bounded(error.message, 180) : 'failed'}`); }
+      return;
+    }
     if (text.trimStart().startsWith('/skill')) {
       const command = /^\/skill\s+(\S+)\s+([\s\S]*\S)\s*$/.exec(text);
       if (!command) {
@@ -676,6 +710,26 @@ export class GeorgeTui {
 
   private status(state: string): string {
     return `${state} · ${this.statusDetails}`;
+  }
+
+  private agent(): AgentLoopApplicationService {
+    return this.service instanceof CodingWorkflowApplicationService ? this.service.agent : this.service;
+  }
+
+  private async showPlugins(): Promise<void> {
+    try {
+      const plugins = await this.agent().plugins.list();
+      const details = plugins.slice(0, 4).map((plugin) => `${plugin.id} ${plugin.version} — ${plugin.enabled ? 'enabled' : 'disabled'}`);
+      if (plugins.length > details.length) details.push(`… ${plugins.length - details.length} more plugin(s)`);
+      this.showCommand(details.length ? `Plugins (${plugins.length}):\n${details.join('\n')}` : 'Plugins: none installed');
+    } catch (error) { this.showCommand(`Plugins unavailable: ${error instanceof Error ? bounded(error.message, 180) : 'failed'}`); }
+  }
+
+  private showCommands(): void {
+    const commands = this.agent().plugins.listCommands();
+    const details = commands.slice(0, 4).map((command) => command.id);
+    if (commands.length > details.length) details.push(`… ${commands.length - details.length} more command(s)`);
+    this.showCommand(details.length ? `Commands (${commands.length}):\n${details.join('\n')}` : 'Commands: none enabled');
   }
 
   private async showSkills(): Promise<void> {

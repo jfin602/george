@@ -5,9 +5,9 @@ import { fileURLToPath } from 'node:url';
 import { GeorgeError } from '../core/index.ts';
 import { loadBoundedContextFile } from '../context/index.ts';
 
-export type SkillOrigin = 'builtin' | 'user' | 'workspace';
+export type SkillOrigin = 'builtin' | 'user' | 'workspace' | 'plugin';
 
-export type SkillRoots = Readonly<Record<SkillOrigin, string>>;
+export type SkillRoots = Readonly<Record<Exclude<SkillOrigin, 'plugin'>, string>>;
 
 export type SkillMetadata = Readonly<{
   id: string;
@@ -23,6 +23,9 @@ export type SkillCatalogIssue = Readonly<{
   path: string;
   reason: string;
 }>;
+
+/** A managed plugin file, supplied by PluginManager rather than discovered from a workspace. */
+export type PluginSkillRoot = Readonly<{ pluginId: string; id: string; path: string; root: string }>;
 
 export type SkillCatalog = Readonly<{
   skills: readonly SkillMetadata[];
@@ -119,12 +122,14 @@ export class SkillRegistry {
   private readonly maxSkillBytes: number;
   private readonly maxMetadataBytes: number;
   private readonly maxSkills: number;
+  private readonly pluginSkills: readonly PluginSkillRoot[];
 
-  constructor(roots: SkillRoots, options: Readonly<{ maxSkillBytes?: number; maxMetadataBytes?: number; maxSkills?: number }> = {}) {
+  constructor(roots: SkillRoots, options: Readonly<{ maxSkillBytes?: number; maxMetadataBytes?: number; maxSkills?: number; pluginSkills?: readonly PluginSkillRoot[] }> = {}) {
     this.roots = roots;
     this.maxSkillBytes = options.maxSkillBytes ?? DEFAULT_SKILL_MAX_BYTES;
     this.maxMetadataBytes = options.maxMetadataBytes ?? DEFAULT_SKILL_METADATA_BYTES;
     this.maxSkills = options.maxSkills ?? DEFAULT_MAX_SKILLS;
+    this.pluginSkills = options.pluginSkills ?? [];
     for (const [name, value] of Object.entries({ maxSkillBytes: this.maxSkillBytes, maxMetadataBytes: this.maxMetadataBytes, maxSkills: this.maxSkills })) {
       if (!Number.isInteger(value) || value < 1) throw invalid(`${name} must be a positive integer.`);
     }
@@ -177,6 +182,26 @@ export class SkillRegistry {
         } catch (error) {
           issues.push({ origin, path, reason: error instanceof Error ? error.message : String(error) });
         }
+      }
+    }
+    for (const plugin of this.pluginSkills) {
+      const id = `plugin:${plugin.pluginId}:${plugin.id}`;
+      try {
+        if (!safeName(plugin.pluginId) || !safeName(plugin.id)) throw invalid('Plugin skill identity is unsafe.');
+        const canonicalRoot = await realpath(plugin.root);
+        const canonicalPath = await realpath(plugin.path);
+        if (!isWithin(canonicalRoot, canonicalPath)) throw invalid('Plugin SKILL.md escapes its managed package.');
+        const details = await stat(canonicalPath);
+        if (!details.isFile()) throw invalid('Plugin SKILL.md must be a regular file.');
+        if (details.size > this.maxSkillBytes) throw invalid(`SKILL.md exceeds the ${this.maxSkillBytes} byte safety limit.`);
+        const metadata = await readMetadata(canonicalPath, this.maxMetadataBytes);
+        const parsed = parseSkillMetadata(metadata);
+        if (parsed.name !== plugin.id) throw invalid('Plugin SKILL.md name must match its manifest ID.');
+        if (!metadata.slice(parsed.bodyStart).trim() && details.size <= Buffer.byteLength(metadata)) throw invalid('SKILL.md requires a non-empty body.');
+        if (discovered.length >= this.maxSkills) throw invalid(`Skill catalog exceeds the ${this.maxSkills} skill limit.`);
+        discovered.push({ metadata: { id, name: plugin.id, description: parsed.description, origin: 'plugin', ...(parsed.help ? { help: parsed.help } : {}), ...(parsed.argumentHint ? { argumentHint: parsed.argumentHint } : {}) }, path: canonicalPath });
+      } catch (error) {
+        issues.push({ origin: 'plugin', path: plugin.path, reason: error instanceof Error ? error.message : String(error) });
       }
     }
     discovered.sort((left, right) => left.metadata.id.localeCompare(right.metadata.id));

@@ -48,7 +48,7 @@ function bounded(value: string, limit: number, name: string): string {
 }
 
 function validate(registration: HookRegistration): HookRegistration {
-  if (!/^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$/.test(registration.id)) throw new GeorgeError('configuration', 'Hook ID is unsafe.');
+  if (!/^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$/.test(registration.id)) throw new GeorgeError('configuration', 'Hook ID is unsafe.');
   if (!HOOK_EVENTS.includes(registration.event)) throw new GeorgeError('configuration', 'Hook event is invalid.');
   if (registration.priority !== undefined && (!Number.isInteger(registration.priority) || registration.priority < -1_000 || registration.priority > 1_000)) throw new GeorgeError('configuration', 'Hook priority is invalid.');
   JSON.stringify(registration.configuration ?? {}); // rejects nothing useful, but makes the size check deterministic.

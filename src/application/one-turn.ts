@@ -44,6 +44,8 @@ import { WorkProjection } from './progress.ts';
 import { DEFAULT_PROVIDER_RETRY_POLICY, retryDelay, sleepForRetry, validateProviderRetryPolicy, type ProviderRetryPolicy, type RetrySleeper } from './retry.ts';
 import { RecoveryCoordinator } from './recovery.ts';
 import { defaultSkillRoots, SkillRegistry, type SkillCatalog, type SkillRoots } from '../skills/index.ts';
+import { PluginManager, type EnabledPlugin } from '../plugins/index.ts';
+import { PluginApplicationService, PluginCommandRegistry } from './plugin-commands.ts';
 import {
   createProcessToolExecutor,
   createReadOnlyToolExecutor,
@@ -82,6 +84,8 @@ export type OneTurnServiceOptions = Readonly<{
   retrySleeper?: RetrySleeper;
   approvalPort?: ApprovalPort;
   hooks?: readonly HookRegistration[];
+  /** George-owned managed plugins; workspace content is never consulted for executable contributions. */
+  pluginManager?: PluginManager;
   /** Derived observability only; it cannot affect session, provider, or tool execution. */
   diagnostics?: DiagnosticObserver;
 }>;
@@ -190,6 +194,7 @@ export class AgentLoopApplicationService {
   private readonly retrySleeper: RetrySleeper;
   private readonly recovery: RecoveryCoordinator;
   readonly hooks: HookRegistry;
+  readonly plugins: PluginApplicationService;
   private readonly diagnostics: DiagnosticObserver | undefined;
   private readonly projections = new WeakMap<Session, WorkProjection>();
   readonly workspace: Workspace;
@@ -212,6 +217,7 @@ export class AgentLoopApplicationService {
     providerRetryPolicy: ProviderRetryPolicy,
     retrySleeper: RetrySleeper,
     hooks: HookRegistry,
+    plugins: PluginApplicationService,
     diagnostics?: DiagnosticObserver,
   ) {
     this.provider = provider;
@@ -232,6 +238,7 @@ export class AgentLoopApplicationService {
     this.retrySleeper = retrySleeper;
     this.recovery = new RecoveryCoordinator(workspace);
     this.hooks = hooks;
+    this.plugins = plugins;
     this.diagnostics = diagnostics;
   }
 
@@ -378,8 +385,8 @@ export class AgentLoopApplicationService {
       return {
         id: callId, toolName: definition.name, execution: definition.execution,
         process: {
-          executable: arguments_.executable as string,
-          argv: arguments_.arguments as string[],
+          executable: typeof arguments_.executable === 'string' ? arguments_.executable : definition.execution.descriptor?.resource ?? definition.name,
+          argv: Array.isArray(arguments_.arguments) ? arguments_.arguments as string[] : [],
           cwd: cwd.slice(this.workspace.root.length + 1) || '.',
           warning: 'Approved arbitrary processes are not OS/workspace sandboxed.',
         },
@@ -665,6 +672,24 @@ export async function createOneTurnApplicationService(
   return createAgentLoopApplicationService(options);
 }
 
+/** Plugin executables are attached child processes; their manifest never chooses the execution effect. */
+function pluginToolDefinitions(plugins: readonly EnabledPlugin[], process: ReturnType<typeof createProcessToolExecutor>): ToolDefinition[] {
+  return plugins.flatMap((plugin) => plugin.manifest.tools.map((tool) => ({
+    name: `plugin:${plugin.manifest.id}:${tool.id}`,
+    description: tool.description,
+    inputSchema: tool.inputSchema,
+    execution: { effect: 'host_process' as const, replaySafety: 'not_replay_safe' as const, source: { kind: 'plugin' as const, id: plugin.manifest.id }, descriptor: { resource: `plugin:${plugin.manifest.id}:${tool.id}`, operation: 'attached process' } },
+    execute: async (arguments_, options) => {
+      const result = await process.execute({ name: 'run_process', executable: join(plugin.root, tool.path), arguments: tool.arguments }, { signal: options.signal, input: JSON.stringify(arguments_) });
+      if (result.outcome !== 'completed' || result.stdoutTruncated) throw new GeorgeError('tool', `Plugin tool ${tool.id} did not produce a complete result.`);
+      let value: unknown;
+      try { value = JSON.parse(result.stdout); } catch { throw new GeorgeError('validation', `Plugin tool ${tool.id} returned malformed JSON.`); }
+      if (!value || typeof value !== 'object' || Array.isArray(value)) throw new GeorgeError('validation', `Plugin tool ${tool.id} must return one JSON object.`);
+      return value as import('../core/index.ts').JsonValue;
+    },
+  })));
+}
+
 export async function createAgentLoopApplicationService(
   options: AgentLoopServiceOptions,
 ): Promise<AgentLoopApplicationService> {
@@ -673,15 +698,25 @@ export async function createAgentLoopApplicationService(
   const mutation = createWorkspaceMutationToolExecutor(workspace);
   const process = createProcessToolExecutor(workspace);
   const userConfigRoot = options.userConfigRoot ?? resolveGeorgeUserConfigRoot();
+  const manager = options.pluginManager ?? new PluginManager({ userConfigRoot });
+  const enabled = await manager.enabled();
+  const pluginTools = pluginToolDefinitions(enabled.plugins, process);
   const roots = defaultSkillRoots(userConfigRoot, workspace.root);
-  const skills = new SkillRegistry({ ...roots, ...options.skillRoots }, { maxSkillBytes: options.maxSkillBytes, maxMetadataBytes: options.maxSkillMetadataBytes, maxSkills: options.maxSkills });
+  const skills = new SkillRegistry({ ...roots, ...options.skillRoots }, { maxSkillBytes: options.maxSkillBytes, maxMetadataBytes: options.maxSkillMetadataBytes, maxSkills: options.maxSkills, pluginSkills: enabled.plugins.flatMap((plugin) => plugin.manifest.skills.map((skill) => ({ pluginId: plugin.manifest.id, id: skill.id, path: join(plugin.root, skill.path), root: plugin.root }))) });
   const registry = new ToolRegistry([
     ...readOnly.registry.registrations,
     ...mutation.registry.registrations,
     ...process.registry.registrations,
+    ...pluginTools,
     ...(options.additionalTools ?? []),
   ]);
-  return new AgentLoopApplicationService(
+  const hooks = new HookRegistry();
+  for (const hook of options.hooks ?? []) hooks.register(hook);
+  for (const plugin of enabled.plugins) for (const hook of plugin.manifest.hooks) hooks.register({ id: `plugin:${plugin.manifest.id}:${hook.id}`, event: hook.event, kind: 'process', executable: join(plugin.root, hook.path), arguments: hook.arguments, ...(hook.priority === undefined ? {} : { priority: hook.priority }), ...(hook.timeoutMs === undefined ? {} : { timeoutMs: hook.timeoutMs }), ...(hook.configuration === undefined ? {} : { configuration: hook.configuration }) });
+  const commands = new PluginCommandRegistry(enabled.plugins);
+  let service!: AgentLoopApplicationService;
+  const plugins = new PluginApplicationService(manager, commands, { skillTurn: (...args) => service.skillTurn(...args) });
+  service = new AgentLoopApplicationService(
     options.provider,
     workspace,
     options.georgeInstructions ?? GEORGE_OWNED_INSTRUCTIONS,
@@ -698,9 +733,11 @@ export async function createAgentLoopApplicationService(
     options.compactor ?? new ProviderContextCompactor(options.provider),
     validateProviderRetryPolicy(options.providerRetryPolicy ?? DEFAULT_PROVIDER_RETRY_POLICY),
     options.retrySleeper ?? sleepForRetry,
-    (() => { const hooks = new HookRegistry(); for (const hook of options.hooks ?? []) hooks.register(hook); return hooks; })(),
+    hooks,
+    plugins,
     options.diagnostics,
   );
+  return service;
 }
 
 /** @deprecated Use AgentLoopApplicationService. This alias delegates to the canonical loop. */

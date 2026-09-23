@@ -67,7 +67,7 @@ export type ContextSourceObservation = Readonly<{
 export type ActivatedContextSkill = Readonly<{
   id: string;
   text: string;
-  origin: 'builtin' | 'user' | 'workspace';
+  origin: 'builtin' | 'user' | 'workspace' | 'plugin';
 }>;
 
 /** Explicit history sources keep derived summaries visibly below instruction authority. */
