@@ -58,21 +58,149 @@ function stringAt(value: unknown, key: string): string | undefined {
   return typeof candidate === 'string' ? candidate : undefined;
 }
 
-function functionCallFrom(value: unknown): Extract<ProviderEvent, { type: 'provider.tool.call' }> | undefined {
-  const item = value && typeof value === 'object' && 'item' in value
-    ? (value as { item: unknown }).item
-    : value;
-  if (stringAt(item, 'type') !== 'function_call') return undefined;
-  const callId = stringAt(item, 'call_id');
-  const name = stringAt(item, 'name');
-  const arguments_ = stringAt(item, 'arguments');
-  if (!callId || !name || arguments_ === undefined) {
-    throw providerError('LM Studio sent an incomplete function call.');
-  }
-  return { type: 'provider.tool.call', callId, name, arguments: arguments_ };
+function numberAt(value: unknown, key: string): number | undefined {
+  if (!value || typeof value !== 'object') return undefined;
+  const candidate = (value as Record<string, unknown>)[key];
+  return typeof candidate === 'number' && Number.isInteger(candidate) ? candidate : undefined;
 }
 
-function normalizeMessage(message: SseMessage): ProviderEvent | undefined {
+type FunctionCallState = {
+  itemId?: string;
+  outputIndex?: number;
+  callId?: string;
+  name?: string;
+  arguments?: string;
+  finalized: boolean;
+  emitted: boolean;
+};
+
+type FunctionCallIdentity = Readonly<{
+  itemId?: string;
+  outputIndex?: number;
+  callId?: string;
+}>;
+
+/** Accumulates the OpenAI-compatible Responses function-call stream for one response. */
+class FunctionCallAssembler {
+  private readonly states = new Set<FunctionCallState>();
+  private readonly byItemId = new Map<string, FunctionCallState>();
+  private readonly byOutputIndex = new Map<number, FunctionCallState>();
+  private readonly byCallId = new Map<string, FunctionCallState>();
+  private readonly emittedCallIds = new Set<string>();
+
+  consume(wireType: string | undefined, payload: unknown): Extract<ProviderEvent, { type: 'provider.tool.call' }> | undefined {
+    const item = payload && typeof payload === 'object' && 'item' in payload
+      ? (payload as { item: unknown }).item
+      : undefined;
+    switch (wireType) {
+      case 'response.output_item.added':
+      case 'response.output_item.done': {
+        if (stringAt(item, 'type') !== 'function_call') return undefined;
+        const state = this.update(payload, item);
+        if (wireType === 'response.output_item.done') {
+          state.finalized = true;
+          return this.complete(state, true);
+        }
+        return undefined;
+      }
+      case 'response.function_call_arguments.delta': {
+        const delta = stringAt(payload, 'delta');
+        if (delta === undefined) throw providerError('LM Studio sent a function-call arguments delta without text.');
+        const state = this.update(payload);
+        state.arguments = `${state.arguments ?? ''}${delta}`;
+        return undefined;
+      }
+      case 'response.function_call_arguments.done': {
+        const state = this.update(payload);
+        const arguments_ = stringAt(payload, 'arguments');
+        if (arguments_ !== undefined) state.arguments = arguments_;
+        state.finalized = true;
+        return this.complete(state, false);
+      }
+      default:
+        return undefined;
+    }
+  }
+
+  assertComplete(): void {
+    if ([...this.states].some((state) => !state.emitted)) {
+      throw providerError('LM Studio completed a response with an incomplete function call.');
+    }
+  }
+
+  private update(payload: unknown, item?: unknown): FunctionCallState {
+    const identity = {
+      itemId: stringAt(payload, 'item_id') ?? stringAt(item, 'id'),
+      outputIndex: numberAt(payload, 'output_index'),
+      callId: stringAt(payload, 'call_id') ?? stringAt(item, 'call_id'),
+    };
+    const state = this.stateFor(identity);
+    this.bind(state, identity);
+    const name = stringAt(payload, 'name') ?? stringAt(item, 'name');
+    if (name) state.name = name;
+    const arguments_ = stringAt(item, 'arguments');
+    if (arguments_ !== undefined) state.arguments = arguments_;
+    return state;
+  }
+
+  private stateFor(identity: FunctionCallIdentity): FunctionCallState {
+    const matches = new Set<FunctionCallState>();
+    const byItemId = identity.itemId === undefined ? undefined : this.byItemId.get(identity.itemId);
+    const byOutputIndex = identity.outputIndex === undefined ? undefined : this.byOutputIndex.get(identity.outputIndex);
+    const byCallId = identity.callId === undefined ? undefined : this.byCallId.get(identity.callId);
+    if (byItemId) matches.add(byItemId);
+    if (byOutputIndex) matches.add(byOutputIndex);
+    if (byCallId) matches.add(byCallId);
+    const [state, ...duplicates] = matches;
+    const resolved = state ?? { finalized: false, emitted: false };
+    this.states.add(resolved);
+    for (const duplicate of duplicates) this.merge(resolved, duplicate);
+    return resolved;
+  }
+
+  private merge(into: FunctionCallState, from: FunctionCallState): void {
+    if (from.finalized || into.arguments === undefined) into.arguments = from.arguments;
+    into.itemId ??= from.itemId;
+    into.outputIndex ??= from.outputIndex;
+    into.callId ??= from.callId;
+    into.name ??= from.name;
+    into.finalized ||= from.finalized;
+    into.emitted ||= from.emitted;
+    this.states.delete(from);
+    this.bind(into, into);
+  }
+
+  private bind(state: FunctionCallState, identity: FunctionCallIdentity): void {
+    if (identity.itemId) {
+      state.itemId = identity.itemId;
+      this.byItemId.set(identity.itemId, state);
+    }
+    if (identity.outputIndex !== undefined) {
+      state.outputIndex = identity.outputIndex;
+      this.byOutputIndex.set(identity.outputIndex, state);
+    }
+    if (identity.callId) {
+      state.callId = identity.callId;
+      this.byCallId.set(identity.callId, state);
+    }
+  }
+
+  private complete(
+    state: FunctionCallState,
+    definitive: boolean,
+  ): Extract<ProviderEvent, { type: 'provider.tool.call' }> | undefined {
+    if (!state.finalized || !state.callId || !state.name || state.arguments === undefined) {
+      if (definitive) throw providerError('LM Studio completed an incomplete function call.');
+      return undefined;
+    }
+    state.emitted = true;
+    if (this.emittedCallIds.has(state.callId)) return undefined;
+    this.emittedCallIds.add(state.callId);
+    return { type: 'provider.tool.call', callId: state.callId, name: state.name, arguments: state.arguments };
+  }
+}
+
+function normalizeMessage(message: SseMessage, functionCalls: FunctionCallAssembler): ProviderEvent | undefined {
   if (message.data === '[DONE]') return undefined;
 
   let payload: unknown;
@@ -89,6 +217,8 @@ function normalizeMessage(message: SseMessage): ProviderEvent | undefined {
     ? message.event
     : stringAt(payload, 'type');
   const response = (payload as Record<string, unknown>).response;
+  const functionCall = functionCalls.consume(wireType, payload);
+  if (functionCall) return functionCall;
   switch (wireType) {
     case 'response.created':
       return {
@@ -100,18 +230,8 @@ function normalizeMessage(message: SseMessage): ProviderEvent | undefined {
       if (delta === undefined) throw providerError('LM Studio sent a text delta without text.');
       return { type: 'provider.text.delta', delta };
     }
-    case 'response.function_call_arguments.done': {
-      const callId = stringAt(payload, 'call_id');
-      const name = stringAt(payload, 'name');
-      const arguments_ = stringAt(payload, 'arguments');
-      if (!callId || !name || arguments_ === undefined) {
-        throw providerError('LM Studio sent an incomplete function call.');
-      }
-      return { type: 'provider.tool.call', callId, name, arguments: arguments_ };
-    }
-    case 'response.output_item.done':
-      return functionCallFrom(payload);
     case 'response.completed': {
+      functionCalls.assertComplete();
       const responseUsage = response && typeof response === 'object'
         ? (response as Record<string, unknown>).usage
         : undefined;
@@ -266,9 +386,10 @@ export class LmStudioResponsesProvider implements ModelProvider {
 
       let completed = false;
       const callIds = new Set<string>();
+      const functionCalls = new FunctionCallAssembler();
       try {
         for await (const message of parseSse(response.body)) {
-          const event = normalizeMessage(message);
+          const event = normalizeMessage(message, functionCalls);
           if (!event) continue;
           if (event.type === 'provider.response.completed') completed = true;
           if (event.type === 'provider.tool.call') {

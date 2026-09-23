@@ -66,6 +66,39 @@ test('LM Studio provider sends the Responses request shape and parses split CRLF
   ]);
 });
 
+test('LM Studio provider assembles a function call from output-item and argument stream events', async (t) => {
+  const { server, baseUrl } = await fixture((_request, response) => sse(response, [
+    'data: {"type":"response.output_item.added","output_index":0,"item":{"id":"item-1","type":"function_call","call_id":"call-1","name":"read_file","arguments":""}}\n\n',
+    'data: {"type":"response.function_call_arguments.delta","item_id":"item-1","output_index":0,"delta":"{\\"path\\":"}\n\n',
+    'data: {"type":"response.function_call_arguments.delta","item_id":"item-1","output_index":0,"delta":"\\"a.ts\\"}"}\n\n',
+    'data: {"type":"response.function_call_arguments.done","item_id":"item-1","output_index":0,"name":"read_file","arguments":"{\\"path\\":\\"a.ts\\"}"}\n\n',
+    'data: {"type":"response.output_item.done","output_index":0,"item":{"id":"item-1","type":"function_call","status":"completed"}}\n\n',
+    'data: {"type":"response.completed","response":{}}\n\n',
+  ]));
+  t.after(() => close(server));
+
+  const provider = new LmStudioResponsesProvider({ baseUrl, model: 'local-model' });
+  assert.deepEqual(await eventsFrom(provider.stream({ input: 'Read a.ts' })), [
+    { type: 'provider.tool.call', callId: 'call-1', name: 'read_file', arguments: '{"path":"a.ts"}' },
+    { type: 'provider.response.completed' },
+  ]);
+});
+
+test('LM Studio provider completes arguments-done calls from earlier output-item state', async (t) => {
+  const { server, baseUrl } = await fixture((_request, response) => sse(response, [
+    'data: {"type":"response.output_item.added","output_index":0,"item":{"id":"item-1","type":"function_call","call_id":"call-1","name":"read_file"}}\n\n',
+    'data: {"type":"response.function_call_arguments.done","item_id":"item-1","output_index":0,"arguments":"{\\"path\\":\\"a.ts\\"}"}\n\n',
+    'data: {"type":"response.completed","response":{}}\n\n',
+  ]));
+  t.after(() => close(server));
+
+  const provider = new LmStudioResponsesProvider({ baseUrl, model: 'local-model' });
+  assert.deepEqual(await eventsFrom(provider.stream({ input: 'Read a.ts' })), [
+    { type: 'provider.tool.call', callId: 'call-1', name: 'read_file', arguments: '{"path":"a.ts"}' },
+    { type: 'provider.response.completed' },
+  ]);
+});
+
 test('LM Studio provider normalizes function calls without duplicate output-item events', async (t) => {
   const { server, baseUrl } = await fixture((_request, response) => sse(response, [
     'data: {"type":"response.function_call_arguments.done","call_id":"call-1","name":"read_file","arguments":"{\\"path\\":\\"a.ts\\"}"}\n\n',
@@ -81,17 +114,57 @@ test('LM Studio provider normalizes function calls without duplicate output-item
   ]);
 });
 
-test('LM Studio provider rejects malformed function calls', async (t) => {
+test('LM Studio provider rejects function calls left incomplete at item or response completion', async (t) => {
+  const cases: ReadonlyArray<Readonly<{ name: string; chunks: string[]; expected: RegExp }>> = [
+    {
+      name: 'output item completion',
+      chunks: [
+        'data: {"type":"response.output_item.added","output_index":0,"item":{"id":"item-1","type":"function_call","call_id":"call-1"}}\n\n',
+        'data: {"type":"response.output_item.done","output_index":0,"item":{"id":"item-1","type":"function_call","status":"completed"}}\n\n',
+      ],
+      expected: /completed an incomplete function call/,
+    },
+    {
+      name: 'response completion',
+      chunks: [
+        'data: {"type":"response.output_item.added","output_index":0,"item":{"id":"item-1","type":"function_call","call_id":"call-1","name":"read_file"}}\n\n',
+        'data: {"type":"response.completed","response":{}}\n\n',
+      ],
+      expected: /completed a response with an incomplete function call/,
+    },
+  ];
+
+  for (const item of cases) {
+    await t.test(item.name, async (subtest) => {
+      const { server, baseUrl } = await fixture((_request, response) => sse(response, item.chunks));
+      subtest.after(() => close(server));
+      const events: unknown[] = [];
+      await assert.rejects(async () => {
+        for await (const event of new LmStudioResponsesProvider({ baseUrl, model: 'local-model' }).stream({ input: 'Read.' })) events.push(event);
+      }, (error: unknown) => error instanceof GeorgeError && error.code === 'provider' && item.expected.test(error.message));
+      assert.equal((events.at(-1) as { type: string }).type, 'provider.error');
+    });
+  }
+});
+
+test('LM Studio provider assembles multiple streamed function calls in output order', async (t) => {
   const { server, baseUrl } = await fixture((_request, response) => sse(response, [
-    'data: {"type":"response.function_call_arguments.done","call_id":"call-1","arguments":"{}"}\n\n',
+    'data: {"type":"response.output_item.added","output_index":0,"item":{"id":"item-1","type":"function_call","call_id":"call-1","name":"read_file","arguments":""}}\n\n',
+    'data: {"type":"response.output_item.added","output_index":1,"item":{"id":"item-2","type":"function_call","call_id":"call-2","name":"git_status","arguments":""}}\n\n',
+    'data: {"type":"response.function_call_arguments.delta","item_id":"item-1","output_index":0,"delta":"{\\"path\\":\\"a.ts\\"}"}\n\n',
+    'data: {"type":"response.function_call_arguments.done","item_id":"item-1","output_index":0,"arguments":"{\\"path\\":\\"a.ts\\"}"}\n\n',
+    'data: {"type":"response.function_call_arguments.delta","item_id":"item-2","output_index":1,"delta":"{}"}\n\n',
+    'data: {"type":"response.function_call_arguments.done","item_id":"item-2","output_index":1,"arguments":"{}"}\n\n',
+    'data: {"type":"response.completed","response":{}}\n\n',
   ]));
   t.after(() => close(server));
 
-  const events: unknown[] = [];
-  await assert.rejects(async () => {
-    for await (const event of new LmStudioResponsesProvider({ baseUrl, model: 'local-model' }).stream({ input: 'Read.' })) events.push(event);
-  }, (error: unknown) => error instanceof GeorgeError && error.code === 'provider' && /incomplete function call/.test(error.message));
-  assert.equal((events.at(-1) as { type: string }).type, 'provider.error');
+  const provider = new LmStudioResponsesProvider({ baseUrl, model: 'local-model' });
+  assert.deepEqual(await eventsFrom(provider.stream({ input: 'Inspect.' })), [
+    { type: 'provider.tool.call', callId: 'call-1', name: 'read_file', arguments: '{"path":"a.ts"}' },
+    { type: 'provider.tool.call', callId: 'call-2', name: 'git_status', arguments: '{}' },
+    { type: 'provider.response.completed' },
+  ]);
 });
 
 test('LM Studio provider serializes multiple custom tools and structured tool-result continuation', async (t) => {
