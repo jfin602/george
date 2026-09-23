@@ -1,6 +1,6 @@
 # Phase 4 Task Stack
 
-Status: IMPLEMENTATION COMPLETE — NOT STABILITY QUALIFIED (NATIVE-TERMINAL / LIVE-MODEL EVIDENCE GAPS)
+Status: OWNER-CLOSED WITH ACCEPTED NATIVE-TERMINAL / LIVE-MODEL EVIDENCE GAPS
 
 Phase: 4 — Coding Workflow + Sessions  
 Execution folder: `p4`  
@@ -28,6 +28,8 @@ Current authority:
 - P5 / `0.4.5` — durable reopen and safe new-turn resume integration.
 - P6 / `0.4.6` — integrated Phase-4 qualification, conditional native/live evidence, bounded hardening.
 - P7 / `0.4.7` — evidence-only Phase-4 closeout; formal record: [`docs/phase-4-closeout.md`](../../phase-4-closeout.md).
+
+Owner closeout: [`docs/phase-4-owner-closeout.md`](../../phase-4-owner-closeout.md).
 
 P1-P6 use Terra High. P7 uses Terra Medium.
 

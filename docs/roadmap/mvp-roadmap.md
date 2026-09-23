@@ -1,6 +1,6 @@
 # George MVP Roadmap
 
-Status: CURRENT ROADMAP — PHASE 3 OWNER-CLOSED; PHASE 4 CURRENT
+Status: CURRENT ROADMAP — PHASE 4 OWNER-CLOSED; PHASE 5 PLANNING
 
 The roadmap deliberately proves the provider, read-only tool foundation, real interactive terminal surface, and safe autonomous tool execution before broader coding workflow, networking, or a desktop GUI.
 
@@ -152,7 +152,10 @@ Non-goals:
 
 ## Phase 4 — Coding Workflow + Sessions
 
-Status: CURRENT IMPLEMENTATION GATE — baseline package `0.4.0`
+Status: OWNER-CLOSED WITH ACCEPTED NATIVE-TERMINAL / LIVE-MODEL EVIDENCE GAPS
+
+Formal evidence: `docs/phase-4-closeout.md`.  
+Owner closeout: `docs/phase-4-owner-closeout.md`.
 
 Goal: turn the Phase 3 context-aware safe agent into a durable bounded coding workflow that can modify, validate, report, persist, and safely resume work.
 
@@ -203,6 +206,8 @@ Non-goals:
 - daemon/server mode, Tauri, or multi-agent scheduling.
 
 ## Phase 5 — Reliability + Long Runs
+
+Status: CURRENT PLANNING GATE — baseline package `0.5.0`
 
 Goal: support longer autonomous local jobs safely and establish George's lifecycle hook runtime.
 

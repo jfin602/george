@@ -35,13 +35,19 @@ Formal Phase 3 closeout: `docs/phase-3-closeout.md`.
 Phase 3 owner closeout: `docs/phase-3-owner-closeout.md`.  
 Phase 4 baseline transition: package `0.4.0`.
 
-The owner explicitly accepts the recorded Phase 1, Phase 2, and Phase 3 native-terminal/live LM Studio/Qwen Evidence Gaps for roadmap progression. They remain Evidence Gaps, not Green evidence.
+Phase 4 — Coding Workflow + Sessions — is owner-closed.
 
-**Phase 4 — Coding Workflow + Sessions — is the current implementation gate.**
+Accepted Phase 4 implementation/qualification candidate: `ceac33dd09c85e141a4ff8a892a7e0dca8198ea2` at package `0.4.6`.  
+Formal Phase 4 P7 closeout marker: `8374f3b3453c3ebc66942f2cf8796b34736c588d` at package `0.4.7`.  
+Formal Phase 4 closeout: `docs/phase-4-closeout.md`.  
+Phase 4 owner closeout: `docs/phase-4-owner-closeout.md`.  
+Phase 5 baseline transition: package `0.5.0`.
 
-Phase 4 decision authority: `docs/planning/p4-coding-workflow-sessions/decision-record.md`.
+The owner explicitly accepts the recorded Phase 1, Phase 2, Phase 3, and Phase 4 native-terminal/live LM Studio/Qwen Evidence Gaps for roadmap progression. They remain Evidence Gaps, not Green evidence.
 
-The approved Phase 4 decision record, together with the current product, architecture, stability, and roadmap contracts, is the implementation authority for the current gate.
+**Phase 5 — Reliability + Long Runs — is the current planning gate.**
+
+Phase 5 planning authority starts with the current product, architecture, workflow, stability, and roadmap contracts. A Phase 5 decision record should be established through the normal `/docs-review -> /docs-apply` workflow before implementation prompts are written.
 
 ## Core premise
 
@@ -76,7 +82,7 @@ Read:
 - workflow: `docs/workflow.md`;
 - stability/testing: `docs/stability-contract.md`;
 - roadmap: `docs/roadmap/mvp-roadmap.md`;
-- Phase 4 decision authority: `docs/planning/p4-coding-workflow-sessions/decision-record.md`;
+- Phase 4 closeout/history when needed: `docs/phase-4-closeout.md`, `docs/phase-4-owner-closeout.md`, `docs/planning/p4-coding-workflow-sessions/decision-record.md`;
 - Phase 3 closeout/history when needed: `docs/phase-3-closeout.md`, `docs/phase-3-owner-closeout.md`, `docs/planning/p3-context-skills/decision-record.md`;
 - superseded combined Phase 3 record/history when needed: `docs/planning/p3-coding-workflow/decision-record.md`;
 - Phase 2 closeout/history when needed: `docs/phase-2-closeout.md`, `docs/phase-2-owner-closeout.md`, `docs/planning/p2-safe-tool-loop/decision-record.md`;
