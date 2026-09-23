@@ -1,0 +1,264 @@
+# Phase 3 Implementation Plan
+
+Status: CURRENT IMPLEMENTATION PLAN
+
+Phase: 3 — Context + Skills  
+Execution folder: `p3`  
+Baseline: main `e7883db6f5ea481883fca5e07ae3a28937e1bd5b`, package `0.3.0`.
+
+Read with `BOOT.md`, `AGENTS.md`, `docs/project-overview.md`, `docs/architecture.md`, `docs/workflow.md`, `docs/stability-contract.md`, `docs/roadmap/mvp-roadmap.md`, `docs/planning/p3-context-skills/decision-record.md`, and `docs/tasks/p3/prompt-assessment.md`.
+
+## Target architecture
+
+```text
+OpenTUI adapter
+      |
+application agent service
+      |
+ +----+------------------+
+ |                       |
+context assembler    canonical Phase-2 tool loop
+ |      |
+sources skill registry
+ |      |
+config/workspace/user dirs
+      |
+provider-independent request context
+      |
+ModelProvider
+      |
+LM Studio adapter
+```
+
+P1 establishes the context source/budget contracts independently. P2 replaces the live raw-concatenation path and adds config/diagnostics/routed documents. P3 adds declarative skills and explicit turn-scoped activation. P4 adds only presentation/input affordances over those reusable services. P5 qualifies the exact candidate. P6 performs evidence-only closeout.
+
+## P1 — context source model, discovery, and token budget
+
+Target: `0.3.1`.
+
+Create a dedicated reusable context layer; do not bury context precedence or source loading inside the TUI or LM Studio adapter.
+
+### Source model
+
+Represent each discovered source with a stable identity, origin/trust class, deterministic priority/order, disposition, and whole accepted text where applicable.
+
+The layer must be capable of representing:
+- compact George-owned core instructions;
+- current user intent and conversation input;
+- optional user-global instructions;
+- optional personality;
+- workspace `.george/instructions.md`;
+- root `AGENTS.md`;
+- root `BOOT.md` as routing guidance;
+- explicitly routed workspace documents;
+- later activated skill content;
+- normalized tool-schema overhead for provider-facing size diagnostics.
+
+Keep the representation provider-independent. It may render normalized strings for the current provider contract, but LM Studio/OpenAI field names do not belong in the context layer.
+
+### Discovery and filesystem behavior
+
+Add bounded whole-file loading primitives for model-facing context. Workspace-native and routed content must use canonical workspace containment and reject traversal/symlink escape. User-global sources come only from the deterministic George user-config area/configured paths.
+
+A source that exceeds the read safety bound is oversized; do not return/inject its partial prefix as complete instructions.
+
+Missing optional user/global/personality/workspace-native files are normal and recorded consistently.
+
+### Precedence and duplicates
+
+Encode the approved precedence explicitly and test it. Within workspace guidance use one stable documented order.
+
+Perform exact deterministic duplicate suppression after normalization/fingerprinting. Record the duplicate disposition/source relationship rather than silently disappearing it. No semantic/fuzzy dedupe.
+
+### Token estimator and budget
+
+Provide a deterministic provider-facing token estimator interface with a documented default estimate when no exact tokenizer exists. Label estimates as estimates.
+
+Budget accepted sources in whole units. Required compact George invariants fail closed if they cannot fit. Optional/routed/personality material may be omitted/deferred whole with reason. Critical instructions are never silently truncated.
+
+Include normalized instructions, conversation/current input, and normalized tool-definition overhead in aggregate diagnostics so the budget is more than a raw source-byte limit.
+
+Add focused unit tests covering order, source identity, missing optionals, oversize handling, duplicate suppression, routed path containment, deterministic estimation, required-source failure, optional whole-source omission/defer, and provider independence.
+
+P1 does **not** change the normal agent loop or add skills.
+
+## P2 — canonical loop integration and context configuration
+
+Target: `0.3.2`.
+
+Replace the current `instructions()`/raw `loadRepositoryInstructions()` path in `AgentLoopApplicationService` with the P1 context service. There must be one canonical context assembly path after this prompt.
+
+### Configuration
+
+Extend George configuration with a deterministic user-config root and context budget. On Linux honor `XDG_CONFIG_HOME` then fall back to `~/.config/george`; use platform-appropriate Node/OS primitives elsewhere.
+
+Support optional conventional global `instructions.md` and `personality.md` sources. Missing files are normal. Keep explicit test injection/overrides so tests never depend on the developer's real home directory.
+
+Do not read arbitrary environment secrets into context diagnostics or model input.
+
+### Turn assembly
+
+For each new user turn, assemble:
+- compact George invariants;
+- current user input/conversation history;
+- workspace/project instruction/routing sources;
+- optional global/personality sources;
+- any explicit current-turn routed document paths;
+- normalized tool-definition overhead.
+
+Add an application submission field/API for explicit routed document paths. Paths are current-turn only and workspace-bounded.
+
+Render the assembled result into the existing provider-independent `ProviderRequest` shape without moving context policy into LM Studio.
+
+### Diagnostics and events
+
+Add structured context diagnostics to application/session events: aggregate estimated tokens, estimator kind, active source identities, and omitted/deferred/duplicate/failure evidence bounded enough for normal session history.
+
+Preserve provider-reported actual usage on `provider.response.completed`; do not relabel estimates as actual.
+
+Tests prove exact ordering/whole-source behavior through a scripted provider, `BOOT.md` references are not eagerly loaded, explicit routed documents are included only when requested, missing optionals do not break startup, context-budget failures are visible, and continuation/tool/approval semantics remain unchanged.
+
+Run the existing Phase-2 integration/TUI/provider suites broadly after replacing the assembly path.
+
+P2 does not add durable sessions, validation/completion workflow, skills, hooks, or network behavior.
+
+## P3 — portable skill registry and turn-scoped activation
+
+Target: `0.3.3`.
+
+Build the declarative skill substrate on the qualified context machinery.
+
+### Discovery roots and identities
+
+Support:
+- George built-ins from a deterministic package-owned skill root;
+- user-global skills from the George config area's `skills/`;
+- workspace-native skills from `.george/skills/`.
+
+Keep roots injectable in tests. Missing roots are normal.
+
+Every discovered skill has an origin-qualified stable ID such as `builtin:name`, `user:name`, or `workspace:name`. Resolve an unqualified name only when unique. Ambiguous names fail visibly instead of source-precedence guessing.
+
+### Portable SKILL.md parsing
+
+Support `<root>/<name>/SKILL.md`.
+
+Implement a small bounded dependency-free parser sufficient for portable name/description metadata plus optional noncritical help/argument-hint fields when present. Unknown noncritical metadata is ignored safely. Reject malformed required metadata/body and oversized files explicitly.
+
+Do not add a general YAML runtime unless materially justified by actual portable fixtures and approved dependency policy.
+
+### Catalog
+
+Expose a bounded deterministic catalog containing metadata only. The catalog may be included in ordinary context within its own budget, but discovered skill bodies must not be eagerly loaded.
+
+Stable ordering and collision diagnostics must be observable.
+
+### Activation
+
+Add explicit `activatedSkills` to the user-turn submission/application context API. Resolve all requested IDs before the provider request; unknown/ambiguous/malformed/oversized activation fails visibly.
+
+Load activated bodies just in time as context sources using origin-appropriate trust/priority and the same whole-source token budget. Keep them active across that user turn's provider/tool rounds only. A later turn has no activated skill unless requested again.
+
+A skill body is text only. It cannot add tools, change permission classes, suppress approval, expand filesystem/network/process access, or alter environment inheritance.
+
+Tests cover all three roots, unique/qualified resolution, collisions, malformed/missing/oversized files, bounded metadata-only catalog, JIT body loading, multiple provider rounds in one activated turn, absence in an unrelated later turn, external portable fixture compatibility, and hostile skill text failing to change Phase-2 approval/tool behavior.
+
+## P4 — TUI skill activation and context observability
+
+Target: `0.3.4`.
+
+Expose the already-built Phase-3 capabilities through a small native-feeling terminal surface without moving discovery/resolution/business rules into OpenTUI.
+
+### Reusable application surface
+
+Expose read-only skill catalog access and a narrow application-level parser/helper for built-in activation commands, or an equivalently reusable interface. The TUI must not directly scan skill directories or parse `SKILL.md`.
+
+### TUI commands
+
+Support:
+- `/skills` — show a bounded available-skill catalog locally without making a provider request;
+- `/skill <id> <message>` — submit `<message>` as the user turn with exactly `<id>` explicitly activated.
+
+Reject missing/unknown/ambiguous IDs visibly and keep the composer usable. Do not implement sticky enable/disable state; a normal next message must not inherit the prior skill.
+
+If multiple skill activation is supported by the core API, the P4 TUI may remain single-skill for simplicity unless an existing requirement clearly needs more.
+
+### Observability
+
+Render compact context/skill status from application diagnostics: estimated context size must be labeled estimated and activated skill identity should be visible without dumping source bodies or secrets.
+
+Preserve current streamed transcript, multiline input, draft preservation during active turns, approvals, process warning, scrollback, resize, active Ctrl+C cancellation, idle exit, and clean renderer destruction.
+
+Test with OpenTUI's test renderer: catalog command without provider call, one-turn activation, invalid/collision handling, no sticky activation, context estimate labeling, active skill visibility, and all existing TUI regressions.
+
+## P5 — integrated Phase 3 qualification and hardening
+
+Target: `0.3.5`.
+
+Qualify the exact P1-P4 candidate without broadening scope.
+
+### Deterministic matrix
+
+Run and record:
+- exact phase-runner grammar/tests;
+- core/config/workspace/session tests;
+- context source/discovery/precedence/dedup/routing tests;
+- token estimate/budget and whole-source failure/defer tests;
+- application-loop assembled-context integration;
+- provider request/usage/continuation regression tests;
+- all three skill roots and portable external `SKILL.md` fixture;
+- skill collision/malformed/oversized/catalog/JIT/turn-lifetime tests;
+- permission-isolation tests proving hostile repository/personality/skill text cannot bypass Phase-2 policy;
+- OpenTUI `/skills`, `/skill`, diagnostics, draft, approval, resize, scrollback, and cancellation tests;
+- TypeScript typecheck;
+- broad deterministic aggregate command;
+- `git diff --check`;
+- explicit no-`package-lock.json` check.
+
+Build at least one integrated disposable-repository fixture that combines context precedence/budgeting, routed knowledge, portable skill activation, a multi-round existing read-only tool cycle, a later unrelated turn with no leaked skill activation, and an approval-required call that remains gated despite hostile context.
+
+### Native/live evidence
+
+Record exact Node/platform versions.
+
+If a genuine usable TTY is available, exercise the real terminal command surface and cleanup; otherwise record Evidence Gap.
+
+If the supported LM Studio endpoint and explicit Qwen model are configured, run the bounded live smoke through the exact P5 application/context path. A small optional skill/context marker may be added to the disposable smoke fixture if useful, but do not turn model obedience into deterministic proof. If unavailable, record Evidence Gap.
+
+### Hardening bound
+
+Allow at most two substantial evidence-driven correction cycles. Each defect fix adds permanent regression coverage for its defect class, then reruns focused and broad affected evidence.
+
+Write `docs/tasks/p3/P5-qualification-evidence.md` for the exact final source baseline with per-layer Green / Not Green / Evidence Gap truth.
+
+Do not implement Phase-4 persistence/resume, changed-file accounting, validation orchestration, completion evidence, Phase-5 compaction/hooks, or Phase-6 plugins/network adapters.
+
+## P6 — evidence-only Phase 3 closeout
+
+Target: `0.3.6`.
+
+Read the exact P5 source/evidence and audit:
+- provider-independent context representation;
+- precedence/order/trust labeling;
+- whole-source discovery and no silent critical truncation;
+- deterministic token estimate and budget outcomes;
+- user-global/personality/workspace source behavior;
+- BOOT routing vs explicit routed-document behavior;
+- duplicate suppression and diagnostics;
+- skill roots, portable parser, metadata catalog, collision behavior, and stable IDs;
+- JIT turn-scoped activation and non-leakage;
+- permission/tool/approval isolation;
+- application-loop and provider boundaries;
+- TUI explicit activation/observability;
+- deterministic integrated fixture evidence;
+- native terminal/live LM Studio/Qwen evidence;
+- exact runner/no-package-lock invariants;
+- every Phase-4+ feature remains deferred.
+
+Do not repair implementation, add features, broaden tests merely to manufacture a pass, or advance the roadmap to Phase 4.
+
+Write/update `docs/phase-3-closeout.md` and narrow Phase-3 task/router status only as needed to preserve evidence truth. Owner closeout and the Phase-4 baseline transition remain separate decisions.
+
+## Phase boundaries
+
+Phase 3 does not implement durable session persistence/resume, mutating-run changed-file accounting, validation-command orchestration, structured coding completion evidence, LLM compaction/summarization, automatic semantic skill routing, executable hooks, plugin packaging/install lifecycle, network/browser tools, external adapters, remembered approvals, OS/container sandboxing, general mutating Git, crash-safe side-effect reconciliation, long-job retry/backoff, daemon/Tauri work, or multi-agent scheduling.

@@ -1,0 +1,36 @@
+TASK: Phase 3 / P4 — TUI skill activation and context observability
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Terra High`.
+- Browser required: no.
+
+VERSIONING
+- This prompt's assigned project version is `0.3.4`.
+
+GOAL
+
+Make the already-qualified Phase-3 context and skill substrate directly usable from George's OpenTUI without moving context/skill business logic into the presentation layer.
+
+Read the Phase-3 authority, assessment, implementation plan, and exact P1-P3 source/tests before editing. Preserve the existing Codex-style terminal behavior.
+
+Expose a reusable application-level read-only skill catalog and narrow command/activation helper (or equivalent reusable API). OpenTUI must not scan skill directories, parse `SKILL.md`, decide collisions, or own context precedence.
+
+Add a bounded TUI command surface:
+- `/skills` shows discovered skill metadata locally and must not invoke the model;
+- `/skill <id> <message>` submits `<message>` as a normal user turn with exactly that skill explicitly activated for that turn.
+
+Unknown/ambiguous/malformed activation must be visibly recoverable and leave the composer usable. Do not implement sticky skill enable/disable state. A normal next user message must contain no previously activated skill unless explicitly requested again.
+
+Render compact context diagnostics from application events: estimated context size must be visibly labeled estimated, and active skill identity should be visible. Never dump full instruction/skill bodies, unrestricted paths, secrets, or unbounded diagnostic content into the status surface.
+
+Preserve streamed output, multiline Enter/Shift+Enter behavior, draft preservation during active work, read/write/process activity, allow-once/deny approvals, process non-sandbox warning, scrollback, resize, active Ctrl+C cancellation, idle exit, and renderer cleanup.
+
+Set `package.json` version to `0.3.4`.
+
+Required proof:
+- OpenTUI test-renderer coverage proves `/skills` does not call the provider, one-turn `/skill` activation reaches the service, invalid/collision cases remain usable, and the following normal turn has no leaked activation;
+- context estimate labeling and active-skill visibility are bounded and correct;
+- existing TUI transcript/draft/approval/cancellation/resize/scrollback tests remain Green;
+- application/context/skill/provider/tool integration tests, typecheck, broad deterministic tests, `git diff --check`, and no-`package-lock.json` pass.
+
+Do not add durable sessions/resume, changed-file/validation/completion workflow, hooks, plugins, browser/network adapters, or automatic semantic skill routing.

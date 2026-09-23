@@ -1,0 +1,40 @@
+TASK: Phase 3 / P3 — Portable declarative skill registry
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Terra High`.
+- Browser required: no.
+
+VERSIONING
+- This prompt's assigned project version is `0.3.3`.
+
+GOAL
+
+Add George's portable declarative skill substrate on top of the qualified P2 context machinery, with cheap discovery and explicit non-sticky activation.
+
+Read the Phase-3 authority, assessment, implementation plan, and exact P1-P2 source/tests before editing.
+
+Implement deterministic skill discovery from three injectable origins:
+- package-owned built-in skills;
+- George user-config `skills/`;
+- workspace `.george/skills/`.
+
+Support the portable directory shape `<root>/<name>/SKILL.md`. Use a small bounded dependency-free metadata parser sufficient for stable name/description plus optional noncritical help/argument-hint metadata when present; safely ignore unknown noncritical metadata. Malformed required metadata/body, unsafe paths, and oversized files fail visibly.
+
+Give every skill a stable qualified identity such as `builtin:name`, `user:name`, or `workspace:name`. Unqualified names resolve only when exactly one discovered skill matches. Ambiguous names must fail visibly rather than silently choosing an origin.
+
+Expose a deterministic bounded catalog containing metadata only. Ordinary discovery/catalog assembly must not read or inject every full skill body.
+
+Extend turn submission/context assembly with explicit activated skill IDs. Resolve activation before provider invocation; load full bodies just in time through the existing whole-source budget machinery; keep activated content available across all provider/tool rounds of that one user turn; drop it for unrelated later turns unless explicitly activated again. Origin determines its context trust/priority, and explicit current user intent still outranks skill text.
+
+Skill content is declarative model-facing text only. It must not register tools, change ToolRegistry definitions/permissions, bypass ApprovalPort, expand workspace/network/process scope, or alter child environment policy.
+
+Set `package.json` version to `0.3.3`.
+
+Required proof:
+- tests cover all three roots, missing roots, portable external `SKILL.md`, metadata-only catalog behavior, stable ordering, qualified and unique unqualified resolution, collision failure, malformed/missing/oversized skill behavior, and bounded catalog/body handling;
+- provider/application tests prove no full body is injected before activation, an activated body persists across multiple tool rounds in that turn, and it is absent from a later unrelated turn;
+- hostile repository/personality/skill text attempting to grant write/process/network authority does not alter Phase-2 tool validation/approval behavior;
+- context budgeting/diagnostics include skill catalog/activated sources truthfully;
+- typecheck, broad deterministic provider/tool/application/integration tests, `git diff --check`, and no-`package-lock.json` pass.
+
+Do not add executable hooks, plugin manifests/install lifecycle, automatic semantic skill selection, durable sessions, coding completion workflow, or network tools.

@@ -1,0 +1,36 @@
+TASK: Phase 3 / P5 — Integrated Phase 3 qualification
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Terra High`.
+- Browser required: no.
+
+VERSIONING
+- This prompt's assigned project version is `0.3.5`.
+
+GOAL
+
+Qualify and narrowly harden the exact Phase-3 context + skills candidate from P1-P4. Do not broaden product scope.
+
+Read `BOOT.md`, all current product/architecture/workflow/stability contracts, the Phase-3 decision record, assessment/implementation plan, and exact P1-P4 source/tests.
+
+Build/run the deterministic qualification matrix required by `docs/stability-contract.md`:
+- context-source discovery, stable identity/order/precedence, exact duplicate handling, missing optionals, routing, workspace containment, and provider independence;
+- provider-facing estimated-token sizing, tool-schema/conversation overhead, whole-source required failure and optional omit/defer behavior, and no silent critical truncation;
+- user-global instructions, personality, `.george/instructions.md`, `AGENTS.md`, and routing-oriented `BOOT.md`;
+- built-in/user/workspace skill discovery, portable external `SKILL.md`, metadata-only bounded catalog, collision/malformed/oversized behavior, JIT body loading, multi-round turn lifetime, and no unrelated-turn leakage;
+- hostile repository/personality/skill guidance cannot raise filesystem/process/network/approval authority;
+- canonical application-loop/provider continuation/usage behavior and all Phase-2 tool/process/approval safeguards;
+- OpenTUI `/skills`, `/skill`, estimated-context/active-skill diagnostics, draft preservation, approvals, cancellation, resize, scrollback, and cleanup;
+- exact runner tests, typecheck, broad deterministic aggregate tests, `git diff --check`, and no `package-lock.json`.
+
+Add at least one integrated disposable-repository fixture combining precedence/budgeting, an explicitly routed document, one portable skill activation, an existing multi-round read-only tool cycle, a later unrelated turn with no skill leakage, and an approval-required operation that remains gated despite hostile model-facing text.
+
+Record exact Node/platform versions. If a genuine usable TTY is available, exercise the real terminal command surface/cleanup; otherwise record Evidence Gap. If the supported loopback LM Studio endpoint plus explicit Qwen model are configured, run the bounded live smoke through the exact P5 context/application path; otherwise record Evidence Gap. Deterministic fixtures remain the authority for correctness.
+
+Permit at most two substantial evidence-driven correction cycles. Every correction adds a permanent executable regression guard for the defect class, reruns focused affected evidence, then the broad applicable matrix.
+
+Create `docs/tasks/p3/P5-qualification-evidence.md` tied to the exact final candidate with per-layer Green / Not Green / Evidence Gap truth. Do not relabel missing native/live evidence Green.
+
+Set `package.json` version to `0.3.5`.
+
+Do not implement Phase-4 durable session persistence/resume, changed-file accounting, validation-command orchestration, structured coding completion evidence, Phase-5 compaction/hooks, Phase-6 plugins/network adapters, daemon/Tauri, or multi-agent work.

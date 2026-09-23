@@ -1,0 +1,37 @@
+TASK: Phase 3 / P2 — Canonical context loop integration
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Terra High`.
+- Browser required: no.
+
+VERSIONING
+- This prompt's assigned project version is `0.3.2`.
+
+GOAL
+
+Replace George's bootstrap raw repository-instruction concatenation with the P1 provider-independent context path while preserving every Phase-2 tool/provider/approval behavior.
+
+Read the Phase-3 authority, assessment, implementation plan, and exact P1 source/tests before editing. Inspect `AgentLoopApplicationService`, config, application events/session handling, TUI launch wiring, provider contracts, and integration tests.
+
+Extend George configuration with a deterministic user-config root and estimated-token context budget. On Linux honor `XDG_CONFIG_HOME/george` with `~/.config/george` fallback; keep paths/config injectable for tests so no test reads the developer's actual home. Support optional conventional `instructions.md` and `personality.md`; missing optional files are normal.
+
+Wire the canonical agent loop through the P1 context assembler. Remove the old live `instructions()` / partial `loadRepositoryInstructions()` assembly path rather than leaving two competing systems. Assemble compact George invariants, current conversation/user input, workspace/project guidance, optional global/personality sources, and normalized tool-definition overhead.
+
+Add an explicit current-turn routed-document field/API. Routed paths are workspace-relative, bounded, non-sticky, and included only when explicitly requested; `BOOT.md` references must not trigger eager loading of every mentioned file.
+
+Add bounded structured context diagnostics to application/session events: estimated token total with estimator label, active source IDs, and omitted/deferred/duplicate/failure evidence. Preserve provider-reported `provider.response.completed.usage` as actual provider usage; never relabel estimates as actual.
+
+Render the assembled context into the existing provider-independent request boundary. Do not move precedence/budget logic into the LM Studio adapter and do not alter ToolRegistry permission classes or approval behavior.
+
+Set `package.json` version to `0.3.2`.
+
+Required proof:
+- scripted-provider tests prove exact source ordering and whole-source rendering through the canonical loop;
+- missing optional global/personality/workspace-native sources do not break startup;
+- a path merely mentioned in `BOOT.md` is not eagerly injected;
+- an explicit routed document is included only for that turn and escape/symlink attempts fail;
+- context budget failures/deferred sources are visible in diagnostics;
+- estimated context diagnostics and actual provider usage remain distinguishable;
+- existing multi-round tool continuation, approvals, process/write safeguards, session transcript, TUI behavior, provider tests, integration tests, typecheck, broad deterministic tests, `git diff --check`, and no-`package-lock.json` remain Green.
+
+Do not implement skills, durable persistence/resume, changed-file accounting, validation/completion orchestration, hooks, plugins, or network tools.

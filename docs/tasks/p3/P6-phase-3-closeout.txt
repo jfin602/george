@@ -1,0 +1,41 @@
+TASK: Phase 3 / P6 — Phase 3 closeout validation
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Terra Medium`.
+- Browser required: no.
+
+VERSIONING
+- This prompt's assigned project version is `0.3.6`.
+
+GOAL
+
+Perform an evidence-only Phase-3 closeout from the exact P5 candidate and its durable qualification evidence.
+
+Read `BOOT.md`, current product/architecture/workflow/stability contracts, the Phase-3 decision record, assessment/implementation plan, exact P1-P5 source/test state, and `docs/tasks/p3/P5-qualification-evidence.md`.
+
+Audit and report:
+- provider-independent assembled-context representation and adapter boundaries;
+- George/current-user/workspace/global/personality precedence and stable same-tier ordering;
+- whole-source loading, oversize behavior, exact duplicate suppression, routing behavior, and no silent critical truncation;
+- provider-facing estimated-token diagnostics vs actual provider usage;
+- optional user-global/personality/workspace source handling;
+- portable skill discovery across built-in/user/workspace roots, stable IDs, collisions, parser bounds, metadata-only catalog, JIT body loading, and turn-scoped non-leakage;
+- hostile context/skill inability to expand executable permissions or bypass Phase-2 approval/tool/process safeguards;
+- TUI `/skills` and `/skill` usability plus bounded context/activation observability;
+- integrated disposable-repository fixture evidence;
+- native-terminal and live LM Studio/Qwen evidence;
+- exact runner/no-`package-lock.json` invariants;
+- every Phase-4+ feature remains deferred.
+
+Do not repair implementation, add features, broaden tests merely to manufacture a pass, or implement/advance Phase-4 behavior.
+
+Create/update `docs/phase-3-closeout.md` with explicit Implementation Complete / Stability Qualified state and Green / Not Green / Evidence Gap truth. Narrowly update Phase-3 task/router status only when required to point at this formal evidence record. Do **not** mark Phase 3 owner-closed or move `BOOT.md`/roadmap to Phase 4; owner closeout and the Phase-4 baseline transition are separate decisions.
+
+Set `package.json` version to `0.3.6`.
+
+Required proof:
+- closeout claims trace to actual P5/current evidence;
+- missing native/live evidence is never relabeled Green;
+- no Phase-4+ product scope is added;
+- documentation `git diff --check` passes;
+- no `package-lock.json` exists.

@@ -1,0 +1,35 @@
+TASK: Phase 3 / P1 — Context source model and token budget
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Terra High`.
+- Browser required: no.
+
+VERSIONING
+- This prompt's assigned project version is `0.3.1`.
+
+GOAL
+
+Establish the Phase-3 provider-independent context foundation without changing the live agent-loop assembly path yet.
+
+Read `BOOT.md`, `AGENTS.md`, `docs/planning/p3-context-skills/decision-record.md`, `docs/tasks/p3/prompt-assessment.md`, and `docs/tasks/p3/implementation-plan.md`; inspect the current workspace/config/provider/application tests before editing.
+
+Create one reusable context layer that represents stable source identity/origin, trust/precedence, deterministic ordering, active/routed/omitted/deferred/duplicate/failure disposition, accepted whole text, per-source estimated token contribution, and aggregate provider-facing size diagnostics. Keep LM Studio/OpenAI wire fields out of this layer.
+
+Support source kinds needed by the approved plan: compact George-owned invariants, current conversation/user input, optional user-global instructions/personality, workspace `.george/instructions.md`, root `AGENTS.md`, routing-oriented root `BOOT.md`, explicit routed workspace documents, future activated skill sources, and normalized tool-definition overhead.
+
+Add bounded whole-file context loading. Workspace/routed sources must remain canonically workspace-contained and reject traversal/symlink escape. A source that exceeds a read bound is oversized; never expose a truncated prefix as complete instructions. Missing optional sources are normal.
+
+Encode the approved precedence and one deterministic same-tier ordering. Implement exact-content duplicate suppression only, preserving the higher-priority/stable-earlier source and recording the duplicate outcome.
+
+Implement a deterministic token-estimator interface and documented default estimate when no exact tokenizer exists. Budget whole sources in estimated tokens; required George invariants fail explicitly if they cannot fit, while optional/routed/personality sources may be omitted/deferred whole with reason. Include normalized instructions, conversation/current input, and normalized tool-schema overhead in aggregate estimates.
+
+Do not wire `AgentLoopApplicationService` to the new assembler yet. Do not add skills, durable sessions, validation/completion workflow, hooks, plugins, or network behavior.
+
+Set `package.json` version to `0.3.1`.
+
+Required proof:
+- focused context tests cover stable IDs/order/precedence, missing optionals, whole-source oversize handling, duplicate recording, routed-path containment, deterministic estimated-token counts, required-budget failure, optional whole-source omission/defer, and provider independence;
+- existing workspace/tool/provider/application/TUI tests remain Green;
+- typecheck, broad applicable deterministic tests, `git diff --check`, and no-`package-lock.json` checks pass.
+
+If current source materially contradicts the approved Phase-3 contracts, stop with `Planning needed` rather than silently changing scope.
