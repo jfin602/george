@@ -1,11 +1,11 @@
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { open, lstat, mkdir, readFile, rename, rm } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { basename, isAbsolute, join, resolve } from 'node:path';
 
 import { GeorgeError } from './errors.ts';
 import type { ContextProfile } from './config.ts';
-import type { ApplicationEvent, ContextDiagnostics, ProviderUsage } from './events.ts';
+import type { ApplicationEvent, ContextCheckpointEvidence, ContextDiagnostics, ProviderUsage } from './events.ts';
 import type { RunBudgetDimension, RunBudgetSnapshot } from './run-budget.ts';
 import type { TranscriptEntry, Session, SessionInterruption } from './session.ts';
 import { resolveWorkspaceRoot } from './workspace.ts';
@@ -191,6 +191,9 @@ function durableEvent(event: ApplicationEvent): ApplicationEvent | undefined {
     case 'budget.state': return { type: event.type, turnId: string(event.turnId, 'turn ID', 256), runId: identifier(event.runId, 'run ID'), budget: safeBudget(event.budget) };
     case 'budget.pressure': return { type: event.type, turnId: string(event.turnId, 'turn ID', 256), runId: identifier(event.runId, 'run ID'), dimensions: boundedArray(event.dimensions, 'budget pressure dimensions', 11).map((dimension) => safeBudgetDimension(dimension)), budget: safeBudget(event.budget) };
     case 'budget.exhausted': return { type: event.type, turnId: string(event.turnId, 'turn ID', 256), runId: identifier(event.runId, 'run ID'), dimension: safeBudgetDimension(event.dimension), budget: safeBudget(event.budget) };
+    case 'context.compaction.started': return { type: event.type, turnId: string(event.turnId, 'turn ID', 256), runId: identifier(event.runId, 'run ID'), start: boundedInteger(event.start, 'context compaction start'), end: boundedInteger(event.end, 'context compaction end'), reason: oneOf(event.reason, 'context compaction reason', ['soft-pressure', 'hard-pressure']) };
+    case 'context.compaction.completed': return { type: event.type, turnId: string(event.turnId, 'turn ID', 256), runId: identifier(event.runId, 'run ID'), checkpoint: safeCheckpoint(event.checkpoint) };
+    case 'context.compaction.failed': return { type: event.type, turnId: string(event.turnId, 'turn ID', 256), runId: identifier(event.runId, 'run ID'), reason: boundedMessage(string(event.reason, 'context compaction failure', 512)) };
     case 'input.submitted': return undefined; // Completed user input lives only in the canonical transcript.
     case 'assistant.response.completed': return { type: event.type, turnId: string(event.turnId, 'turn ID', 256), text: boundedMessage(string(event.text, 'assistant response')) };
     case 'provider.text.delta': return undefined; // The clean transcript is authoritative for completed assistant text.
@@ -255,6 +258,27 @@ function safeBudget(value: RunBudgetSnapshot): RunBudgetSnapshot {
     consumed: Object.fromEntries(BUDGET_DIMENSIONS.map((dimension) => [dimension, boundedInteger(consumed[dimension], `run budget consumption ${dimension}`)])) as RunBudgetSnapshot['consumed'],
     elapsedMs: boundedInteger(budget.elapsedMs, 'run budget elapsed time'),
   };
+}
+
+function safeCheckpoint(value: ContextCheckpointEvidence): ContextCheckpointEvidence {
+  const checkpoint = record(value, 'context checkpoint');
+  exactKeys(checkpoint, ['version', 'id', 'start', 'end', 'rangeDigest', 'summaryDigest', 'summary', 'beforeTokens', 'afterTokens', 'reason'], 'context checkpoint');
+  const version = boundedInteger(checkpoint.version, 'context checkpoint version');
+  if (version !== 1) invalid('context checkpoint version is invalid.');
+  const start = boundedInteger(checkpoint.start, 'context checkpoint start');
+  const end = boundedInteger(checkpoint.end, 'context checkpoint end');
+  if (end <= start) invalid('context checkpoint range is invalid.');
+  const digest = (item: unknown, name: string) => {
+    const result = string(item, name, 64);
+    if (!/^[a-f0-9]{64}$/.test(result)) invalid(`${name} is invalid.`);
+    return result;
+  };
+  const summary = string(checkpoint.summary, 'context checkpoint summary', 16 * 1024);
+  if (!summary.trim()) invalid('context checkpoint summary is empty.');
+  const reason = oneOf(checkpoint.reason, 'context checkpoint reason', ['soft-pressure', 'hard-pressure']);
+  const summaryDigest = digest(checkpoint.summaryDigest, 'context checkpoint summary digest');
+  if (createHash('sha256').update(summary).digest('hex') !== summaryDigest) invalid('context checkpoint summary digest does not match summary.');
+  return { version, id: identifier(checkpoint.id, 'context checkpoint ID'), start, end, rangeDigest: digest(checkpoint.rangeDigest, 'context checkpoint range digest'), summaryDigest, summary, beforeTokens: boundedInteger(checkpoint.beforeTokens, 'context checkpoint before tokens'), afterTokens: boundedInteger(checkpoint.afterTokens, 'context checkpoint after tokens'), reason };
 }
 
 function safeApproval(request: ApplicationEvent extends never ? never : Extract<ApplicationEvent, { type: 'approval.requested' }>['request']): Extract<ApplicationEvent, { type: 'approval.requested' }>['request'] {

@@ -3,6 +3,19 @@ import type { ApprovalRequest } from './approval.ts';
 import type { ContextProfile } from './config.ts';
 import type { RunBudgetDimension, RunBudgetSnapshot } from './run-budget.ts';
 
+export type ContextCheckpointEvidence = Readonly<{
+  version: number;
+  id: string;
+  start: number;
+  end: number;
+  rangeDigest: string;
+  summaryDigest: string;
+  summary: string;
+  beforeTokens: number;
+  afterTokens: number;
+  reason: 'soft-pressure' | 'hard-pressure';
+}>;
+
 export type ProviderUsage = Readonly<{
   inputTokens?: number;
   outputTokens?: number;
@@ -117,6 +130,9 @@ export type ApplicationEvent =
   | Readonly<{ type: 'budget.state'; turnId: string; runId: string; budget: RunBudgetSnapshot }>
   | Readonly<{ type: 'budget.pressure'; turnId: string; runId: string; dimensions: readonly RunBudgetDimension[]; budget: RunBudgetSnapshot }>
   | Readonly<{ type: 'budget.exhausted'; turnId: string; runId: string; dimension: RunBudgetDimension; budget: RunBudgetSnapshot }>
+  | Readonly<{ type: 'context.compaction.started'; turnId: string; runId: string; start: number; end: number; reason: 'soft-pressure' | 'hard-pressure' }>
+  | Readonly<{ type: 'context.compaction.completed'; turnId: string; runId: string; checkpoint: ContextCheckpointEvidence }>
+  | Readonly<{ type: 'context.compaction.failed'; turnId: string; runId: string; reason: string }>
   | Readonly<{ type: 'turn.started'; turnId: string }>
   | Readonly<{ type: 'input.submitted'; text: string }>
   | Readonly<{ type: 'assistant.response.completed'; turnId: string; text: string }>

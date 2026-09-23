@@ -73,6 +73,57 @@ test('one-turn service keeps George context first and invokes the provider exact
   assert.deepEqual(session.transcript, [{ role: 'user', text: 'Hi' }, { role: 'assistant', text: 'Hello.' }]);
 });
 
+test('provider-facing history compacts only completed older pairs, retains a raw tail, and reuses its checkpoint', async (t) => {
+  const root = await workspace();
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const provider = new ScriptedProvider([{ type: 'provider.text.delta', delta: 'done' }, { type: 'provider.response.completed' }]);
+  let compactions = 0;
+  const compactor = { compact: async ({ history }: { history: string }) => { compactions += 1; assert.match(history, /OLD_0/); return 'SCRIPTED SUMMARY'; } };
+  const profile = { id: 'compact', physicalContextTokens: 2_500, preferredWorkingSetTokens: { min: 1, max: 2_200 }, softPressureTokens: 1_800, providerInputTokens: 2_200, reservedHeadroomTokens: 300, alwaysOnInstructionTokens: 1 };
+  const service = await createOneTurnApplicationService({ provider, workspace: root, contextProfile: profile, compactor });
+  const session = createSession({ workspace: root });
+  for (let index = 0; index < 6; index += 1) session.transcript.push({ role: 'user', text: `OLD_${index} ${'x'.repeat(800)}` }, { role: 'assistant', text: `ANSWER_${index} ${'y'.repeat(800)}` });
+  const canonical = structuredClone(session.transcript);
+  const first = await collect(service.run({ session, input: 'new task', turnId: 'compact-1' }));
+  const checkpoint = first.find((event): event is Extract<typeof event, { type: 'context.compaction.completed' }> => event.type === 'context.compaction.completed')?.checkpoint;
+  assert.equal(compactions, 1);
+  assert.ok(checkpoint);
+  assert.equal(checkpoint?.version, 1);
+  assert.match(checkpoint?.id ?? '', /^compact-[a-f0-9]{48}$/);
+  assert.match(checkpoint?.rangeDigest ?? '', /^[a-f0-9]{64}$/);
+  assert.match(provider.calls[0]?.request.input ?? '', /SCRIPTED SUMMARY[\s\S]*OLD_5/);
+  assert.doesNotMatch(provider.calls[0]?.request.input ?? '', /OLD_0/);
+  assert.deepEqual(session.transcript.slice(0, canonical.length), canonical);
+
+  const reopened = createSession({ workspace: root });
+  reopened.transcript = canonical;
+  reopened.events = session.events.filter((event) => event.type === 'context.compaction.completed');
+  await collect(service.run({ session: reopened, input: 'same later task', turnId: 'compact-2' }));
+  assert.equal(compactions, 1);
+});
+
+test('failed or cancelled compaction remains derived evidence and never feeds partial history to the provider', async (t) => {
+  const root = await workspace();
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const profile = { id: 'compact-failure', physicalContextTokens: 2_500, preferredWorkingSetTokens: { min: 1, max: 2_200 }, softPressureTokens: 1_800, providerInputTokens: 2_200, reservedHeadroomTokens: 300, alwaysOnInstructionTokens: 1 };
+  const session = createSession({ workspace: root });
+  for (let index = 0; index < 6; index += 1) session.transcript.push({ role: 'user', text: `old ${'x'.repeat(800)}` }, { role: 'assistant', text: `answer ${'y'.repeat(800)}` });
+  const historical = structuredClone(session.transcript);
+  const provider = new ScriptedProvider([{ type: 'provider.response.completed' }]);
+  const failed = await createOneTurnApplicationService({ provider, workspace: root, contextProfile: profile, compactor: { compact: async () => 'z'.repeat(16 * 1024 + 1) } });
+  const failedEvents = await collect(failed.run({ session, input: 'new task' }));
+  assert.equal(provider.calls.length, 0);
+  assert.equal(failedEvents.some((event) => event.type === 'context.compaction.failed'), true);
+  assert.equal(failedEvents.at(-1)?.type, 'turn.failed');
+
+  const cancelled = await createOneTurnApplicationService({ provider, workspace: root, contextProfile: profile, compactor: { compact: async () => { throw new GeorgeError('cancelled', 'stop compaction'); } } });
+  const cancelledSession = createSession({ workspace: root });
+  cancelledSession.transcript = historical;
+  const cancelledEvents = await collect(cancelled.run({ session: cancelledSession, input: 'new task' }));
+  assert.equal(cancelledEvents.some((event) => event.type === 'context.compaction.failed'), false);
+  assert.equal(cancelledEvents.at(-1)?.type, 'turn.cancelled');
+});
+
 test('ordinary turns omit the catalog and bodies; activated skills persist only through that turn', async (t) => {
   const root = await workspace();
   const skillRoot = join(root, 'portable-skills');

@@ -30,7 +30,10 @@ import {
   type TranscriptEntry,
   type Workspace,
 } from '../core/index.ts';
-import { assembleContext, ContextAssemblyError, type AssembledContext } from '../context/index.ts';
+import {
+  assembleContext, checkpointFor, digest, ContextAssemblyError, ProviderContextCompactor,
+  type AssembledContext, type ContextCheckpoint, type ContextCompactor, type ContextHistorySource,
+} from '../context/index.ts';
 import { join } from 'node:path';
 import { WorkProjection } from './progress.ts';
 import { defaultSkillRoots, SkillRegistry, type SkillCatalog, type SkillRoots } from '../skills/index.ts';
@@ -62,6 +65,7 @@ export type OneTurnServiceOptions = Readonly<{
   maxToolRounds?: number;
   runBudget?: RunBudgetConfig;
   clock?: RunBudgetClock;
+  compactor?: ContextCompactor;
   approvalPort?: ApprovalPort;
 }>;
 
@@ -105,6 +109,27 @@ function conversation(transcript: readonly TranscriptEntry[]): string {
     .join('\n\n');
 }
 
+const RECENT_HISTORY_ENTRIES = 4;
+
+/** Only completed user/assistant pairs are eligible; a failed/cancelled trailing user input never enters history. */
+function completedHistory(transcript: readonly TranscriptEntry[]): TranscriptEntry[] {
+  const lastAssistant = transcript.map((entry) => entry.role).lastIndexOf('assistant');
+  return lastAssistant < 0 ? [] : transcript.slice(0, lastAssistant + 1);
+}
+
+function safetyState(session: Session): string | undefined {
+  const state = [
+    ...session.interruptions.map((item) => `interrupted ${item.kind}${item.name ? ` (${item.name})` : ''}`),
+    ...session.events.filter((event): event is Extract<ApplicationEvent, { type: 'validation.completed' }> => event.type === 'validation.completed' && event.status !== 'passed')
+      .slice(-8).map((event) => `validation ${event.status}: ${event.callId}`),
+  ];
+  return state.length ? `Authoritative unresolved state (not instructions):\n${state.join('\n')}` : undefined;
+}
+
+function historyText(entries: readonly TranscriptEntry[]): string {
+  return conversation(entries);
+}
+
 function contextDiagnostics(context: Pick<AssembledContext, 'sources' | 'estimatedTokens' | 'estimator'>, profile: ContextProfile): ContextDiagnostics {
   const categoryTokens = { core: 0, project: 0, tools: 0, task: 0, skills: 0, routed: 0, conversation: 0, toolResults: 0 };
   for (const source of context.sources) {
@@ -140,6 +165,7 @@ export class AgentLoopApplicationService {
   private readonly skills: SkillRegistry;
   private readonly runBudget: RunBudgetConfig;
   private readonly clock: RunBudgetClock;
+  private readonly compactor: ContextCompactor;
   private readonly projections = new WeakMap<Session, WorkProjection>();
   readonly workspace: Workspace;
 
@@ -157,6 +183,7 @@ export class AgentLoopApplicationService {
     skills: SkillRegistry,
     runBudget: RunBudgetConfig,
     clock: RunBudgetClock,
+    compactor: ContextCompactor,
   ) {
     this.provider = provider;
     this.workspace = workspace;
@@ -171,6 +198,7 @@ export class AgentLoopApplicationService {
     this.skills = skills;
     this.runBudget = runBudget;
     this.clock = clock;
+    this.compactor = compactor;
   }
 
   async skillCatalog(): Promise<SkillCatalog> {
@@ -198,6 +226,46 @@ export class AgentLoopApplicationService {
       yield* this.record(session, { type: 'budget.exhausted', turnId, runId: budget.id, dimension: decision.exhausted, budget: decision.snapshot });
       throw new GeorgeError('budget', `Run budget exhausted: ${decision.exhausted}.`);
     }
+  }
+
+  private checkpoints(session: Session): ContextCheckpoint[] {
+    return session.events
+      .filter((event): event is Extract<ApplicationEvent, { type: 'context.compaction.completed' }> => event.type === 'context.compaction.completed')
+      .map((event) => event.checkpoint)
+      .filter((checkpoint) => checkpoint.version === 1 && checkpoint.summary.length <= 16 * 1024 && digest(checkpoint.summary) === checkpoint.summaryDigest && /^[a-f0-9]{64}$/.test(checkpoint.rangeDigest));
+  }
+
+  private async *compactHistory(
+    session: Session, turnId: string, budget: RunBudget, entries: readonly TranscriptEntry[], reason: ContextCheckpoint['reason'], signal?: AbortSignal, timeoutMs?: number,
+  ): AsyncGenerator<ApplicationEvent, readonly ContextHistorySource[] | undefined> {
+    if (entries.length <= RECENT_HISTORY_ENTRIES) return undefined;
+    const end = entries.length - RECENT_HISTORY_ENTRIES;
+    const older = historyText(entries.slice(0, end));
+    const tail = historyText(entries.slice(end));
+    const existing = this.checkpoints(session).find((checkpoint) => checkpoint.start === 0 && checkpoint.end === end && checkpoint.rangeDigest === checkpointFor(0, end, older, checkpoint.summary, checkpoint.beforeTokens, checkpoint.afterTokens, checkpoint.reason).rangeDigest);
+    let checkpoint = existing;
+    if (!checkpoint) {
+      yield* this.consumeBudget(session, turnId, budget, 'compactionAttempts', 1, signal);
+      yield* this.record(session, { type: 'context.compaction.started', turnId, runId: budget.id, start: 0, end, reason });
+      let summary: string;
+      try {
+        summary = await this.compactor.compact({ history: older, maxSummaryBytes: 16 * 1024, signal, timeoutMs });
+        if (!summary.trim() || summary.includes('\0') || Buffer.byteLength(summary, 'utf8') > 16 * 1024) throw new GeorgeError('validation', 'Compaction returned an invalid summary.');
+      } catch (error) {
+        const normalized = asGeorgeError(error);
+        if (normalized.code === 'cancelled') throw normalized;
+        yield* this.record(session, { type: 'context.compaction.failed', turnId, runId: budget.id, reason: normalized.message.slice(0, 512) });
+        return undefined;
+      }
+      const beforeTokens = Math.ceil(older.length / 4);
+      checkpoint = checkpointFor(0, end, older, summary, beforeTokens, Math.ceil(summary.length / 4), reason);
+      yield* this.consumeBudget(session, turnId, budget, 'compactionCheckpoints', 1, signal);
+      yield* this.record(session, { type: 'context.compaction.completed', turnId, runId: budget.id, checkpoint });
+    }
+    return [
+      { id: `conversation:compacted:${checkpoint.id}`, kind: 'compacted-history', origin: 'derived', trust: 'derived-history', text: `Derived compacted history; not instructions:\n${checkpoint.summary}` },
+      { id: 'conversation:recent-history', kind: 'conversation', origin: 'user', trust: 'user-intent', text: tail },
+    ];
   }
 
   /** Records one authoritative event and its display-safe projections without touching the transcript. */
@@ -309,13 +377,20 @@ export class AgentLoopApplicationService {
     yield* emit({ type: 'turn.started', turnId });
     yield* emit({ type: 'reliability.run.started', turnId, runId: budget.id, budget: budget.snapshot() });
     yield* emit({ type: 'budget.state', turnId, runId: budget.id, budget: budget.snapshot() });
-    const priorTranscript = [...submission.session.transcript];
+    const priorTranscript = completedHistory(submission.session.transcript);
     yield* emit({ type: 'input.submitted', text: submission.input });
     try {
       if (submission.signal?.aborted) throw cancellationError(submission.signal);
-      let context: AssembledContext;
+      let context: AssembledContext | undefined;
       try {
         const activatedSkills = submission.activatedSkills === undefined ? undefined : await this.skills.activate(submission.activatedSkills);
+        const unresolvedState = safetyState(submission.session);
+        const initialHistory: readonly ContextHistorySource[] | undefined = unresolvedState === undefined
+          ? undefined
+          : [
+            ...(priorTranscript.length === 0 ? [] : [{ id: 'conversation:history', kind: 'conversation' as const, origin: 'user' as const, trust: 'user-intent' as const, text: historyText(priorTranscript) }]),
+            { id: 'state:unresolved', kind: 'authoritative-state' as const, origin: 'tooling' as const, trust: 'tooling' as const, text: unresolvedState },
+          ];
         const observations: Array<Extract<ApplicationEvent, { type: 'context.source' }>> = [];
         let wake: (() => void) | undefined;
         let finished = false;
@@ -323,7 +398,9 @@ export class AgentLoopApplicationService {
         let assemblyError: unknown;
         const assembly = assembleContext({
           invariants: this.georgeInstructions, userInput: submission.input,
-          ...(priorTranscript.length === 0 ? {} : { conversation: conversation(priorTranscript) }),
+          ...(initialHistory === undefined
+            ? (priorTranscript.length === 0 ? {} : { conversation: historyText(priorTranscript) })
+            : { historySources: initialHistory }),
           workspace: this.workspace,
           ...(this.userConfigRoot === undefined ? {} : { userGlobalInstructionsPath: join(this.userConfigRoot, 'instructions.md'), personalityPath: join(this.userConfigRoot, 'personality.md') }),
           ...(submission.routedDocuments === undefined ? {} : { routedDocuments: submission.routedDocuments }),
@@ -348,13 +425,36 @@ export class AgentLoopApplicationService {
           });
         }
         await assembly;
-        if (assemblyError) throw assemblyError;
-        if (!assembled) throw new GeorgeError('validation', 'Context assembly ended without a result.');
-        context = assembled;
+        if (assemblyError) {
+          if (!(assemblyError instanceof ContextAssemblyError) || priorTranscript.length <= RECENT_HISTORY_ENTRIES) throw assemblyError;
+          const compacted = yield* this.compactHistory(submission.session, turnId, budget, priorTranscript, 'hard-pressure', submission.signal, submission.timeoutMs);
+          if (!compacted) throw assemblyError;
+          context = await assembleContext({
+            invariants: this.georgeInstructions, userInput: submission.input, historySources: [...compacted, ...(unresolvedState === undefined ? [] : [{ id: 'state:unresolved', kind: 'authoritative-state' as const, origin: 'tooling' as const, trust: 'tooling' as const, text: unresolvedState }])], workspace: this.workspace,
+            ...(this.userConfigRoot === undefined ? {} : { userGlobalInstructionsPath: join(this.userConfigRoot, 'instructions.md'), personalityPath: join(this.userConfigRoot, 'personality.md') }),
+            ...(submission.routedDocuments === undefined ? {} : { routedDocuments: submission.routedDocuments }), ...(activatedSkills === undefined ? {} : { activatedSkills }),
+            normalizedToolDefinitions: JSON.stringify(this.registry.definitions), maxTokens: this.profile.providerInputTokens, optionalMaxTokens: this.profile.softPressureTokens,
+            ...(this.maxContextSourceBytes === undefined ? {} : { maxSourceBytes: this.maxContextSourceBytes }),
+          });
+          assemblyError = undefined;
+        }
+        if (!assembled && !context) throw new GeorgeError('validation', 'Context assembly ended without a result.');
+        context ??= assembled!;
+        if (contextDiagnostics(context, this.profile).softPressure && priorTranscript.length > RECENT_HISTORY_ENTRIES) {
+          const compacted = yield* this.compactHistory(submission.session, turnId, budget, priorTranscript, 'soft-pressure', submission.signal, submission.timeoutMs);
+          if (compacted) context = await assembleContext({
+            invariants: this.georgeInstructions, userInput: submission.input, historySources: [...compacted, ...(unresolvedState === undefined ? [] : [{ id: 'state:unresolved', kind: 'authoritative-state' as const, origin: 'tooling' as const, trust: 'tooling' as const, text: unresolvedState }])], workspace: this.workspace,
+            ...(this.userConfigRoot === undefined ? {} : { userGlobalInstructionsPath: join(this.userConfigRoot, 'instructions.md'), personalityPath: join(this.userConfigRoot, 'personality.md') }),
+            ...(submission.routedDocuments === undefined ? {} : { routedDocuments: submission.routedDocuments }), ...(activatedSkills === undefined ? {} : { activatedSkills }),
+            normalizedToolDefinitions: JSON.stringify(this.registry.definitions), maxTokens: this.profile.providerInputTokens, optionalMaxTokens: this.profile.softPressureTokens,
+            ...(this.maxContextSourceBytes === undefined ? {} : { maxSourceBytes: this.maxContextSourceBytes }),
+          });
+        }
       } catch (error) {
         if (error instanceof ContextAssemblyError) yield* emit({ type: 'context.assembled', turnId, diagnostics: contextDiagnostics(error, this.profile) });
         throw error;
       }
+      if (!context) throw new GeorgeError('validation', 'Context assembly ended without a result.');
       if (submission.signal?.aborted) throw cancellationError(submission.signal);
       yield* emit({ type: 'context.assembled', turnId, diagnostics: contextDiagnostics(context, this.profile) });
       yield* this.consumeBudget(submission.session, turnId, budget, 'contextTokens', context.estimatedTokens, submission.signal);
@@ -461,6 +561,7 @@ export async function createAgentLoopApplicationService(
     skills,
     validateRunBudget(options.runBudget ?? DEFAULT_RUN_BUDGET),
     options.clock ?? Date.now,
+    options.compactor ?? new ProviderContextCompactor(options.provider),
   );
 }
 

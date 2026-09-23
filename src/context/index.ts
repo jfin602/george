@@ -2,6 +2,8 @@ import { open } from 'node:fs/promises';
 
 import { GeorgeError, resolveWorkspacePath, type Workspace } from '../core/index.ts';
 
+export * from './compaction.ts';
+
 /** A deterministic fallback when an active model tokenizer is unavailable: four UTF-16 code units per token. */
 export const defaultContextTokenEstimator: ContextTokenEstimator = {
   kind: 'estimated-4-code-units-per-token',
@@ -17,6 +19,8 @@ export type ContextSourceKind =
   | 'george-invariants'
   | 'current-user-input'
   | 'conversation'
+  | 'compacted-history'
+  | 'authoritative-state'
   | 'user-global-instructions'
   | 'personality'
   | 'workspace-instructions'
@@ -26,8 +30,8 @@ export type ContextSourceKind =
   | 'activated-skill'
   | 'tool-definition-overhead';
 
-export type ContextSourceOrigin = 'george' | 'user' | 'workspace' | 'builtin-skill' | 'user-skill' | 'workspace-skill' | 'tooling';
-export type ContextTrust = 'invariant' | 'user-intent' | 'workspace-untrusted' | 'user-default' | 'personality' | 'builtin-skill' | 'user-skill' | 'workspace-skill' | 'tooling';
+export type ContextSourceOrigin = 'george' | 'user' | 'workspace' | 'builtin-skill' | 'user-skill' | 'workspace-skill' | 'tooling' | 'derived';
+export type ContextTrust = 'invariant' | 'user-intent' | 'workspace-untrusted' | 'user-default' | 'personality' | 'builtin-skill' | 'user-skill' | 'workspace-skill' | 'tooling' | 'derived-history';
 export type ContextDisposition = 'active' | 'routed' | 'omitted' | 'deferred' | 'duplicate' | 'failed';
 
 export type ContextSource = Readonly<{
@@ -66,10 +70,20 @@ export type ActivatedContextSkill = Readonly<{
   origin: 'builtin' | 'user' | 'workspace';
 }>;
 
+/** Explicit history sources keep derived summaries visibly below instruction authority. */
+export type ContextHistorySource = Readonly<{
+  id: string;
+  text: string;
+  kind: 'conversation' | 'compacted-history' | 'authoritative-state';
+  origin: ContextSourceOrigin;
+  trust: ContextTrust;
+}>;
+
 export type ContextAssemblyOptions = Readonly<{
   invariants: string;
   userInput: string;
   conversation?: string;
+  historySources?: readonly ContextHistorySource[];
   workspace?: Workspace;
   userGlobalInstructionsPath?: string;
   personalityPath?: string;
@@ -152,7 +166,7 @@ function providerFacingText(value: AssembledContext['rendered']): string {
 }
 
 function channelFor(kind: ContextSourceKind): Channel {
-  if (kind === 'current-user-input' || kind === 'conversation') return 'conversation';
+  if (kind === 'current-user-input' || kind === 'conversation' || kind === 'compacted-history' || kind === 'authoritative-state') return 'conversation';
   if (kind === 'tool-definition-overhead') return 'tools';
   return 'guidance';
 }
@@ -261,7 +275,12 @@ export async function assembleContext(options: ContextAssemblyOptions): Promise<
     { id: 'george:invariants', kind: 'george-invariants', origin: 'george', trust: 'invariant', precedence: 0, order: 0, required: true, channel: 'guidance', text: normalize(options.invariants) },
     { id: 'conversation:current-user-input', kind: 'current-user-input', origin: 'user', trust: 'user-intent', precedence: 10, order: 0, required: true, channel: 'conversation', text: normalize(options.userInput) },
   ];
+  if (options.conversation && options.historySources?.length) throw validationError('conversation and historySources cannot both be provided.');
   if (options.conversation) candidates.push({ id: 'conversation:history', kind: 'conversation', origin: 'user', trust: 'user-intent', precedence: 10, order: 1, required: true, channel: 'conversation', text: normalize(options.conversation) });
+  for (const [order, history] of (options.historySources ?? []).entries()) {
+    if (!history.id || !history.text) throw validationError('history source must have an ID and text.');
+    candidates.push({ id: history.id, kind: history.kind, origin: history.origin, trust: history.trust, precedence: 10, order: order + 1, required: true, channel: 'conversation', text: normalize(history.text) });
+  }
   if (options.normalizedToolDefinitions) candidates.push({ id: 'tools:normalized-definition-overhead', kind: 'tool-definition-overhead', origin: 'tooling', trust: 'tooling', precedence: 20, order: 0, required: true, channel: 'tools', text: normalize(options.normalizedToolDefinitions) });
 
   if (options.workspace) {

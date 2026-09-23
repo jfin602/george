@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { mkdtemp, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -126,4 +127,20 @@ test('durable sessions retain only bounded normalized run-budget evidence', asyn
   assert.deepEqual(reopened.events.map((event) => event.type), ['reliability.run.started', 'budget.pressure', 'budget.exhausted']);
   const serialized = await readFile(join(state, 'budget-session.json'), 'utf8');
   assert.doesNotMatch(serialized, /provider payload|stdout|environment/i);
+});
+
+test('durable sessions retain bounded valid compaction checkpoints without changing schema-1 transcript history', async () => {
+  const { workspace, state } = await fixture();
+  const store = new LocalSessionStore({ root: state });
+  const session = createSession({ id: 'checkpoint-session', workspace });
+  const summary = 'Derived older completed history.';
+  appendSessionEvent(session, { type: 'context.compaction.completed', turnId: 'turn-1', runId: 'run-1', checkpoint: {
+    version: 1, id: 'compact-123', start: 0, end: 2,
+    rangeDigest: 'a'.repeat(64), summaryDigest: createHash('sha256').update(summary).digest('hex'), summary,
+    beforeTokens: 100, afterTokens: 8, reason: 'hard-pressure',
+  } });
+  await store.save(session);
+  const reopened = await store.open('checkpoint-session', workspace);
+  assert.deepEqual(reopened.events, session.events);
+  assert.deepEqual(reopened.transcript, []);
 });
