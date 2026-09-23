@@ -387,27 +387,15 @@ function safeDiagnostics(value: ContextDiagnostics): ContextDiagnostics {
 }
 
 function durableSession(session: Session, workspace: string): DurableSession {
-  const transcript = completedTranscript(session.events).map((entry) => {
+  // Durable events intentionally omit prior input bodies, so they cannot rebuild a reopened transcript.
+  // A trailing user entry is the only incomplete canonical turn state and remains non-durable.
+  const transcript = (session.transcript.at(-1)?.role === 'user' ? session.transcript.slice(0, -1) : session.transcript).map((entry) => {
     if (entry.role !== 'user' && entry.role !== 'assistant') invalid('transcript role is invalid.');
     return { role: entry.role, text: string(entry.text, 'transcript text') } as TranscriptEntry;
   });
   if (transcript.length > MAX_DURABLE_TRANSCRIPT_ENTRIES) invalid('transcript exceeds its bound.');
   if (session.events.length > MAX_DURABLE_EVENTS) invalid('event history exceeds its bound.');
   return { schemaVersion: DURABLE_SESSION_SCHEMA_VERSION, id: identifier(session.id, 'session ID'), workspace, transcript, events: session.events.map(durableEvent).filter((event): event is ApplicationEvent => event !== undefined) };
-}
-
-function completedTranscript(events: readonly ApplicationEvent[]): TranscriptEntry[] {
-  const result: TranscriptEntry[] = [];
-  let current: TranscriptEntry[] = [];
-  for (const event of events) {
-    if (event.type === 'input.submitted') current = [{ role: 'user', text: event.text }];
-    else if (event.type === 'assistant.response.completed' && current.length > 0) current.push({ role: 'assistant', text: event.text });
-    else if (event.type === 'turn.completed') {
-      result.push(...current);
-      current = [];
-    } else if (event.type === 'turn.cancelled' || event.type === 'turn.failed') current = [];
-  }
-  return result;
 }
 
 function parseTranscript(value: unknown): TranscriptEntry[] {

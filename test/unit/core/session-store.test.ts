@@ -58,6 +58,23 @@ test('durable sessions bind a canonical workspace and reconstruct clean complete
   await assert.rejects(store.open('session-1', other), /different workspace/);
 });
 
+test('resaving a reopened session preserves prior canonical history without persisting an unfinished tail', async () => {
+  const { workspace, state } = await fixture();
+  const store = new LocalSessionStore({ root: state });
+  const session = createSession({ id: 'resave-1', workspace });
+  appendSessionEvent(session, { type: 'input.submitted', text: 'completed request' });
+  appendSessionEvent(session, { type: 'assistant.response.completed', turnId: 'completed', text: 'completed answer' });
+  appendSessionEvent(session, { type: 'turn.completed', turnId: 'completed' });
+  await store.save(session);
+
+  const reopened = await store.open('resave-1', workspace);
+  appendSessionEvent(reopened, { type: 'input.submitted', text: 'unfinished request' });
+  await store.save(reopened);
+  assert.deepEqual((await store.open('resave-1', workspace)).transcript, [
+    { role: 'user', text: 'completed request' }, { role: 'assistant', text: 'completed answer' },
+  ]);
+});
+
 test('opening rejects malformed, unsupported, oversized, and invalid normalized durable state', async () => {
   const { workspace, state } = await fixture();
   const store = new LocalSessionStore({ root: state });
