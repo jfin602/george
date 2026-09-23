@@ -115,10 +115,13 @@ Scope:
 - explicit trust/precedence across George invariants, current user intent, workspace/project guidance, user-global defaults, and personality;
 - stable source identity/order and deterministic duplicate suppression where possible;
 - token-oriented provider-facing context budgets with observable estimated size and actual provider usage when reported;
+- provider-independent context profiles so model/quant/runtime-specific operating limits do not leak into the core;
+- initial qualification profile for Qwen3-Coder-30B-A3B-Instruct Q4_K_M through LM Studio: 32,768-token physical target, ~12k-18k ordinary working set, ~20k soft pressure, 24,576-token provider-input ceiling, and ~8,192 tokens reserved for generation/tool-loop headroom;
+- smallest-sufficient-working-set policy: unused context is valid headroom and discovered material is not injected merely because it fits;
 - explicit omit/defer/fail behavior for budget exhaustion instead of silently treating partial critical instructions as complete;
 - portable skill registry and discovery with `skills/<name>/SKILL.md` compatibility;
 - built-in, user-global, and workspace skill sources with deterministic source identity and visible collision handling;
-- compact bounded skill metadata/catalog exposure without injecting every installed skill body into every request;
+- compact bounded skill metadata/catalog exposed to application/TUI surfaces without ordinary-turn provider injection, plus no eager full-body loading;
 - explicit just-in-time skill activation, scoped to the current user turn across that turn's provider/tool rounds;
 - no executable authority granted by declarative skill content;
 - deterministic context/skill qualification independent from model nondeterminism;
@@ -126,7 +129,7 @@ Scope:
 
 Success condition:
 - a deterministic repository fixture can be opened and its applicable context sources discovered under the documented trust, precedence, routing, deduplication, and budget contract;
-- provider-facing context size is observable, critical instruction sources are never silently truncated and presented as complete, and optional/routed material is explicitly omitted, deferred, or rejected when required;
+- provider-facing context size/profile/headroom are observable, critical instruction sources are never silently truncated and presented as complete, optional/routed material is explicitly omitted/deferred/rejected when required, and large repositories do not cause eager context filling;
 - at least one portable external `SKILL.md` fixture is discovered and explicitly activated just in time for one user turn without leaking into an unrelated later turn;
 - repository/personality/skill content cannot expand George's executable permission ceiling;
 - provider and TUI code remain adapters over reusable context and skill services.

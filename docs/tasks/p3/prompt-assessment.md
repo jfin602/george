@@ -10,7 +10,9 @@ Assessment baseline: main `e7883db6f5ea481883fca5e07ae3a28937e1bd5b`, package `0
 
 Proceed as one focused Phase 3 with **five implementation prompts plus one evidence-only closeout**.
 
-The safest order is to establish a provider-independent context model and deterministic source/budget machinery before replacing the bootstrap instruction concatenation, then add portable skills on top of that substrate, expose explicit non-sticky skill activation through the TUI, qualify the exact integrated candidate, and close out from evidence.
+P1 is the preserved context-foundation step. The owner has already run P1 in the active development workspace; this documentation update does not regenerate, delete, or rerun it. Canonical `main` at review time still reflects the planning baseline, so P2 must inspect the exact available P1 source/tests before extending them.
+
+The safest remaining order is to layer a provider-independent model context profile and smallest-sufficient-working-set policy onto P1 while replacing the bootstrap instruction concatenation, then add portable skills on top of that substrate, expose explicit non-sticky skill activation through the TUI, qualify the exact integrated candidate against the initial Qwen/Q4_K_M profile, and close out from evidence.
 
 All Phase 3 prompts are `Browser required: no.`. The ordinary phase runner can execute the complete stack. Native-terminal and live-LM-Studio/Qwen evidence remain conditional runtime evidence rather than browser handoffs.
 
@@ -42,13 +44,13 @@ Support George-owned core instructions, optional user-global instructions/person
 
 Replace the bootstrap raw instruction concatenation with the Phase-3 context assembler in the canonical agent loop.
 
-Add safe George user-config discovery, context budget configuration, optional global/personality loading, explicit routed-document input, and structured context diagnostics. Preserve provider independence, provider token usage, tool/approval policy, and all Phase-2 loop semantics.
+Add safe George user-config discovery, a provider-independent context-profile abstraction, optional global/personality loading, explicit routed-document input, smallest-sufficient-working-set behavior, stable-prefix-friendly rendering where semantically safe, and structured context composition/headroom diagnostics. Preserve provider independence, provider token usage, tool/approval policy, and all Phase-2 loop semantics.
 
 ### P3 / 0.3.3 — portable skill registry and turn-scoped activation
 
-Add built-in, user-global, and workspace skill discovery for `skills/<name>/SKILL.md`; bounded metadata/catalog exposure; stable qualified identities; visible collision/malformed/oversized handling; and explicit per-turn activation.
+Add built-in, user-global, and workspace skill discovery for `skills/<name>/SKILL.md`; bounded application/TUI metadata/catalog exposure; stable qualified identities; visible collision/malformed/oversized handling; and explicit per-turn activation.
 
-Full skill bodies load only for activated skills and participate in the same context trust/budget rules. Skill text remains declarative and cannot register executors or raise permissions.
+Ordinary provider turns do not receive the skill catalog by default in Phase 3. Full skill bodies load only for activated skills and participate in the same context trust/budget rules. Skill text remains declarative and cannot register executors or raise permissions.
 
 ### P4 / 0.3.4 — TUI skill activation and context observability
 
@@ -78,6 +80,21 @@ Introduce one reusable assembled-context representation outside the provider ada
 - enough diagnostics to explain why a source was or was not sent.
 
 Do not make LM Studio/OpenAI request objects the canonical context model.
+
+### Initial context profile and working-set policy
+
+Phase 3 qualifies one concrete initial operating profile while keeping the core generic:
+- model: `Qwen3-Coder-30B-A3B-Instruct`; quant: `Q4_K_M`; runtime: LM Studio;
+- physical context target: `32,768`; ordinary assembled working-set target: approximately `12,000-18,000`;
+- soft pressure: approximately `20,000`; provider-input hard budget: `24,576`; reserved headroom: approximately `8,192`;
+- normal always-on George + project-instruction target: approximately `2,560` or less.
+
+The rule is **smallest sufficient working set**, not "use the available budget." These are configurable initial engineering defaults, not architectural limits or claims about Qwen's native maximum context.
+
+P2 is the adaptation point for this profile. P1's generic source, estimator, whole-source budget, and diagnostic primitives are preserved.
+
+Do not introduce dynamic tool-surface routing in Phase 3. Continue exposing the qualified Phase-2 canonical tool surface, measure its schema overhead, and revisit tool routing when later plugin/network phases materially expand the registry.
+
 
 ### Precedence and ordering
 
@@ -130,7 +147,7 @@ Use qualified stable IDs such as `builtin:name`, `user:name`, and `workspace:nam
 
 Support the portable directory shape containing `SKILL.md`. Parse a small dependency-free metadata subset sufficient for stable name/description and optional noncritical help/argument hints when present. Unknown noncritical metadata is ignored safely.
 
-Catalog exposure contains bounded metadata only. Full bodies are loaded just in time only for explicit activation and must drop out after that user turn.
+Catalog exposure contains bounded metadata only and is application/TUI-local by default in Phase 3; it is not injected into ordinary provider turns merely to advertise available skills. Full bodies are loaded just in time only for explicit activation and must drop out after that user turn.
 
 ### TUI activation
 
@@ -165,7 +182,7 @@ Live LM Studio and genuine native-TTY checks remain opt-in/conditional evidence.
 
 ### 1. User-visible / aggregate quantities at risk
 
-Provider-facing estimated/actual context size, instruction ordering, number/size of active sources, omitted/deferred source counts, tool-schema overhead, skill-catalog size, TUI command/diagnostic layout, provider turn count, session event growth, and normal response/approval/cancellation latency.
+Provider-facing estimated/actual context size, selected profile, available headroom, soft-pressure state, category contribution totals, instruction ordering, number/size of active sources, omitted/deferred source counts, tool-schema overhead, skill-catalog size, TUI command/diagnostic layout, provider turn count, session event growth, and normal response/approval/cancellation latency.
 
 ### 2. Invariants
 

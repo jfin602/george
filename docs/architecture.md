@@ -116,6 +116,15 @@ Phase 3 should replace raw instruction concatenation with a deterministic instru
 
 Phase 3 context budgeting is token-oriented, not merely byte-oriented. When an exact tokenizer for the active provider/model is unavailable, George may use a deterministic documented estimate, but diagnostics must label estimated counts as estimates. Actual provider usage may be recorded separately when the provider reports it. Budget exhaustion must omit/defer lower-priority material explicitly or fail closed for required material; George must not silently cut a critical instruction source and present the fragment as the complete source.
 
+George optimizes for the **smallest sufficient working set** rather than trying to fill the model's available context window. Unused context capacity is valid intentional headroom for generation, tool results, and later provider rounds.
+
+The reusable context layer accepts a provider-independent context profile containing operating limits/targets needed by assembly and diagnostics. The first qualified profile targets `Qwen3-Coder-30B-A3B-Instruct` `Q4_K_M` through LM Studio with a 32,768-token physical target, approximately 12k-18k ordinary working set, approximately 20k soft pressure, 24,576-token provider-input budget, approximately 8,192 tokens reserved headroom, and approximately 2,560 tokens as the normal always-on George + project-instruction target. These are replaceable defaults, not Qwen wire semantics or universal model limits.
+
+Logical trust/precedence and physical/provider serialization order are separate concerns. Where semantically safe, repeated stable material should precede volatile turn material so provider/runtime prefix caching can reuse the longest practical prefix. This must never change instruction authority, message roles, or tool-policy semantics.
+
+Context diagnostics should expose the selected profile plus a bounded contribution breakdown, for example core/project instructions, tools, task, skills, routed knowledge, conversation, and tool results.
+
+
 Human-readable Markdown remains an authoring format, not a requirement that every byte be permanently injected. LLM-based summarization is not required for Phase 3 instruction assembly; any later compaction/summarization must preserve critical instructions and remain independently testable.
 
 The current Phase 1 behavior that loads bounded raw root `BOOT.md` and `AGENTS.md` content directly into a turn is a bootstrap implementation, not the intended mature context architecture.
@@ -149,7 +158,7 @@ Target skill sources are:
 
 George should support the portable directory shape `skills/<name>/SKILL.md`. Compatible skill metadata should understand at least a stable name and description, with optional argument/help metadata where present. Unknown noncritical metadata should be ignored safely rather than making an otherwise portable skill unusable.
 
-Skill discovery must be token-conscious. George may index compact metadata for discovered skills, but it must not inject every installed `SKILL.md` body into every provider request. Full skill bodies are loaded just in time when explicitly activated or otherwise selected by a later bounded routing mechanism.
+Skill discovery must be token-conscious. George may index compact metadata for application/TUI discovery, but Phase 3 does not inject the ordinary skill catalog or every installed `SKILL.md` body into normal provider requests. Full skill bodies are loaded just in time when explicitly activated; model-facing catalog selection may be introduced later with automatic semantic skill routing.
 
 Phase 3 requires deterministic explicit activation and stable skill identity. An activated skill body is scoped to the current user turn and remains available across that turn's provider/tool rounds; it does not become sticky context for unrelated later turns unless the user explicitly activates it again or a later approved configuration mechanism says otherwise. Automatic semantic skill selection may be added later after the deterministic path is qualified.
 

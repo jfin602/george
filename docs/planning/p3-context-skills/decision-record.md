@@ -63,6 +63,31 @@ Budget handling is explicit:
 
 LLM-based summarization/compaction is not required in Phase 3 and remains Phase 5 scope.
 
+### George optimizes for the smallest sufficient working set
+
+Available context capacity is headroom, not a target to fill. Phase 3 assembly prefers the smallest sufficient provider-facing working set for the current turn. A source is not injected merely because budget remains; project knowledge, source material, and skills are routed or loaded just in time where practical.
+
+George may preserve unused context headroom intentionally for model output, tool-result continuations, and later rounds within the same user turn. Context pressure is an explicit operating condition, not only a provider hard-limit event.
+
+### Context profiles separate model-specific operating policy from the core
+
+George's context machinery remains provider-independent, while an active model/runtime may select a bounded **context profile** describing physical/provider window size when known, provider-input budget, soft pressure, reserved generation/tool-loop headroom, preferred ordinary working-set range, and compact always-on instruction target.
+
+The initial profile to qualify is `Qwen3-Coder-30B-A3B-Instruct` using the `Q4_K_M` GGUF through LM Studio:
+- physical context target: `32,768` tokens;
+- preferred ordinary assembled working set: approximately `12,000-18,000` estimated tokens;
+- soft pressure threshold: approximately `20,000` estimated tokens;
+- provider-input hard budget: `24,576` estimated tokens;
+- reserved generation/tool-loop headroom: approximately `8,192` tokens;
+- normal always-on George + project-instruction target: no more than approximately `2,560` estimated tokens.
+
+These are George engineering defaults for the first supported local model/quant/runtime, not claims about the model's maximum context capability and not architectural limits. Other providers, models, quants, hardware, or measured evidence may select different profiles without changing the context core.
+
+Budget behavior remains whole-source and explicit. Lower-value optional/routed material is omitted or deferred before critical instructions, and unused capacity may remain intentionally unused.
+
+Where the provider/request shape permits without changing semantic roles or the documented trust/precedence contract, provider-facing rendering should favor a stable repeated prefix before more volatile turn material so runtime prefix caching can reuse the longest practical prefix.
+
+
 ### Routing is distinct from always-on instructions
 
 A discovered project document does not automatically belong in every provider request.
@@ -89,7 +114,7 @@ Skill sources are:
 
 The portable compatibility target is a directory containing `SKILL.md`, compatible with `skills/<name>/SKILL.md`. George should understand a stable skill name and description plus optional noncritical help/argument metadata when present. Unknown noncritical metadata is ignored safely.
 
-Discovery is cheap and token-conscious. George may expose compact bounded metadata/catalog entries broadly, but full skill bodies are not inserted into every model request.
+Discovery is cheap and token-conscious. Phase 3 exposes the bounded skill catalog through application/TUI surfaces, but ordinary provider requests do not include the catalog by default because Phase 3 uses explicit user activation rather than automatic model skill selection. Full skill bodies are never inserted merely because a skill is discovered.
 
 Phase 3 requires deterministic explicit activation. An activated skill body is loaded just in time, participates in the same trust/precedence/budget machinery as other model-facing context, remains available across that current user turn's model/tool rounds, and drops out for unrelated later turns unless explicitly activated again.
 
@@ -128,14 +153,16 @@ Phase 4 owns coding workflow and durable sessions. Phase 5 owns long-run reliabi
 
 Deterministic Phase 3 coverage must prove at minimum:
 - context-source discovery, precedence, stable ordering, duplicate handling, and provider independence;
-- estimated provider-facing context sizing and explicit budget exhaustion behavior;
+- estimated provider-facing context sizing, selected context-profile diagnostics, intentional headroom, and explicit budget/pressure behavior;
+- large repositories or many discovered documents do not cause George to fill available context eagerly;
+- the initial Qwen/Q4_K_M/LM Studio profile preserves the documented provider-input ceiling and sheds/defers optional material before critical instructions;
 - required instructions are not silently truncated and presented as complete;
 - missing optional user-global/personality/workspace sources;
 - routed/retrievable project documentation is not unnecessarily repeated in every assembled turn;
 - repository/personality/skill text cannot raise executable permissions;
 - skill discovery across built-in, user-global, and workspace sources;
 - visible skill collision behavior and malformed/oversized skill handling;
-- compact skill catalog behavior without eager full-body injection;
+- compact application/TUI skill catalog behavior without ordinary-turn provider injection or eager full-body loading;
 - explicit skill activation scoped to one user turn and absent from an unrelated later turn;
 - at least one portable external `SKILL.md` fixture;
 - provider/TUI boundaries remain adapters over reusable context and skill services.

@@ -35,6 +35,17 @@ When Phase 3 introduces instruction precedence and budgeting, deterministic cove
 
 Raw source byte limits are not by themselves sufficient evidence of useful token budgeting. Qualification should measure the provider-facing assembled context at the layer where its size can be meaningfully compared.
 
+Phase 3 context qualification must also prove that the selected context profile is operating policy rather than a fill target:
+- a repository containing many discoverable documents does not cause unrelated material to be injected merely because tokens remain;
+- profile identity, provider-input budget, soft-pressure state, reserved headroom, and bounded category contributions are observable;
+- the initial Qwen3-Coder-30B-A3B-Instruct / Q4_K_M / LM Studio profile enforces a 24,576 estimated provider-input ceiling against the 32,768 physical target and preserves intended headroom;
+- representative ordinary fixtures can remain within the approximately 12k-18k working-set target without weakening correctness;
+- crossing soft pressure causes lower-value optional/routed material to be omitted/deferred before critical instructions are lost;
+- stable provider-facing ordering remains deterministic and does not change logical precedence.
+
+The preferred working-set and soft-pressure numbers are qualification targets, not guarantees that every valid task must fit beneath them. Tasks requiring more context may use available profile headroom while remaining below the hard provider-input budget.
+
+
 ### Extension qualification
 
 Skill behavior must be deterministic enough to test independently from model inference.
@@ -44,7 +55,7 @@ When Phase 3 introduces the skill registry, deterministic coverage must include:
 - stable source identity and explicit collision handling;
 - malformed or missing skill metadata/body behavior;
 - oversized skill bodies and context-budget exhaustion;
-- compact metadata/catalog behavior without loading every discovered skill body;
+- compact application/TUI metadata/catalog behavior without injecting the catalog or loading every discovered skill body into ordinary provider turns;
 - full skill body loading only when activated/selected;
 - activation state not leaking unexpectedly into unrelated turns;
 - workspace/repository skill text being unable to raise process, filesystem, network, secret-access, or approval permissions;
@@ -142,6 +153,8 @@ Changed-file evidence must distinguish observation from attribution. When an app
 ### Live local-model qualification
 
 For release candidates that change the live agent path, exercise the exact supported LM Studio/Qwen configuration and record the model/provider/runtime used.
+
+For Phase 3, when the supported local setup is available, record the exact Qwen model/quant/runtime profile and compare George's estimated provider-facing size with provider-reported usage where available. Include at least one representative ordinary-context tool cycle and, when feasible without manufacturing product behavior, one bounded higher-context/pressure characterization. Live behavior characterizes the profile; deterministic fixtures remain the correctness authority.
 
 For Phase 2, attempt one bounded live tool-use cycle that proves tool schemas are accepted, a tool call can be returned to George, and a structured result can continue to a final response.
 
