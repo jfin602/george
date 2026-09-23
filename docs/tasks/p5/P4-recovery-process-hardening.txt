@@ -29,6 +29,8 @@ Recovery is read/observe/classify only. It must never automatically write, patch
 
 Append recovery decisions/evidence as new normalized events. Never rewrite prior events. Project recovery progress/work through the existing presentation-independent mechanism.
 
+Recovery/reopen must also preserve the hardened assistant-history boundary: discarded provisional text from tool-bearing/failed/cancelled provider rounds must never be restored as completed assistant history, while the singular committed final response remains durable. Bounded failed-tool/provider diagnostic evidence may be retained according to the sanitized event contract but must not be promoted into canonical conversation.
+
 Harden in-run process-tree termination and expose bounded structured cleanup outcome/uncertainty for timeout/cancellation/error paths. Where post-interruption process observation/cleanup is attempted, require identity stronger than a persisted PID alone; never signal a possibly reused PID. Unsupported platform cases remain explicit Evidence Gap/outcome unknown.
 
 Preserve the existing truthful statement that approved processes run with host-user privileges and cwd is not an OS sandbox.
