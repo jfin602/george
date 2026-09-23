@@ -2,9 +2,12 @@ import {
   BoxRenderable,
   CliRenderEvents,
   ScrollBoxRenderable,
+  StyledText,
   TextareaRenderable,
   TextRenderable,
+  bold,
   createHostClipboard,
+  fg,
   type CliRenderer,
   type HostClipboardService,
   type KeyBinding as TextareaKeyBinding,
@@ -27,6 +30,9 @@ export const NEON_THEME = {
   green: '#18d976',
   mint: '#5cffb1',
   border: '#199958',
+  user: '#38bdf8',
+  assistant: '#5cffb1',
+  error: '#ff6b6b',
 } as const;
 
 const ASCII_BORDER = {
@@ -46,8 +52,59 @@ export type GeorgeTuiOptions = Readonly<{
   clipboard?: Clipboard;
 }>;
 
-function transcriptText(entries: readonly TranscriptEntry[]): string {
-  return entries.map((entry) => `${entry.role === 'user' ? 'You' : 'George'}\n${entry.text}`).join('\n\n');
+export type TranscriptDiagnosticEntry = Readonly<{
+  afterEntryCount: number;
+  title: 'Error' | 'Tool failure';
+  source: string;
+  code: string;
+  message: string;
+  details: readonly string[];
+}>;
+
+function plain(text: string): StyledText['chunks'][number] {
+  return { __isChunk: true, text, attributes: 0 };
+}
+
+function errorFingerprint(code: string, message: string): string {
+  return `${code}\u0000${message}`;
+}
+
+function safeCauseDetails(cause: unknown): string[] {
+  if (!cause || typeof cause !== 'object' || Array.isArray(cause)) return [];
+  const record = cause as Record<string, unknown>;
+  const details: string[] = [];
+  if (typeof record.kind === 'string') details.push(`Kind: ${bounded(record.kind, 64)}`);
+  if (typeof record.status === 'number' && Number.isInteger(record.status)) details.push(`HTTP status: ${record.status}`);
+  for (const key of ['providerEventType', 'eventType'] as const) {
+    if (typeof record[key] === 'string') details.push(`Provider event: ${bounded(record[key], 64)}`);
+  }
+  return details;
+}
+
+/** Builds presentation-only styled transcript content; canonical transcript entries remain clean text. */
+export function renderTranscript(
+  entries: readonly TranscriptEntry[],
+  diagnostics: readonly TranscriptDiagnosticEntry[],
+): StyledText {
+  const chunks: StyledText['chunks'] = [];
+  let blockCount = 0;
+  const separator = () => { if (blockCount++ > 0) chunks.push(plain('\n\n')); };
+  const diagnosticAt = (count: number) => {
+    for (const diagnostic of diagnostics.filter((item) => item.afterEntryCount === count)) {
+      separator();
+      chunks.push(bold(fg(NEON_THEME.error)(diagnostic.title)));
+      chunks.push(plain(`\n${diagnostic.source}\nCode: ${diagnostic.code}\n${diagnostic.message}`));
+      if (diagnostic.details.length > 0) chunks.push(plain(`\n${diagnostic.details.join('\n')}`));
+    }
+  };
+  diagnosticAt(0);
+  entries.forEach((entry, index) => {
+    separator();
+    chunks.push(bold(fg(entry.role === 'user' ? NEON_THEME.user : NEON_THEME.assistant)(entry.role === 'user' ? 'You' : 'George')));
+    chunks.push(plain(`\n${entry.text}`));
+    diagnosticAt(index + 1);
+  });
+  return new StyledText(chunks);
 }
 
 function activityFor(event: ApplicationEvent): string | undefined {
@@ -93,6 +150,8 @@ export class GeorgeTui {
   readonly input: TextareaRenderable;
   readonly transcript: ScrollBoxRenderable;
   readonly session: Session;
+  /** UI-only diagnostics: visible history, never part of the session transcript or provider context. */
+  readonly diagnostics: TranscriptDiagnosticEntry[] = [];
   private readonly renderer: CliRenderer;
   private readonly service: AgentLoopApplicationService;
   private readonly transcriptView: TextRenderable;
@@ -112,6 +171,7 @@ export class GeorgeTui {
   private controller: AbortController | undefined;
   private active: Promise<void> | undefined;
   private pendingApproval: ApprovalRequest | undefined;
+  private readonly terminalFailureFingerprints = new Set<string>();
   private closed = false;
 
   constructor(options: GeorgeTuiOptions) {
@@ -297,7 +357,9 @@ export class GeorgeTui {
   }
 
   private render(event: ApplicationEvent): void {
-    this.transcriptView.content = transcriptText(this.session.transcript);
+    if (event.type === 'turn.started') this.terminalFailureFingerprints.clear();
+    this.recordDiagnostic(event);
+    this.transcriptView.content = renderTranscript(this.session.transcript, this.diagnostics);
     if (event.type === 'context.assembled') {
       this.contextView.content = contextText(event.diagnostics);
       this.contextView.height = event.diagnostics.activeSourceIds.some((id) => id.startsWith('skill:')) ? 3 : 2;
@@ -315,6 +377,29 @@ export class GeorgeTui {
     const activity = activityFor(event);
     if (activity) this.activityView.content = activity;
     this.renderer.requestRender();
+  }
+
+  private recordDiagnostic(event: ApplicationEvent): void {
+    if (event.type === 'tool.failed') {
+      this.diagnostics.push({
+        afterEntryCount: this.session.transcript.length,
+        title: 'Tool failure', source: `Tool: ${event.name}`,
+        code: bounded(event.result.error.code, 64), message: bounded(event.result.error.message, 480), details: [],
+      });
+      return;
+    }
+    if (event.type !== 'provider.error' && event.type !== 'turn.failed') return;
+    const fingerprint = errorFingerprint(event.error.code, event.error.message);
+    if (this.terminalFailureFingerprints.has(fingerprint)) return;
+    this.terminalFailureFingerprints.add(fingerprint);
+    this.diagnostics.push({
+      afterEntryCount: this.session.transcript.length,
+      title: 'Error',
+      source: event.type === 'provider.error' ? 'Provider failure' : 'Turn failure',
+      code: event.error.code,
+      message: bounded(event.error.message, 480),
+      details: safeCauseDetails(event.error.cause),
+    });
   }
 
   private status(state: string): string {

@@ -17,7 +17,7 @@ import {
   type ProviderStreamOptions,
 } from '../../../src/core/index.ts';
 import { createOneTurnApplicationService, type OneTurnServiceOptions } from '../../../src/application/index.ts';
-import { GeorgeTui, NEON_THEME, type GeorgeTuiOptions } from '../../../src/tui/app.ts';
+import { GeorgeTui, NEON_THEME, renderTranscript, type GeorgeTuiOptions } from '../../../src/tui/app.ts';
 
 class ScriptedProvider implements ModelProvider {
   calls: Array<{ request: ProviderRequest; options: ProviderStreamOptions }> = [];
@@ -131,6 +131,79 @@ test('uses the green neon palette for the transcript and focused composer', asyn
   assert.deepEqual(item.app.input.cursorColor.toInts(), RGBA.fromHex(NEON_THEME.mint).toInts());
   assert.match(item.setup.captureCharFrame(), /┌─Transcript/);
   assert.match(item.setup.captureCharFrame(), /\+-+\+/);
+});
+
+test('transcript styles distinct multiline You and George headers without changing canonical text', () => {
+  const transcript = renderTranscript([
+    { role: 'user', text: 'first user line\nsecond user line' },
+    { role: 'assistant', text: 'first George line\nsecond George line' },
+  ], []);
+  const you = transcript.chunks.find((chunk) => chunk.text === 'You');
+  const george = transcript.chunks.find((chunk) => chunk.text === 'George');
+  assert.deepEqual(you?.fg?.toInts(), RGBA.fromHex(NEON_THEME.user).toInts());
+  assert.deepEqual(george?.fg?.toInts(), RGBA.fromHex(NEON_THEME.assistant).toInts());
+  assert.notDeepEqual(you?.fg?.toInts(), george?.fg?.toInts());
+  assert.ok((you?.attributes ?? 0) > 0);
+  assert.match(transcript.chunks.map((chunk) => chunk.text).join(''), /first user line\nsecond user line[\s\S]*first George line\nsecond George line/);
+});
+
+test('provider failure stays visible once with safe metadata and never enters later model context', async (t) => {
+  const timeout = new GeorgeError('provider', 'LM Studio request timed out after 30000 ms.', {
+    cause: { kind: 'timeout', status: 504, providerEventType: 'response.error', raw: 'secret'.repeat(10_000) },
+  });
+  const provider = new class implements ModelProvider {
+    calls: Array<{ request: ProviderRequest; options: ProviderStreamOptions }> = [];
+    async *stream(request: ProviderRequest, options: ProviderStreamOptions = {}): AsyncGenerator<ProviderEvent> {
+      this.calls.push({ request, options });
+      if (this.calls.length === 1) {
+        yield { type: 'provider.error', error: timeout };
+        return;
+      }
+      yield { type: 'provider.text.delta', delta: 'recovered' };
+      yield { type: 'provider.response.completed' };
+    }
+  }();
+  const item = await tui(provider);
+  t.after(() => cleanup(item));
+
+  await item.setup.mockInput.typeText('first turn');
+  item.setup.mockInput.pressEnter();
+  await item.app.waitForIdle();
+  const visible = renderTranscript(item.app.session.transcript, item.app.diagnostics).chunks.map((chunk) => chunk.text).join('');
+  assert.equal(item.app.diagnostics.length, 1);
+  assert.equal(item.app.session.events.filter((event) => event.type === 'provider.error' || event.type === 'turn.failed').length, 2);
+  assert.match(visible, /Error\nProvider failure\nCode: provider\nLM Studio request timed out after 30000 ms\.\nKind: timeout\nHTTP status: 504\nProvider event: response\.error/);
+  assert.doesNotMatch(visible, /secret/);
+  assert.deepEqual(item.app.session.transcript, [{ role: 'user', text: 'first turn' }]);
+
+  await item.setup.mockInput.typeText('second turn');
+  item.setup.mockInput.pressEnter();
+  await item.app.waitForIdle();
+  assert.equal(provider.calls.length, 2);
+  assert.doesNotMatch(provider.calls[1]?.request.input ?? '', /LM Studio request timed out|Provider failure|secret/);
+});
+
+test('recoverable tool failures remain presentation-only diagnostic history', async (t) => {
+  const provider = new class implements ModelProvider {
+    calls = 0;
+    async *stream(): AsyncGenerator<ProviderEvent> {
+      this.calls += 1;
+      if (this.calls === 1) {
+        yield { type: 'provider.response.started', responseId: 'tool-failure' };
+        yield { type: 'provider.tool.call', callId: 'bad-tool', name: 'not_a_tool', arguments: '{}' };
+      }
+      yield { type: 'provider.response.completed' };
+    }
+  }();
+  const item = await tui(provider);
+  t.after(() => cleanup(item));
+
+  await item.setup.mockInput.typeText('run tool');
+  item.setup.mockInput.pressEnter();
+  await item.app.waitForIdle();
+  const visible = renderTranscript(item.app.session.transcript, item.app.diagnostics).chunks.map((chunk) => chunk.text).join('');
+  assert.match(visible, /Tool failure\nTool: not_a_tool\nCode: validation/);
+  assert.deepEqual(item.app.session.transcript, [{ role: 'user', text: 'run tool' }]);
 });
 
 test('Enter submits while Shift+Enter uses the OpenTUI Textarea newline binding', async (t) => {
