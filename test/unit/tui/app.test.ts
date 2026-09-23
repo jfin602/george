@@ -120,14 +120,14 @@ test('test renderer shows identity, configuration, streamed text, and read-only 
   assert.match(frame, /streamed answer/);
 });
 
-test('uses the blue neon palette for the transcript and focused composer', async (t) => {
+test('uses the green neon palette for the transcript and focused composer', async (t) => {
   const item = await tui(new ScriptedProvider([]));
   t.after(() => cleanup(item));
 
   assert.deepEqual(item.app.transcript.backgroundColor.toInts(), RGBA.fromHex(NEON_THEME.panel).toInts());
   assert.deepEqual(item.app.transcript.borderColor.toInts(), RGBA.fromHex(NEON_THEME.border).toInts());
   assert.deepEqual(item.app.input.backgroundColor.toInts(), RGBA.fromHex(NEON_THEME.panel).toInts());
-  assert.deepEqual(item.app.input.cursorColor.toInts(), RGBA.fromHex(NEON_THEME.cyan).toInts());
+  assert.deepEqual(item.app.input.cursorColor.toInts(), RGBA.fromHex(NEON_THEME.mint).toInts());
 });
 
 test('Enter submits while Shift+Enter uses the OpenTUI Textarea newline binding', async (t) => {
