@@ -1,8 +1,9 @@
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 
 import {
   asGeorgeError,
   appendSessionEvent,
+  classifySessionInterruptions,
   cancellationError,
   DEFAULT_CONTEXT_PROFILE,
   DEFAULT_RUN_BUDGET,
@@ -37,6 +38,7 @@ import {
 import { join } from 'node:path';
 import { WorkProjection } from './progress.ts';
 import { DEFAULT_PROVIDER_RETRY_POLICY, retryDelay, sleepForRetry, validateProviderRetryPolicy, type ProviderRetryPolicy, type RetrySleeper } from './retry.ts';
+import { RecoveryCoordinator } from './recovery.ts';
 import { defaultSkillRoots, SkillRegistry, type SkillCatalog, type SkillRoots } from '../skills/index.ts';
 import {
   createProcessToolExecutor,
@@ -171,6 +173,7 @@ export class AgentLoopApplicationService {
   private readonly compactor: ContextCompactor;
   private readonly providerRetryPolicy: ProviderRetryPolicy;
   private readonly retrySleeper: RetrySleeper;
+  private readonly recovery: RecoveryCoordinator;
   private readonly projections = new WeakMap<Session, WorkProjection>();
   readonly workspace: Workspace;
 
@@ -208,6 +211,7 @@ export class AgentLoopApplicationService {
     this.compactor = compactor;
     this.providerRetryPolicy = providerRetryPolicy;
     this.retrySleeper = retrySleeper;
+    this.recovery = new RecoveryCoordinator(workspace);
   }
 
   async skillCatalog(): Promise<SkillCatalog> {
@@ -291,6 +295,14 @@ export class AgentLoopApplicationService {
     return events;
   }
 
+  /** Appends only read-observed recovery decisions; it never replays an operation. */
+  async recover(session: Session): Promise<readonly ApplicationEvent[]> {
+    const events: ApplicationEvent[] = [];
+    for (const decision of await this.recovery.observe(session)) events.push(...this.record(session, decision));
+    session.interruptions = classifySessionInterruptions(session.events);
+    return events;
+  }
+
   /** Prepares a single explicit skill turn without making skill state sticky. */
   async skillTurn(id: string, input: string): Promise<Pick<AgentLoopSubmission, 'input' | 'activatedSkills'>> {
     if (!input.trim()) throw new GeorgeError('validation', '/skill requires an ID and a message.');
@@ -360,6 +372,14 @@ export class AgentLoopApplicationService {
     if (budget) {
       yield* this.consumeBudget(session, turnId, budget, 'toolExecutions', 1, signal);
       if (call.name === 'run_process') yield* this.consumeBudget(session, turnId, budget, 'processExecutions', 1, signal);
+    }
+    if (call.name === 'write_file' || call.name === 'apply_patch') {
+      const target = await resolveWorkspaceMutationPath(this.workspace, validation.arguments.path as string);
+      const expected = validation.arguments.expectedSha256;
+      const intent = call.name === 'write_file' && target.exists && typeof expected !== 'string' ? undefined : call.name === 'write_file'
+        ? { name: 'write_file' as const, path: target.relativePath, desiredBytes: Buffer.byteLength(validation.arguments.content as string, 'utf8'), desiredSha256: createHash('sha256').update(validation.arguments.content as string).digest('hex'), precondition: target.exists ? expected as string : 'absent' as const }
+        : { name: 'apply_patch' as const, path: target.relativePath, precondition: validation.arguments.expectedSha256 as string, edits: (validation.arguments.edits as readonly unknown[]).length };
+      if (intent) yield* emit({ type: 'recovery.intent', turnId, callId: call.callId, intent });
     }
     yield* emit({ type: 'tool.started', turnId, callId: call.callId, name: call.name });
     const startedAt = call.name === 'run_process' ? this.clock() : undefined;

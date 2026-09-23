@@ -33,6 +33,10 @@ async function main(): Promise<void> {
     userConfigRoot: config.userConfigRoot,
     sessionStore: store,
   });
+  if (session) {
+    await service.agent.recover(session);
+    await store.save(session);
+  }
   const renderer = await createCliRenderer({ exitOnCtrlC: false, exitSignals: [] });
   let tui: GeorgeTui | undefined;
   try {

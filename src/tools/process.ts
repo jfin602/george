@@ -47,6 +47,7 @@ export type ProcessToolResult = Readonly<{
   exitCode: number | null;
   signal: string | null;
   outcome: 'completed' | 'failed' | 'timed_out' | 'spawn_failed';
+  cleanup?: Readonly<{ attempted: true; outcome: 'completed' | 'uncertain'; platform: 'linux' | 'win32' | 'unsupported' }>;
 }>;
 
 export type ProcessToolLimits = Readonly<{
@@ -114,7 +115,16 @@ async function wait(milliseconds: number): Promise<void> {
   await new Promise<void>((resolve) => setTimeout(resolve, milliseconds));
 }
 
-async function linuxDescendants(pid: number): Promise<number[]> {
+type LinuxIdentity = Readonly<{ pid: number; startTime: string }>;
+
+async function linuxIdentity(pid: number): Promise<LinuxIdentity | undefined> {
+  const text = await readFile(`/proc/${pid}/stat`, 'utf8').catch(() => '');
+  const fields = text.slice(text.lastIndexOf(')') + 2).split(' ');
+  const startTime = fields[19];
+  return startTime && /^\d+$/.test(startTime) ? { pid, startTime } : undefined;
+}
+
+async function linuxDescendants(pid: number): Promise<LinuxIdentity[]> {
   const parents = new Map<number, number[]>();
   const entries = await readdir('/proc', { withFileTypes: true }).catch(() => []);
   await Promise.all(entries.filter((entry) => entry.isDirectory() && /^\d+$/.test(entry.name)).map(async (entry) => {
@@ -124,36 +134,47 @@ async function linuxDescendants(pid: number): Promise<number[]> {
     const parent = Number(fields[1]);
     if (Number.isInteger(parent)) parents.set(parent, [...(parents.get(parent) ?? []), child]);
   }));
-  const result: number[] = [];
+  const result: LinuxIdentity[] = [];
   const pending = [...(parents.get(pid) ?? [])];
   while (pending.length) {
     const child = pending.pop()!;
-    result.push(child);
+    const identity = await linuxIdentity(child);
+    if (identity) result.push(identity);
     pending.push(...(parents.get(child) ?? []));
   }
   return result;
 }
 
-function signalProcesses(pids: readonly number[], signal: NodeJS.Signals): void {
-  for (const pid of pids) {
-    try { process.kill(pid, signal); } catch { /* It already exited. */ }
+async function signalProcesses(processes: readonly LinuxIdentity[], signal: NodeJS.Signals): Promise<void> {
+  for (const processIdentity of processes) {
+    const current = await linuxIdentity(processIdentity.pid);
+    if (!current || current.startTime !== processIdentity.startTime) continue;
+    try { process.kill(processIdentity.pid, signal); } catch { /* It already exited. */ }
   }
 }
 
-async function terminateTree(pid: number): Promise<void> {
+async function terminateTree(pid: number): Promise<NonNullable<ProcessToolResult['cleanup']>> {
   if (platform() === 'win32') {
     await new Promise<void>((resolve) => {
       const taskkill = spawn('taskkill', ['/pid', String(pid), '/T', '/F'], { shell: false, stdio: 'ignore', windowsHide: true });
       taskkill.once('error', () => resolve());
       taskkill.once('close', () => resolve());
     });
-    return;
+    return { attempted: true, outcome: 'uncertain', platform: 'win32' };
   }
-  if (platform() === 'linux') signalProcesses([pid], 'SIGSTOP');
-  const targets = platform() === 'linux' ? [...await linuxDescendants(pid).catch(() => []), pid] : [pid];
-  signalProcesses(targets, 'SIGTERM');
+  if (platform() !== 'linux') return { attempted: true, outcome: 'uncertain', platform: 'unsupported' };
+  const root = await linuxIdentity(pid);
+  if (!root) return { attempted: true, outcome: 'completed', platform: 'linux' };
+  await signalProcesses([root], 'SIGSTOP');
+  const targets = [...await linuxDescendants(pid).catch(() => []), root];
+  await signalProcesses(targets, 'SIGTERM');
   await wait(KILL_GRACE_MS);
-  signalProcesses(targets, 'SIGKILL');
+  await signalProcesses(targets, 'SIGKILL');
+  const survivors = await Promise.all(targets.map(async (target) => {
+    const current = await linuxIdentity(target.pid);
+    return current?.startTime === target.startTime;
+  }));
+  return { attempted: true, outcome: survivors.some(Boolean) ? 'uncertain' : 'completed', platform: 'linux' };
 }
 
 export class ProcessCancellationError extends GeorgeError {
@@ -213,10 +234,10 @@ export function createProcessToolExecutor(workspace: Workspace, configuredLimits
       let stderrTruncated = false;
       let timedOut = false;
       let settled = false;
-      let termination: Promise<void> | undefined;
-      const stop = (): Promise<void> => termination ??= (async () => {
-        if (child.pid === undefined) return;
-        await terminateTree(child.pid);
+      let termination: Promise<NonNullable<ProcessToolResult['cleanup']>> | undefined;
+      const stop = (): Promise<NonNullable<ProcessToolResult['cleanup']>> => termination ??= (async () => {
+        if (child.pid === undefined) return { attempted: true, outcome: 'uncertain', platform: 'unsupported' };
+        return terminateTree(child.pid);
       })();
       const timeout = setTimeout(() => { timedOut = true; void stop(); }, timeoutMs);
       const cancelled = () => { void stop(); };
@@ -232,22 +253,22 @@ export function createProcessToolExecutor(workspace: Workspace, configuredLimits
         settled = true;
         clearTimeout(timeout);
         options.signal?.removeEventListener('abort', cancelled);
-        await termination;
+        const cleanup = await termination;
         const result = {
           name: 'run_process' as const, executable: call.executable, arguments: call.arguments, cwd: relative(workspace.root, cwd) || '.',
           stdout: stdout.toString('utf8'), stderr: stderr.toString('utf8'), stdoutTruncated, stderrTruncated, exitCode, signal,
         };
-        if (options.signal?.aborted) return reject(new ProcessCancellationError(result, options.signal));
-        resolveResult({ ...result, outcome: timedOut ? 'timed_out' : exitCode === 0 ? 'completed' : 'failed' });
+        if (options.signal?.aborted) return reject(new ProcessCancellationError({ ...result, ...(cleanup === undefined ? {} : { cleanup }) }, options.signal));
+        resolveResult({ ...result, outcome: timedOut ? 'timed_out' : exitCode === 0 ? 'completed' : 'failed', ...(cleanup === undefined ? {} : { cleanup }) });
       };
       child.on('error', (error) => {
         if (settled) return;
         settled = true;
         clearTimeout(timeout);
         options.signal?.removeEventListener('abort', cancelled);
-        void Promise.resolve(termination).then(() => reject(options.signal?.aborted
-          ? new ProcessCancellationError({ name: 'run_process', executable: call.executable, arguments: call.arguments, cwd: call.cwd ?? '.', stdout: stdout.toString('utf8'), stderr: stderr.toString('utf8'), stdoutTruncated, stderrTruncated, exitCode: null, signal: null }, options.signal)
-          : new ProcessSpawnError({ name: 'run_process', executable: call.executable, arguments: call.arguments, cwd: call.cwd ?? '.', stdout: stdout.toString('utf8'), stderr: stderr.toString('utf8'), stdoutTruncated, stderrTruncated, exitCode: null, signal: null, outcome: 'spawn_failed' }, error)));
+        void stop().then((cleanup) => reject(options.signal?.aborted
+          ? new ProcessCancellationError({ name: 'run_process', executable: call.executable, arguments: call.arguments, cwd: call.cwd ?? '.', stdout: stdout.toString('utf8'), stderr: stderr.toString('utf8'), stdoutTruncated, stderrTruncated, exitCode: null, signal: null, cleanup }, options.signal)
+          : new ProcessSpawnError({ name: 'run_process', executable: call.executable, arguments: call.arguments, cwd: call.cwd ?? '.', stdout: stdout.toString('utf8'), stderr: stderr.toString('utf8'), stdoutTruncated, stderrTruncated, exitCode: null, signal: null, outcome: 'spawn_failed', cleanup }, error)));
       });
       child.on('close', (exitCode, signal) => { void finish(exitCode, signal); });
     });

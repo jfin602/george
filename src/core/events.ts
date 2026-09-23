@@ -111,6 +111,12 @@ export type WorkItem = Readonly<{
   details: WorkDetails;
 }>;
 
+export type RecoveryIntent =
+  | Readonly<{ name: 'write_file'; path: string; desiredBytes: number; desiredSha256: string; precondition: 'absent' | string }>
+  | Readonly<{ name: 'apply_patch'; path: string; precondition: string; edits: number }>;
+
+export type RecoveryOutcome = 'confirmed_complete' | 'confirmed_incomplete' | 'interrupted' | 'outcome_unknown';
+
 export type ProviderEvent =
   | Readonly<{ type: 'provider.response.started'; responseId?: string }>
   | Readonly<{ type: 'provider.text.delta'; delta: string }>
@@ -143,6 +149,8 @@ export type ApplicationEvent =
   | Readonly<{ type: 'turn.completed'; turnId: string }>
   | Readonly<{ type: 'turn.cancelled'; turnId: string; error: GeorgeErrorShape }>
   | Readonly<{ type: 'turn.failed'; turnId: string; error: GeorgeErrorShape }>
+  | Readonly<{ type: 'recovery.intent'; turnId: string; callId: string; intent: RecoveryIntent }>
+  | Readonly<{ type: 'recovery.decision'; turnId: string; callId?: string; kind: 'mutation' | 'process' | 'approval' | 'provider-continuation'; name?: string; outcome: RecoveryOutcome; evidence: string }>
   | Readonly<{
       type: 'tool.requested';
       turnId: string;

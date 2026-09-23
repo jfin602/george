@@ -192,6 +192,11 @@ export class WorkProjection {
       case 'context.assembled': return [this.activityEvent(event.turnId, 'context', 'Context assembled'), ...this.progressEvent(event.turnId, 'context', 'Context assembled')];
       case 'provider.response.started': return [this.activityEvent(undefined, 'inspection', 'Thinking...')];
       case 'provider.error': return [this.activityEvent(undefined, 'recovery', 'Provider failed')];
+      case 'recovery.decision': {
+        const status: WorkStatus = event.outcome === 'confirmed_complete' ? 'succeeded' : event.outcome === 'confirmed_incomplete' ? 'missing' : 'interrupted';
+        const summary = `Recovery ${event.outcome.replace('_', ' ')}: ${event.name ?? event.kind}`;
+        return [this.activityEvent(event.turnId, 'recovery', summary), ...this.progressEvent(event.turnId, 'recovery', summary), ...this.update({ id: `${event.turnId}:recovery:${event.callId ?? event.kind}`, turnId: event.turnId, operationId: event.callId ?? event.kind, category: 'recovery', status, summary, details: { error: bounded(event.evidence) } })];
+      }
       case 'tool.requested': {
         const details = detailsFor(event.name, event.arguments);
         return [this.activityEvent(event.turnId, category(event.name), requested(event.name, details)), ...this.tool(event.turnId, event.callId, event.name, { details, status: 'requested', summary: requested(event.name, details) })];

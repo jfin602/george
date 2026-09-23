@@ -57,10 +57,12 @@ test('process executor terminates timed-out and cancelled process groups', async
   const timeout = await executor.execute({ ...node(['-e', 'setInterval(() => {}, 1_000)']), timeoutMs: 20 });
   assert.equal(timeout.outcome, 'timed_out');
   assert.ok(timeout.signal === 'SIGTERM' || timeout.signal === 'SIGKILL');
+  assert.equal(timeout.cleanup?.attempted, true);
+  assert.ok(timeout.cleanup?.outcome === 'completed' || timeout.cleanup?.outcome === 'uncertain');
   const controller = new AbortController();
   const pending = executor.execute(node(['-e', 'setInterval(() => {}, 1_000)']), { signal: controller.signal });
   setTimeout(() => controller.abort(new GeorgeError('cancelled', 'Stopped')), 20);
-  await assert.rejects(() => pending, (error: unknown) => error instanceof ProcessCancellationError && error.result.stdout === '');
+  await assert.rejects(() => pending, (error: unknown) => error instanceof ProcessCancellationError && error.result.stdout === '' && error.result.cleanup?.attempted === true);
 
   if (process.platform !== 'linux') return t.skip('The deterministic descendant fixture requires Linux /proc cleanup.');
   const marker = join(root, 'orphaned.txt');

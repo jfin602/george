@@ -183,6 +183,24 @@ function safeWorkflowCompletion(value: Extract<ApplicationEvent, { type: 'workfl
   return { baselineAvailable: bool(completion.baselineAvailable, 'workflow baseline availability'), finalStateAvailable: bool(completion.finalStateAvailable, 'workflow final state availability'), changes, directMutations, validations, warnings, terminalState: terminalState as 'completed' | 'failed' | 'cancelled' | 'budget_exhausted', finalAssistantResponse: boundedMessage(string(completion.finalAssistantResponse, 'workflow final response')) };
 }
 
+function safeRecoveryIntent(value: Extract<ApplicationEvent, { type: 'recovery.intent' }>['intent']): Extract<ApplicationEvent, { type: 'recovery.intent' }>['intent'] {
+  const intent = record(value, 'recovery intent');
+  const name = oneOf(intent.name, 'recovery mutation name', ['write_file', 'apply_patch']);
+  const path = string(intent.path, 'recovery target path', 4096);
+  const hash = (item: unknown, name: string) => {
+    const result = string(item, name, 64);
+    if (!/^[a-f0-9]{64}$/.test(result)) invalid(`${name} is invalid.`);
+    return result;
+  };
+  if (name === 'write_file') {
+    exactKeys(intent, ['name', 'path', 'desiredBytes', 'desiredSha256', 'precondition'], 'write recovery intent');
+    const precondition = intent.precondition === 'absent' ? 'absent' : hash(intent.precondition, 'write recovery precondition');
+    return { name, path, desiredBytes: boundedInteger(intent.desiredBytes, 'write recovery bytes'), desiredSha256: hash(intent.desiredSha256, 'write recovery hash'), precondition };
+  }
+  exactKeys(intent, ['name', 'path', 'precondition', 'edits'], 'patch recovery intent');
+  return { name, path, precondition: hash(intent.precondition, 'patch recovery precondition'), edits: boundedInteger(intent.edits, 'patch recovery edit count', 128) };
+}
+
 /** Drops file bodies, write/patch arguments, environment data, and process output. */
 function durableEvent(event: ApplicationEvent): ApplicationEvent | undefined {
   switch (event.type) {
@@ -205,6 +223,12 @@ function durableEvent(event: ApplicationEvent): ApplicationEvent | undefined {
     case 'provider.error': return { type: event.type, error: safeError(event.error) };
     case 'turn.started': case 'turn.completed': return { type: event.type, turnId: string(event.turnId, 'turn ID', 256) };
     case 'turn.cancelled': case 'turn.failed': return { type: event.type, turnId: string(event.turnId, 'turn ID', 256), error: safeError(event.error) };
+    case 'recovery.intent': return { type: event.type, turnId: string(event.turnId, 'turn ID', 256), callId: string(event.callId, 'call ID', 256), intent: safeRecoveryIntent(event.intent) };
+    case 'recovery.decision': return {
+      type: event.type, turnId: string(event.turnId, 'turn ID', 256), ...(event.callId === undefined ? {} : { callId: string(event.callId, 'call ID', 256) }),
+      kind: oneOf(event.kind, 'recovery kind', ['mutation', 'process', 'approval', 'provider-continuation']), ...(event.name === undefined ? {} : { name: string(event.name, 'recovery name', 256) }),
+      outcome: oneOf(event.outcome, 'recovery outcome', ['confirmed_complete', 'confirmed_incomplete', 'interrupted', 'outcome_unknown']), evidence: boundedMessage(string(event.evidence, 'recovery evidence', 512)),
+    };
     case 'context.source': return { type: event.type, turnId: string(event.turnId, 'turn ID', 256), sourceId: string(event.sourceId, 'context source ID', 1024), kind: string(event.kind, 'context source kind', 128), status: oneOf(event.status, 'context source status', ['loading', 'loaded', 'missing', 'oversized', 'failed']), ...(event.bytes === undefined ? {} : { bytes: boundedInteger(event.bytes, 'context source bytes') }) };
     case 'context.assembled': return { type: event.type, turnId: string(event.turnId, 'turn ID', 256), diagnostics: safeDiagnostics(event.diagnostics) };
     case 'tool.requested': return { type: event.type, turnId: string(event.turnId, 'turn ID', 256), callId: string(event.callId, 'call ID', 256), name: string(event.name, 'tool name', 256), arguments: '{}' };
@@ -406,6 +430,8 @@ export function classifySessionInterruptions(events: readonly ApplicationEvent[]
   const tools = new Map<string, Extract<ApplicationEvent, { type: 'tool.requested' | 'tool.started' }>>();
   const approvals = new Map<string, Extract<ApplicationEvent, { type: 'approval.requested' }>>();
   const providerStarted = new Set<string>();
+  const reconciled = new Set<string>();
+  const reconciledProviderTurns = new Set<string>();
   let currentTurn = 'unknown';
   for (const event of events) {
     if (event.type === 'turn.started') currentTurn = event.turnId;
@@ -415,14 +441,19 @@ export function classifySessionInterruptions(events: readonly ApplicationEvent[]
     else if (event.type === 'tool.completed' || event.type === 'tool.failed') tools.delete(event.callId);
     else if (event.type === 'approval.requested') approvals.set(event.callId, event);
     else if (event.type === 'approval.allowed' || event.type === 'approval.denied') approvals.delete(event.callId);
+    else if (event.type === 'recovery.decision') {
+      if (event.callId) reconciled.add(event.callId);
+      if (event.kind === 'provider-continuation') reconciledProviderTurns.add(event.turnId);
+    }
   }
   const interruptions: SessionInterruption[] = [];
   for (const event of tools.values()) {
+    if (reconciled.has(event.callId)) continue;
     if (event.name === 'write_file' || event.name === 'apply_patch') interruptions.push({ kind: 'mutation', turnId: event.turnId, callId: event.callId, name: event.name });
     if (event.name === 'run_process') interruptions.push({ kind: 'process', turnId: event.turnId, callId: event.callId, name: event.name });
   }
-  for (const event of approvals.values()) interruptions.push({ kind: 'approval', turnId: event.turnId, callId: event.callId, name: event.request.toolName });
-  for (const turnId of providerStarted) interruptions.push({ kind: 'provider-continuation', ...(turnId === 'unknown' ? {} : { turnId }) });
+  for (const event of approvals.values()) if (!reconciled.has(event.callId)) interruptions.push({ kind: 'approval', turnId: event.turnId, callId: event.callId, name: event.request.toolName });
+  for (const turnId of providerStarted) if (!reconciledProviderTurns.has(turnId)) interruptions.push({ kind: 'provider-continuation', ...(turnId === 'unknown' ? {} : { turnId }) });
   return interruptions;
 }
 
