@@ -91,6 +91,15 @@ export class ToolRegistry {
     this.definitions = definitions.map(({ name, description, inputSchema }) => ({ name, description, inputSchema: schemaJson(inputSchema) }));
   }
 
+  /** Returns a capability-reducing view of this registry using the original registrations. */
+  select(names: readonly string[]): ToolRegistry {
+    const selected = new Set(names);
+    for (const name of selected) {
+      if (!this.byName.has(name)) throw new Error(`Unknown registered tool: ${name}`);
+    }
+    return new ToolRegistry(this.registrations.filter((definition) => selected.has(definition.name)));
+  }
+
   validate(call: ToolCall): ValidatedToolCall | ToolResult {
     const definition = this.byName.get(call.name);
     if (!definition) return { callId: call.callId, name: call.name, result: { ok: false, error: validationError(`Unknown tool: ${call.name}.`) } };

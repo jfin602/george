@@ -2,8 +2,8 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { createAgentLoopApplicationService } from '../src/application/index.ts';
-import { createSession } from '../src/core/index.ts';
+import { createAgentLoopApplicationService, diagnoseLmStudioToolCycle } from '../src/application/index.ts';
+import { createSession, type ApplicationEvent } from '../src/core/index.ts';
 import { LmStudioResponsesProvider } from '../src/provider/index.ts';
 
 function argument(name: string): string | undefined {
@@ -25,31 +25,33 @@ if (!baseUrl || !model || process.argv.some((value) => value.startsWith('--') &&
       writeFile(join(root, 'AGENTS.md'), 'Smoke fixture instructions.\n'),
     ]);
     const provider = new LmStudioResponsesProvider({ baseUrl, model, ...(timeout === undefined ? {} : { timeoutMs: Number(timeout) }) });
-    const service = await createAgentLoopApplicationService({ provider, workspace: root, maxToolCalls: 2, maxToolRounds: 2 });
+    const service = await createAgentLoopApplicationService({ provider, workspace: root, toolNames: ['read_file'], maxToolCalls: 2, maxToolRounds: 2 });
     const started = performance.now();
-    let completed = false;
-    let toolCompleted = false;
-    let usage: unknown;
+    const events: ApplicationEvent[] = [];
     for await (const event of service.run({
       session: createSession({ workspace: root }),
       input: 'Use read_file to read BOOT.md, then answer with its exact one-line content.',
       timeoutMs: timeout === undefined ? undefined : Number(timeout),
     })) {
-      if (event.type === 'tool.completed') toolCompleted = true;
-      if (event.type === 'provider.response.completed') usage = event.usage;
-      if (event.type === 'turn.completed') completed = true;
+      events.push(event);
     }
-    if (!completed || !toolCompleted) throw new Error('The bounded read-only tool cycle did not complete.');
-    console.log(JSON.stringify({
-      endpoint: provider.baseUrl.origin,
-      model: model.slice(0, 128),
-      completed,
-      toolCompleted,
-      elapsedMs: Math.round(performance.now() - started),
-      ...(usage === undefined ? {} : { usage }),
-    }));
+    const diagnostic = diagnoseLmStudioToolCycle(events, performance.now() - started);
+    if (diagnostic.classification !== 'success') {
+      console.error(JSON.stringify({ error: 'LM Studio read-only tool-cycle smoke failed.', diagnostic }));
+      process.exitCode = 1;
+    } else {
+      console.log(JSON.stringify({
+        endpoint: provider.baseUrl.origin,
+        model: model.slice(0, 128),
+        completed: diagnostic.completed,
+        toolCompleted: diagnostic.toolCompleted,
+        requestedTools: diagnostic.requestedTools,
+        elapsedMs: diagnostic.elapsedMs,
+        ...(diagnostic.usage === undefined ? {} : { usage: diagnostic.usage }),
+      }));
+    }
   } catch {
-    console.error('LM Studio read-only tool-cycle smoke failed.');
+    console.error(JSON.stringify({ error: 'LM Studio read-only tool-cycle smoke failed.', diagnostic: { classification: 'smoke-did-not-complete' } }));
     process.exitCode = 1;
   } finally {
     await rm(root, { recursive: true, force: true });

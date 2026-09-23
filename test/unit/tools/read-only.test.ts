@@ -112,6 +112,24 @@ test('canonical registry validates JSON and schema before executor invocation', 
   assert.equal(executions, 1);
 });
 
+test('registry selection preserves canonical registrations and cannot add authority', async () => {
+  let reads = 0;
+  let writes = 0;
+  const registry = new ToolRegistry([
+    { name: 'read_file', description: 'Read.', permission: 'read', inputSchema: { type: 'object', properties: {}, additionalProperties: false }, execute: async () => { reads += 1; return {}; } },
+    { name: 'write_file', description: 'Write.', permission: 'write', inputSchema: { type: 'object', properties: {}, additionalProperties: false }, execute: async () => { writes += 1; return {}; } },
+  ]);
+  const selected = registry.select(['read_file']);
+
+  assert.deepEqual(selected.registrations, [registry.registrations[0]]);
+  assert.deepEqual(selected.definitions.map((definition) => definition.name), ['read_file']);
+  assert.equal((await selected.dispatch({ callId: 'read', name: 'read_file', arguments: '{}' })).result.ok, true);
+  assert.equal((await selected.dispatch({ callId: 'write', name: 'write_file', arguments: '{}' })).result.ok, false);
+  assert.equal(reads, 1);
+  assert.equal(writes, 0);
+  assert.throws(() => registry.select(['missing']), /Unknown registered tool: missing/);
+});
+
 test('read-only compatibility calls use the canonical registry definitions', async (t) => {
   const root = await fixture();
   t.after(() => rm(root, { recursive: true, force: true }));

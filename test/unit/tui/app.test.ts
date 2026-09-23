@@ -365,6 +365,29 @@ test('reopened workflow renders historical evidence as idle and starts a fresh p
   assert.equal((await store.open('resume-1', workspace)).interruptions.some((item) => item.kind === 'provider-continuation'), true);
 });
 
+test('resumed transcript waits for measured layout before its first usable frame', async (t) => {
+  const workspace = await mkdtemp(join(tmpdir(), 'george-tui-resume-layout-'));
+  await writeFile(join(workspace, 'BOOT.md'), 'fixture boot');
+  t.after(() => rm(workspace, { recursive: true, force: true }));
+  const session = createSession({ workspace });
+  appendSessionEvent(session, { type: 'turn.started', turnId: 'old' });
+  appendSessionEvent(session, { type: 'input.submitted', text: 'historical request' });
+  appendSessionEvent(session, { type: 'assistant.response.completed', turnId: 'old', text: 'historical transcript should render at a sensible measured width before a user submits another prompt' });
+  appendSessionEvent(session, { type: 'work.updated', item: { id: 'old:read', turnId: 'old', operationId: 'read', category: 'inspection', status: 'succeeded', summary: 'Read historical evidence', details: {} } });
+  const setup = await createTestRenderer({ width: 72, height: 30, kittyKeyboard: true, exitOnCtrlC: false });
+  const approvals = new PendingApprovalPort();
+  const service = await createOneTurnApplicationService({ provider: new ScriptedProvider([]), workspace, approvalPort: approvals });
+  const app = new GeorgeTui({ renderer: setup.renderer, service, session, provider: 'LM Studio', model: 'test-model', approvals });
+  t.after(() => app.close());
+
+  await setup.flush();
+  const transcript = app.transcript.findDescendantById('transcript-text');
+  assert.ok(transcript instanceof TextRenderable);
+  assert.ok(transcript.width > 4);
+  assert.match(transcript.plainText, /historical transcript should render/);
+  assert.match(setup.captureCharFrame(), /historical transcript should render/);
+});
+
 test('uses the green neon palette for the transcript and focused composer', async (t) => {
   const item = await tui(new ScriptedProvider([]));
   t.after(() => cleanup(item));

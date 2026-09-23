@@ -351,6 +351,7 @@ export class GeorgeTui {
     this.renderer.root.add(layout);
     this.restoreHistory();
     this.refreshTranscript();
+    this.renderer.once(CliRenderEvents.FRAME, () => this.refreshTranscript());
     this.renderer._internalKeyInput.onInternal('keypress', (key) => {
       if (key.name === 'escape') {
         key.preventDefault();
@@ -570,10 +571,12 @@ export class GeorgeTui {
   }
 
   private refreshTranscript(): void {
+    const bodyWidth = this.transcriptView.width - 4;
+    if (bodyWidth < 1) return;
     const entries = this.revealedAssistant === undefined ? this.session.transcript : this.session.transcript.map((entry, index) =>
       index === this.revealedAssistant!.index ? { ...entry, text: this.revealedAssistant!.text } : entry,
     );
-    this.transcriptView.content = renderTranscript(entries, this.diagnostics, Math.max(1, this.transcriptView.width - 4), this.work);
+    this.transcriptView.content = renderTranscript(entries, this.diagnostics, bodyWidth, this.work);
   }
 
   private async revealAssistant(text: string): Promise<void> {

@@ -261,6 +261,63 @@ test('compatibility factory delegates to the canonical tool loop', async (t) => 
   assert.equal(events.some((event) => event.type === 'turn.completed'), true);
 });
 
+test('a bounded service advertises and executes only its selected canonical tool', async (t) => {
+  const root = await workspace();
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const provider = new class implements ModelProvider {
+    calls: Array<{ request: ProviderRequest; options: ProviderStreamOptions }> = [];
+    async *stream(request: ProviderRequest, options: ProviderStreamOptions = {}): AsyncGenerator<ProviderEvent> {
+      this.calls.push({ request, options });
+      if (this.calls.length === 1) {
+        yield { type: 'provider.response.started', responseId: 'read-response' };
+        yield { type: 'provider.tool.call', callId: 'read', name: 'read_file', arguments: '{"path":"BOOT.md"}' };
+      } else yield { type: 'provider.text.delta', delta: 'Repository boot.' };
+      yield { type: 'provider.response.completed' };
+    }
+  }();
+  const service = await createOneTurnApplicationService({ provider, workspace: root, toolNames: ['read_file'] });
+  const events = await collect(service.run({ session: createSession({ workspace: root }), input: 'Read BOOT.md.' }));
+
+  assert.deepEqual(provider.calls[0]?.request.tools.map((tool) => tool.name), ['read_file']);
+  assert.deepEqual(provider.calls[1]?.request.continuation?.toolResults[0]?.result, {
+    ok: true, value: { name: 'read_file', path: 'BOOT.md', text: 'Repository boot.', bytes: 16, truncated: false },
+  });
+  assert.equal(events.some((event) => event.type === 'tool.completed' && event.name === 'read_file'), true);
+  assert.equal(events.some((event) => event.type === 'turn.completed'), true);
+});
+
+test('a bounded service denies unselected tools while the default service keeps the full surface', async (t) => {
+  const root = await workspace();
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const blockedProvider = new class implements ModelProvider {
+    calls = 0;
+    async *stream(): AsyncGenerator<ProviderEvent> {
+      this.calls += 1;
+      if (this.calls === 1) {
+        yield { type: 'provider.response.started', responseId: 'blocked-response' };
+        yield { type: 'provider.tool.call', callId: 'write', name: 'write_file', arguments: '{"path":"blocked.txt","content":"no"}' };
+      } else yield { type: 'provider.text.delta', delta: 'Stopped.' };
+      yield { type: 'provider.response.completed' };
+    }
+  }();
+  const bounded = await createOneTurnApplicationService({ provider: blockedProvider, workspace: root, toolNames: ['read_file'] });
+  const blocked = await collect(bounded.run({ session: createSession({ workspace: root }), input: 'Try a write.' }));
+  assert.equal(blocked.some((event) => event.type === 'tool.started' && event.name === 'write_file'), false);
+  assert.equal(blocked.some((event) => event.type === 'tool.failed' && event.name === 'write_file' && event.result.error.code === 'validation'), true);
+  await assert.rejects(() => import('node:fs/promises').then(({ readFile }) => readFile(join(root, 'blocked.txt'))));
+
+  const normalProvider = new ScriptedProvider([{ type: 'provider.response.completed' }]);
+  const normal = await createOneTurnApplicationService({ provider: normalProvider, workspace: root });
+  await collect(normal.run({ session: createSession({ workspace: root }), input: 'Inspect tools.' }));
+  assert.deepEqual(normalProvider.calls[0]?.request.tools.map((tool) => tool.name), [
+    'read_file', 'list_directory', 'search_text', 'git_status', 'git_diff', 'write_file', 'apply_patch', 'run_process',
+  ]);
+  await assert.rejects(
+    () => createOneTurnApplicationService({ provider: normalProvider, workspace: root, toolNames: ['not_registered'] }),
+    /Unknown registered tool: not_registered/,
+  );
+});
+
 test('canonical loop renders only selected whole sources and records profile diagnostics', async (t) => {
   const root = await workspace();
   t.after(() => rm(root, { recursive: true, force: true }));

@@ -68,6 +68,8 @@ export type OneTurnServiceOptions = Readonly<{
   maxSkills?: number;
   maxContextSourceBytes?: number;
   readOnlyLimits?: ReadOnlyToolLimits;
+  /** Optional capability-reducing selection from George's canonical tool registry. */
+  toolNames?: readonly string[];
   maxToolCalls?: number;
   maxToolRounds?: number;
   runBudget?: RunBudgetConfig;
@@ -665,6 +667,11 @@ export async function createAgentLoopApplicationService(
   const userConfigRoot = options.userConfigRoot ?? resolveGeorgeUserConfigRoot();
   const roots = defaultSkillRoots(userConfigRoot, workspace.root);
   const skills = new SkillRegistry({ ...roots, ...options.skillRoots }, { maxSkillBytes: options.maxSkillBytes, maxMetadataBytes: options.maxSkillMetadataBytes, maxSkills: options.maxSkills });
+  const registry = new ToolRegistry([
+    ...readOnly.registry.registrations,
+    ...mutation.registry.registrations,
+    ...process.registry.registrations,
+  ]);
   return new AgentLoopApplicationService(
     options.provider,
     workspace,
@@ -672,7 +679,7 @@ export async function createAgentLoopApplicationService(
     validateContextProfile(options.contextProfile ?? DEFAULT_CONTEXT_PROFILE),
     options.userConfigRoot,
     options.maxContextSourceBytes,
-    new ToolRegistry([...readOnly.registry.registrations, ...mutation.registry.registrations, ...process.registry.registrations]),
+    options.toolNames === undefined ? registry : registry.select(options.toolNames),
     positive(options.maxToolCalls, DEFAULT_MAX_TOOL_CALLS, 'maxToolCalls'),
     positive(options.maxToolRounds, DEFAULT_MAX_TOOL_ROUNDS, 'maxToolRounds'),
     options.approvalPort ?? denyApprovalPort,
