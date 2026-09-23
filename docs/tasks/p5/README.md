@@ -1,11 +1,11 @@
 # Phase 5 Task Stack
 
-Status: READY FOR EXECUTION
+Status: READY AFTER POST-HARDENING BASELINE REFRESH
 
 Phase: 5 — Reliability + Long Runs  
 Execution folder: `p5`  
 Baseline package: `0.5.0`  
-Baseline main: `f178a59f4e4aba16f87cd8c9c05a4638d2c505f0`
+Baseline main: **pending refresh to the committed post-Phase-4 hardening candidate; do not execute P1 from the older planning SHA**
 
 Current authority:
 - `BOOT.md`;
@@ -37,6 +37,10 @@ Every prompt is:
 `Browser required: no.`
 
 Phase 5 adds no browser/network tool requirement. Native-terminal and live LM Studio/Qwen evidence are conditional runtime qualification, not browser handoff points.
+
+## Baseline execution gate
+
+Before running P1, update this folder's baseline references to the exact commit that contains the approved post-Phase-4 hardening: provider-round assistant buffering/canonical commit semantics, safe failed-tool argument summaries, root-list omitted/empty/`.` normalization, bounded provider diagnostics, progressive final-answer presentation, `Thinking...`, and compact consecutive Work grouping with explicit per-item status. P1-P8 must preserve that behavior unless a prompt explicitly changes it.
 
 ## Safety ordering
 
