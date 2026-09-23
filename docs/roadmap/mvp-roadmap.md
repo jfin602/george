@@ -1,6 +1,6 @@
 # George MVP Roadmap
 
-Status: CURRENT ROADMAP — PHASE 2 OWNER-CLOSED; PHASE 3 CURRENT
+Status: CURRENT ROADMAP — PHASE 3 OWNER-CLOSED; PHASE 4 CURRENT
 
 The roadmap deliberately proves the provider, read-only tool foundation, real interactive terminal surface, and safe autonomous tool execution before broader coding workflow, networking, or a desktop GUI.
 
@@ -100,11 +100,13 @@ Non-goals:
 
 ## Phase 3 — Context + Skills
 
-Status: CURRENT IMPLEMENTATION GATE — baseline package `0.3.0`
+Status: OWNER-CLOSED WITH ACCEPTED NATIVE-TERMINAL / LIVE-MODEL EVIDENCE GAPS
 
 Goal: give George a deterministic, token-conscious, provider-independent context and declarative-skill substrate without weakening the Phase 2 tool/permission boundary.
 
-Decision authority: `docs/planning/p3-context-skills/decision-record.md`.
+Decision authority: `docs/planning/p3-context-skills/decision-record.md`.  
+Formal evidence: `docs/phase-3-closeout.md`.  
+Owner closeout: `docs/phase-3-owner-closeout.md`.
 
 Scope:
 - provider-independent deterministic context assembly rather than raw instruction concatenation;
@@ -150,7 +152,7 @@ Non-goals:
 
 ## Phase 4 — Coding Workflow + Sessions
 
-Status: PLANNED — baseline established after Phase 3 owner closeout
+Status: CURRENT IMPLEMENTATION GATE — baseline package `0.4.0`
 
 Goal: turn the Phase 3 context-aware safe agent into a durable bounded coding workflow that can modify, validate, report, persist, and safely resume work.
 

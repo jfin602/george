@@ -1,8 +1,8 @@
 # Phase 4 Decision Record — Coding Workflow + Sessions
 
-Status: APPROVED DIRECTION FOR PLANNED PHASE
+Status: APPROVED DIRECTION
 
-Baseline: established after Phase 3 owner closeout  
+Baseline: package `0.4.0`  
 Roadmap gate: Phase 4 — Coding Workflow + Sessions
 
 ## Problem
