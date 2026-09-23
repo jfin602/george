@@ -19,11 +19,14 @@ Use stable available correlation identities for session, turn, operation/tool ca
 
 Do not serialize arbitrary `ApplicationEvent` objects wholesale. Define bounded/redacted diagnostic fields and exclude raw file bodies, write/patch bodies, arbitrary tool-result JSON, unrestricted stdout/stderr, unrestricted environment data, secrets, and complete provider wire/payload content.
 
+Reuse the hardened safe diagnostic vocabulary where applicable: allowlisted invalid-tool requested-argument summaries and bounded provider event/code/message/reason/status metadata may be recorded, but generic raw argument/provider payload dumps remain forbidden. Diagnostics must preserve the difference between provisional provider-round evidence and canonical assistant-response commit.
+
 Implement deterministic bounded rotation/retention by bytes/files or an equally explicit policy. Logging failure must not corrupt canonical session/tool execution; surface bounded observability degradation evidence where practical without recursive logging failure loops.
 
 Add the smallest reusable measurement helpers/counters needed to characterize, with explicit units/workload identity:
 - provider-facing context size/growth and compaction cost;
 - provider attempt latency / time-to-first-token where observable;
+- final-response eligibility/commit latency and presentation reveal duration as separate measurements so simulated progressive reveal does not distort provider timing;
 - tool-loop latency;
 - process cleanup duration/outcome;
 - reopen/recovery latency;
@@ -34,6 +37,8 @@ Add the smallest reusable measurement helpers/counters needed to characterize, w
 Do not freeze arbitrary hard performance thresholds before baseline measurements exist. Keep measurements separate from execution policy unless a P1 run budget already defines the corresponding limit.
 
 Keep Phase-4 user-visible work history distinct from diagnostics. OpenTUI may render existing reliability work events but must not become diagnostics authority.
+
+Characterize long-history rendering using the compact consecutive Work grouping and explicit per-item status contract, including progressive final-answer reveal. Preserve `Thinking...` as presentation wording only; internal provider lifecycle names remain unchanged.
 
 Set `package.json` version to `0.5.6`.
 
