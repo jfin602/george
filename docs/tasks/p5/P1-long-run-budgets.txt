@@ -25,6 +25,8 @@ Product defaults must be finite and documented in code/config, but must not make
 
 Extend durable-event sanitization/parsing for the new bounded evidence. Preserve schema/workspace/session safety and do not persist secrets, raw provider payloads, file bodies, unrestricted process output, or environment state.
 
+Preserve the inherited hardened baseline while adding budgets/events: tool-bearing provider-round text remains provisional/non-canonical; only a completed tool-free round may commit the singular assistant response; budget pressure/exhaustion must not flush buffered provisional text into history; safe failed-tool/provider diagnostic metadata remains bounded/redacted; root-list normalization remains intact; and Work/final-reveal presentation state must not become budget authority.
+
 Set `package.json` version to `0.5.1`.
 
 Required proof:
