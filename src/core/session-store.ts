@@ -99,6 +99,49 @@ function safeArguments(): Record<string, never> {
   return {};
 }
 
+function safeWorkflowCompletion(value: Extract<ApplicationEvent, { type: 'workflow.completed' }>['completion']): Extract<ApplicationEvent, { type: 'workflow.completed' }>['completion'] {
+  const completion = record(value, 'workflow completion');
+  exactKeys(completion, ['baselineAvailable', 'finalStateAvailable', 'changes', 'directMutations', 'validations', 'warnings', 'terminalState', 'finalAssistantResponse'], 'workflow completion');
+  const bool = (item: unknown, name: string): boolean => typeof item === 'boolean' ? item : invalid(`${name} is invalid.`);
+  const changes = boundedArray(completion.changes, 'workflow changes', 1024).map((item) => {
+    const change = record(item, 'workflow change');
+    exactKeys(change, ['path', 'relationship', 'directGeorgeMutation'], 'workflow change');
+    const relationship = string(change.relationship, 'workflow change relationship', 32);
+    if (!['pre-existing', 'newly-observed', 'no-longer-observed'].includes(relationship)) invalid('workflow change relationship is invalid.');
+    return { path: string(change.path, 'workflow change path', 4096), relationship: relationship as 'pre-existing' | 'newly-observed' | 'no-longer-observed', directGeorgeMutation: bool(change.directGeorgeMutation, 'workflow direct mutation') };
+  });
+  const directMutations = boundedArray(completion.directMutations, 'workflow direct mutations', 1024).map((item) => {
+    const mutation = record(item, 'workflow direct mutation');
+    exactKeys(mutation, ['tool', 'path', 'bytes', 'sha256'], 'workflow direct mutation');
+    const tool = string(mutation.tool, 'workflow mutation tool', 32);
+    if (tool !== 'write_file' && tool !== 'apply_patch') invalid('workflow mutation tool is invalid.');
+    return { tool, path: string(mutation.path, 'workflow mutation path', 4096), bytes: boundedInteger(mutation.bytes, 'workflow mutation bytes'), sha256: string(mutation.sha256, 'workflow mutation hash', 128) } as Extract<ApplicationEvent, { type: 'workflow.completed' }>['completion']['directMutations'][number];
+  });
+  const validations = boundedArray(completion.validations, 'workflow validations', 128).map((item) => {
+    const validation = record(item, 'workflow validation');
+    const allowed = ['callId', 'label', 'intent', 'executable', 'arguments', 'cwd', 'status', 'exitCode', 'signal', 'outcome', 'stdout', 'stderr', 'stdoutTruncated', 'stderrTruncated', 'error'];
+    if (Object.keys(validation).some((key) => !allowed.includes(key)) || allowed.filter((key) => !['outcome', 'error'].includes(key)).some((key) => !(key in validation))) invalid('workflow validation has an invalid shape.');
+    const status = string(validation.status, 'workflow validation status', 32);
+    if (!['passed', 'failed', 'denied', 'cancelled'].includes(status)) invalid('workflow validation status is invalid.');
+    const outcome = validation.outcome === undefined ? undefined : string(validation.outcome, 'workflow validation outcome', 32);
+    if (outcome !== undefined && !['completed', 'failed', 'timed_out', 'spawn_failed'].includes(outcome)) invalid('workflow validation outcome is invalid.');
+    const exitCode = validation.exitCode;
+    if (exitCode !== null && (typeof exitCode !== 'number' || !Number.isInteger(exitCode) || exitCode < -1_000_000 || exitCode > 1_000_000)) invalid('workflow validation exit code is invalid.');
+    const error = validation.error === undefined ? undefined : safeError(record(validation.error, 'workflow validation error') as { code: string; message: string });
+    return {
+      callId: string(validation.callId, 'workflow validation call ID', 256), label: string(validation.label, 'workflow validation label', 1024), intent: string(validation.intent, 'workflow validation intent', 4096), executable: string(validation.executable, 'workflow validation executable', 1024),
+      arguments: boundedArray(validation.arguments, 'workflow validation argv', 64).map((argument) => string(argument, 'workflow validation argv item', 8192)), cwd: string(validation.cwd, 'workflow validation cwd', 4096),
+      status: status as 'passed' | 'failed' | 'denied' | 'cancelled', exitCode, signal: validation.signal === null ? null : string(validation.signal, 'workflow validation signal', 128),
+      ...(outcome === undefined ? {} : { outcome: outcome as 'completed' | 'failed' | 'timed_out' | 'spawn_failed' }), stdout: boundedMessage(string(validation.stdout, 'workflow validation stdout')),
+      stderr: boundedMessage(string(validation.stderr, 'workflow validation stderr')), stdoutTruncated: bool(validation.stdoutTruncated, 'workflow validation stdout truncation'), stderrTruncated: bool(validation.stderrTruncated, 'workflow validation stderr truncation'), ...(error === undefined ? {} : { error }),
+    };
+  });
+  const warnings = boundedArray(completion.warnings, 'workflow warnings', 128).map((warning) => boundedMessage(string(warning, 'workflow warning')));
+  const terminalState = string(completion.terminalState, 'workflow terminal state', 32);
+  if (!['completed', 'failed', 'cancelled'].includes(terminalState)) invalid('workflow terminal state is invalid.');
+  return { baselineAvailable: bool(completion.baselineAvailable, 'workflow baseline availability'), finalStateAvailable: bool(completion.finalStateAvailable, 'workflow final state availability'), changes, directMutations, validations, warnings, terminalState: terminalState as 'completed' | 'failed' | 'cancelled', finalAssistantResponse: boundedMessage(string(completion.finalAssistantResponse, 'workflow final response')) };
+}
+
 /** Drops file bodies, write/patch arguments, environment data, and process output. */
 function durableEvent(event: ApplicationEvent): ApplicationEvent | undefined {
   switch (event.type) {
@@ -119,6 +162,7 @@ function durableEvent(event: ApplicationEvent): ApplicationEvent | undefined {
       type: event.type, turnId: string(event.turnId, 'turn ID', 256), callId: string(event.callId, 'call ID', 256),
       request: safeApproval(event.request),
     } as ApplicationEvent;
+    case 'workflow.completed': return { type: event.type, turnId: string(event.turnId, 'turn ID', 256), completion: safeWorkflowCompletion(event.completion) };
     default: return invalid('event type is invalid.');
   }
 }

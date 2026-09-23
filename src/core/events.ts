@@ -28,6 +28,41 @@ export type ContextDiagnostics = Readonly<{
   evidence: readonly ContextDiagnosticEvidence[];
 }>;
 
+export type WorkflowChange = Readonly<{
+  path: string;
+  relationship: 'pre-existing' | 'newly-observed' | 'no-longer-observed';
+  directGeorgeMutation: boolean;
+}>;
+
+export type WorkflowValidation = Readonly<{
+  callId: string;
+  label: string;
+  intent: string;
+  executable: string;
+  arguments: readonly string[];
+  cwd: string;
+  status: 'passed' | 'failed' | 'denied' | 'cancelled';
+  exitCode: number | null;
+  signal: string | null;
+  outcome?: 'completed' | 'failed' | 'timed_out' | 'spawn_failed';
+  stdout: string;
+  stderr: string;
+  stdoutTruncated: boolean;
+  stderrTruncated: boolean;
+  error?: Readonly<{ code: string; message: string }>;
+}>;
+
+export type WorkflowCompletion = Readonly<{
+  baselineAvailable: boolean;
+  finalStateAvailable: boolean;
+  changes: readonly WorkflowChange[];
+  directMutations: readonly Readonly<{ tool: 'write_file' | 'apply_patch'; path: string; bytes: number; sha256: string }>[];
+  validations: readonly WorkflowValidation[];
+  warnings: readonly string[];
+  terminalState: 'completed' | 'failed' | 'cancelled';
+  finalAssistantResponse: string;
+}>;
+
 export type ProviderEvent =
   | Readonly<{ type: 'provider.response.started'; responseId?: string }>
   | Readonly<{ type: 'provider.text.delta'; delta: string }>
@@ -59,6 +94,7 @@ export type ApplicationEvent =
   | Readonly<{ type: 'approval.requested'; turnId: string; callId: string; request: ApprovalRequest }>
   | Readonly<{ type: 'approval.allowed'; turnId: string; callId: string; request: ApprovalRequest }>
   | Readonly<{ type: 'approval.denied'; turnId: string; callId: string; request: ApprovalRequest }>
+  | Readonly<{ type: 'workflow.completed'; turnId: string; completion: WorkflowCompletion }>
   | Readonly<{
       type: 'tool.completed';
       turnId: string;

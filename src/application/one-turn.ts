@@ -58,6 +58,16 @@ export type OneTurnServiceOptions = Readonly<{
 
 export type AgentLoopServiceOptions = OneTurnServiceOptions;
 export type AgentLoopSubmission = OneTurnSubmission;
+export type ProcessSubmission = Readonly<{
+  session: Session;
+  turnId: string;
+  executable: string;
+  arguments: readonly string[];
+  cwd?: string;
+  timeoutMs?: number;
+  callId?: string;
+  signal?: AbortSignal;
+}>;
 
 const DEFAULT_MAX_TOOL_CALLS = 32;
 const DEFAULT_MAX_TOOL_ROUNDS = 32;
@@ -179,6 +189,60 @@ export class AgentLoopApplicationService {
     };
   }
 
+  /** Executes one registered call through the same validation, approval, and dispatch boundary as the model loop. */
+  private async *executeTool(
+    session: Session,
+    turnId: string,
+    call: { callId: string; name: string; arguments: string },
+    signal?: AbortSignal,
+  ): AsyncGenerator<ApplicationEvent, import('../tools/index.ts').ToolResult> {
+    const emit = (event: ApplicationEvent): ApplicationEvent => {
+      appendSessionEvent(session, event);
+      return event;
+    };
+    yield emit({ type: 'tool.requested', turnId, callId: call.callId, name: call.name, arguments: call.arguments });
+    const validation = this.registry.validate(call);
+    if ('callId' in validation) {
+      yield emit({ type: 'tool.failed', turnId, callId: call.callId, name: call.name, result: validation.result as Extract<typeof validation.result, { ok: false }> });
+      return validation;
+    }
+    let request: ApprovalRequest | undefined;
+    try {
+      request = await this.approvalRequest(call.callId, validation, signal);
+    } catch (error) {
+      const normalized = asGeorgeError(error, 'validation');
+      if (normalized.code === 'cancelled') throw normalized;
+      const result = { callId: call.callId, name: call.name, result: { ok: false as const, error: { code: normalized.code, message: normalized.message } } };
+      yield emit({ type: 'tool.failed', turnId, callId: call.callId, name: call.name, result: result.result });
+      return result;
+    }
+    if (request) {
+      yield emit({ type: 'approval.requested', turnId, callId: call.callId, request });
+      const decision = await this.approvalPort.request(request, { signal });
+      if (decision !== 'allow_once') {
+        yield emit({ type: 'approval.denied', turnId, callId: call.callId, request });
+        const result = { callId: call.callId, name: call.name, result: { ok: false as const, error: { code: 'denied', message: `Approval denied for tool ${call.name}.` } } };
+        yield emit({ type: 'tool.failed', turnId, callId: call.callId, name: call.name, result: result.result });
+        return result;
+      }
+      yield emit({ type: 'approval.allowed', turnId, callId: call.callId, request });
+    }
+    yield emit({ type: 'tool.started', turnId, callId: call.callId, name: call.name });
+    const result = await this.registry.dispatch(call, { signal });
+    if (result.result.ok) yield emit({ type: 'tool.completed', turnId, callId: call.callId, name: call.name, result: result.result });
+    else yield emit({ type: 'tool.failed', turnId, callId: call.callId, name: call.name, result: result.result });
+    return result;
+  }
+
+  /** Explicit application-owned process work still uses the canonical registry and ApprovalPort. */
+  async *runProcess(submission: ProcessSubmission): AsyncGenerator<ApplicationEvent, import('../tools/index.ts').ToolResult> {
+    const call = {
+      callId: submission.callId ?? randomUUID(), name: 'run_process',
+      arguments: JSON.stringify({ executable: submission.executable, arguments: submission.arguments, ...(submission.cwd === undefined ? {} : { cwd: submission.cwd }), ...(submission.timeoutMs === undefined ? {} : { timeoutMs: submission.timeoutMs }) }),
+    };
+    return yield* this.executeTool(submission.session, submission.turnId, call, submission.signal);
+  }
+
   async *run(submission: AgentLoopSubmission): AsyncGenerator<ApplicationEvent> {
     const turnId = submission.turnId ?? randomUUID();
     const emit = (event: ApplicationEvent): ApplicationEvent => {
@@ -245,46 +309,19 @@ export class AgentLoopApplicationService {
         const results = [];
         for (const call of calls) {
           toolCalls += 1;
-          yield emit({ type: 'tool.requested', turnId, callId: call.callId, name: call.name, arguments: call.arguments });
           if (toolCalls > this.maxToolCalls) {
             const result = { ok: false as const, error: { code: 'tool', message: `Tool call limit of ${this.maxToolCalls} exhausted.` } };
+            yield emit({ type: 'tool.requested', turnId, callId: call.callId, name: call.name, arguments: call.arguments });
             yield emit({ type: 'tool.failed', turnId, callId: call.callId, name: call.name, result });
             throw new GeorgeError('tool', result.error.message);
           }
-          const validation = this.registry.validate(call);
-          if ('callId' in validation) {
-            yield emit({ type: 'tool.failed', turnId, callId: call.callId, name: call.name, result: validation.result as Extract<typeof validation.result, { ok: false }> });
-            results.push(validation);
-            continue;
+          const iterator = this.executeTool(submission.session, turnId, call, submission.signal);
+          let next = await iterator.next();
+          while (!next.done) {
+            yield next.value;
+            next = await iterator.next();
           }
-          let request: ApprovalRequest | undefined;
-          try {
-            request = await this.approvalRequest(call.callId, validation, submission.signal);
-          } catch (error) {
-            const normalized = asGeorgeError(error, 'validation');
-            if (normalized.code === 'cancelled') throw normalized;
-            const result = { callId: call.callId, name: call.name, result: { ok: false as const, error: { code: normalized.code, message: normalized.message } } };
-            yield emit({ type: 'tool.failed', turnId, callId: call.callId, name: call.name, result: result.result });
-            results.push(result);
-            continue;
-          }
-          if (request) {
-            yield emit({ type: 'approval.requested', turnId, callId: call.callId, request });
-            const decision = await this.approvalPort.request(request, { signal: submission.signal });
-            if (decision !== 'allow_once') {
-              yield emit({ type: 'approval.denied', turnId, callId: call.callId, request });
-              const result = { callId: call.callId, name: call.name, result: { ok: false as const, error: { code: 'denied', message: `Approval denied for tool ${call.name}.` } } };
-              yield emit({ type: 'tool.failed', turnId, callId: call.callId, name: call.name, result: result.result });
-              results.push(result);
-              continue;
-            }
-            yield emit({ type: 'approval.allowed', turnId, callId: call.callId, request });
-          }
-          yield emit({ type: 'tool.started', turnId, callId: call.callId, name: call.name });
-          const result = await this.registry.dispatch(call, { signal: submission.signal });
-          if (result.result.ok) yield emit({ type: 'tool.completed', turnId, callId: call.callId, name: call.name, result: result.result });
-          else yield emit({ type: 'tool.failed', turnId, callId: call.callId, name: call.name, result: result.result });
-          results.push(result);
+          results.push(next.value);
         }
         continuation = { responseId, toolResults: results };
       }
