@@ -1,0 +1,57 @@
+TASK: Phase 5 / P5 — Lifecycle hook bus and bounded runtime
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Terra High`.
+- Browser required: no.
+
+VERSIONING
+- This prompt's assigned project version is `0.5.5`.
+
+GOAL
+
+Implement George's first normalized lifecycle-hook bus/runtime over the now-explicit Phase-5 budget/retry/recovery/process boundaries, without introducing plugin packaging or hook-file discovery.
+
+Read the Phase-5 authority/assessment/plan and inspect exact P1-P4 state plus application event recording, ToolRegistry/ApprovalPort/process execution, session persistence, work projection, and tests.
+
+Create a reusable provider-/presentation-independent hook registry with explicit programmatic registration.
+
+Freeze the smallest justified normalized lifecycle event set around current behavior, covering appropriate boundaries for session start/reopen/end where available, turn/user-input start, context assembly, provider request/response, tool before/after, and turn completion.
+
+Each hook has stable ID, lifecycle event, explicit deterministic order/priority, enable/disable state, and bounded configuration. Duplicate/conflicting identity behavior must fail or resolve visibly and deterministically.
+
+Support bounded in-process hooks for deterministic testing and process-backed executable hooks sufficient to prove the runtime contract.
+
+Executable/process-backed hooks must:
+- receive bounded normalized event input only, not raw provider payloads/session dumps;
+- produce bounded output;
+- support timeout and cancellation;
+- use sanitized environment handling;
+- emit structured start/success/failure/timeout/cancel evidence;
+- isolate one hook failure from unrelated hooks and the surrounding run according to explicit documented failure policy;
+- consume applicable P1 budgets;
+- run executable work through George's canonical process/tool/approval boundary rather than bypassing process permission policy.
+
+Prevent recursive hook storms when hook-origin process/tool lifecycle emits events. Hook execution metadata must distinguish hook-origin operations without suppressing authoritative tool/process evidence.
+
+Hook return/output must not silently mutate pending tool arguments, provider requests, approvals, validation results, or canonical session history. Hooks cannot raise George's permission ceiling.
+
+Project hook activity through existing presentation-independent work/progress only if useful and bounded; do not make OpenTUI the hook runtime.
+
+Do not implement plugin manifests, install/enable packages, filesystem hook discovery, Ponytail/Claude/Codex compatibility, network hooks, or Phase-6 adapters.
+
+Set `package.json` version to `0.5.5`.
+
+Required proof:
+- deterministic lifecycle ordering;
+- enable/disable behavior;
+- stable ID and duplicate/conflict handling;
+- bounded input/output;
+- timeout and cancellation;
+- malformed hook output/failure isolation;
+- sanitized process environment;
+- process hook approval uses the canonical boundary;
+- recursive hook-origin lifecycle does not create a hook storm;
+- hook output cannot mutate tool args, manufacture approval, or replace canonical evidence;
+- one failing hook leaves unrelated hooks and the surrounding run inspectable/usable;
+- durable hook evidence is bounded/sanitized;
+- Phase-2/3/4 and P1-P4 regressions, typecheck, broad deterministic tests, `git diff --check`, and no-`package-lock.json` are Green.
