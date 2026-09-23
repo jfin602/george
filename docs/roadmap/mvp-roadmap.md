@@ -328,6 +328,75 @@ Non-goals for the initial post-MVP implementation:
 - replacing deterministic HTML/DOM cleanup with an LLM when normal parsing is sufficient;
 - requiring Parallel or another paid provider for ordinary web research.
 
+## Post-MVP — Living Project Map / Software Graph
+
+Goal: let George maintain a continuously updated, human-readable model of the target software project so developers can see what the system is, how a coding task affects it, and how the architecture changes as work is implemented and validated.
+
+This capability describes the repository George is working on, not George's own internal architecture. It intentionally follows the MVP and should build on the existing workspace identity, changed-file evidence, session/event stream, reliability, daemon, and presentation boundaries rather than expanding Phase 4.
+
+Direction:
+- build a deterministic repository index for statically recoverable structure such as files, modules, packages, imports/exports, symbols, routes, schemas, and similar relationships appropriate to the target language/framework;
+- maintain a presentation-independent software graph above that index;
+- layer a higher-level semantic architecture model over deterministic evidence without treating model interpretation as structural truth;
+- preserve explicit evidence classes for deterministic structure, semantic interpretation, and task/runtime observations;
+- update the graph incrementally as code/configuration changes, with rebuild/validation paths that detect stale derived state;
+- project coding-task impact onto the graph so expected, currently modified, removed, added, affected, and validated components can be distinguished;
+- distinguish expected blast radius from the actual observed change/validation footprint;
+- favor conceptual architecture plus drill-down over an unreadable all-files dependency graph;
+- support multiple projections over the same graph, including architecture, module/dependency structure, data flow, control/runtime flow where evidence exists, API/network boundaries, database/persistence, tests/validation, and current-task impact;
+- allow runtime/session evidence to augment the project model without converting one observed execution into an unsupported static claim;
+- keep graph construction and state independent from OpenTUI, Tauri, browser, and future network-client presentation choices;
+- store derived index/graph state in George's own workspace-scoped state keyed to canonical workspace identity by default;
+- do not silently write `.george/project-map.json` or equivalent generated metadata into target repositories;
+- permit an explicit future project-owned/committed architecture description only as a separate opt-in workflow.
+
+Candidate evidence model:
+
+```text
+target repository
+       |
+       v
+deterministic structural evidence
+files / imports / symbols / routes / schemas
+       |
+       v
+semantic project model
+components / responsibilities / architecture
+       |
+       v
+task + runtime evidence
+inspected / changed / validated / observed
+       |
+       v
+project-map projections
+architecture / data flow / dependencies / current task
+```
+
+Candidate task-delta semantics:
+
+```text
+baseline -> expected impact -> current edits -> validated state
+```
+
+Qualification direction:
+- deterministic graph construction is stable for the same repository state;
+- incremental updates converge to the same structural graph as a clean rebuild;
+- moves, renames, deletes, and relationship changes do not leave stale edges;
+- deterministic relationships are never fabricated to make a diagram look complete;
+- semantic/model-derived relationships are visibly distinguishable from deterministic evidence;
+- task-delta views accurately reflect observed repository and validation evidence without overstating process causality;
+- stale/incompatible cached graph state fails visibly or rebuilds safely;
+- derived state remains workspace-bound and does not mutate the target repository by default;
+- large-repository indexing, update latency, memory usage, and projection size are characterized before defaults are frozen.
+
+Non-goals for the initial implementation:
+- generating a fresh Mermaid diagram from the model on every turn and treating it as authoritative;
+- visualizing George's own architecture instead of the active target project;
+- rendering every file/symbol at once as the default experience;
+- requiring a browser UI for the graph core;
+- making the software graph part of Phase 4 completion criteria;
+- silently committing generated project-map metadata into user repositories.
+
 ## Later
 
 Only after the local product is reliable: trusted LAN clients, phone/secondary-device control, multiple workspaces/runs, remote inference providers, richer MCP ecosystem, scheduling/background jobs, and multi-agent experiments.
