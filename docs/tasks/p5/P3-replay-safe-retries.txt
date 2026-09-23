@@ -25,7 +25,7 @@ Backoff must be finite, cancellation-aware, and deterministic under injected clo
 
 LM Studio/provider adapters continue to normalize transport/protocol errors; retry ownership stays in the application/core layer.
 
-Do not buffer or rewrite partial assistant output merely to manufacture retryability. Preserve the Phase-4 canonical transcript/event semantics.
+Preserve George's inherited per-provider-round assistant buffering: it exists to prevent tool-bearing provisional text from becoming canonical output, not to manufacture retryability. Once an attempt has emitted `provider.response.started`, text, or tool-call evidence, it remains non-retryable under this prompt even if that provisional text was never committed to the assistant transcript. Retry handling must not create duplicate final reveals, duplicate canonical assistant entries, or resurrect discarded provisional text.
 
 Set `package.json` version to `0.5.3`.
 
