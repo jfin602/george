@@ -4,7 +4,7 @@ Status: CURRENT IMPLEMENTATION ASSESSMENT
 
 Phase: 5 — Reliability + Long Runs  
 Execution folder: `p5`  
-Assessment baseline: main `f178a59f4e4aba16f87cd8c9c05a4638d2c505f0`, package `0.5.0`.
+Assessment baseline: package `0.5.0`; exact main SHA must be refreshed to the committed post-Phase-4 hardening candidate before P1 executes.
 
 ## Assessment conclusion
 
@@ -22,6 +22,10 @@ The safe order is:
 8. evidence-only closeout.
 
 This ordering preserves the Phase-4 authoritative session/event model while adding long-run control one layer at a time. Compaction, retry, recovery, hooks, and logs all consume or emit normalized evidence rather than becoming independent execution authorities.
+
+### Hardened inherited baseline
+
+The execution baseline also includes the post-closeout corrections validated during live smoke testing: tool-bearing provider-round text is provisional and never canonical; only the final completed tool-free round commits one assistant response; final committed text is progressively revealed without changing durable truth; invalid tool calls expose bounded safe argument summaries; `list_directory` treats omitted/empty/`.` as workspace root without weakening containment; provider failures expose bounded safe normalized metadata; provider activity renders as `Thinking...`; and consecutive Work entries are visually grouped with explicit per-item status. Every Phase 5 prompt must preserve these invariants.
 
 ## Current implementation findings
 
@@ -266,4 +270,4 @@ Context pressure followed by compaction and continued tool use, retry timing/can
 
 ### 4. Comparison baseline
 
-The planning baseline is main `f178a59f4e4aba16f87cd8c9c05a4638d2c505f0`, package `0.5.0`, with Phase 1-4 owner-closed and the Phase-5 decision/architecture/stability contracts applied. Preserve all qualified provider/context/skill/tool/approval/process/coding-workflow/session/progress/TUI behavior except where Phase 5 explicitly adds bounded reliability, compaction, retry/recovery, hooks, observability, and performance evidence.
+The execution baseline is package `0.5.0` plus the committed post-Phase-4 hardening candidate described above; its exact main SHA must be captured before P1 runs. Preserve all qualified provider/context/skill/tool/approval/process/coding-workflow/session/progress/TUI behavior—including the hardened provider-round, diagnostics, root-list, final-reveal, `Thinking...`, and compact Work semantics—except where Phase 5 explicitly adds bounded reliability, compaction, retry/recovery, hooks, observability, and performance evidence.
