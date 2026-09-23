@@ -214,6 +214,7 @@ Goal: support longer autonomous local jobs safely and establish George's lifecyc
 Decision authority: `docs/planning/p5-reliability-long-runs/decision-record.md`.
 
 Scope:
+- preserve the post-Phase-4 hardened transcript/presentation baseline: tool-bearing provider-round text remains provisional/non-canonical, only a completed tool-free round commits the singular final assistant response, final output is progressively revealed without changing transcript truth, invalid tool requests expose only bounded safe argument diagnostics, root directory listing accepts omitted/empty/`.` path forms without weakening containment, provider failures retain bounded safe diagnostic metadata, and consecutive Work rows render compactly with explicit per-item status plus a `Thinking...` provider activity label;
 - provider-independent long-run orchestration owned by the application/core;
 - normalized durable session/event history remains authoritative while compaction summaries, logs, recovery projections, hook results, and provider continuation state remain derived evidence;
 - versioned provider-facing compaction checkpoints with durable-history provenance rather than destructive replacement of canonical history;
