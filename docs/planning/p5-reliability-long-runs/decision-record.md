@@ -13,6 +13,22 @@ The next step is to let that workflow operate for materially longer local coding
 
 Phase 5 owns long-run reliability, compaction, budgets, bounded retry/recovery behavior, lifecycle hooks, observability, and performance characterization. It must preserve the Phase 2 permission/process boundary, the Phase 3 context trust model, and the Phase 4 event/session evidence model.
 
+## Inherited hardened Phase 4 baseline
+
+Phase 5 begins from the post-owner-closeout hardening of the Phase 4 runtime rather than from the older planning snapshot alone. The inherited behavior is part of the Phase 5 regression floor:
+- assistant text is buffered per provider round and becomes canonical only for a completed tool-free round;
+- text from tool-bearing rounds, failed rounds, and cancelled rounds remains non-canonical and is absent from durable completed assistant history/provider-facing completed conversation;
+- final committed assistant text may be progressively revealed by the TUI at a fast bounded pace without changing transcript/session truth;
+- invalid tool requests retain bounded allowlisted argument diagnostics, with sensitive bodies/raw payloads excluded;
+- `list_directory` normalizes omitted/empty/`.` path forms to workspace root while retaining containment/traversal/symlink safety;
+- LM Studio/provider failures retain bounded safe event/code/message/reason/status metadata when available;
+- provider generation is presented as `Thinking...`;
+- consecutive visible work operations may share one visual Work group, but each item keeps stable identity, chronology, details, and explicit textual status independent from color.
+
+These are preservation constraints, not new execution authority. Work/progress/animation/diagnostic projections remain derived presentation/observability state and cannot replace canonical transcript, tool/session evidence, permission policy, or provider-independent lifecycle truth.
+
+The original Phase 5 prompt stack was drafted against an older planning SHA. Before P1 executes, `docs/tasks/p5/` must record the exact committed post-hardening baseline so the runner does not silently build on stale assumptions.
+
 ## Decisions
 
 ### Canonical evidence remains canonical
