@@ -4,15 +4,18 @@ import {
   asGeorgeError,
   appendSessionEvent,
   cancellationError,
+  DEFAULT_CONTEXT_PROFILE,
   denyApprovalPort,
   GeorgeError,
-  loadRepositoryInstructions,
   resolveWorkspaceRoot,
   resolveWorkspaceMutationPath,
   resolveWorkspacePath,
+  validateContextProfile,
   type ApprovalPort,
   type ApprovalRequest,
   type ApplicationEvent,
+  type ContextDiagnostics,
+  type ContextProfile,
   type GeorgeErrorShape,
   type ModelProvider,
   type ProviderContinuation,
@@ -20,6 +23,8 @@ import {
   type TranscriptEntry,
   type Workspace,
 } from '../core/index.ts';
+import { assembleContext, ContextAssemblyError, type AssembledContext } from '../context/index.ts';
+import { join } from 'node:path';
 import {
   createProcessToolExecutor,
   createReadOnlyToolExecutor,
@@ -36,7 +41,9 @@ export type OneTurnServiceOptions = Readonly<{
   provider: ModelProvider;
   workspace: string;
   georgeInstructions?: string;
-  instructionBytes?: number;
+  contextProfile?: ContextProfile;
+  userConfigRoot?: string;
+  maxContextSourceBytes?: number;
   readOnlyLimits?: ReadOnlyToolLimits;
   maxToolCalls?: number;
   maxToolRounds?: number;
@@ -61,26 +68,43 @@ export type OneTurnSubmission = Readonly<{
   turnId?: string;
   signal?: AbortSignal;
   timeoutMs?: number;
+  routedDocuments?: readonly string[];
 }>;
 
-function conversation(transcript: readonly TranscriptEntry[], input: string): string {
-  return [...transcript, { role: 'user' as const, text: input }]
+function conversation(transcript: readonly TranscriptEntry[]): string {
+  return transcript
     .map((entry) => `${entry.role}: ${entry.text}`)
     .join('\n\n');
 }
 
-function instructions(owned: string, repository: Awaited<ReturnType<typeof loadRepositoryInstructions>>): string {
-  const files = repository.instructions
-    .map((instruction) => `Repository ${instruction.path} (untrusted):\n${instruction.text}`)
-    .join('\n\n');
-  return files ? `${owned}\n\n${files}` : owned;
+function contextDiagnostics(context: Pick<AssembledContext, 'sources' | 'estimatedTokens' | 'estimator'>, profile: ContextProfile): ContextDiagnostics {
+  const categoryTokens = { core: 0, project: 0, tools: 0, task: 0, skills: 0, routed: 0, conversation: 0, toolResults: 0 };
+  for (const source of context.sources) {
+    const tokens = source.estimatedTokens ?? 0;
+    if (source.kind === 'george-invariants') categoryTokens.core += tokens;
+    else if (source.kind === 'current-user-input') categoryTokens.task += tokens;
+    else if (source.kind === 'conversation') categoryTokens.conversation += tokens;
+    else if (source.kind === 'tool-definition-overhead') categoryTokens.tools += tokens;
+    else if (source.kind === 'routed-document') categoryTokens.routed += tokens;
+    else if (source.kind === 'activated-skill') categoryTokens.skills += tokens;
+    else categoryTokens.project += tokens;
+  }
+  return {
+    profileId: profile.id, profile, estimatedTokens: context.estimatedTokens, estimator: context.estimator.kind,
+    providerInputBudget: profile.providerInputTokens, remainingHeadroom: Math.max(0, profile.providerInputTokens - context.estimatedTokens),
+    softPressure: context.estimatedTokens >= profile.softPressureTokens || context.sources.some((source) => source.reason === `would exceed the ${profile.softPressureTokens} token optional budget`), reservedHeadroom: profile.reservedHeadroomTokens,
+    categoryTokens, activeSourceIds: context.sources.filter((source) => source.disposition === 'active').slice(0, 32).map((source) => source.id),
+    evidence: context.sources.filter((source) => source.disposition !== 'active').slice(0, 32).map((source) => ({ id: source.id, disposition: source.disposition as Exclude<typeof source.disposition, 'active'>, ...(source.reason === undefined ? {} : { reason: source.reason }), ...(source.duplicateOf === undefined ? {} : { duplicateOf: source.duplicateOf }) })),
+  };
 }
 
 /** George's one canonical bounded model -> tool -> model application loop. */
 export class AgentLoopApplicationService {
   private readonly provider: ModelProvider;
   private readonly georgeInstructions: string;
-  private readonly instructionBytes: number | undefined;
+  private readonly profile: ContextProfile;
+  private readonly userConfigRoot: string | undefined;
+  private readonly maxContextSourceBytes: number | undefined;
   private readonly registry: ToolRegistry;
   private readonly maxToolCalls: number;
   private readonly maxToolRounds: number;
@@ -91,7 +115,9 @@ export class AgentLoopApplicationService {
     provider: ModelProvider,
     workspace: Workspace,
     georgeInstructions: string,
-    instructionBytes: number | undefined,
+    profile: ContextProfile,
+    userConfigRoot: string | undefined,
+    maxContextSourceBytes: number | undefined,
     registry: ToolRegistry,
     maxToolCalls: number,
     maxToolRounds: number,
@@ -100,7 +126,9 @@ export class AgentLoopApplicationService {
     this.provider = provider;
     this.workspace = workspace;
     this.georgeInstructions = georgeInstructions;
-    this.instructionBytes = instructionBytes;
+    this.profile = profile;
+    this.userConfigRoot = userConfigRoot;
+    this.maxContextSourceBytes = maxContextSourceBytes;
     this.registry = registry;
     this.maxToolCalls = maxToolCalls;
     this.maxToolRounds = maxToolRounds;
@@ -141,13 +169,24 @@ export class AgentLoopApplicationService {
     yield emit({ type: 'input.submitted', text: submission.input });
     try {
       if (submission.signal?.aborted) throw cancellationError(submission.signal);
-      const repository = await loadRepositoryInstructions(this.workspace, this.instructionBytes);
+      let context: AssembledContext;
+      try {
+        context = await assembleContext({
+          invariants: this.georgeInstructions, userInput: submission.input,
+          ...(priorTranscript.length === 0 ? {} : { conversation: conversation(priorTranscript) }),
+          workspace: this.workspace,
+          ...(this.userConfigRoot === undefined ? {} : { userGlobalInstructionsPath: join(this.userConfigRoot, 'instructions.md'), personalityPath: join(this.userConfigRoot, 'personality.md') }),
+          ...(submission.routedDocuments === undefined ? {} : { routedDocuments: submission.routedDocuments }),
+          normalizedToolDefinitions: JSON.stringify(this.registry.definitions), maxTokens: this.profile.providerInputTokens, optionalMaxTokens: this.profile.softPressureTokens,
+          ...(this.maxContextSourceBytes === undefined ? {} : { maxSourceBytes: this.maxContextSourceBytes }),
+        });
+      } catch (error) {
+        if (error instanceof ContextAssemblyError) yield emit({ type: 'context.assembled', turnId, diagnostics: contextDiagnostics(error, this.profile) });
+        throw error;
+      }
       if (submission.signal?.aborted) throw cancellationError(submission.signal);
-      const baseRequest = {
-        instructions: instructions(this.georgeInstructions, repository),
-        input: conversation(priorTranscript, submission.input),
-        tools: this.registry.definitions,
-      };
+      yield emit({ type: 'context.assembled', turnId, diagnostics: contextDiagnostics(context, this.profile) });
+      const baseRequest = { instructions: context.rendered.guidance, input: context.rendered.conversation, tools: this.registry.definitions };
       let continuation: ProviderContinuation | undefined;
       let toolCalls = 0;
       let toolRounds = 0;
@@ -253,7 +292,9 @@ export async function createAgentLoopApplicationService(
     options.provider,
     workspace,
     options.georgeInstructions ?? GEORGE_OWNED_INSTRUCTIONS,
-    options.instructionBytes,
+    validateContextProfile(options.contextProfile ?? DEFAULT_CONTEXT_PROFILE),
+    options.userConfigRoot,
+    options.maxContextSourceBytes,
     new ToolRegistry([...readOnly.registry.registrations, ...mutation.registry.registrations, ...process.registry.registrations]),
     positive(options.maxToolCalls, DEFAULT_MAX_TOOL_CALLS, 'maxToolCalls'),
     positive(options.maxToolRounds, DEFAULT_MAX_TOOL_ROUNDS, 'maxToolRounds'),

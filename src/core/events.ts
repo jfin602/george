@@ -1,9 +1,31 @@
 import type { GeorgeErrorShape } from './errors.ts';
 import type { ApprovalRequest } from './approval.ts';
+import type { ContextProfile } from './config.ts';
 
 export type ProviderUsage = Readonly<{
   inputTokens?: number;
   outputTokens?: number;
+}>;
+
+export type ContextDiagnosticEvidence = Readonly<{
+  id: string;
+  disposition: 'omitted' | 'deferred' | 'duplicate' | 'failed' | 'routed';
+  reason?: string;
+  duplicateOf?: string;
+}>;
+
+export type ContextDiagnostics = Readonly<{
+  profileId: string;
+  profile: ContextProfile;
+  estimatedTokens: number;
+  estimator: string;
+  providerInputBudget: number;
+  remainingHeadroom: number;
+  softPressure: boolean;
+  reservedHeadroom: number;
+  categoryTokens: Readonly<{ core: number; project: number; tools: number; task: number; skills: number; routed: number; conversation: number; toolResults: number }>;
+  activeSourceIds: readonly string[];
+  evidence: readonly ContextDiagnosticEvidence[];
 }>;
 
 export type ProviderEvent =
@@ -22,6 +44,7 @@ export type ApplicationEvent =
   | ProviderEvent
   | Readonly<{ type: 'turn.started'; turnId: string }>
   | Readonly<{ type: 'input.submitted'; text: string }>
+  | Readonly<{ type: 'context.assembled'; turnId: string; diagnostics: ContextDiagnostics }>
   | Readonly<{ type: 'turn.completed'; turnId: string }>
   | Readonly<{ type: 'turn.cancelled'; turnId: string; error: GeorgeErrorShape }>
   | Readonly<{ type: 'turn.failed'; turnId: string; error: GeorgeErrorShape }>

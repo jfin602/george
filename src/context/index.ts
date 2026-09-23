@@ -69,6 +69,9 @@ export type ContextAssemblyOptions = Readonly<{
   activatedSkills?: readonly ActivatedContextSkill[];
   normalizedToolDefinitions?: string;
   maxSourceBytes?: number;
+  maxRoutedDocuments?: number;
+  /** Optional sources defer at this pressure point while required sources retain the hard budget. */
+  optionalMaxTokens?: number;
   maxTokens: number;
   estimator?: ContextTokenEstimator;
 }>;
@@ -81,7 +84,23 @@ export type AssembledContext = Readonly<{
 }>;
 
 const DEFAULT_SOURCE_BYTES = 32 * 1024;
+export const DEFAULT_MAX_ROUTED_DOCUMENTS = 16;
 const MISSING_WORKSPACE_PATH = 'Workspace path must exist.';
+
+/** Carries bounded assembly evidence when a required source cannot fit. */
+export class ContextAssemblyError extends GeorgeError {
+  readonly sources: readonly ContextSource[];
+  readonly estimator: AssembledContext['estimator'];
+  readonly estimatedTokens: number;
+
+  constructor(message: string, sources: readonly ContextSource[], estimator: AssembledContext['estimator'], estimatedTokens: number) {
+    super('validation', message);
+    this.name = 'ContextAssemblyError';
+    this.sources = sources;
+    this.estimator = estimator;
+    this.estimatedTokens = estimatedTokens;
+  }
+}
 
 type Channel = 'guidance' | 'conversation' | 'tools';
 type Candidate = Omit<ContextSource, 'disposition' | 'estimatedTokens' | 'reason' | 'duplicateOf'> & Readonly<{
@@ -195,8 +214,12 @@ async function fileCandidate(candidate: Candidate, load: Promise<ContextFileLoad
   return { ...candidate, disposition: 'failed', reason: result.reason };
 }
 
-function stableRoutedPaths(paths: readonly string[]): string[] {
-  return [...new Set(paths.map((path) => path.replace(/\\/g, '/')))].sort((left, right) => left.localeCompare(right));
+function stableRoutedPaths(paths: readonly string[], maxPaths: number): string[] {
+  positive(maxPaths, 'maxRoutedDocuments');
+  const normalized = [...new Set(paths.map((path) => path.replace(/\\/g, '/')))].sort((left, right) => left.localeCompare(right));
+  if (normalized.length > maxPaths) throw validationError(`At most ${maxPaths} routed documents are allowed per turn.`);
+  if (normalized.some((path) => path.length > 1_024)) throw validationError('Routed document paths must be at most 1024 characters.');
+  return normalized;
 }
 
 function optional(candidate: Candidate, text: string | undefined): Candidate {
@@ -211,6 +234,9 @@ function optional(candidate: Candidate, text: string | undefined): Candidate {
  */
 export async function assembleContext(options: ContextAssemblyOptions): Promise<AssembledContext> {
   positive(options.maxTokens, 'maxTokens');
+  if (options.optionalMaxTokens !== undefined && (!Number.isInteger(options.optionalMaxTokens) || options.optionalMaxTokens < 1 || options.optionalMaxTokens > options.maxTokens)) {
+    throw validationError('optionalMaxTokens must be a positive integer no greater than maxTokens.');
+  }
   const maxSourceBytes = options.maxSourceBytes ?? DEFAULT_SOURCE_BYTES;
   positive(maxSourceBytes, 'maxSourceBytes');
   const estimator = options.estimator ?? defaultContextTokenEstimator;
@@ -233,7 +259,7 @@ export async function assembleContext(options: ContextAssemblyOptions): Promise<
       fileCandidate({ id: 'workspace:BOOT.md', kind: 'workspace-routing', origin: 'workspace', trust: 'workspace-untrusted', precedence: 30, order: 2, required: false, channel: 'guidance', disposition: 'routed' }, loadWorkspaceContextFile(options.workspace, 'BOOT.md', maxSourceBytes)),
     ]);
     candidates.push(...workspaceCandidates);
-    const paths = stableRoutedPaths(options.routedDocuments ?? []);
+    const paths = stableRoutedPaths(options.routedDocuments ?? [], options.maxRoutedDocuments ?? DEFAULT_MAX_ROUTED_DOCUMENTS);
     candidates.push(...await Promise.all(paths.map((path, order) => fileCandidate(
       { id: `workspace:routed:${path}`, kind: 'routed-document', origin: 'workspace', trust: 'workspace-untrusted', precedence: 30, order: order + 3, required: false, channel: 'guidance' },
       loadWorkspaceContextFile(options.workspace!, path, maxSourceBytes),
@@ -281,10 +307,16 @@ export async function assembleContext(options: ContextAssemblyOptions): Promise<
     const beforeTokens = estimate(providerFacingText(before));
     sources[index] = { ...source, disposition: 'active' };
     const afterTokens = estimate(providerFacingText(rendered(sources)));
-    if (afterTokens > options.maxTokens) {
-      if (source.required) throw validationError(`Required context source ${source.id} exceeds the ${options.maxTokens} token budget.`);
+    const budget = source.required ? options.maxTokens : options.optionalMaxTokens ?? options.maxTokens;
+    if (afterTokens > budget) {
+      if (source.required) {
+        const message = `Required context source ${source.id} exceeds the ${options.maxTokens} token budget.`;
+        sources[index] = { ...source, disposition: 'failed', reason: message };
+        const partial = rendered(sources);
+        throw new ContextAssemblyError(message, sources, { kind: estimator.kind, estimated: true }, estimate(providerFacingText(partial)));
+      }
       const { text: _text, estimatedTokens: _tokens, ...omitted } = source;
-      sources[index] = { ...omitted, disposition: source.kind === 'routed-document' ? 'deferred' : 'omitted', reason: `would exceed the ${options.maxTokens} token budget` };
+      sources[index] = { ...omitted, disposition: source.kind === 'routed-document' ? 'deferred' : 'omitted', reason: `would exceed the ${budget} token ${source.required ? 'hard' : 'optional'} budget` };
       continue;
     }
     sources[index] = { ...source, disposition: 'active', estimatedTokens: afterTokens - beforeTokens };

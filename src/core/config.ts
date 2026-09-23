@@ -1,11 +1,34 @@
-import { resolve } from 'node:path';
+import { homedir } from 'node:os';
+import { join, resolve } from 'node:path';
 
 import { GeorgeError } from './errors.ts';
 
 export const DEFAULT_LM_STUDIO_BASE_URL = 'http://127.0.0.1:1234';
+export const DEFAULT_CONTEXT_PROFILE: ContextProfile = {
+  id: 'qwen3-coder-30b-a3b-instruct-q4_k_m-lm-studio-32k',
+  physicalContextTokens: 32_768,
+  preferredWorkingSetTokens: { min: 12_000, max: 18_000 },
+  softPressureTokens: 20_000,
+  providerInputTokens: 24_576,
+  reservedHeadroomTokens: 8_192,
+  alwaysOnInstructionTokens: 2_560,
+};
+
+/** Operating policy, not provider wire semantics or a claim about model capability. */
+export type ContextProfile = Readonly<{
+  id: string;
+  physicalContextTokens: number;
+  preferredWorkingSetTokens: Readonly<{ min: number; max: number }>;
+  softPressureTokens: number;
+  providerInputTokens: number;
+  reservedHeadroomTokens: number;
+  alwaysOnInstructionTokens: number;
+}>;
 
 export type GeorgeConfig = Readonly<{
   workspace: string;
+  userConfigRoot: string;
+  context: Readonly<{ profile: ContextProfile }>;
   provider: Readonly<{
     baseUrl: URL;
     model?: string;
@@ -16,6 +39,14 @@ export type GeorgeConfigInput = Readonly<{
   workspace?: string;
   baseUrl?: string | URL;
   model?: string;
+  userConfigRoot?: string;
+  contextProfile?: ContextProfile;
+}>;
+
+export type GeorgeConfigEnvironment = Readonly<{
+  environment?: Readonly<Record<string, string | undefined>>;
+  platform?: NodeJS.Platform;
+  homeDirectory?: string;
 }>;
 
 function configurationError(message: string): never {
@@ -35,6 +66,41 @@ export function validateModelId(value: string): string {
     configurationError('Model ID must not contain control characters.');
   }
   return model;
+}
+
+function positiveContextNumber(value: number, name: string): number {
+  if (!Number.isInteger(value) || value < 1) configurationError(`${name} must be a positive integer.`);
+  return value;
+}
+
+export function validateContextProfile(value: ContextProfile): ContextProfile {
+  if (!value.id.trim()) configurationError('Context profile ID must not be empty.');
+  const physicalContextTokens = positiveContextNumber(value.physicalContextTokens, 'Physical context target');
+  const min = positiveContextNumber(value.preferredWorkingSetTokens.min, 'Preferred working-set minimum');
+  const max = positiveContextNumber(value.preferredWorkingSetTokens.max, 'Preferred working-set maximum');
+  const softPressureTokens = positiveContextNumber(value.softPressureTokens, 'Soft pressure threshold');
+  const providerInputTokens = positiveContextNumber(value.providerInputTokens, 'Provider input budget');
+  const reservedHeadroomTokens = positiveContextNumber(value.reservedHeadroomTokens, 'Reserved headroom');
+  const alwaysOnInstructionTokens = positiveContextNumber(value.alwaysOnInstructionTokens, 'Always-on instruction target');
+  if (min > max || max > providerInputTokens || softPressureTokens > providerInputTokens || providerInputTokens + reservedHeadroomTokens > physicalContextTokens || alwaysOnInstructionTokens > providerInputTokens) {
+    configurationError('Context profile token targets are inconsistent.');
+  }
+  return { id: value.id.trim(), physicalContextTokens, preferredWorkingSetTokens: { min, max }, softPressureTokens, providerInputTokens, reservedHeadroomTokens, alwaysOnInstructionTokens };
+}
+
+export function resolveGeorgeUserConfigRoot(
+  environment: Readonly<Record<string, string | undefined>> = process.env,
+  platform: NodeJS.Platform = process.platform,
+  homeDirectory = homedir(),
+): string {
+  if (!homeDirectory || homeDirectory.includes('\0')) configurationError('Home directory must be a non-empty path without NUL.');
+  const xdgRoot = platform === 'linux' ? environment.XDG_CONFIG_HOME?.trim() : undefined;
+  return join(xdgRoot || join(homeDirectory, '.config'), 'george');
+}
+
+function validateUserConfigRoot(value: string, cwd: string): string {
+  if (!value.trim() || value.includes('\0')) configurationError('George user config root must be a non-empty path without NUL.');
+  return resolve(cwd, value);
 }
 
 function isLoopbackHost(hostname: string): boolean {
@@ -68,9 +134,14 @@ export function validateProviderBaseUrl(value: string | URL): URL {
 export function resolveGeorgeConfig(
   input: GeorgeConfigInput = {},
   cwd = process.cwd(),
+  environment: GeorgeConfigEnvironment = {},
 ): GeorgeConfig {
   return {
     workspace: validateWorkspace(input.workspace ?? cwd, cwd),
+    userConfigRoot: input.userConfigRoot === undefined
+      ? resolveGeorgeUserConfigRoot(environment.environment, environment.platform, environment.homeDirectory)
+      : validateUserConfigRoot(input.userConfigRoot, cwd),
+    context: { profile: validateContextProfile(input.contextProfile ?? DEFAULT_CONTEXT_PROFILE) },
     provider: {
       baseUrl: validateProviderBaseUrl(
         input.baseUrl ?? DEFAULT_LM_STUDIO_BASE_URL,

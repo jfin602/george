@@ -17,6 +17,8 @@ async function main(): Promise<void> {
     provider: new LmStudioResponsesProvider(config.provider),
     workspace: config.workspace,
     approvalPort: approvals,
+    contextProfile: config.context.profile,
+    userConfigRoot: config.userConfigRoot,
   });
   const renderer = await createCliRenderer({ exitOnCtrlC: false });
   let tui: GeorgeTui | undefined;

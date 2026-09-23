@@ -3,12 +3,14 @@ import test from 'node:test';
 
 import {
   DEFAULT_LM_STUDIO_BASE_URL,
+  DEFAULT_CONTEXT_PROFILE,
   GeorgeError,
   appendSessionEvent,
   cancellationError,
   createCancellation,
   createSession,
   resolveGeorgeConfig,
+  resolveGeorgeUserConfigRoot,
   validateModelId,
   validateProviderBaseUrl,
   validateWorkspace,
@@ -21,6 +23,13 @@ test('configuration resolves safe defaults without inventing a model', () => {
   assert.equal(config.provider.model, undefined);
   assert.equal(validateWorkspace('project', '/workspace'), '/workspace/project');
   assert.equal(validateModelId(' qwen-local '), 'qwen-local');
+  assert.equal(resolveGeorgeUserConfigRoot({ XDG_CONFIG_HOME: '/tmp/config' }, 'linux', '/home/tester'), '/tmp/config/george');
+  assert.equal(resolveGeorgeUserConfigRoot({}, 'linux', '/home/tester'), '/home/tester/.config/george');
+  const configured = resolveGeorgeConfig({ userConfigRoot: '/tmp/george-config', contextProfile: DEFAULT_CONTEXT_PROFILE }, '/workspace');
+  assert.equal(configured.userConfigRoot, '/tmp/george-config');
+  assert.equal(configured.context.profile.providerInputTokens, 24_576);
+  assert.equal(configured.context.profile.softPressureTokens, 20_000);
+  assert.equal(configured.context.profile.reservedHeadroomTokens, 8_192);
 });
 
 test('configuration rejects invalid workspace, model, and non-loopback provider URLs', () => {
