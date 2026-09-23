@@ -36,11 +36,15 @@ Progress is not assistant transcript, hidden reasoning, chain-of-thought, valida
 
 The normalized progress contract should carry a turn identity, a small stable category such as context/inspection/editing/validation/recovery/completion, and a bounded user-facing message. Exact event/type names may follow source conventions, but the semantics are presentation-independent so future Tauri/daemon clients can render the same stream.
 
-Authoritative tool/provider/validation/session events remain the source of truth. Progress may summarize or derive from them but must not become a competing authority. Repeated low-value lifecycle churn may be coalesced so progress remains useful rather than noisy.
+Authoritative tool/provider/validation/session events remain the source of truth. Progress and visible work items may summarize or derive from them but must not become a competing authority. Repeated low-value lifecycle churn may be coalesced so progress remains useful rather than noisy.
 
-OpenTUI should retain its fast-changing activity indicator and additionally render a small recent-progress/work log for meaningful milestones.
+Phase 4 also establishes an **observable execution transcript**. Presentation adapters project authoritative lifecycle events into persistent human-readable work items for meaningful concrete operations, including context-source discovery/loading, file reads/listing/search, Git inspection, writes/patches, approvals, process execution, validation, recovery, and completion. A work item is keyed to a stable turn/tool/operation identity and updates through requested/running/waiting/succeeded/failed/denied/cancelled or interrupted state instead of emitting separate noisy requested/started/completed transcript lines for the same operation.
 
-Durable sessions may retain bounded progress history where useful for diagnosis, but reopening a session must not present a stale status such as "Running tests..." as currently active.
+Safe work-item rendering may include bounded paths, search terms, counts, byte sizes, literal process executable/argv, workspace-relative cwd, exit/signal status, durations, truncation markers, and concise error summaries. It must not automatically copy raw file bodies, write contents, patch bodies, arbitrary tool-result JSON, unrestricted stdout/stderr, unrestricted environment state, secrets, or provider payloads into the visible work log.
+
+OpenTUI should retain its fast-changing activity indicator and render the persistent work log in the conversation/transcript presentation so the user can watch George inspect, edit, and validate in chronological context. These presentation-visible work items remain separate from canonical user/assistant transcript entries and therefore do not enter later provider-facing conversation merely because they were displayed.
+
+Durable sessions may retain bounded work/progress history where useful for diagnosis, but reopening a session must render prior operations as historical evidence only and must not present a stale status such as "Running tests..." as currently active.
 
 ### Changed-file accounting is evidence, not guesswork
 
@@ -72,6 +76,8 @@ At minimum it can represent:
 - unresolved failures, warnings, or evidence gaps;
 - session/turn completion state;
 - final assistant response.
+
+The final assistant response for coding work should be sufficiently detailed to summarize what George inspected, what changed, what validation was performed, and any unresolved issue or evidence gap. Routine step-by-step status narration remains harness-owned rather than requiring extra model-authored progress chatter.
 
 OpenTUI may render a polished summary, but the TUI is not the authoritative source of these facts.
 
@@ -133,11 +139,14 @@ Deterministic Phase 4 coverage must prove at minimum:
 - changed-file observation that does not overclaim process attribution;
 - validation through the canonical process/approval boundary;
 - structured completion evidence;
-- presentation-independent progress events in meaningful lifecycle order, with bounded/coalesced messages and separate high-frequency activity state;
-- progress/status text never entering assistant transcript or provider-facing context;
-- validation failure/recovery, cancellation, and terminal completion producing truthful progress without replacing the underlying authoritative evidence;
-- persisted/resumed sessions never presenting stale prior-run activity as currently active;
-- progress messages not exposing raw file bodies, process output, unrestricted environment data, or secrets merely because those values exist in underlying tool events;
+- presentation-independent progress/work projection in meaningful lifecycle order, with bounded/coalesced messages and separate high-frequency activity state;
+- context-source loading plus file read/list/search, Git inspection, mutation, approval, process, and validation operations producing intelligible persistent work items;
+- one concrete operation updating one stable visible work item across running and terminal lifecycle states rather than duplicating requested/started/completed lines;
+- process work items exposing the literal executable/argv and relevant workspace-relative cwd with bounded outcome metadata;
+- progress/work text never entering assistant transcript or provider-facing context;
+- validation failure/recovery, cancellation, denial, interruption, and terminal completion producing truthful visible state without replacing the underlying authoritative evidence;
+- persisted/resumed sessions rendering prior work as history and never presenting stale prior-run activity as currently active;
+- work/progress rendering not exposing raw file bodies, write/patch bodies, arbitrary result JSON, unrestricted process output, unrestricted environment data, provider payloads, or secrets merely because those values exist in underlying events;
 - one end-to-end disposable-repository workflow using the qualified Phase 3 context/skill substrate, approved mutation, validation, completion, persistence, and resumed later work;
 - preservation of the Phase 2 permission, workspace, process, and Git safeguards throughout the flow.
 

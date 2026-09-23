@@ -165,11 +165,14 @@ Scope:
 - conservative attribution when approved arbitrary child processes may have modified files;
 - validation-command workflow through the existing canonical process/tool/approval boundary;
 - structured validation evidence;
-- normalized presentation-independent progress/status event stream;
+- normalized presentation-independent progress/status/work projection over authoritative application events;
 - deterministic harness-generated progress milestones for context, inspection, editing, validation, recovery, and completion;
-- separate high-frequency activity state and lower-frequency user-facing progress, with bounded/coalesced messages;
-- OpenTUI recent-progress/work-log rendering without moving progress semantics into the TUI;
-- progress/status events excluded from assistant transcript and provider-facing model context;
+- separate high-frequency activity state, lower-frequency progress milestones, and persistent concrete-operation work items;
+- observable execution transcript covering context-source loading, file read/list/search, Git inspection, mutations, approvals, literal process commands/argv, validation, recovery, and completion;
+- stable work-item identity so one operation updates through running and terminal states instead of duplicating requested/started/completed rows;
+- bounded safe operation metadata with no automatic raw file/patch bodies, unrestricted process output/environment, provider payloads, or secrets;
+- OpenTUI chronological execution/work-log rendering without moving progress semantics into the TUI;
+- progress/work presentation excluded from canonical assistant transcript and provider-facing model context;
 - structured completion evidence covering observed changes, validation, unresolved failures/warnings, completion state, and final assistant output;
 - schema-versioned filesystem session persistence outside the repository by default;
 - canonical workspace identity binding;
@@ -183,7 +186,8 @@ Success condition:
 - the run accurately separates pre-existing dirty work from newly observed changes without overclaiming process attribution;
 - normalized session state persists outside the repository and a later turn can reopen completed history;
 - interruption/resume tests prove incomplete writes, processes, approvals, and provider continuations are not automatically replayed;
-- users receive meaningful harness-generated progress while a coding turn runs, without progress polluting the assistant transcript/model context or replacing authoritative tool/validation evidence;
+- users can watch George's concrete repository work in a persistent chronological execution transcript, including the files it reads/searches, edits it performs, commands it runs, approvals it awaits, and validation outcomes, without that presentation history polluting canonical assistant transcript/model context or replacing authoritative evidence;
+- final coding responses are sufficiently detailed about inspection, changes, validation, and unresolved issues while routine progress remains harness-generated;
 - provider/TUI code remains adapters over reusable context, session, tool, progress, and coding-workflow services.
 
 Non-goals:
