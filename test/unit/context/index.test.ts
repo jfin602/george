@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 
-import { GeorgeError, resolveWorkspaceRoot } from '../../../src/core/index.ts';
+import { DEFAULT_CONTEXT_PROFILE, GeorgeError, resolveWorkspaceRoot } from '../../../src/core/index.ts';
 import { assembleContext, defaultContextTokenEstimator, loadBoundedContextFile } from '../../../src/context/index.ts';
 
 async function fixture(): Promise<string> {
@@ -120,4 +120,26 @@ test('activated skill origins have explicit precedence below current user intent
   ]);
   assert.ok(context.rendered.guidance.indexOf('invariant') < context.rendered.guidance.indexOf('builtin skill'));
   assert.match(context.rendered.conversation, /user task/);
+});
+
+test('Qwen profile keeps a 12k-18k working set bounded without eagerly loading repository documents', async (t) => {
+  const root = await fixture();
+  t.after(() => rm(root, { recursive: true, force: true }));
+  await Promise.all([
+    writeFile(join(root, 'AGENTS.md'), 'project guidance'),
+    writeFile(join(root, 'BOOT.md'), 'Route docs only when explicitly selected.'),
+    ...Array.from({ length: 24 }, (_, index) => writeFile(join(root, `unrelated-${index}.md`), `unrelated document ${index}`)),
+  ]);
+  const context = await assemble(root, {
+    userInput: 'ordinary task '.repeat(3_250),
+    normalizedToolDefinitions: 'tool schema '.repeat(500),
+    maxTokens: DEFAULT_CONTEXT_PROFILE.providerInputTokens,
+    optionalMaxTokens: DEFAULT_CONTEXT_PROFILE.softPressureTokens,
+  });
+
+  assert.ok(context.estimatedTokens >= DEFAULT_CONTEXT_PROFILE.preferredWorkingSetTokens.min);
+  assert.ok(context.estimatedTokens <= DEFAULT_CONTEXT_PROFILE.preferredWorkingSetTokens.max);
+  assert.ok(context.estimatedTokens < DEFAULT_CONTEXT_PROFILE.softPressureTokens);
+  assert.equal(context.sources.filter((source) => source.kind === 'routed-document').length, 0);
+  assert.doesNotMatch(context.rendered.guidance, /unrelated document/);
 });
