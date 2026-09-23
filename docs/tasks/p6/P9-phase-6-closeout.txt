@@ -1,0 +1,26 @@
+TASK: Phase 6 / P9 — Phase 6 closeout validation
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Terra Medium`.
+- Browser required: no.
+
+VERSIONING
+- This prompt's assigned project version is `0.6.9`.
+
+GOAL
+
+Perform an evidence-only Phase-6 closeout from the exact P8 candidate and `docs/tasks/p6/P8-qualification-evidence.md`.
+
+Read BOOT/current product/architecture/workflow/stability contracts, Phase-6 decision record, assessment/plan, exact P1-P8 source/test state, and qualification evidence.
+
+Audit and report: effect/risk/replay/source metadata; generic approval policy/presentation; credential executor-only boundary; durable external interruption truth; plugin manifest/install/list/enable/disable/uninstall containment and no-install-execution; capability fingerprint/re-enable behavior; plugin skill/hook/tool/command integration through existing registries; third-party process trust truth; Parallel adapter bounds; GitHub read/mutation separation and no ambiguous replay; MCP configuration/transports/namespacing/allowlist/schema translation/conservative authority/process ownership; Chrome DevTools profile observation-vs-interaction/session-risk/secret protection; provider-facing tool-schema bounds; adapter disablement/failure isolation; inherited Phase-2-5 safeguards; deterministic and live evidence truth.
+
+Do not repair implementation, add features, broaden tests merely to manufacture a pass, owner-close Phase 6, or advance Phase 7 behavior.
+
+Create/update `docs/phase-6-closeout.md` with explicit Implementation Complete / Stability Qualified state and Green / Not Green / Evidence Gap truth. Narrowly update Phase-6 task status only where required to point at the formal evidence record.
+
+Do not move `BOOT.md` or the roadmap to Phase 7. Owner closeout and any `0.7.0` transition remain separate decisions.
+
+Set `package.json` version to `0.6.9`.
+
+Required proof: every closeout claim traces to current P8 evidence; missing live/browser evidence is never relabeled Green; no Phase-7+ scope is added; documentation `git diff --check` passes; no `package-lock.json` exists.

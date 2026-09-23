@@ -1,0 +1,34 @@
+TASK: Phase 6 / P5 — GitHub REST adapter
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Terra High`.
+- Browser required: no.
+
+VERSIONING
+- This prompt's assigned project version is `0.6.5`.
+
+GOAL
+
+Add a narrow GitHub remote-service adapter that complements, but never replaces, George's local Git tools.
+
+Read Phase-6 authority/assessment/plan and exact P1-P4 source/tests.
+
+Use native `fetch`, a test-injectable API root, and one centralized explicit GitHub REST API-version header compatible with the current official API.
+
+Resolve credentials only at execution time through the credential resolver. Public-read behavior may work without a token where GitHub permits it, but authenticated tokens must never enter provider context, schemas, events, work text, diagnostics, or errors.
+
+Implement a small coding-workflow set:
+- repository file/content read;
+- issue read;
+- pull-request list/get read;
+- one remote mutation: create an issue comment.
+
+Bound owner/repo/path/number/body inputs, pagination, result counts, response bytes, redirects, timeouts, and error strings.
+
+Classify reads as external/network read and comment creation as remote mutation. The mutation requires normal approval and is non-replay-safe after ambiguous execution. Never automatically duplicate a comment after timeout/connection ambiguity.
+
+Keep local Git status/diff/worktree preservation unchanged.
+
+Set `package.json` version to `0.6.5`.
+
+Required proof: local GitHub-like HTTP fixture for each operation, pagination/bounds, unauthenticated/authenticated cases, credential redaction, mutation approval/denial/cancellation, ambiguous mutation no-retry/outcome-unknown evidence, hostile remote text remains data, local Git regression coverage, broad Phase-2-5/P1-P4 validation and no lockfile.

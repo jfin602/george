@@ -1,0 +1,34 @@
+TASK: Phase 6 / P1 — External effect, approval, and credential foundation
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Terra High`.
+- Browser required: no.
+
+VERSIONING
+- This prompt's assigned project version is `0.6.1`.
+
+GOAL
+
+Establish the Phase-6 George-owned effect/approval/credential substrate before adding plugins or network adapters.
+
+Read `BOOT.md`, `AGENTS.md`, current product/architecture/workflow/stability/roadmap contracts, the Phase-6 decision record, and `docs/tasks/p6/{prompt-assessment,implementation-plan}.md`. Inspect the exact ToolRegistry, approval path, one-turn loop, durable session sanitization/interruption classification, recovery, progress/work projection, TUI approval rendering, and tests before editing.
+
+Replace/generalize the current local-only tool permission representation with normalized George-owned execution metadata that can distinguish at least local read, workspace mutation, host process, external/network read, remote mutation, browser observation, browser interaction, and unknown external effects. Add explicit replay-safety and source identity metadata.
+
+Preserve current behavior: local read remains auto-allowed; workspace write and arbitrary process remain allow-once/deny approval. Initial external/browser/unknown effects require explicit allow-once/deny approval with bounded safe service/origin/resource/operation details and appropriate warning text.
+
+Do not allow model/repository/remote metadata to alter effect classification.
+
+Extend canonical tool/approval events and durable sanitization with only bounded safe execution descriptors. Generalize interrupted side-effect classification so future external tools can remain interrupted/outcome-unknown without hard-coding each adapter tool name. Preserve Phase-5 no-blind-replay truth.
+
+Add a small credential-resolver boundary with an environment-backed implementation. Secret values are executor-only. Never include them in provider context/tool schemas, approval/work text, durable events, diagnostics, or normalized error messages.
+
+Update OpenTUI approval presentation generically without moving policy into the TUI.
+
+Do not implement plugins, Parallel, GitHub, MCP, or Chrome yet.
+
+Set `package.json` version to `0.6.1`.
+
+Required proof: focused effect/policy/approval/credential/interruption tests; exact prior read/write/process behavior remains Green; external/unknown effects cannot self-downgrade; secrets stay absent from event/session/UI/error fixtures; cancellation works while awaiting every new approval type; Phase-2-5 affected regression suites, typecheck, broad tests, exact runner tests, `git diff --check`, and no `package-lock.json`.
+
+If current source materially contradicts the approved Phase-6 contracts, stop with `Planning needed` rather than silently changing scope.

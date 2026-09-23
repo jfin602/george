@@ -1,0 +1,30 @@
+TASK: Phase 6 / P3 — Plugin contributions and command surfaces
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Terra High`.
+- Browser required: no.
+
+VERSIONING
+- This prompt's assigned project version is `0.6.3`.
+
+GOAL
+
+Wire enabled George plugins into the existing skill, hook, tool, application-command, and TUI boundaries without creating parallel execution authority.
+
+Read Phase-6 authority/assessment/plan and exact P1-P2 source/tests.
+
+Extend SkillRegistry to consume enabled managed plugin skill roots with stable namespaced identity. Preserve lazy metadata discovery/body activation, bounds, collision handling, and turn scoping.
+
+Translate plugin process hooks into the existing HookRegistry only. Plugin manifests cannot create arbitrary in-process hooks.
+
+Translate plugin executable tools into canonical ToolRegistry definitions using a bounded attached process protocol. Tool arguments are one JSON object on stdin; stdout is one bounded normalized JSON result. Use existing timeout/cancellation/process-tree cleanup and sanitized environment behavior. No implicit shell interpolation. Third-party executable plugin tools retain conservative George-owned host-process/unknown-external authority regardless of manifest claims.
+
+Add an application-owned plugin command registry. Initial plugin commands should activate a declared plugin skill/workflow; they are not hidden shell/process commands.
+
+Expose bounded TUI user surfaces for plugin lifecycle/catalog and command activation, for example `/plugins`, `/plugin install|enable|disable|uninstall`, `/commands`, and `/command <plugin:command> <message>`. OpenTUI parses/presents only; PluginManager/command behavior stays application-owned.
+
+Ensure enabled plugin tool schemas participate in the same capability-reducing ToolRegistry selection and context bounds as built-ins.
+
+Set `package.json` version to `0.6.3`.
+
+Required proof: one plugin fixture contributes skill + hook + process tool + command; disabled plugin contributes nothing executable/model-visible; process tool requires normal approval and cancellation cleanup; hook failure isolated; command cannot bypass ToolRegistry; plugin skill stays lazy/non-sticky; collisions fail visibly; workspace plugin content cannot activate executable contributions; existing skill/hook/TUI/tool/session behavior remains Green; broad validation and no lockfile.

@@ -1,0 +1,38 @@
+TASK: Phase 6 / P2 — Plugin manifest and managed lifecycle
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Terra High`.
+- Browser required: no.
+
+VERSIONING
+- This prompt's assigned project version is `0.6.2`.
+
+GOAL
+
+Implement the George-native plugin package/manifest and explicit managed lifecycle without executing plugin contributions yet.
+
+Read Phase-6 authority/assessment/plan and exact P1 source/tests.
+
+Add a bounded versioned `george-plugin.json` v1 contract containing stable plugin ID/version and optional declarations for skills, process hooks, declarative commands, and process-backed tools. Keep referenced paths package-relative and tool input schemas inside George's supported schema subset.
+
+Create a PluginManager under a dedicated plugin module. Managed installation state belongs under George user config/state, never the active repository.
+
+Implement explicit install/list/enable/disable/uninstall:
+- install only from an explicit local source directory;
+- inspect/copy without executing code;
+- reject symlinks, traversal, special files, unsafe names, missing references, oversized manifest/files/tree, duplicate contributions, and unsupported manifest versions;
+- validate before publish;
+- stage privately and publish atomically;
+- installed plugins start disabled;
+- uninstall only removes the managed plugin root/state;
+- no npm registry/download/update/lifecycle/install/uninstall scripts.
+
+Compute a deterministic executable-capability fingerprint. Replacing an enabled plugin with materially changed executable contributions must not silently preserve enablement/trust.
+
+Workspace/repository content must not auto-install or auto-enable executable plugins.
+
+Do not wire plugin skills/hooks/tools/commands into the live agent yet.
+
+Set `package.json` version to `0.6.2`.
+
+Required proof: valid lifecycle fixture; malformed/oversized/unsupported/duplicate cases; traversal/symlink/special-file rejection; no code execution during install/uninstall; atomic failure leaves prior state intact; capability-change re-enable behavior; managed state never mutates fixture workspace; P1 + Phase-2-5 regressions, typecheck/tests/runner, `git diff --check`, no `package-lock.json`.

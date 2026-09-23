@@ -1,0 +1,48 @@
+TASK: Phase 6 / P8 — Integrated Phase 6 qualification
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Terra High`.
+- Browser required: no.
+
+VERSIONING
+- This prompt's assigned project version is `0.6.8`.
+
+GOAL
+
+Qualify and narrowly harden the exact Phase-6 plugin + external-adapter candidate from P1-P7 without broadening scope.
+
+Read BOOT/current contracts, Phase-6 decision record, assessment/plan, and exact P1-P7 source/tests.
+
+Build/run the Phase-6 deterministic qualification matrix required by `docs/stability-contract.md`.
+
+Create integrated fixtures covering:
+- a managed plugin with lazy skill, process hook, process tool, and command;
+- malformed/oversized/symlink/capability-changing plugin packages;
+- local Parallel-like HTTP service;
+- local GitHub-like REST service including ambiguous remote mutation;
+- stdio + Streamable-HTTP MCP servers with safe/unsupported schemas and hostile metadata;
+- a Chrome DevTools MCP-profile fixture with observation, interaction, unknown tools, and secret-like browser data.
+
+Prove one canonical ToolRegistry can combine enabled built-ins/plugins/external adapters while disabled capabilities contribute nothing usable/provider-visible and provider-facing schema/context growth remains bounded/smallest-sufficient.
+
+Exercise every Phase-6 effect/approval type, cancellation/timeouts, credential redaction, hostile remote text, unknown MCP effects, schema translation rejection, external interruption/outcome-unknown/no-blind-replay, plugin failure isolation, capability-fingerprint re-enable behavior, MCP child cleanup, adapter disable/unavailable paths, TUI plugin/command/approval presentation, and durable-session sanitization.
+
+Re-run inherited Phase-2 tool/process/approval/Git safeguards, Phase-3 context/skills, Phase-4 coding workflow/session/progress/TUI, and Phase-5 budgets/compaction/retry/recovery/hooks/diagnostics/integrated qualification regressions.
+
+Record exact Node/npm/platform and dependency versions.
+
+Conditional live evidence:
+- Parallel Search only when an explicit test credential is configured;
+- GitHub live read when a test credential/public target is configured; perform remote mutation only against an explicitly designated disposable target;
+- MCP against an explicitly configured server when available;
+- Chrome through an explicitly installed/configured Chrome DevTools MCP server/debug target when available.
+
+Never manufacture live evidence. Missing credentials/services/TTY/browser target are Evidence Gap. Deterministic fixtures remain correctness authority.
+
+Permit at most two substantial evidence-driven correction cycles. Every correction adds a permanent regression guard and reruns focused plus broad affected evidence.
+
+Create `docs/tasks/p6/P8-qualification-evidence.md` tied to the exact final candidate with Green / Not Green / Evidence Gap per layer.
+
+Set `package.json` version to `0.6.8`.
+
+Run typecheck, broad tests, exact runner tests, `git diff --check`, and explicit no-`package-lock.json`.

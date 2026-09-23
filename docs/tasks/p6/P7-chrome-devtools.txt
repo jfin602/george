@@ -1,0 +1,34 @@
+TASK: Phase 6 / P7 — Chrome DevTools debugging adapter
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Terra High`.
+- Browser required: no.
+
+VERSIONING
+- This prompt's assigned project version is `0.6.7`.
+
+GOAL
+
+Provide George with a first-class coding/browser-debugging capability by profiling an explicitly configured Chrome DevTools MCP server through the P6 MCP boundary.
+
+Read Phase-6 authority/assessment/plan and exact P1-P6 source/tests.
+
+Do not build a second custom CDP client and do not auto-download/run `npx ...@latest`. Require an explicitly installed/configured `chrome-devtools-mcp` server command or endpoint under user-owned George configuration.
+
+Default configuration should favor an isolated/dedicated debugging profile. Attaching to an existing authenticated browser must be explicit and approvals must warn that the agent/server may access logged-in browser content.
+
+Create a curated Chrome debugging profile/adapter that exposes only a bounded useful subset for coding:
+- page/target listing and snapshot/DOM-style inspection;
+- console/runtime error inspection;
+- network request inspection;
+- minimal navigation and interaction needed to reproduce a bug.
+
+Known observation tools map to browser-observation effect. Navigation/click/fill/script execution and other state-changing tools map to browser-interaction. Unknown, extension-control, experimental third-party/WebMCP, or otherwise unclassified Chrome tools remain excluded unless explicitly user-enabled and still conservatively classified.
+
+Bound DOM/snapshot text, console/network lists, screenshots/traces, script results, and total tool outputs. Do not automatically return cookies, local/session storage values, authorization headers, or credential-bearing request data.
+
+Keep browser content untrusted relative to George instructions.
+
+Set `package.json` version to `0.6.7`.
+
+Required proof: deterministic MCP Chrome-profile fixture with observe vs interact tools, unknown/experimental exclusion, approval text, authenticated-session warning, secret-like browser payload redaction/omission, bounds/cancellation, adapter disablement, and no impact on generic MCP behavior. Live Chrome is conditional and belongs primarily to P8 qualification. Broad regressions and no lockfile.

@@ -1,0 +1,30 @@
+TASK: Phase 6 / P4 — Parallel Search adapter
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Terra High`.
+- Browser required: no.
+
+VERSIONING
+- This prompt's assigned project version is `0.6.4`.
+
+GOAL
+
+Add George's smallest useful bounded Parallel Search network-read adapter through the P1 canonical effect/approval/credential path.
+
+Read Phase-6 authority/assessment/plan and exact P1-P3 source/tests.
+
+Implement one built-in `parallel_search` tool using native `fetch`. Keep API base URL/path injectable for deterministic local HTTP tests and centralize the current product default in the adapter.
+
+Resolve the API key only at execution time through the credential boundary, defaulting to the configured `PARALLEL_API_KEY` reference. Never copy the value into schemas/events/UI/errors.
+
+Tool input should be small and bounded: required objective plus optional bounded search query list and a small bounded result-count request. Enforce timeout/cancellation, maximum response bytes, result count, URL/title/excerpt lengths, and whole normalized output size. Reject malformed/non-JSON/oversized/error responses safely.
+
+Return normalized source records containing only useful bounded fields such as title, URL, and relevant excerpts. Treat every returned string as untrusted data, never George instructions.
+
+Classify this tool as external/network read. It therefore follows the Phase-6 approval policy and Phase-5 replay-safe semantics; do not add hidden adapter retries.
+
+Do not implement Parallel Extract, Task, Chat, crawling, browser fallback, SearXNG, or utility-model work.
+
+Set `package.json` version to `0.6.4`.
+
+Required proof: deterministic local stub service for success/error/timeout/cancellation/oversize/malformed/redirect and hostile-result cases; approval and credential redaction; disabled/unconfigured credential failure is explicit; provider-facing schema is bounded; no remote result can expand instructions/permissions; P1-P3 and Phase-2-5 regressions remain Green; broad validation and no lockfile.

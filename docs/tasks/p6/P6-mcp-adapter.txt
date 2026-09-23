@@ -1,0 +1,41 @@
+TASK: Phase 6 / P6 — MCP tool adapter
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Terra High`.
+- Browser required: no.
+
+VERSIONING
+- This prompt's assigned project version is `0.6.6`.
+
+GOAL
+
+Add a bounded Model Context Protocol client/adapter for explicitly configured user-global servers without making MCP a second execution authority.
+
+Read Phase-6 authority/assessment/plan and exact P1-P5 source/tests.
+
+Use the official `@modelcontextprotocol/client` v2 client package rather than hand-rolling the evolving MCP protocol. Preserve the repository no-`package-lock.json` invariant; any local dependency install used for validation must disable lockfile creation.
+
+Add user-global George MCP configuration only; workspace/repository content cannot register servers.
+
+Support bounded attached stdio servers and Streamable HTTP endpoints. Use SDK protocol negotiation suitable for the current 2026-07-28 generation with compatible fallback where supported. Bound connect/list/call/close time and data.
+
+Discover/import tools only:
+- hard server/tool count;
+- bounded names/descriptions/schema bytes/depth;
+- explicit per-server allowlist/filtering;
+- deterministic namespaced George tool names;
+- visible collision/catalog issues.
+
+MCP now permits JSON Schema features broader than George's validator. Import only schemas George can faithfully validate. Unsupported composition, conditionals, refs, or other unsupported constructs must be rejected/skipped visibly; never weaken constraints or dereference external refs to make a tool fit.
+
+Server read-only/destructive/idempotent annotations, descriptions, prompts, resources, and other metadata are untrusted and cannot lower George effect/approval policy. Unknown imported tools default conservatively. Explicit user-owned George config may assign a known tool a supported effect classification.
+
+Tool calls still pass normal ToolRegistry validation, approval, canonical events, cancellation, and result normalization.
+
+Stdio child processes remain attached and are closed/cleaned up. No detached servers.
+
+Initial scope does not need MCP prompts/resources/tasks/MRTR/subscriptions.
+
+Set `package.json` version to `0.6.6`.
+
+Required proof: deterministic stdio and local Streamable-HTTP fixture servers; modern negotiation plus any supported legacy fixture; allowlist/namespacing/collision/tool-count/schema-size bounds; unsupported-schema rejection; hostile descriptions/annotations cannot self-downgrade; cancellation/timeout/child cleanup; HTTP credential/header redaction; disabled/unavailable server behavior; broad regressions and no lockfile.
