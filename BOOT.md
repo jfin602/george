@@ -41,17 +41,21 @@ Accepted Phase 4 implementation/qualification candidate: `ceac33dd09c85e141a4ff8
 Formal Phase 4 P7 closeout marker: `8374f3b3453c3ebc66942f2cf8796b34736c588d` at package `0.4.7`.  
 Formal Phase 4 closeout: `docs/phase-4-closeout.md`.  
 Phase 4 owner closeout: `docs/phase-4-owner-closeout.md`.  
-Phase 5 baseline target: package `0.5.0`.
+Phase 5 baseline transition: package `0.5.0`.
 
-The owner explicitly accepts the recorded Phase 1, Phase 2, Phase 3, and Phase 4 native-terminal/live LM Studio/Qwen Evidence Gaps for roadmap progression. They remain Evidence Gaps, not Green evidence.
+Phase 5 — Reliability + Long Runs — is owner-closed.
 
-**Phase 5 — Reliability + Long Runs — is the current implementation gate.**
+Accepted Phase 5 implementation/qualification candidate: `0ea556034c70861297997a046e622162876a8d00` at package `0.5.7`.  
+Formal Phase 5 P8 closeout marker: `dee176d91a1a37d143fea8ce3a75833d1e42b5e6` at package `0.5.8`.  
+Formal Phase 5 closeout: `docs/phase-5-closeout.md`.  
+Phase 5 owner closeout: `docs/phase-5-owner-closeout.md`.  
+Phase 6 baseline transition: package `0.6.0`.
 
-Phase 5 decision authority: `docs/planning/p5-reliability-long-runs/decision-record.md`.
+The owner explicitly accepts the recorded Phase 1-4 native-terminal/live-model Evidence Gaps plus the Phase 5 native-terminal Evidence Gap and live LM Studio/Qwen Not Green result for roadmap progression. These remain their recorded evidence states, not Green evidence.
 
-The approved Phase 5 decision record, together with the current product, architecture, stability, workflow, and roadmap contracts, is the implementation authority for the current gate.
+**Phase 6 — Plugins + External Adapters — is the current planning gate.**
 
-Phase 5 must start from the post-Phase-4 hardened runtime baseline, not from the older planning SHA recorded when the original prompt stack was drafted. That inherited baseline includes: canonical assistant commits only from completed tool-free provider rounds; no canonical/persisted provisional text from tool-bearing rounds; bounded safe invalid-tool argument diagnostics; workspace-root `list_directory` normalization for omitted, empty, and `.` paths; bounded LM Studio failure metadata; fast progressive final-answer presentation; a `Thinking...` provider activity label; and compact consecutive Work rendering with explicit per-item textual status. The exact baseline SHA must be captured in `docs/tasks/p5/` after those corrections are committed before P1 executes.
+Phase 6 planning authority starts with the current product, architecture, workflow, stability, roadmap, and Phase 5 closeout contracts. Establish a Phase 6 decision record through the normal `/docs-review -> /docs-apply` workflow before implementation prompts are written.
 
 ## Core premise
 
@@ -87,7 +91,7 @@ Read:
 - workflow: `docs/workflow.md`;
 - stability/testing: `docs/stability-contract.md`;
 - roadmap: `docs/roadmap/mvp-roadmap.md`;
-- Phase 5 decision authority: `docs/planning/p5-reliability-long-runs/decision-record.md`;
+- Phase 5 closeout/history when needed: `docs/phase-5-closeout.md`, `docs/phase-5-owner-closeout.md`, `docs/planning/p5-reliability-long-runs/decision-record.md`;
 - Phase 4 closeout/history when needed: `docs/phase-4-closeout.md`, `docs/phase-4-owner-closeout.md`, `docs/planning/p4-coding-workflow-sessions/decision-record.md`;
 - Phase 3 closeout/history when needed: `docs/phase-3-closeout.md`, `docs/phase-3-owner-closeout.md`, `docs/planning/p3-context-skills/decision-record.md`;
 - superseded combined Phase 3 record/history when needed: `docs/planning/p3-coding-workflow/decision-record.md`;
