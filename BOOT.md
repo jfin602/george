@@ -51,6 +51,8 @@ Phase 5 decision authority: `docs/planning/p5-reliability-long-runs/decision-rec
 
 The approved Phase 5 decision record, together with the current product, architecture, stability, workflow, and roadmap contracts, is the implementation authority for the current gate.
 
+Phase 5 must start from the post-Phase-4 hardened runtime baseline, not from the older planning SHA recorded when the original prompt stack was drafted. That inherited baseline includes: canonical assistant commits only from completed tool-free provider rounds; no canonical/persisted provisional text from tool-bearing rounds; bounded safe invalid-tool argument diagnostics; workspace-root `list_directory` normalization for omitted, empty, and `.` paths; bounded LM Studio failure metadata; fast progressive final-answer presentation; a `Thinking...` provider activity label; and compact consecutive Work rendering with explicit per-item textual status. The exact baseline SHA must be captured in `docs/tasks/p5/` after those corrections are committed before P1 executes.
+
 ## Core premise
 
 George is a local-first coding agent harness. The pinned default local brain is LM Studio model ID `qwen3-coder-30b-a3b-instruct@q4_k_m`, with Qwen3-Coder served through LM Studio's OpenAI-compatible Responses API. `GEORGE_MODEL` remains an explicit override for deliberate model testing.
