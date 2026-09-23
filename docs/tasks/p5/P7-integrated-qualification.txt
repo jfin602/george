@@ -33,6 +33,16 @@ Exercise P6 diagnostics: correlation, redaction, sink-failure isolation, rotatio
 
 Exercise OpenTUI test-renderer behavior with representative long execution/work history plus streaming, cancellation, approvals, draft preservation, resize, scrollback/selection, and clean shutdown. Do not turn test-renderer evidence into native-terminal evidence.
 
+Explicitly regression-qualify the inherited hardening floor:
+- `list_directory` with `{}`, `{"path":""}`, and `{"path":"."}` all resolves to workspace root while traversal/outside/symlink escape remains rejected;
+- schema-invalid tool requests retain bounded safe requested-argument evidence, including wrong/missing field/type cases, while write/patch bodies, secrets, arbitrary raw JSON, and raw provider payloads remain absent;
+- bounded LM Studio/provider failure rendering retains safe available event/code/message/reason/status metadata;
+- text from any tool-bearing provider round is absent from canonical/durable assistant history and later provider-facing completed conversation;
+- multiple tool rounds produce exactly one committed final assistant response and no duplicate/premature George block;
+- the final committed response is progressively revealed at a bounded fast pace without altering stored content or cancellation truth;
+- provider generation renders as `Thinking...`;
+- consecutive Work operations render under one visual Work group with explicit textual per-item status, semantic color that is not the sole signal, stable item identity/order, and correct resize/scrollback/restored-session behavior.
+
 Run focused Phase-5 tests plus Phase-2 tool/process/approval, Phase-3 context/skills, Phase-4 sessions/workflow/progress/TUI/integration, exact runner tests, typecheck, broad deterministic aggregate checks, `git diff --check`, and explicit no-`package-lock.json`.
 
 Record exact Node/npm/platform versions.
