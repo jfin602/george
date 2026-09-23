@@ -16,8 +16,8 @@ import {
   type ProviderRequest,
   type ProviderStreamOptions,
 } from '../../../src/core/index.ts';
-import { createOneTurnApplicationService, type OneTurnServiceOptions } from '../../../src/application/index.ts';
-import { GeorgeTui, NEON_THEME, renderTranscript, type GeorgeTuiOptions } from '../../../src/tui/app.ts';
+import { createOneTurnApplicationService, WorkProjection, type OneTurnServiceOptions } from '../../../src/application/index.ts';
+import { GeorgeTui, NEON_THEME, renderTranscript, type GeorgeTuiOptions, type TranscriptWorkEntry } from '../../../src/tui/app.ts';
 
 class ScriptedProvider implements ModelProvider {
   calls: Array<{ request: ProviderRequest; options: ProviderStreamOptions }> = [];
@@ -115,6 +115,8 @@ test('test renderer shows identity, configuration, streamed text, and read-only 
   await item.app.waitForIdle();
   await item.setup.flush();
   assert.equal(item.app.session.events.some((event) => event.type === 'tool.completed'), true);
+  assert.deepEqual(item.app.work.filter((entry) => entry.item.operationId === 'call-1').map((entry) => entry.item.status), ['succeeded']);
+  assert.match(renderTranscript(item.app.session.transcript, item.app.diagnostics, 80, item.app.work).chunks.map((chunk) => chunk.text).join(''), /Read BOOT\.md \(12 bytes\)/);
   const frame = item.setup.captureCharFrame();
   assert.match(item.app.session.transcript.map((entry) => entry.text).join('\n'), /Inspect BOOT/);
   assert.match(frame, /streamed answer/);
@@ -149,6 +151,49 @@ test('transcript styles distinct multiline You and George headers without changi
   assert.match(renderTranscript([{ role: 'assistant', text: 'one two three four' }], [], 7).chunks.map((chunk) => chunk.text).join(''), /George\n│   one two\n│   three\n│   four/);
 });
 
+test('execution transcript updates one stable work row and renders bounded concrete operations', () => {
+  const projection = new WorkProjection();
+  const projected = [
+    { type: 'context.source' as const, turnId: 'turn', sourceId: 'workspace:AGENTS.md', kind: 'workspace-untrusted', status: 'loaded' as const, bytes: 48 },
+    { type: 'tool.requested' as const, turnId: 'turn', callId: 'read', name: 'read_file', arguments: '{"path":"src/app.ts"}' },
+    { type: 'tool.started' as const, turnId: 'turn', callId: 'read', name: 'read_file' },
+    { type: 'tool.completed' as const, turnId: 'turn', callId: 'read', name: 'read_file', result: { ok: true as const, value: { bytes: 12, text: 'SECRET_FILE_BODY', truncated: false } } },
+    { type: 'tool.requested' as const, turnId: 'turn', callId: 'list', name: 'list_directory', arguments: '{"path":"src"}' },
+    { type: 'tool.completed' as const, turnId: 'turn', callId: 'list', name: 'list_directory', result: { ok: true as const, value: { entries: [{}, {}], truncated: false } } },
+    { type: 'tool.requested' as const, turnId: 'turn', callId: 'search', name: 'search_text', arguments: '{"path":"src","query":"needle"}' },
+    { type: 'tool.completed' as const, turnId: 'turn', callId: 'search', name: 'search_text', result: { ok: true as const, value: { matches: [{}], scannedFiles: 3, scannedBytes: 32, text: 'SECRET_SEARCH_BODY', truncated: false } } },
+    { type: 'tool.requested' as const, turnId: 'turn', callId: 'status', name: 'git_status', arguments: '{}' },
+    { type: 'tool.completed' as const, turnId: 'turn', callId: 'status', name: 'git_status', result: { ok: true as const, value: { exitCode: 0, stdout: 'SECRET_GIT_OUTPUT', stdoutTruncated: false, stderrTruncated: false } } },
+    { type: 'tool.requested' as const, turnId: 'turn', callId: 'diff', name: 'git_diff', arguments: '{}' },
+    { type: 'tool.completed' as const, turnId: 'turn', callId: 'diff', name: 'git_diff', result: { ok: true as const, value: { exitCode: 0, stdout: 'SECRET_DIFF_OUTPUT', stdoutTruncated: false, stderrTruncated: false } } },
+    { type: 'tool.requested' as const, turnId: 'turn', callId: 'write', name: 'write_file', arguments: '{"path":"src/app.ts","content":"SECRET_WRITE_BODY"}' },
+    { type: 'tool.completed' as const, turnId: 'turn', callId: 'write', name: 'write_file', result: { ok: true as const, value: { bytes: 24 } } },
+    { type: 'tool.requested' as const, turnId: 'turn', callId: 'process', name: 'run_process', arguments: '{"executable":"node","arguments":["--check","src/app.ts"],"cwd":"."}' },
+    { type: 'tool.completed' as const, turnId: 'turn', callId: 'process', name: 'run_process', result: { ok: true as const, value: { executable: 'node', arguments: ['--check', 'src/app.ts'], cwd: '.', exitCode: 0, signal: null, outcome: 'completed', stdout: 'SECRET_PROCESS_OUTPUT', stderr: '', stdoutTruncated: false, stderrTruncated: false } } },
+    { type: 'validation.started' as const, turnId: 'turn', callId: 'validation', label: 'typecheck', intent: 'typecheck' },
+    { type: 'validation.completed' as const, turnId: 'turn', callId: 'validation', status: 'passed' as const, exitCode: 0, signal: null, outcome: 'completed' as const, stdoutTruncated: false, stderrTruncated: false },
+  ].flatMap((event) => projection.observe(event));
+  const updates = projected.filter((event): event is Extract<typeof event, { type: 'work.updated' }> => event.type === 'work.updated');
+  const read = updates.filter((event) => event.item.operationId === 'read');
+  assert.deepEqual(read.map((event) => event.item.status), ['requested', 'running', 'succeeded']);
+  assert.equal(new Set(read.map((event) => event.item.id)).size, 1);
+
+  const work = [...new Map(updates.map((event) => [event.item.id, event.item])).values()].map((item, order): TranscriptWorkEntry => ({ afterEntryCount: 1, order, item }));
+  const running = renderTranscript([{ role: 'user', text: 'inspect and validate' }], [], 120, [{ afterEntryCount: 1, item: read[1]!.item }]).chunks.map((chunk) => chunk.text).join('');
+  const visible = renderTranscript([{ role: 'user', text: 'inspect and validate' }], [], 120, work).chunks.map((chunk) => chunk.text).join('');
+  assert.match(running, /Work · running\n│   Read src\/app\.ts/);
+  assert.equal((visible.match(/Read src\/app\.ts \(12 bytes\)/g) ?? []).length, 1);
+  assert.match(visible, /Context source workspace:AGENTS\.md: loaded/);
+  assert.match(visible, /Listed src \(2 entries\)/);
+  assert.match(visible, /Searched src \(1 matches in 3 files\)\n│   Query: needle/);
+  assert.match(visible, /Inspected Git status/);
+  assert.match(visible, /Inspected Git diff/);
+  assert.match(visible, /Wrote src\/app\.ts \(24 bytes\)/);
+  assert.match(visible, /Executable: node\n│   Argv: \["--check","src\/app\.ts"\]\n│   Cwd: \.\n│   Exit: 0\n│   Outcome: completed/);
+  assert.match(visible, /Work · succeeded\n│   Validation passed/);
+  assert.doesNotMatch(visible, /SECRET_(FILE|SEARCH|GIT|DIFF|WRITE|PROCESS)_/);
+});
+
 test('transcript presentation stays out of provider context', async (t) => {
   const provider = new ScriptedProvider([
     { type: 'provider.text.delta', delta: 'first George answer' },
@@ -164,8 +209,10 @@ test('transcript presentation stays out of provider context', async (t) => {
   item.setup.mockInput.pressEnter();
   await item.app.waitForIdle();
   const context = provider.calls[1]?.request.input ?? '';
+  const visible = renderTranscript(item.app.session.transcript, item.app.diagnostics, 80, item.app.work).chunks.map((chunk) => chunk.text).join('');
+  assert.match(visible, /Work · succeeded/);
   assert.match(context, /user: first user question\n\nassistant: first George answer/);
-  assert.doesNotMatch(context, /│|\nYou\n|\nGeorge\n/);
+  assert.doesNotMatch(context, /Work ·|Context source|│|\nYou\n|\nGeorge\n/);
 });
 
 test('provider failure stays visible once with safe metadata and never enters later model context', async (t) => {
@@ -196,6 +243,7 @@ test('provider failure stays visible once with safe metadata and never enters la
   assert.match(visible, /Error\nProvider failure\nCode: provider\nLM Studio request timed out after 30000 ms\.\nKind: timeout\nHTTP status: 504\nProvider event: response\.error/);
   assert.doesNotMatch(visible, /secret/);
   assert.deepEqual(item.app.session.transcript, [{ role: 'user', text: 'first turn' }]);
+  assert.equal(item.app.work.some((entry) => entry.item.status === 'interrupted'), true);
 
   await item.setup.mockInput.typeText('second turn');
   item.setup.mockInput.pressEnter();
@@ -530,6 +578,7 @@ test('test renderer presents normalized approvals and allow, deny, and Esc keep 
   denied.setup.mockInput.pressKey('d', { ctrl: true });
   await denied.app.waitForIdle();
   assert.equal(await readFile(join(denied.workspace, 'denied.txt'), 'utf8'), 'before');
+  assert.equal(denied.app.work.some((entry) => entry.item.status === 'denied'), true);
 
   const cancelled = await write('cancel', 'cancelled.txt', 'never');
   await cancelled.setup.mockInput.typeText('cancel it');
@@ -539,6 +588,7 @@ test('test renderer presents normalized approvals and allow, deny, and Esc keep 
   cancelled.setup.mockInput.pressEscape();
   await cancelled.app.waitForIdle();
   assert.equal(cancelled.app.session.events.at(-1)?.type, 'turn.cancelled');
+  assert.equal(cancelled.app.work.some((entry) => entry.item.status === 'cancelled'), true);
   assert.ok(cancelled.app.input.width > 0 && cancelled.app.input.height >= 3);
 
   const process = await tui(new ApprovalProvider({ type: 'provider.tool.call', callId: 'process', name: 'run_process', arguments: '{"executable":"node","arguments":["-e","0"]}' }));
