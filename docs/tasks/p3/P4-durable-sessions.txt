@@ -1,0 +1,45 @@
+TASK: Phase 3 / P4 — Durable filesystem sessions and safe non-replay resume
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Terra High`.
+- Browser required: no.
+
+VERSIONING
+- This prompt's assigned project version is `0.3.4`.
+
+GOAL
+
+Make George's normalized session history durable using local filesystem state while guaranteeing that resume never silently replays an interrupted side effect.
+
+Read Phase-3 authority/assessment/plan and inspect exact current session/events/application loop, context/skill diagnostics, approval lifecycle, and tests.
+
+Introduce a presentation-independent SessionStore contract and a schema-versioned filesystem implementation outside the active repository by default. On Linux prefer `$XDG_STATE_HOME/george`, falling back to `~/.local/state/george`; use platform-appropriate equivalents elsewhere. Allow tests/configuration to inject a temporary state root.
+
+Persist session metadata including schema version, session ID, canonical workspace identity, and lifecycle state plus append-friendly durable event/evidence records.
+
+Validate session IDs and resolved state paths so store access cannot escape the configured state root.
+
+Refactor event recording as needed so durable lifecycle evidence is written before advancing into side-effectful stages. In particular, an interruption after a tool/approval/process has started must be distinguishable from a completed action. Preserve the existing in-memory Session/transcript semantics for active use where helpful.
+
+Do not serialize arbitrary in-memory provider/tool events wholesale. Define an explicit durable-record schema/sanitizer. Never persist unrestricted environment state, raw read-file bodies merely because a tool result contains them, or raw write-file content merely because model arguments contain it. Avoid unnecessary raw process arguments/output in durable evidence; retain bounded safe identity/status summaries sufficient for diagnosis. Persist completed user/assistant transcript for resume, without claiming semantic secret detection inside ordinary conversation text.
+
+Opening a session must validate schema/workspace identity and deterministically reconstruct completed transcript/history. Malformed/unsupported state fails visibly. Handle a trailing partial append record safely rather than trusting corrupted content.
+
+If a previous turn lacks a terminal completed/cancelled/failed state, mark/expose it as interrupted. If durable evidence shows a write, process, approval request, or provider continuation was in flight, never replay/restart/reapprove/resubmit it automatically. Subsequent user work starts as a new turn from durable completed history.
+
+Provider-native response IDs may be retained as diagnostics but are not recovery authority.
+
+Do not implement crash-safe side-effect reconciliation, retries/backoff, daemon state, or TUI resume UX yet.
+
+Set `package.json` version to `0.3.4`.
+
+Required proof:
+- tests cover create/persist/reopen/reconstruct, canonical workspace binding, invalid ID/path, unsupported schema, malformed/trailing-partial data, and transcript continuity;
+- interrupted write/process/approval/provider-continuation fixtures reopen as interrupted and do not replay side effects;
+- durable files do not contain fixture raw read bodies, raw write contents, or unrestricted environment sentinel values;
+- state files live outside the fixture repository by default;
+- context and activated-skill identities survive as bounded diagnostics without persisting full skill bodies;
+- all Phase-2 approval/process/Git safeguards remain Green;
+- typecheck, broad deterministic tests, `git diff --check`, and no-`package-lock.json` checks pass.
+
+If safe durable ordering requires a material change to Phase-2 tool semantics, stop with `Planning needed`.
