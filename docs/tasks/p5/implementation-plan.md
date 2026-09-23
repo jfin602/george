@@ -4,9 +4,13 @@ Status: CURRENT IMPLEMENTATION PLAN
 
 Phase: 5 — Reliability + Long Runs  
 Execution folder: `p5`  
-Baseline: main `f178a59f4e4aba16f87cd8c9c05a4638d2c505f0`, package `0.5.0`.
+Baseline: package `0.5.0`; exact main SHA must be refreshed to the committed post-Phase-4 hardening candidate before P1 executes.
 
 Read with `BOOT.md`, `AGENTS.md`, `docs/project-overview.md`, `docs/architecture.md`, `docs/workflow.md`, `docs/stability-contract.md`, `docs/roadmap/mvp-roadmap.md`, `docs/planning/p5-reliability-long-runs/decision-record.md`, and `docs/tasks/p5/prompt-assessment.md`.
+
+## Preserved post-Phase-4 hardening
+
+All P1-P8 work builds on and must preserve: per-provider-round assistant buffering; canonical assistant commit only from a completed tool-free round; no durable/provider-facing provisional tool-round text; fast progressive reveal of the committed final answer; bounded allowlisted failed-tool argument diagnostics; `list_directory` root normalization for omitted/empty/`.` paths with unchanged containment; bounded safe provider error metadata; the `Thinking...` provider activity label; and compact consecutive Work grouping with explicit textual per-item status. These remain presentation/diagnostic projections where applicable and never become alternate execution authority.
 
 ## Target architecture
 
