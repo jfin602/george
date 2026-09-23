@@ -85,6 +85,7 @@ function safeCauseDetails(cause: unknown): string[] {
 export function renderTranscript(
   entries: readonly TranscriptEntry[],
   diagnostics: readonly TranscriptDiagnosticEntry[],
+  bodyWidth = Number.MAX_SAFE_INTEGER,
 ): StyledText {
   const chunks: StyledText['chunks'] = [];
   let blockCount = 0;
@@ -101,10 +102,30 @@ export function renderTranscript(
   entries.forEach((entry, index) => {
     separator();
     chunks.push(bold(fg(entry.role === 'user' ? NEON_THEME.user : NEON_THEME.assistant)(entry.role === 'user' ? 'You' : 'George')));
-    chunks.push(plain(`\n${entry.text}`));
+    for (const line of wrapTranscriptBody(entry.text, bodyWidth)) {
+      chunks.push(fg(NEON_THEME.muted)('\n│   '));
+      chunks.push(plain(line));
+    }
     diagnosticAt(index + 1);
   });
   return new StyledText(chunks);
+}
+
+function wrapTranscriptBody(text: string, width: number): string[] {
+  const lines: string[] = [];
+  for (const line of text.split('\n')) {
+    let remaining = line;
+    do {
+      if (remaining.length <= width) {
+        lines.push(remaining);
+        break;
+      }
+      const breakAt = remaining.lastIndexOf(' ', width);
+      lines.push(remaining.slice(0, breakAt > 0 ? breakAt : width));
+      remaining = remaining.slice(breakAt > 0 ? breakAt + 1 : width);
+    } while (remaining);
+  }
+  return lines;
 }
 
 function activityFor(event: ApplicationEvent): string | undefined {
@@ -191,7 +212,7 @@ export class GeorgeTui {
     this.contextView = new TextRenderable(this.renderer, { id: 'context', width: '100%', height: 2, flexShrink: 0, fg: NEON_THEME.muted, content: 'Context: awaiting first turn' });
     layout.add(this.contextView);
     this.transcript = new ScrollBoxRenderable(this.renderer, { id: 'transcript', flexGrow: 1, scrollY: true, stickyScroll: true, stickyStart: 'bottom', border: true, borderStyle: 'single', borderColor: NEON_THEME.border, focusedBorderColor: NEON_THEME.mint, backgroundColor: NEON_THEME.transcript, title: 'Transcript', titleColor: NEON_THEME.mint });
-    this.transcriptView = new TextRenderable(this.renderer, { id: 'transcript-text', fg: NEON_THEME.foreground, content: '' });
+    this.transcriptView = new TextRenderable(this.renderer, { id: 'transcript-text', width: '100%', fg: NEON_THEME.foreground, selectionBg: NEON_THEME.green, selectionFg: NEON_THEME.background, content: '', onSizeChange: () => this.refreshTranscript() });
     this.transcript.add(this.transcriptView);
     layout.add(this.transcript);
     this.activityView = new TextRenderable(this.renderer, { id: 'activity', width: '100%', height: 1, flexShrink: 0, fg: NEON_THEME.mint, content: 'Idle' });
@@ -231,13 +252,22 @@ export class GeorgeTui {
       } else if (key.ctrl && key.name === 'v') {
         key.preventDefault();
         void this.pasteClipboard();
-      } else if (key.ctrl && key.name === 'c' && this.input.getSelectedText()) {
-        key.preventDefault();
-        void this.copySelection();
+      } else if (key.ctrl && key.name === 'c') {
+        if (this.hasTranscriptSelection()) {
+          const text = this.renderer.getSelection()?.getSelectedText();
+          if (text && this.renderer.copyToClipboardOSC52(text)) key.preventDefault();
+        } else if (this.input.getSelectedText()) {
+          key.preventDefault();
+          void this.copySelection();
+        } else {
+          key.preventDefault();
+          this.escape();
+        }
       }
     });
     this.renderer.on(CliRenderEvents.RESIZE, () => {
       this.updateComposerOverflow();
+      this.refreshTranscript();
       this.renderer.requestRender();
     });
     this.renderer.on(CliRenderEvents.DESTROY, () => {
@@ -310,6 +340,15 @@ export class GeorgeTui {
     this.transcript.scrollBy(lines);
   }
 
+  hasTranscriptSelection(): boolean {
+    let container = this.renderer.getSelectionContainer();
+    while (container) {
+      if (container === this.transcript) return this.transcriptView.hasSelection();
+      container = container.parent;
+    }
+    return false;
+  }
+
   close(): void {
     if (this.closed) return;
     this.closed = true;
@@ -359,7 +398,7 @@ export class GeorgeTui {
   private render(event: ApplicationEvent): void {
     if (event.type === 'turn.started') this.terminalFailureFingerprints.clear();
     this.recordDiagnostic(event);
-    this.transcriptView.content = renderTranscript(this.session.transcript, this.diagnostics);
+    this.refreshTranscript();
     if (event.type === 'context.assembled') {
       this.contextView.content = contextText(event.diagnostics);
       this.contextView.height = event.diagnostics.activeSourceIds.some((id) => id.startsWith('skill:')) ? 3 : 2;
@@ -377,6 +416,10 @@ export class GeorgeTui {
     const activity = activityFor(event);
     if (activity) this.activityView.content = activity;
     this.renderer.requestRender();
+  }
+
+  private refreshTranscript(): void {
+    this.transcriptView.content = renderTranscript(this.session.transcript, this.diagnostics, Math.max(1, this.transcriptView.width - 4));
   }
 
   private recordDiagnostic(event: ApplicationEvent): void {

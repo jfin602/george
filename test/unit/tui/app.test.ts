@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 
-import { RGBA } from '@opentui/core';
+import { RGBA, TextRenderable } from '@opentui/core';
 import { createTestRenderer } from '@opentui/core/testing';
 
 import {
@@ -87,7 +87,7 @@ async function tui(
 ) {
   const workspace = await mkdtemp(join(tmpdir(), 'george-tui-'));
   await writeFile(join(workspace, 'BOOT.md'), 'fixture boot');
-  const setup = await createTestRenderer({ width: 72, height: 18, kittyKeyboard: true });
+  const setup = await createTestRenderer({ width: 72, height: 18, kittyKeyboard: true, exitOnCtrlC: false });
   const approvals = new PendingApprovalPort();
   const service = await createOneTurnApplicationService({ provider, workspace, approvalPort: approvals, ...options });
   const app = new GeorgeTui({ renderer: setup.renderer, service, provider: 'LM Studio', model: 'test-model', approvals, ...uiOptions });
@@ -144,7 +144,28 @@ test('transcript styles distinct multiline You and George headers without changi
   assert.deepEqual(george?.fg?.toInts(), RGBA.fromHex(NEON_THEME.assistant).toInts());
   assert.notDeepEqual(you?.fg?.toInts(), george?.fg?.toInts());
   assert.ok((you?.attributes ?? 0) > 0);
-  assert.match(transcript.chunks.map((chunk) => chunk.text).join(''), /first user line\nsecond user line[\s\S]*first George line\nsecond George line/);
+  const visible = transcript.chunks.map((chunk) => chunk.text).join('');
+  assert.match(visible, /^You\n│   first user line\n│   second user line\n\nGeorge\n│   first George line\n│   second George line$/);
+  assert.match(renderTranscript([{ role: 'assistant', text: 'one two three four' }], [], 7).chunks.map((chunk) => chunk.text).join(''), /George\n│   one two\n│   three\n│   four/);
+});
+
+test('transcript presentation stays out of provider context', async (t) => {
+  const provider = new ScriptedProvider([
+    { type: 'provider.text.delta', delta: 'first George answer' },
+    { type: 'provider.response.completed' },
+  ]);
+  const item = await tui(provider);
+  t.after(() => cleanup(item));
+
+  await item.setup.mockInput.typeText('first user question');
+  item.setup.mockInput.pressEnter();
+  await item.app.waitForIdle();
+  await item.setup.mockInput.typeText('second user question');
+  item.setup.mockInput.pressEnter();
+  await item.app.waitForIdle();
+  const context = provider.calls[1]?.request.input ?? '';
+  assert.match(context, /user: first user question\n\nassistant: first George answer/);
+  assert.doesNotMatch(context, /│|\nYou\n|\nGeorge\n/);
 });
 
 test('provider failure stays visible once with safe metadata and never enters later model context', async (t) => {
@@ -383,6 +404,76 @@ test('transcript scrollback and renderer resize retain a coherent conversation l
   assert.ok(item.app.transcript.width > 0 && item.app.transcript.height > 0);
   assert.ok(item.app.input.width > 0 && item.app.input.height >= 3);
   assert.match(item.setup.captureCharFrame(), /Transcript/);
+});
+
+test('transcript stays selectable after wrapped scrollback and resize', async (t) => {
+  const provider = new ScriptedProvider([
+    { type: 'provider.text.delta', delta: Array.from({ length: 12 }, (_, index) => `long response line ${index}`).join('\n') },
+    { type: 'provider.response.completed' },
+  ]);
+  const item = await tui(provider);
+  t.after(() => cleanup(item));
+
+  await item.setup.mockInput.typeText('select this transcript');
+  item.setup.mockInput.pressEnter();
+  await item.app.waitForIdle();
+  item.app.scrollTranscript(-3);
+  item.setup.resize(48, 12);
+  await item.setup.flush();
+  const text = item.app.transcript.findDescendantById('transcript-text');
+  assert.ok(text instanceof TextRenderable);
+  item.setup.renderer.startSelection(text, text.x, text.y);
+  item.setup.renderer.updateSelection(text, text.x + 12, text.y, { finishDragging: true });
+  assert.equal(item.app.hasTranscriptSelection(), true);
+  assert.ok(item.setup.renderer.getSelection()?.getSelectedText());
+});
+
+test('Ctrl+C gives an active transcript selection precedence over cancellation', async (t) => {
+  const provider = new PausedProvider();
+  const item = await tui(provider);
+  t.after(async () => {
+    if (!item.setup.renderer.isDestroyed) item.app.close();
+    await rm(item.workspace, { recursive: true, force: true });
+  });
+
+  await item.setup.mockInput.typeText('copy this active turn');
+  item.setup.mockInput.pressEnter();
+  await provider.started.promise;
+  await item.setup.flush();
+  const text = item.app.transcript.findDescendantById('transcript-text');
+  assert.ok(text instanceof TextRenderable);
+  item.setup.renderer.startSelection(text, text.x, text.y);
+  item.setup.renderer.updateSelection(text, text.x + 8, text.y, { finishDragging: true });
+  assert.equal(item.app.hasTranscriptSelection(), true);
+
+  item.setup.mockInput.pressCtrlC();
+  await item.setup.flush();
+  assert.equal(provider.calls[0]?.options.signal?.aborted, false);
+  assert.equal(item.setup.renderer.isDestroyed, false);
+  provider.release.resolve();
+  await item.app.waitForIdle();
+  assert.notEqual(item.app.session.events.at(-1)?.type, 'turn.cancelled');
+});
+
+test('Ctrl+C cancels an active turn without a selection and exits while idle', async (t) => {
+  const provider = new PausedProvider();
+  const active = await tui(provider);
+  t.after(async () => {
+    if (!active.setup.renderer.isDestroyed) active.app.close();
+    await rm(active.workspace, { recursive: true, force: true });
+  });
+
+  await active.setup.mockInput.typeText('cancel with Ctrl+C');
+  active.setup.mockInput.pressEnter();
+  await provider.started.promise;
+  active.setup.mockInput.pressCtrlC();
+  await active.app.waitForIdle();
+  assert.equal(provider.calls[0]?.options.signal?.aborted, true);
+  assert.equal(active.setup.renderer.isDestroyed, false);
+  assert.equal(active.app.session.events.at(-1)?.type, 'turn.cancelled');
+
+  active.setup.mockInput.pressCtrlC();
+  assert.equal(active.setup.renderer.isDestroyed, true);
 });
 
 test('Esc cancels an active turn, then exits and destroys the renderer while idle', async (t) => {
