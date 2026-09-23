@@ -12,13 +12,22 @@ export type Session = {
   workspace: string;
   transcript: TranscriptEntry[];
   events: ApplicationEvent[];
+  /** Historical operations that stopped before George observed a terminal event. */
+  interruptions: SessionInterruption[];
 };
+
+export type SessionInterruption = Readonly<{
+  kind: 'mutation' | 'process' | 'approval' | 'provider-continuation';
+  turnId?: string;
+  callId?: string;
+  name?: string;
+}>;
 
 export function createSession({
   workspace,
   id = randomUUID(),
 }: Readonly<{ workspace: string; id?: string }>): Session {
-  return { id, workspace, transcript: [], events: [] };
+  return { id, workspace, transcript: [], events: [], interruptions: [] };
 }
 
 export function appendSessionEvent(session: Session, event: ApplicationEvent): void {
