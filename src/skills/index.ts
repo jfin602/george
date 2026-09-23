@@ -191,6 +191,17 @@ export class SkillRegistry {
     return (await this.discover()).catalog;
   }
 
+  /** Resolves one explicit request without loading its declarative body. */
+  async resolve(requestedId: string): Promise<SkillMetadata> {
+    const { discovered } = await this.discover();
+    const matches = requestedId.includes(':')
+      ? discovered.filter((skill) => skill.metadata.id === requestedId)
+      : discovered.filter((skill) => skill.metadata.name === requestedId);
+    if (matches.length === 0) throw invalid(`Unknown skill ${requestedId}.`);
+    if (matches.length > 1) throw invalid(`Ambiguous skill ${requestedId}; use a qualified ID.`);
+    return matches[0]!.metadata;
+  }
+
   async activate(requested: readonly string[]): Promise<readonly ActivatedSkill[]> {
     const { discovered } = await this.discover();
     const activated: ActivatedSkill[] = [];

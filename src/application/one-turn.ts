@@ -149,6 +149,13 @@ export class AgentLoopApplicationService {
     return this.skills.catalog();
   }
 
+  /** Prepares a single explicit skill turn without making skill state sticky. */
+  async skillTurn(id: string, input: string): Promise<Pick<AgentLoopSubmission, 'input' | 'activatedSkills'>> {
+    if (!input.trim()) throw new GeorgeError('validation', '/skill requires an ID and a message.');
+    const skill = await this.skills.resolve(id);
+    return { input, activatedSkills: [skill.id] };
+  }
+
   private async approvalRequest(callId: string, validated: ValidatedToolCall, signal?: AbortSignal): Promise<ApprovalRequest | undefined> {
     const { definition, arguments: arguments_ } = validated;
     if (definition.permission === 'read') return undefined;

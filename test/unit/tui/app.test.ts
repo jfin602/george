@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
@@ -15,7 +15,7 @@ import {
   type ProviderRequest,
   type ProviderStreamOptions,
 } from '../../../src/core/index.ts';
-import { createOneTurnApplicationService } from '../../../src/application/index.ts';
+import { createOneTurnApplicationService, type OneTurnServiceOptions } from '../../../src/application/index.ts';
 import { GeorgeTui } from '../../../src/tui/app.ts';
 
 class ScriptedProvider implements ModelProvider {
@@ -79,12 +79,12 @@ class ApprovalProvider implements ModelProvider {
   }
 }
 
-async function tui(provider: ModelProvider) {
+async function tui(provider: ModelProvider, options: Omit<OneTurnServiceOptions, 'provider' | 'workspace' | 'approvalPort'> = {}) {
   const workspace = await mkdtemp(join(tmpdir(), 'george-tui-'));
   await writeFile(join(workspace, 'BOOT.md'), 'fixture boot');
   const setup = await createTestRenderer({ width: 72, height: 18, kittyKeyboard: true });
   const approvals = new PendingApprovalPort();
-  const service = await createOneTurnApplicationService({ provider, workspace, approvalPort: approvals });
+  const service = await createOneTurnApplicationService({ provider, workspace, approvalPort: approvals, ...options });
   const app = new GeorgeTui({ renderer: setup.renderer, service, provider: 'LM Studio', model: 'test-model', approvals });
   return { workspace, setup, app, approvals };
 }
@@ -147,6 +147,69 @@ test('streaming does not overwrite draft input and returns the composer to ready
   assert.equal(item.app.input.plainText, 'next draft');
   assert.match(item.setup.captureCharFrame(), /streamed answer/);
   assert.match(item.setup.captureCharFrame(), /Ready/);
+});
+
+test('/skills stays local and /skill activates exactly one recoverable non-sticky turn', async (t) => {
+  const roots = await mkdtemp(join(tmpdir(), 'george-tui-skills-'));
+  const provider = new ScriptedProvider([{ type: 'provider.response.completed' }]);
+  const item = await tui(provider, {
+    skillRoots: { builtin: join(roots, 'builtin'), user: join(roots, 'user'), workspace: join(roots, 'workspace') },
+  });
+  t.after(async () => {
+    await cleanup(item);
+    await rm(roots, { recursive: true, force: true });
+  });
+  const writeSkill = async (root: string, name: string, description: string, body: string) => {
+    await mkdir(join(root, name), { recursive: true });
+    await writeFile(join(root, name, 'SKILL.md'), `---\nname: ${name}\ndescription: ${description}\n---\n${body}\n`);
+  };
+  await Promise.all([
+    writeSkill(join(roots, 'builtin'), 'focused', 'Built-in focus', 'BUILTIN BODY'),
+    writeSkill(join(roots, 'workspace'), 'focused', 'Workspace focus', 'WORKSPACE BODY'),
+    writeSkill(join(roots, 'workspace'), 'other', 'Other skill', 'OTHER BODY'),
+  ]);
+
+  await item.setup.mockInput.typeText('/skills');
+  item.setup.mockInput.pressEnter();
+  await item.setup.waitForFrame((frame) => frame.includes('Skills (3):'));
+  assert.match(item.setup.captureCharFrame(), /builtin:focused/);
+  assert.equal(provider.calls.length, 0);
+
+  await item.setup.mockInput.typeText('/skill focused write this');
+  item.setup.mockInput.pressEnter();
+  await item.setup.waitForFrame((frame) => frame.includes('Ambiguous skill focused'));
+  assert.equal(provider.calls.length, 0);
+  assert.equal(item.app.input.plainText, '/skill focused write this');
+
+  item.app.input.clear();
+  await item.setup.mockInput.typeText('/skill missing write this');
+  item.setup.mockInput.pressEnter();
+  await item.setup.waitForFrame((frame) => frame.includes('Unknown skill missing'));
+  assert.equal(provider.calls.length, 0);
+  assert.equal(item.app.input.plainText, '/skill missing write this');
+
+  item.app.input.clear();
+  await item.setup.mockInput.typeText('/skill workspace:focused use it');
+  item.setup.mockInput.pressEnter();
+  await item.app.waitForIdle();
+  await item.setup.flush();
+  assert.equal(provider.calls.length, 1);
+  assert.match(provider.calls[0]?.request.instructions ?? '', /WORKSPACE BODY/);
+  assert.match(item.setup.captureCharFrame(), /Context estimated .*profile .*input/);
+  assert.match(item.setup.captureCharFrame(), /Headroom .*pressure no/);
+  assert.match(item.setup.captureCharFrame(), /categories/);
+  assert.match(item.setup.captureCharFrame(), /Active skill: workspace:focused/);
+
+  await item.setup.mockInput.typeText('normal turn');
+  item.setup.mockInput.pressEnter();
+  await item.app.waitForIdle();
+  assert.equal(provider.calls.length, 2);
+  assert.doesNotMatch(provider.calls[1]?.request.instructions ?? '', /WORKSPACE BODY/);
+
+  await item.setup.mockInput.typeText('/skill');
+  item.setup.mockInput.pressEnter();
+  await item.setup.waitForFrame((frame) => frame.includes('Usage: /skill'));
+  assert.equal(item.app.input.plainText, '/skill');
 });
 
 test('transcript scrollback and renderer resize retain a coherent conversation layout', async (t) => {
