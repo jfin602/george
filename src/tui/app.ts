@@ -170,7 +170,7 @@ export class GeorgeTui {
     const text = this.input.plainText;
     if (!text.trim()) return;
     if (text.trim() === '/skills') {
-      this.input.clear();
+      this.clearComposer();
       await this.showSkills();
       return;
     }
@@ -192,7 +192,7 @@ export class GeorgeTui {
   }
 
   private async start(text: string, activatedSkills?: readonly string[]): Promise<void> {
-    this.input.clear();
+    this.clearComposer();
     this.controller = new AbortController();
     this.statusView.content = this.status('Working');
     this.activityView.content = 'Starting turn';
@@ -246,11 +246,22 @@ export class GeorgeTui {
   }
 
   private updateComposerOverflow(): void {
+    if (!this.input.plainText) {
+      this.composerOverflowView.content = '';
+      this.composerOverflowView.height = 0;
+      return;
+    }
     const above = this.input.scrollY > 0;
     const below = this.input.scrollY + this.input.height < this.input.virtualLineCount;
     const content = [above ? '… lines above' : '', below ? '… lines below' : ''].filter(Boolean).join('  ');
     this.composerOverflowView.content = content;
     this.composerOverflowView.height = content ? 1 : 0;
+  }
+
+  private clearComposer(): void {
+    this.input.clear();
+    this.composerOverflowView.content = '';
+    this.composerOverflowView.height = 0;
   }
 
   private render(event: ApplicationEvent): void {

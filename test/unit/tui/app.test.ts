@@ -169,6 +169,21 @@ test('composer selects all with Ctrl+A, clears with Backspace, and marks hidden 
   assert.doesNotMatch(item.setup.captureCharFrame(), /… lines/);
 });
 
+test('submitting a scrolled composer clears its overflow cue', async (t) => {
+  const provider = new ScriptedProvider([{ type: 'provider.response.completed' }]);
+  const item = await tui(provider);
+  t.after(() => cleanup(item));
+
+  await item.setup.mockInput.pasteBracketedText(Array.from({ length: 16 }, (_, index) => `line ${index}`).join('\n'));
+  await item.setup.flush();
+  assert.match(item.setup.captureCharFrame(), /… lines above/);
+  item.setup.mockInput.pressEnter();
+  await item.app.waitForIdle();
+  await item.setup.flush();
+  assert.equal(item.app.input.plainText, '');
+  assert.doesNotMatch(item.setup.captureCharFrame(), /… lines/);
+});
+
 test('streaming does not overwrite draft input and returns the composer to ready state', async (t) => {
   const provider = new PausedProvider();
   const item = await tui(provider);
@@ -219,6 +234,8 @@ test('/skills stays local and /skill activates exactly one recoverable non-stick
   assert.equal(item.app.input.plainText, '/skill focused write this');
 
   item.app.input.clear();
+  item.app.input.focus();
+  await item.setup.flush();
   await item.setup.mockInput.typeText('/skill missing write this');
   item.setup.mockInput.pressEnter();
   await item.setup.waitForFrame((frame) => frame.includes('Unknown skill missing'));
@@ -226,9 +243,10 @@ test('/skills stays local and /skill activates exactly one recoverable non-stick
   assert.equal(item.app.input.plainText, '/skill missing write this');
 
   item.app.input.clear();
+  item.app.input.focus();
+  await item.setup.flush();
   await item.setup.mockInput.typeText('/skill workspace:focused use it');
-  item.setup.mockInput.pressEnter();
-  await item.app.waitForIdle();
+  await item.app.submit();
   await item.setup.flush();
   assert.equal(provider.calls.length, 1);
   assert.match(provider.calls[0]?.request.instructions ?? '', /WORKSPACE BODY/);
@@ -238,8 +256,7 @@ test('/skills stays local and /skill activates exactly one recoverable non-stick
   assert.match(item.setup.captureCharFrame(), /Active skill: workspace:focused/);
 
   await item.setup.mockInput.typeText('normal turn');
-  item.setup.mockInput.pressEnter();
-  await item.app.waitForIdle();
+  await item.app.submit();
   assert.equal(provider.calls.length, 2);
   assert.doesNotMatch(provider.calls[1]?.request.instructions ?? '', /WORKSPACE BODY/);
 
