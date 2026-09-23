@@ -155,6 +155,10 @@ Context diagnostics should expose the selected profile plus a bounded contributi
 
 Human-readable Markdown remains an authoring format, not a requirement that every byte be permanently injected. LLM-based summarization is not required for Phase 3 instruction assembly; any later compaction/summarization must preserve critical instructions and remain independently testable.
 
+Phase 5 implements compaction as provider-facing derived context over the authoritative normalized session/event history. Versioned compaction checkpoints retain durable-history provenance and do not delete or become the sole copy of the history they summarize. Critical George/user/project instructions, unresolved validation/failure state, pending approvals, interrupted/ambiguous side effects, and current recovery state must remain available whenever safety or correctness requires them.
+
+Compaction/summarization is exposed behind a provider-independent boundary. Deterministic structural reduction is preferred where inference is unnecessary so a later secondary utility model can assume semantic compaction duties without changing session or context architecture.
+
 The current Phase 1 behavior that loads bounded raw root `BOOT.md` and `AGENTS.md` content directly into a turn is a bootstrap implementation, not the intended mature context architecture.
 
 Context policy must be testable independently from inference.
@@ -196,13 +200,26 @@ Skill content is model-facing guidance only. It cannot raise George's executable
 
 ### Hook bus
 
-George should define its own normalized lifecycle hook model rather than adopting another host's lifecycle as the core contract.
+George defines its own normalized lifecycle hook model rather than adopting another host's lifecycle as the core contract.
 
-Candidate lifecycle boundaries include session start/end, user input, context assembly, provider request/response, tool before/after, and turn completion. Exact event names and payloads are implementation decisions for the hook-runtime phase.
+Phase 5 freezes the first justified George-owned hook event names/payload boundaries around session, turn/user-input, context assembly, provider request/response, tool before/after, and turn completion lifecycle.
 
-Phase 5 owns executable hook runtime behavior because hooks require the same reliability properties as other long-running executable work: deterministic ordering, timeout, cancellation, bounded input/output, structured success/failure evidence, failure isolation, sanitized environment handling, and recovery semantics.
+Hook registration uses stable identities and deterministic ordering. Enable/disable state is explicit. Duplicate/conflicting registration fails or resolves through a documented deterministic rule rather than silently selecting one contributor.
 
-A hook cannot silently suppress George policy or convert declarative extension content into executable authority. Process-backed hooks remain subject to George's process trust boundary; tool-like hook actions must use the canonical tool/approval path.
+Executable hooks are bounded long-run operations:
+- bounded normalized input payloads;
+- bounded normalized output;
+- timeout and cancellation;
+- sanitized environment handling;
+- structured success/error lifecycle evidence;
+- failure isolation so one hook cannot corrupt unrelated extension state or the surrounding agent run;
+- interrupted/recovered-session evidence where relevant.
+
+Hooks are non-authoritative. A hook cannot grant itself capabilities, manufacture/reuse an approval, suppress George policy, replace canonical tool/session/validation evidence, or mutate tool execution through an undocumented side channel.
+
+Process-backed hooks retain George's process trust boundary. Hook behavior that is semantically a George tool action must execute through the canonical ToolRegistry and normal permission/approval path.
+
+Phase 5 owns the hook bus/runtime semantics only. Phase 6 owns plugin manifests, package/install lifecycle, compatibility adapters, and plugin-provided contribution discovery.
 
 ### Compatibility adapters
 
@@ -312,6 +329,72 @@ Persist enough to reconstruct completed user/assistant turns, normalized provide
 Phase 4 resume means **continue from durable completed history**, not replay an interrupted side effect. If a prior turn ended while a write, process, approval request, or provider continuation was in flight, the resumed session exposes that turn as interrupted and starts subsequent work from a new turn. George must not silently re-run the incomplete write/process, synthesize an approval, or depend on a provider-native continuation identifier as the only recoverable state.
 
 Exact crash-safe replay/reconciliation of partially completed long-running work belongs to Phase 5. Phase 4 only needs deterministic durable history, interruption visibility, and safe non-replay resume semantics.
+
+## Long-run reliability and recovery
+
+Phase 5 extends the Phase 4 durable session/coding workflow without creating a second execution authority.
+
+### Canonical versus derived state
+
+Normalized durable session/event history remains authoritative. Compaction checkpoints, progress/work projections, diagnostic logs, hook results, recovery projections, and provider-native continuation state are derived representations.
+
+Derived state may accelerate or explain work but must not silently rewrite completed history, manufacture success, or become the only evidence required to diagnose a failed run.
+
+### Run budgets
+
+The application layer owns a multidimensional run-budget contract beyond the Phase 2 hard tool-loop guard.
+
+Where measurable, budgets may cover provider requests, tool calls, retry attempts, compaction attempts, process executions/cumulative process runtime, wall-clock run time, provider/context usage, and durable diagnostic growth.
+
+Soft pressure may cause documented compaction/degradation. Hard exhaustion is an explicit terminal state. Model, repository, skill, hook, or plugin content cannot expand the active run budget by instruction alone.
+
+### Replay-safe retry
+
+Retry/backoff policy classifies operations by replay safety.
+
+Read-only/idempotent internal work and provider transport attempts whose outcome is known safe may receive bounded cancellable retry. Side-effecting writes, patches, approvals, arbitrary processes, and other operations with ambiguous outcome are not transparently repeated.
+
+A known failed tool operation may still be returned to the model so a subsequent model decision can propose a new normal operation through George's ordinary schema/policy/approval boundary.
+
+Retry attempt, cause, delay, exhaustion, and terminal outcome are normalized authoritative events.
+
+### Interruption reconciliation
+
+Phase 4 safely reopens durable completed history without replaying interrupted work. Phase 5 adds evidence-based reconciliation for interrupted/ambiguous operations.
+
+The normalized recovery model supports at least these semantics:
+- confirmed complete;
+- confirmed incomplete/not applied;
+- interrupted;
+- outcome unknown.
+
+Recovery considers durable operation intent/start/completion evidence plus bounded observable current state. A workspace-native write may be reconciled complete when the intended result is provably present, or incomplete when evidence proves it did not apply. Ambiguous results remain unknown/interrupted and require a new explicit decision.
+
+Approved arbitrary child processes are treated conservatively because George generally cannot establish all process side effects. Phase 5 does not claim universal exactly-once execution.
+
+Recovery emits new evidence rather than rewriting prior events.
+
+### Process ownership and cleanup
+
+George strengthens process-tree ownership, timeout/cancellation cleanup, and post-interruption diagnosis within the existing process executor boundary.
+
+Where the host platform permits, George may retain bounded operation/process identity needed to detect or terminate descendants it owns after interruption. Cleanup attempts, failures, and uncertainty remain inspectable evidence.
+
+This does not create an OS sandbox. Approved arbitrary child processes still run with host-user privileges unless a future explicit sandbox changes that trust boundary.
+
+### Diagnostic observability
+
+Structured diagnostic observability consumes authoritative application lifecycle events and uses stable session/turn/operation correlation identities.
+
+Diagnostic records are bounded and redacted by default. They must not automatically persist raw file bodies, patch/write bodies, unrestricted stdout/stderr, unrestricted environment state, secrets, or complete provider payloads.
+
+Retention/rotation is bounded so long attached runs do not create unbounded diagnostic storage.
+
+The Phase 4 user-visible work log remains a presentation projection; diagnostic logs do not replace it or the authoritative lifecycle evidence.
+
+### Long-run process lifetime
+
+Phase 5 long runs remain attached to the local George process with durable recovery evidence. Detached/background service ownership, scheduling, and persistent server lifecycle remain later daemon concerns.
 
 ## Interfaces
 
