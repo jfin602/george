@@ -261,6 +261,69 @@ Direction:
 - tool/event inspection;
 - model/provider controls.
 
+## Post-MVP — Local Web Research + Utility Model
+
+Goal: give George a primarily self-hosted web-research path that uses local compute for search-result digestion and context compaction while keeping paid research providers optional.
+
+This work intentionally follows the MVP. It should build on the Phase 5 compaction/reliability substrate and the Phase 6 network/browser adapter boundaries rather than introducing a parallel research architecture.
+
+Direction:
+- add a provider-independent web-research orchestration layer over George's canonical tool and permission boundaries;
+- use a locally hosted SearXNG instance as the preferred first search-discovery backend, with search providers remaining replaceable;
+- keep search discovery separate from page retrieval, extraction, semantic compaction, and final reasoning;
+- provide bounded `web_search` and `web_fetch`-style capabilities rather than implicit unrestricted model network access;
+- retrieve ordinary pages through bounded HTTP first, then perform deterministic DOM/article cleanup before model inference;
+- use browser rendering only as a fallback for pages whose useful content cannot be obtained through the normal fetch/extraction path;
+- introduce an optional secondary local utility-model role, separate from George's primary reasoning/coding model, for narrow tasks such as relevance extraction, page compaction, result reranking, long-log compaction, diff summarization, and similar low-cost context preparation;
+- keep utility-model output as derived, bounded context rather than executable authority: the utility model cannot invoke tools, grant permissions, or override George/user/project instructions;
+- preserve source identity, URLs, titles, dates when available, and enough provenance for the primary model to distinguish source evidence from generated summaries;
+- treat all fetched web content as untrusted data and prevent page text or prompt-injection content from becoming higher-authority George instructions;
+- cap search-result counts, fetched bytes, rendered-page resources, per-source context contribution, utility-model output, timeouts, retries, and total research budget;
+- allow iterative search/refinement when local discovery is insufficient;
+- retain Parallel Search or similar services as optional, independently disableable escalation providers for difficult research rather than making a paid API the default web brain;
+- keep search, fetch, browser, extraction, utility inference, and premium-research providers independently replaceable and observable.
+
+Candidate flow:
+
+```text
+primary model / George
+        |
+        +--> search discovery
+        |      +--> local SearXNG (preferred default)
+        |      +--> optional external search providers
+        |
+        +--> bounded page fetch
+        |      +--> HTTP fetch
+        |      +--> deterministic article/DOM extraction
+        |      +--> browser fallback when required
+        |
+        +--> local utility model
+        |      +--> relevance extraction
+        |      +--> semantic compaction
+        |      +--> reranking / evidence shaping
+        |
+        +--> compact source-attributed evidence
+               |
+               +--> primary reasoning/coding model
+
+Optional escalation: Parallel Search or another premium research adapter.
+```
+
+Qualification direction:
+- common technical/documentation research can complete without a paid research API when public search/fetch sources are sufficient;
+- the primary model receives materially less irrelevant page content than raw-fetch ingestion while important facts, numbers, dates, caveats, and source provenance survive compaction;
+- hostile page text cannot register tools, expand permissions, or override instruction precedence;
+- JS-heavy/browser-fallback behavior is bounded and does not become the default fetch path;
+- disabling SearXNG, the utility model, browser rendering, or a premium provider produces explicit degradation/fallback behavior rather than hidden coupling;
+- local-vs-premium research quality, latency, context usage, and external API cost can be measured before choosing defaults.
+
+Non-goals for the initial post-MVP implementation:
+- crawling or indexing a private copy of the public web;
+- giving either the primary or utility model unrestricted sockets/network access;
+- allowing the utility model to execute tools or make permission decisions;
+- replacing deterministic HTML/DOM cleanup with an LLM when normal parsing is sufficient;
+- requiring Parallel or another paid provider for ordinary web research.
+
 ## Later
 
 Only after the local product is reliable: trusted LAN clients, phone/secondary-device control, multiple workspaces/runs, remote inference providers, richer MCP ecosystem, scheduling/background jobs, and multi-agent experiments.
