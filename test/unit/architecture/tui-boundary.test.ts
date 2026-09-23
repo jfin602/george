@@ -31,3 +31,8 @@ test('TUI launch reserves Ctrl+C from renderer exit handling', async () => {
   const source = await readFile(new URL('../../../src/tui/main.ts', import.meta.url), 'utf8');
   assert.match(source, /createCliRenderer\(\{ exitOnCtrlC: false, exitSignals: \[\] \}\)/);
 });
+
+test('TUI forwards resolved provider configuration to LM Studio', async () => {
+  const source = await readFile(new URL('../../../src/tui/main.ts', import.meta.url), 'utf8');
+  assert.match(source, /new LmStudioResponsesProvider\(config\.provider\)/);
+});

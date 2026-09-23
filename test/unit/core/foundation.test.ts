@@ -3,6 +3,7 @@ import test from 'node:test';
 
 import {
   DEFAULT_LM_STUDIO_BASE_URL,
+  DEFAULT_PROVIDER_TIMEOUT_MS,
   DEFAULT_CONTEXT_PROFILE,
   GeorgeError,
   appendSessionEvent,
@@ -21,6 +22,8 @@ test('configuration resolves safe defaults without inventing a model', () => {
   assert.equal(config.workspace, '/workspace');
   assert.equal(config.provider.baseUrl.href, `${DEFAULT_LM_STUDIO_BASE_URL}/`);
   assert.equal(config.provider.model, undefined);
+  assert.equal(config.provider.timeoutMs, 120_000);
+  assert.equal(DEFAULT_PROVIDER_TIMEOUT_MS, 120_000);
   assert.equal(validateWorkspace('project', '/workspace'), '/workspace/project');
   assert.equal(validateModelId(' qwen-local '), 'qwen-local');
   assert.equal(resolveGeorgeUserConfigRoot({ XDG_CONFIG_HOME: '/tmp/config' }, 'linux', '/home/tester'), '/tmp/config/george');
@@ -30,6 +33,20 @@ test('configuration resolves safe defaults without inventing a model', () => {
   assert.equal(configured.context.profile.providerInputTokens, 24_576);
   assert.equal(configured.context.profile.softPressureTokens, 20_000);
   assert.equal(configured.context.profile.reservedHeadroomTokens, 8_192);
+});
+
+test('configuration resolves and validates GEORGE_PROVIDER_TIMEOUT_MS', () => {
+  const configured = resolveGeorgeConfig({}, '/workspace', {
+    environment: { GEORGE_PROVIDER_TIMEOUT_MS: '120000' },
+  });
+  assert.equal(configured.provider.timeoutMs, 120_000);
+
+  for (const value of ['', 'abc', '1.5', '0', '-1', '120001']) {
+    assert.throws(
+      () => resolveGeorgeConfig({}, '/workspace', { environment: { GEORGE_PROVIDER_TIMEOUT_MS: value } }),
+      (error: unknown) => error instanceof GeorgeError && error.code === 'configuration',
+    );
+  }
 });
 
 test('configuration rejects invalid workspace, model, and non-loopback provider URLs', () => {

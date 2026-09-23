@@ -1,5 +1,7 @@
 import {
+  DEFAULT_PROVIDER_TIMEOUT_MS,
   GeorgeError,
+  MAX_PROVIDER_TIMEOUT_MS,
   cancellationError,
   validateModelId,
   validateProviderBaseUrl,
@@ -10,8 +12,7 @@ import {
   type ProviderUsage,
 } from '../core/index.ts';
 
-export const DEFAULT_PROVIDER_TIMEOUT_MS = 30_000;
-export const MAX_PROVIDER_TIMEOUT_MS = 120_000;
+export { DEFAULT_PROVIDER_TIMEOUT_MS, MAX_PROVIDER_TIMEOUT_MS } from '../core/config.ts';
 
 type SseMessage = Readonly<{ event?: string; data: string }>;
 
@@ -28,10 +29,7 @@ function providerError(message: string, cause?: unknown): GeorgeError {
 function timeoutMs(value: number | undefined): number {
   const timeout = value ?? DEFAULT_PROVIDER_TIMEOUT_MS;
   if (!Number.isInteger(timeout) || timeout < 1 || timeout > MAX_PROVIDER_TIMEOUT_MS) {
-    throw new GeorgeError(
-      'configuration',
-      `Provider timeout must be an integer between 1 and ${MAX_PROVIDER_TIMEOUT_MS} ms.`,
-    );
+    throw new GeorgeError('configuration', `Provider timeout must be an integer between 1 and ${MAX_PROVIDER_TIMEOUT_MS} ms.`);
   }
   return timeout;
 }

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { createServer, type Server } from 'node:http';
 import test from 'node:test';
 
-import { GeorgeError } from '../../../src/core/index.ts';
+import { GeorgeError, resolveGeorgeConfig } from '../../../src/core/index.ts';
 import { LmStudioResponsesProvider } from '../../../src/provider/index.ts';
 
 type RequestHandler = (request: import('node:http').IncomingMessage, response: import('node:http').ServerResponse) => void;
@@ -24,6 +24,14 @@ async function eventsFrom(stream: AsyncIterable<unknown>): Promise<unknown[]> {
   for await (const event of stream) events.push(event);
   return events;
 }
+
+test('LM Studio provider receives the resolved George timeout configuration', () => {
+  const config = resolveGeorgeConfig({ model: 'local-model' }, '/workspace', {
+    environment: { GEORGE_PROVIDER_TIMEOUT_MS: '120000' },
+  });
+  const provider = new LmStudioResponsesProvider(config.provider);
+  assert.equal(provider.defaultTimeoutMs, 120_000);
+});
 
 function sse(response: import('node:http').ServerResponse, chunks: string[]): void {
   response.writeHead(200, { 'content-type': 'text/event-stream' });

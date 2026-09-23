@@ -4,6 +4,8 @@ import { join, resolve } from 'node:path';
 import { GeorgeError } from './errors.ts';
 
 export const DEFAULT_LM_STUDIO_BASE_URL = 'http://127.0.0.1:1234';
+export const DEFAULT_PROVIDER_TIMEOUT_MS = 120_000;
+export const MAX_PROVIDER_TIMEOUT_MS = 120_000;
 export const DEFAULT_CONTEXT_PROFILE: ContextProfile = {
   id: 'qwen3-coder-30b-a3b-instruct-q4_k_m-lm-studio-32k',
   physicalContextTokens: 32_768,
@@ -32,6 +34,7 @@ export type GeorgeConfig = Readonly<{
   provider: Readonly<{
     baseUrl: URL;
     model?: string;
+    timeoutMs: number;
   }>;
 }>;
 
@@ -39,6 +42,7 @@ export type GeorgeConfigInput = Readonly<{
   workspace?: string;
   baseUrl?: string | URL;
   model?: string;
+  providerTimeoutMs?: number;
   userConfigRoot?: string;
   contextProfile?: ContextProfile;
 }>;
@@ -66,6 +70,21 @@ export function validateModelId(value: string): string {
     configurationError('Model ID must not contain control characters.');
   }
   return model;
+}
+
+export function validateProviderTimeoutMs(value: number): number {
+  if (!Number.isInteger(value) || value < 1 || value > MAX_PROVIDER_TIMEOUT_MS) {
+    configurationError(`Provider timeout must be an integer between 1 and ${MAX_PROVIDER_TIMEOUT_MS} ms.`);
+  }
+  return value;
+}
+
+function providerTimeoutFromEnvironment(value: string | undefined): number {
+  if (value === undefined) return DEFAULT_PROVIDER_TIMEOUT_MS;
+  if (!/^\d+$/.test(value)) {
+    configurationError(`GEORGE_PROVIDER_TIMEOUT_MS must be an integer between 1 and ${MAX_PROVIDER_TIMEOUT_MS} ms.`);
+  }
+  return validateProviderTimeoutMs(Number(value));
 }
 
 function positiveContextNumber(value: number, name: string): number {
@@ -136,10 +155,11 @@ export function resolveGeorgeConfig(
   cwd = process.cwd(),
   environment: GeorgeConfigEnvironment = {},
 ): GeorgeConfig {
+  const variables = environment.environment ?? process.env;
   return {
     workspace: validateWorkspace(input.workspace ?? cwd, cwd),
     userConfigRoot: input.userConfigRoot === undefined
-      ? resolveGeorgeUserConfigRoot(environment.environment, environment.platform, environment.homeDirectory)
+      ? resolveGeorgeUserConfigRoot(variables, environment.platform, environment.homeDirectory)
       : validateUserConfigRoot(input.userConfigRoot, cwd),
     context: { profile: validateContextProfile(input.contextProfile ?? DEFAULT_CONTEXT_PROFILE) },
     provider: {
@@ -147,6 +167,9 @@ export function resolveGeorgeConfig(
         input.baseUrl ?? DEFAULT_LM_STUDIO_BASE_URL,
       ),
       ...(input.model === undefined ? {} : { model: validateModelId(input.model) }),
+      timeoutMs: input.providerTimeoutMs === undefined
+        ? providerTimeoutFromEnvironment(variables.GEORGE_PROVIDER_TIMEOUT_MS)
+        : validateProviderTimeoutMs(input.providerTimeoutMs),
     },
   };
 }
