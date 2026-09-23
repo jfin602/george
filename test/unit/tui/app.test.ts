@@ -445,9 +445,14 @@ test('Ctrl+C gives an active transcript selection precedence over cancellation',
   item.setup.renderer.startSelection(text, text.x, text.y);
   item.setup.renderer.updateSelection(text, text.x + 8, text.y, { finishDragging: true });
   assert.equal(item.app.hasTranscriptSelection(), true);
+  let continuedToDefault = false;
+  item.setup.renderer._internalKeyInput.onInternal('keypress', (key) => {
+    if (key.ctrl && key.name === 'c' && !key.defaultPrevented) continuedToDefault = true;
+  });
 
   item.setup.mockInput.pressCtrlC();
   await item.setup.flush();
+  assert.equal(continuedToDefault, false);
   assert.equal(provider.calls[0]?.options.signal?.aborted, false);
   assert.equal(item.setup.renderer.isDestroyed, false);
   provider.release.resolve();

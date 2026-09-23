@@ -254,8 +254,9 @@ export class GeorgeTui {
         void this.pasteClipboard();
       } else if (key.ctrl && key.name === 'c') {
         if (this.hasTranscriptSelection()) {
+          key.preventDefault();
           const text = this.renderer.getSelection()?.getSelectedText();
-          if (text && this.renderer.copyToClipboardOSC52(text)) key.preventDefault();
+          if (text && !this.renderer.copyToClipboardOSC52(text)) void this.clipboard.writeText(text);
         } else if (this.input.getSelectedText()) {
           key.preventDefault();
           void this.copySelection();
