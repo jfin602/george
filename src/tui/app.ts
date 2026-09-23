@@ -22,7 +22,8 @@ export const COMPOSER_KEY_BINDINGS: TextareaKeyBinding[] = [
 export const NEON_THEME = {
   background: '#04130d',
   panel: '#071f16',
-  focusedPanel: '#0b3927',
+  composer: '#25292b',
+  focusedComposer: '#303638',
   foreground: '#d7ffe8',
   muted: '#7dbf9f',
   green: '#18d976',
@@ -142,8 +143,8 @@ export class GeorgeTui {
     layout.add(this.composerKeysView);
     this.input = new TextareaRenderable(this.renderer, {
       id: 'input', height: 5, minHeight: 5, maxHeight: 10, wrapMode: 'word', placeholder: 'Message George', keyBindings: COMPOSER_KEY_BINDINGS,
-      backgroundColor: NEON_THEME.panel, textColor: NEON_THEME.foreground,
-      focusedBackgroundColor: NEON_THEME.focusedPanel, focusedTextColor: NEON_THEME.foreground,
+      backgroundColor: NEON_THEME.composer, textColor: NEON_THEME.foreground,
+      focusedBackgroundColor: NEON_THEME.focusedComposer, focusedTextColor: NEON_THEME.foreground,
       placeholderColor: NEON_THEME.muted, selectionBg: NEON_THEME.green, selectionFg: NEON_THEME.background,
       cursorColor: NEON_THEME.mint,
       onSubmit: () => { void this.submit(); },
