@@ -16,7 +16,7 @@ import {
   type ProviderStreamOptions,
 } from '../../../src/core/index.ts';
 import { createOneTurnApplicationService, type OneTurnServiceOptions } from '../../../src/application/index.ts';
-import { GeorgeTui } from '../../../src/tui/app.ts';
+import { GeorgeTui, type GeorgeTuiOptions } from '../../../src/tui/app.ts';
 
 class ScriptedProvider implements ModelProvider {
   calls: Array<{ request: ProviderRequest; options: ProviderStreamOptions }> = [];
@@ -79,13 +79,17 @@ class ApprovalProvider implements ModelProvider {
   }
 }
 
-async function tui(provider: ModelProvider, options: Omit<OneTurnServiceOptions, 'provider' | 'workspace' | 'approvalPort'> = {}) {
+async function tui(
+  provider: ModelProvider,
+  options: Omit<OneTurnServiceOptions, 'provider' | 'workspace' | 'approvalPort'> = {},
+  uiOptions: Pick<GeorgeTuiOptions, 'clipboard'> = {},
+) {
   const workspace = await mkdtemp(join(tmpdir(), 'george-tui-'));
   await writeFile(join(workspace, 'BOOT.md'), 'fixture boot');
   const setup = await createTestRenderer({ width: 72, height: 18, kittyKeyboard: true });
   const approvals = new PendingApprovalPort();
   const service = await createOneTurnApplicationService({ provider, workspace, approvalPort: approvals, ...options });
-  const app = new GeorgeTui({ renderer: setup.renderer, service, provider: 'LM Studio', model: 'test-model', approvals });
+  const app = new GeorgeTui({ renderer: setup.renderer, service, provider: 'LM Studio', model: 'test-model', approvals, ...uiOptions });
   return { workspace, setup, app, approvals };
 }
 
@@ -130,6 +134,24 @@ test('Enter submits while Shift+Enter uses the OpenTUI Textarea newline binding'
   assert.equal(provider.calls.length, 1);
   assert.match(provider.calls[0]?.request.input ?? '', /first\nsecond/);
   assert.equal(item.app.input.plainText, '');
+});
+
+test('composer accepts terminal paste and explicit Ctrl+V clipboard paste', async (t) => {
+  const clipboardText = 'clipboard\ntext';
+  const item = await tui(new ScriptedProvider([]), {}, {
+    clipboard: {
+      async read() {
+        return { status: 'read', representation: { mimeType: 'text/plain', bytes: new TextEncoder().encode(clipboardText) } };
+      },
+      async dispose() {},
+    },
+  });
+  t.after(() => cleanup(item));
+
+  await item.setup.mockInput.pasteBracketedText('terminal\npaste');
+  item.setup.mockInput.pressKey('v', { ctrl: true });
+  await item.setup.flush();
+  assert.equal(item.app.input.plainText, `terminal\npaste${clipboardText}`);
 });
 
 test('streaming does not overwrite draft input and returns the composer to ready state', async (t) => {

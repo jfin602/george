@@ -4,7 +4,9 @@ import {
   ScrollBoxRenderable,
   TextareaRenderable,
   TextRenderable,
+  createHostClipboard,
   type CliRenderer,
+  type HostClipboardService,
   type KeyBinding as TextareaKeyBinding,
 } from '@opentui/core';
 
@@ -16,6 +18,8 @@ export const COMPOSER_KEY_BINDINGS: TextareaKeyBinding[] = [
   { name: 'return', shift: true, action: 'newline' },
 ];
 
+type Clipboard = Pick<HostClipboardService, 'read' | 'dispose'>;
+
 export type GeorgeTuiOptions = Readonly<{
   renderer: CliRenderer;
   service: AgentLoopApplicationService;
@@ -23,6 +27,7 @@ export type GeorgeTuiOptions = Readonly<{
   model: string;
   workspace?: string;
   approvals: ApprovalResolver;
+  clipboard?: Clipboard;
 }>;
 
 function transcriptText(entries: readonly TranscriptEntry[]): string {
@@ -82,6 +87,8 @@ export class GeorgeTui {
   private readonly commandView: TextRenderable;
   private readonly statusDetails: string;
   private readonly approvals: ApprovalResolver;
+  private readonly clipboard: Clipboard;
+  private readonly ownsClipboard: boolean;
   private readonly done: Promise<void>;
   private resolveDone!: () => void;
   private controller: AbortController | undefined;
@@ -93,6 +100,8 @@ export class GeorgeTui {
     this.renderer = options.renderer;
     this.service = options.service;
     this.approvals = options.approvals;
+    this.clipboard = options.clipboard ?? createHostClipboard();
+    this.ownsClipboard = options.clipboard === undefined;
     this.session = createSession({ workspace: options.workspace ?? options.service.workspace.root });
     this.statusDetails = `${options.provider} · ${options.model} · ${this.session.workspace}`;
     this.done = new Promise<void>((resolve) => { this.resolveDone = resolve; });
@@ -114,7 +123,7 @@ export class GeorgeTui {
     this.commandView = new TextRenderable(this.renderer, { id: 'commands', width: '100%', height: 0, flexShrink: 0, content: '' });
     layout.add(this.commandView);
     this.input = new TextareaRenderable(this.renderer, {
-      id: 'input', height: 3, minHeight: 3, maxHeight: 6, wrapMode: 'word', placeholder: 'Message George (Enter submits, Shift+Enter adds a line)', keyBindings: COMPOSER_KEY_BINDINGS,
+      id: 'input', height: 3, minHeight: 3, maxHeight: 6, wrapMode: 'word', placeholder: 'Message George (Enter submits, Ctrl+V pastes, Shift+Enter adds a line)', keyBindings: COMPOSER_KEY_BINDINGS,
       onSubmit: () => { void this.submit(); },
     });
     layout.add(this.input);
@@ -129,6 +138,9 @@ export class GeorgeTui {
       } else if (this.pendingApproval && key.ctrl && key.name === 'd') {
         key.preventDefault();
         this.decide('deny');
+      } else if (key.ctrl && key.name === 'v') {
+        key.preventDefault();
+        void this.pasteClipboard();
       }
     });
     this.renderer.on(CliRenderEvents.RESIZE, () => this.renderer.requestRender());
@@ -207,6 +219,7 @@ export class GeorgeTui {
     this.closed = true;
     this.controller?.abort();
     this.renderer.destroy();
+    if (this.ownsClipboard) void this.clipboard.dispose();
     this.finish();
   }
 
@@ -214,6 +227,13 @@ export class GeorgeTui {
     for await (const event of this.service.run({ session: this.session, input, signal, ...(activatedSkills === undefined ? {} : { activatedSkills }) })) {
       this.render(event);
     }
+  }
+
+  private async pasteClipboard(): Promise<void> {
+    const result = await this.clipboard.read({ preferredTypes: ['text/plain'] });
+    if (result.status !== 'read') return;
+    this.input.insertText(new TextDecoder().decode(result.representation.bytes));
+    this.renderer.requestRender();
   }
 
   private render(event: ApplicationEvent): void {
