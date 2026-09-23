@@ -118,6 +118,26 @@ Phase 2 deterministic coverage must include:
 
 Live-model tests supplement this evidence but do not replace deterministic coverage.
 
+### Progress/status qualification
+
+Phase 4 progress behavior must be deterministic enough to test independently from model inference.
+
+Coverage must prove:
+- progress semantics originate outside OpenTUI and can be consumed by a presentation-independent application-event consumer;
+- high-frequency activity and lower-frequency progress milestones remain distinct;
+- meaningful context/inspection/editing/validation/recovery/completion milestones appear in deterministic lifecycle order;
+- repetitive low-level tool churn can be coalesced/bounded so progress does not flood the user;
+- progress messages have explicit size bounds;
+- progress is never appended to assistant transcript or included in later provider-facing conversation/context solely because it was displayed;
+- progress does not replace authoritative provider/tool/approval/validation/completion evidence;
+- failed validation produces truthful failure/recovery progress and remains failed in authoritative validation evidence;
+- cancellation/terminal failure/completion produce appropriate terminal progress state without fabricating success;
+- progress generation does not copy raw file bodies, unrestricted process output, unrestricted environment state, or secrets from underlying events;
+- reopening/resuming a durable session treats prior progress as history and does not show stale prior-run activity as currently active;
+- OpenTUI rendering of the progress/work log preserves draft input, approval interaction, cancellation, resize, scrollback, and clean terminal restoration.
+
+Model-authored progress narration is not required for Phase 4 qualification.
+
 ### Session/recovery qualification
 
 Verify interrupted runs remain inspectable, retain structured tool/approval/failure evidence, and do not duplicate writes/tool effects silently.

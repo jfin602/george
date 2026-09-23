@@ -165,6 +165,11 @@ Scope:
 - conservative attribution when approved arbitrary child processes may have modified files;
 - validation-command workflow through the existing canonical process/tool/approval boundary;
 - structured validation evidence;
+- normalized presentation-independent progress/status event stream;
+- deterministic harness-generated progress milestones for context, inspection, editing, validation, recovery, and completion;
+- separate high-frequency activity state and lower-frequency user-facing progress, with bounded/coalesced messages;
+- OpenTUI recent-progress/work-log rendering without moving progress semantics into the TUI;
+- progress/status events excluded from assistant transcript and provider-facing model context;
 - structured completion evidence covering observed changes, validation, unresolved failures/warnings, completion state, and final assistant output;
 - schema-versioned filesystem session persistence outside the repository by default;
 - canonical workspace identity binding;
@@ -178,7 +183,8 @@ Success condition:
 - the run accurately separates pre-existing dirty work from newly observed changes without overclaiming process attribution;
 - normalized session state persists outside the repository and a later turn can reopen completed history;
 - interruption/resume tests prove incomplete writes, processes, approvals, and provider continuations are not automatically replayed;
-- provider/TUI code remains adapters over reusable context, session, tool, and coding-workflow services.
+- users receive meaningful harness-generated progress while a coding turn runs, without progress polluting the assistant transcript/model context or replacing authoritative tool/validation evidence;
+- provider/TUI code remains adapters over reusable context, session, tool, progress, and coding-workflow services.
 
 Non-goals:
 - LLM-based compaction/summarization;

@@ -20,7 +20,9 @@ The normal MVP path runs on the developer's machine. Repository contents, prompt
 
 The MVP interface is an interactive terminal application that behaves like a modern coding-agent TUI rather than a print-and-scroll command.
 
-It must support in-place redraws, streaming assistant output, live tool/progress state, persistent interactive input, scrollback, resize handling, cancellation, and clean terminal restoration.
+It must support in-place redraws, streaming assistant output, live tool/activity state, meaningful recent progress milestones, persistent interactive input, scrollback, resize handling, cancellation, and clean terminal restoration.
+
+Progress semantics are owned by the reusable application/core event stream rather than OpenTUI. Harness-generated progress is bounded user-facing workflow state, not hidden reasoning or assistant transcript, and it must not be fed back into the model merely because it was displayed.
 
 The initial renderer is `@opentui/core` used directly from TypeScript without React. OpenTUI is a presentation dependency only: the core agent engine must remain usable without it, must not depend on terminal state, and must be reusable by a future daemon or Tauri desktop application.
 
@@ -138,6 +140,7 @@ Phase 4 succeeds when George can complete a bounded coding task in a disposable 
 - captures a pre-run repository baseline and reports observed changed files while preserving and distinguishing pre-existing dirty work;
 - avoids unsupported causal attribution for arbitrary process side effects;
 - runs requested validation through George's existing process/tool/approval boundary and records the resulting evidence;
+- emits presentation-independent harness progress milestones during meaningful context/inspection/editing/validation/recovery/completion transitions while keeping progress out of assistant transcript/model context;
 - emits a structured completion result covering observed changes, validation, unresolved failures/warnings, completion state, and the final assistant response;
 - persists schema-versioned normalized session history outside the repository and can reopen completed durable history;
 - surfaces interrupted writes, processes, approvals, and provider continuations without automatically replaying them;
