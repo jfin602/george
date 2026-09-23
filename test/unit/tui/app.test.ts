@@ -460,7 +460,7 @@ test('Ctrl+C gives an active transcript selection precedence over cancellation',
   assert.notEqual(item.app.session.events.at(-1)?.type, 'turn.cancelled');
 });
 
-test('Ctrl+C cancels an active turn without a selection and exits while idle', async (t) => {
+test('Ctrl+C never cancels or exits without a selection', async (t) => {
   const provider = new PausedProvider();
   const active = await tui(provider);
   t.after(async () => {
@@ -472,13 +472,14 @@ test('Ctrl+C cancels an active turn without a selection and exits while idle', a
   active.setup.mockInput.pressEnter();
   await provider.started.promise;
   active.setup.mockInput.pressCtrlC();
-  await active.app.waitForIdle();
-  assert.equal(provider.calls[0]?.options.signal?.aborted, true);
+  await active.setup.flush();
+  assert.equal(provider.calls[0]?.options.signal?.aborted, false);
   assert.equal(active.setup.renderer.isDestroyed, false);
-  assert.equal(active.app.session.events.at(-1)?.type, 'turn.cancelled');
+  provider.release.resolve();
+  await active.app.waitForIdle();
 
   active.setup.mockInput.pressCtrlC();
-  assert.equal(active.setup.renderer.isDestroyed, true);
+  assert.equal(active.setup.renderer.isDestroyed, false);
 });
 
 test('Esc cancels an active turn, then exits and destroys the renderer while idle', async (t) => {

@@ -26,3 +26,8 @@ test('normal TUI launch scripts enable Node FFI', async () => {
   assert.match(manifest.scripts.start, /node --experimental-ffi/);
   assert.match(manifest.scripts.tui, /node --experimental-ffi/);
 });
+
+test('TUI launch reserves Ctrl+C from renderer exit handling', async () => {
+  const source = await readFile(new URL('../../../src/tui/main.ts', import.meta.url), 'utf8');
+  assert.match(source, /createCliRenderer\(\{ exitOnCtrlC: false, exitSignals: \[\] \}\)/);
+});

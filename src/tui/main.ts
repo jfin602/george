@@ -20,7 +20,7 @@ async function main(): Promise<void> {
     contextProfile: config.context.profile,
     userConfigRoot: config.userConfigRoot,
   });
-  const renderer = await createCliRenderer({ exitOnCtrlC: false });
+  const renderer = await createCliRenderer({ exitOnCtrlC: false, exitSignals: [] });
   let tui: GeorgeTui | undefined;
   try {
     tui = new GeorgeTui({

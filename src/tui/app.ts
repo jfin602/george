@@ -256,13 +256,15 @@ export class GeorgeTui {
         if (this.hasTranscriptSelection()) {
           key.preventDefault();
           const text = this.renderer.getSelection()?.getSelectedText();
-          if (text && !this.renderer.copyToClipboardOSC52(text)) void this.clipboard.writeText(text);
+          if (text) {
+            this.renderer.copyToClipboardOSC52(text);
+            void this.clipboard.writeText(text);
+          }
         } else if (this.input.getSelectedText()) {
           key.preventDefault();
           void this.copySelection();
         } else {
           key.preventDefault();
-          this.escape();
         }
       }
     });
