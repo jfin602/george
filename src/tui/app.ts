@@ -30,6 +30,11 @@ export const NEON_THEME = {
   border: '#199958',
 } as const;
 
+const ASCII_BORDER = {
+  topLeft: '+', topRight: '+', bottomLeft: '+', bottomRight: '+',
+  horizontal: '-', vertical: '|', topT: '+', bottomT: '+', leftT: '+', rightT: '+', cross: '+',
+} as const;
+
 type Clipboard = Pick<HostClipboardService, 'read' | 'writeText' | 'dispose'>;
 
 export type GeorgeTuiOptions = Readonly<{
@@ -126,7 +131,7 @@ export class GeorgeTui {
     layout.add(this.statusView);
     this.contextView = new TextRenderable(this.renderer, { id: 'context', width: '100%', height: 2, flexShrink: 0, fg: NEON_THEME.muted, content: 'Context: awaiting first turn' });
     layout.add(this.contextView);
-    this.transcript = new ScrollBoxRenderable(this.renderer, { id: 'transcript', flexGrow: 1, scrollY: true, stickyScroll: true, stickyStart: 'bottom', border: true, borderColor: NEON_THEME.border, focusedBorderColor: NEON_THEME.mint, backgroundColor: NEON_THEME.composer, title: 'Transcript', titleColor: NEON_THEME.mint });
+    this.transcript = new ScrollBoxRenderable(this.renderer, { id: 'transcript', flexGrow: 1, scrollY: true, stickyScroll: true, stickyStart: 'bottom', border: true, borderColor: NEON_THEME.border, focusedBorderColor: NEON_THEME.mint, customBorderChars: ASCII_BORDER, backgroundColor: NEON_THEME.composer, title: 'Transcript', titleColor: NEON_THEME.mint });
     this.transcriptView = new TextRenderable(this.renderer, { id: 'transcript-text', fg: NEON_THEME.foreground, content: '' });
     this.transcript.add(this.transcriptView);
     layout.add(this.transcript);
@@ -140,6 +145,7 @@ export class GeorgeTui {
     layout.add(this.composerOverflowView);
     this.composerKeysView = new TextRenderable(this.renderer, { id: 'composer-keys', width: '100%', height: 1, flexShrink: 0, fg: NEON_THEME.muted, content: 'Enter send · Ctrl+A all · Ctrl+C copy · Ctrl+V paste · Esc exit' });
     layout.add(this.composerKeysView);
+    const composer = new BoxRenderable(this.renderer, { id: 'composer', width: '100%', height: 7, flexShrink: 0, border: true, borderColor: NEON_THEME.border, focusedBorderColor: NEON_THEME.mint, customBorderChars: ASCII_BORDER, backgroundColor: NEON_THEME.composer });
     this.input = new TextareaRenderable(this.renderer, {
       id: 'input', height: 5, minHeight: 5, maxHeight: 10, wrapMode: 'word', placeholder: 'Message George', keyBindings: COMPOSER_KEY_BINDINGS,
       backgroundColor: NEON_THEME.composer, textColor: NEON_THEME.foreground,
@@ -150,7 +156,8 @@ export class GeorgeTui {
       onContentChange: () => this.updateComposerOverflow(),
       onCursorChange: () => this.updateComposerOverflow(),
     });
-    layout.add(this.input);
+    composer.add(this.input);
+    layout.add(composer);
     this.renderer.root.add(layout);
     this.renderer._internalKeyInput.onInternal('keypress', (key) => {
       if (key.name === 'escape') {
@@ -332,6 +339,7 @@ export class GeorgeTui {
   private showCommand(content: string): void {
     this.commandView.content = content;
     this.commandView.height = Math.min(5, content.split('\n').length);
+    this.input.focus();
     this.renderer.requestRender();
   }
 
