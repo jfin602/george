@@ -10,13 +10,16 @@ import { createTestRenderer } from '@opentui/core/testing';
 
 import {
   GeorgeError,
+  LocalSessionStore,
   PendingApprovalPort,
+  appendSessionEvent,
+  createSession,
   type ModelProvider,
   type ProviderEvent,
   type ProviderRequest,
   type ProviderStreamOptions,
 } from '../../../src/core/index.ts';
-import { createOneTurnApplicationService, WorkProjection, type OneTurnServiceOptions } from '../../../src/application/index.ts';
+import { createCodingWorkflowApplicationService, createOneTurnApplicationService, WorkProjection, type OneTurnServiceOptions } from '../../../src/application/index.ts';
 import { GeorgeTui, NEON_THEME, renderTranscript, type GeorgeTuiOptions, type TranscriptWorkEntry } from '../../../src/tui/app.ts';
 
 class ScriptedProvider implements ModelProvider {
@@ -120,6 +123,48 @@ test('test renderer shows identity, configuration, streamed text, and read-only 
   const frame = item.setup.captureCharFrame();
   assert.match(item.app.session.transcript.map((entry) => entry.text).join('\n'), /Inspect BOOT/);
   assert.match(frame, /streamed answer/);
+});
+
+test('reopened workflow renders historical evidence as idle and starts a fresh provider turn', async (t) => {
+  const root = await mkdtemp(join(tmpdir(), 'george-tui-resume-'));
+  const workspace = join(root, 'workspace');
+  const state = join(root, 'state');
+  await mkdir(workspace);
+  await writeFile(join(workspace, 'BOOT.md'), 'fixture boot');
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const store = new LocalSessionStore({ root: state });
+  const prior = createSession({ id: 'resume-1', workspace });
+  appendSessionEvent(prior, { type: 'turn.started', turnId: 'old' });
+  appendSessionEvent(prior, { type: 'input.submitted', text: 'old request' });
+  appendSessionEvent(prior, { type: 'provider.text.delta', delta: 'old answer' });
+  appendSessionEvent(prior, { type: 'provider.response.completed' });
+  appendSessionEvent(prior, { type: 'turn.completed', turnId: 'old' });
+  appendSessionEvent(prior, { type: 'work.updated', item: { id: 'old:read', turnId: 'old', operationId: 'read', category: 'inspection', status: 'succeeded', summary: 'Read BOOT.md (12 bytes)', details: { path: 'BOOT.md', bytes: 12 } } });
+  appendSessionEvent(prior, { type: 'work.updated', item: { id: 'old:write', turnId: 'old', operationId: 'write', category: 'editing', status: 'waiting', summary: 'Awaiting approval for write_file', details: { path: 'later.txt' } } });
+  appendSessionEvent(prior, { type: 'provider.response.started', responseId: 'old-provider-id' });
+  await store.save(prior);
+
+  const provider = new ScriptedProvider([{ type: 'provider.text.delta', delta: 'new answer' }, { type: 'provider.response.completed' }]);
+  const approvals = new PendingApprovalPort();
+  const service = await createCodingWorkflowApplicationService({ provider, workspace, approvalPort: approvals, sessionStore: store });
+  const setup = await createTestRenderer({ width: 72, height: 18, kittyKeyboard: true, exitOnCtrlC: false });
+  const app = new GeorgeTui({ renderer: setup.renderer, service, session: await store.open('resume-1', workspace), provider: 'LM Studio', model: 'test-model', approvals });
+  t.after(() => app.close());
+  await setup.flush();
+  const restored = renderTranscript(app.session.transcript, app.diagnostics, 80, app.work).chunks.map((chunk) => chunk.text).join('');
+  assert.match(restored, /old request[\s\S]*old answer/);
+  assert.match(restored, /Read BOOT\.md/);
+  assert.equal(app.work.some((entry) => ['requested', 'running', 'waiting'].includes(entry.item.status)), false);
+  assert.equal(app.work.filter((entry) => entry.item.status === 'interrupted').length, 2);
+
+  await setup.mockInput.typeText('new request');
+  setup.mockInput.pressEnter();
+  await app.waitForIdle();
+  assert.equal(provider.calls.length, 1);
+  assert.match(provider.calls[0]?.request.input ?? '', /user: old request\n\nassistant: old answer/);
+  assert.doesNotMatch(provider.calls[0]?.request.input ?? '', /Awaiting approval|Previous operation|old-provider-id/);
+  assert.match(app.session.transcript.map((entry) => entry.text).join('\n'), /new request\nnew answer/);
+  assert.equal((await store.open('resume-1', workspace)).interruptions.some((item) => item.kind === 'provider-continuation'), true);
 });
 
 test('uses the green neon palette for the transcript and focused composer', async (t) => {

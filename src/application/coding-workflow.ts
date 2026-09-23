@@ -30,6 +30,8 @@ export type ValidationRequest = Readonly<{
 
 export type CodingWorkflowSubmission = AgentLoopSubmission & Readonly<{
   validations?: readonly ValidationRequest[];
+  /** Presentation observer; it cannot affect the canonical session evidence. */
+  onEvent?: (event: ApplicationEvent) => void | Promise<void>;
 }>;
 
 export type CodingWorkflowCompletion = WorkflowCompletion & Readonly<{
@@ -112,29 +114,40 @@ export class CodingWorkflowApplicationService {
 
     const directMutations: WorkflowCompletion['directMutations'][number][] = [];
     const events: ApplicationEvent[] = [];
+    let persistenceFailure: string | undefined;
+    const observe = async (observed: readonly ApplicationEvent[]): Promise<void> => {
+      for (const event of observed) await submission.onEvent?.(event);
+      if (!this.store) return;
+      try { await this.store.save(submission.session); }
+      catch (error) { persistenceFailure ??= bounded(asGeorgeError(error).message); }
+    };
     for await (const event of this.agent.run({ ...submission, turnId })) {
       events.push(event);
       const mutation = directMutation(event);
       if (mutation) directMutations.push(mutation);
+      await observe([event]);
     }
 
     const validations: WorkflowValidation[] = [];
     for (const request of submission.validations ?? []) {
       if (!request.label.trim() || !request.intent.trim()) throw new Error('Validation label and intent must be explicit.');
       const callId = randomUUID();
-      this.agent.record(submission.session, { type: 'validation.started', turnId, callId, label: bounded(request.label, 1024), intent: bounded(request.intent) });
+      await observe(this.agent.record(submission.session, { type: 'validation.started', turnId, callId, label: bounded(request.label, 1024), intent: bounded(request.intent) }));
       const validationEvents: ApplicationEvent[] = [];
       let failure: unknown;
       try {
-        for await (const event of this.agent.runProcess({ session: submission.session, turnId, callId, ...request, signal: submission.signal })) validationEvents.push(event);
+        for await (const event of this.agent.runProcess({ session: submission.session, turnId, callId, ...request, signal: submission.signal })) {
+          validationEvents.push(event);
+          await observe([event]);
+        }
       } catch (error) { failure = error; }
       const validation = validationFromEvents(request, validationEvents, failure);
       validations.push(validation);
-      this.agent.record(submission.session, {
+      await observe(this.agent.record(submission.session, {
         type: 'validation.completed', turnId, callId, status: validation.status, exitCode: validation.exitCode, signal: validation.signal,
         ...(validation.outcome === undefined ? {} : { outcome: validation.outcome }), stdoutTruncated: validation.stdoutTruncated, stderrTruncated: validation.stderrTruncated,
         ...(validation.error === undefined ? {} : { error: validation.error }),
-      });
+      }));
     }
 
     let finalState: GitWorkingTreeSnapshot | undefined;
@@ -143,6 +156,7 @@ export class CodingWorkflowApplicationService {
     if (!baseline?.isRepository || !finalState?.isRepository) warnings.push('Git change observation is unavailable outside a Git workspace; only direct George-native mutation evidence is known.');
     if (events.some((event) => event.type === 'tool.started' && event.name === 'run_process')) warnings.push('An approved arbitrary process ran; newly observed files are not attributed to that process without direct evidence.');
     if (changes(baseline, finalState, directMutations).some((change) => change.relationship === 'no-longer-observed')) warnings.push('Pre-existing dirty paths changed during the run; their original content was not restored or normalized.');
+    if (persistenceFailure) warnings.push(`Session evidence could not be persisted: ${persistenceFailure}`);
     const terminalEvent = events.at(-1);
     const terminalState = terminalEvent?.type === 'turn.cancelled' || validations.some((validation) => validation.status === 'cancelled')
       ? 'cancelled' : terminalEvent?.type === 'turn.failed' || validations.some((validation) => validation.status !== 'passed') ? 'failed' : 'completed';
@@ -152,11 +166,7 @@ export class CodingWorkflowApplicationService {
       finalAssistantResponse: events.filter((event): event is Extract<ApplicationEvent, { type: 'provider.text.delta' }> => event.type === 'provider.text.delta').map((event) => event.delta).join(''),
     };
     const { turnId: _turnId, baseline: _baseline, finalState: _finalState, ...durableCompletion } = completion;
-    this.agent.record(submission.session, { type: 'workflow.completed', turnId, completion: durableCompletion });
-    if (this.store) {
-      try { await this.store.save(submission.session); }
-      catch (error) { warnings.push(`Completion evidence was not persisted: ${bounded(asGeorgeError(error).message)}`); }
-    }
+    await observe(this.agent.record(submission.session, { type: 'workflow.completed', turnId, completion: durableCompletion }));
     return completion;
   }
 }

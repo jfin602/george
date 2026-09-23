@@ -353,10 +353,12 @@ function parseDurableSession(value: unknown): DurableSession {
 export function classifySessionInterruptions(events: readonly ApplicationEvent[]): SessionInterruption[] {
   const tools = new Map<string, Extract<ApplicationEvent, { type: 'tool.requested' | 'tool.started' }>>();
   const approvals = new Map<string, Extract<ApplicationEvent, { type: 'approval.requested' }>>();
-  let providerStarted = false;
+  const providerStarted = new Set<string>();
+  let currentTurn = 'unknown';
   for (const event of events) {
-    if (event.type === 'provider.response.started') providerStarted = true;
-    else if (event.type === 'provider.response.completed' || event.type === 'provider.error') providerStarted = false;
+    if (event.type === 'turn.started') currentTurn = event.turnId;
+    else if (event.type === 'provider.response.started') providerStarted.add(currentTurn);
+    else if (event.type === 'provider.response.completed' || event.type === 'provider.error') providerStarted.delete(currentTurn);
     else if (event.type === 'tool.requested' || event.type === 'tool.started') tools.set(event.callId, event);
     else if (event.type === 'tool.completed' || event.type === 'tool.failed') tools.delete(event.callId);
     else if (event.type === 'approval.requested') approvals.set(event.callId, event);
@@ -368,7 +370,7 @@ export function classifySessionInterruptions(events: readonly ApplicationEvent[]
     if (event.name === 'run_process') interruptions.push({ kind: 'process', turnId: event.turnId, callId: event.callId, name: event.name });
   }
   for (const event of approvals.values()) interruptions.push({ kind: 'approval', turnId: event.turnId, callId: event.callId, name: event.request.toolName });
-  if (providerStarted) interruptions.push({ kind: 'provider-continuation' });
+  for (const turnId of providerStarted) interruptions.push({ kind: 'provider-continuation', ...(turnId === 'unknown' ? {} : { turnId }) });
   return interruptions;
 }
 

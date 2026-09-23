@@ -1,24 +1,37 @@
 import { createCliRenderer } from '@opentui/core';
 
-import { createAgentLoopApplicationService } from '../application/index.ts';
-import { PendingApprovalPort, resolveGeorgeConfig } from '../core/index.ts';
+import { createCodingWorkflowApplicationService } from '../application/index.ts';
+import { LocalSessionStore, PendingApprovalPort, resolveGeorgeConfig } from '../core/index.ts';
 import { LmStudioResponsesProvider } from '../provider/index.ts';
 import { GeorgeTui } from './app.ts';
 
 async function main(): Promise<void> {
+  const args = process.argv.slice(2);
+  let workspace: string | undefined;
+  let resume: string | undefined;
+  for (let index = 0; index < args.length; index += 1) {
+    if (args[index] === '--resume') {
+      resume = args[++index];
+      if (!resume) throw new Error('Usage: george [workspace] [--resume <session-id>]');
+    } else if (workspace === undefined) workspace = args[index];
+    else throw new Error('Usage: george [workspace] [--resume <session-id>]');
+  }
   const config = resolveGeorgeConfig({
-    workspace: process.argv[2],
+    workspace,
     baseUrl: process.env.GEORGE_BASE_URL,
     model: process.env.GEORGE_MODEL,
   });
   if (!config.provider.model) throw new Error('Set GEORGE_MODEL before starting George.');
   const approvals = new PendingApprovalPort();
-  const service = await createAgentLoopApplicationService({
+  const store = new LocalSessionStore();
+  const session = resume === undefined ? undefined : await store.open(resume, config.workspace);
+  const service = await createCodingWorkflowApplicationService({
     provider: new LmStudioResponsesProvider(config.provider),
     workspace: config.workspace,
     approvalPort: approvals,
     contextProfile: config.context.profile,
     userConfigRoot: config.userConfigRoot,
+    sessionStore: store,
   });
   const renderer = await createCliRenderer({ exitOnCtrlC: false, exitSignals: [] });
   let tui: GeorgeTui | undefined;
@@ -29,6 +42,7 @@ async function main(): Promise<void> {
       provider: 'LM Studio',
       model: config.provider.model,
       approvals,
+      session,
     });
     await tui.run();
   } finally {

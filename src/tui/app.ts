@@ -13,7 +13,7 @@ import {
   type KeyBinding as TextareaKeyBinding,
 } from '@opentui/core';
 
-import { type AgentLoopApplicationService } from '../application/index.ts';
+import { CodingWorkflowApplicationService, type AgentLoopApplicationService } from '../application/index.ts';
 import { createSession, type ApprovalRequest, type ApprovalResolver, type ApplicationEvent, type ContextDiagnostics, type Session, type TranscriptEntry, type WorkItem } from '../core/index.ts';
 
 export const COMPOSER_KEY_BINDINGS: TextareaKeyBinding[] = [
@@ -44,10 +44,11 @@ type Clipboard = Pick<HostClipboardService, 'read' | 'writeText' | 'dispose'>;
 
 export type GeorgeTuiOptions = Readonly<{
   renderer: CliRenderer;
-  service: AgentLoopApplicationService;
+  service: AgentLoopApplicationService | CodingWorkflowApplicationService;
   provider: string;
   model: string;
   workspace?: string;
+  session?: Session;
   approvals: ApprovalResolver;
   clipboard?: Clipboard;
 }>;
@@ -224,7 +225,7 @@ export class GeorgeTui {
   /** UI-only work-log entries, keyed by P3 operation identity rather than lifecycle rows. */
   readonly work: TranscriptWorkEntry[] = [];
   private readonly renderer: CliRenderer;
-  private readonly service: AgentLoopApplicationService;
+  private readonly service: AgentLoopApplicationService | CodingWorkflowApplicationService;
   private readonly transcriptView: TextRenderable;
   private readonly statusView: TextRenderable;
   private readonly contextView: TextRenderable;
@@ -252,8 +253,9 @@ export class GeorgeTui {
     this.approvals = options.approvals;
     this.clipboard = options.clipboard ?? createHostClipboard();
     this.ownsClipboard = options.clipboard === undefined;
-    this.session = createSession({ workspace: options.workspace ?? options.service.workspace.root });
-    this.statusDetails = `${options.provider} · ${options.model} · ${this.session.workspace}`;
+    const agent = options.service instanceof CodingWorkflowApplicationService ? options.service.agent : options.service;
+    this.session = options.session ?? createSession({ workspace: options.workspace ?? agent.workspace.root });
+    this.statusDetails = `${options.provider} · ${options.model} · session ${this.session.id} · ${this.session.workspace}`;
     this.done = new Promise<void>((resolve) => { this.resolveDone = resolve; });
 
     const layout = new BoxRenderable(this.renderer, { id: 'george', width: '100%', height: '100%', flexDirection: 'column', padding: 1, backgroundColor: NEON_THEME.background, shouldFill: true });
@@ -290,6 +292,8 @@ export class GeorgeTui {
     composer.add(this.input);
     layout.add(composer);
     this.renderer.root.add(layout);
+    this.restoreHistory();
+    this.refreshTranscript();
     this.renderer._internalKeyInput.onInternal('keypress', (key) => {
       if (key.name === 'escape') {
         key.preventDefault();
@@ -352,7 +356,7 @@ export class GeorgeTui {
         return;
       }
       try {
-        const submission = await this.service.skillTurn(command[1]!, command[2]!);
+        const submission = await (this.service instanceof CodingWorkflowApplicationService ? this.service.agent : this.service).skillTurn(command[1]!, command[2]!);
         await this.start(submission.input, submission.activatedSkills);
       } catch (error) {
         this.showCommand(`Skill activation: ${error instanceof Error ? bounded(error.message, 180) : 'failed'}`);
@@ -413,6 +417,10 @@ export class GeorgeTui {
   }
 
   private async consume(input: string, signal: AbortSignal, activatedSkills?: readonly string[]): Promise<void> {
+    if (this.service instanceof CodingWorkflowApplicationService) {
+      await this.service.run({ session: this.session, input, signal, ...(activatedSkills === undefined ? {} : { activatedSkills }), onEvent: async (event) => this.render(event) });
+      return;
+    }
     for await (const event of this.service.run({ session: this.session, input, signal, ...(activatedSkills === undefined ? {} : { activatedSkills }) })) {
       this.render(event);
     }
@@ -488,6 +496,30 @@ export class GeorgeTui {
     this.work.push({ afterEntryCount: this.session.transcript.length, order: this.presentationOrder++, item: event.item });
   }
 
+  /** Restored operations are evidence, never live work or a reusable approval. */
+  private restoreHistory(): void {
+    for (const event of this.session.events) {
+      if (event.type === 'work.updated') {
+        const active = event.item.status === 'requested' || event.item.status === 'running' || event.item.status === 'waiting';
+        const item = active ? { ...event.item, status: 'interrupted' as const, summary: `Previous operation interrupted: ${event.item.summary}` } : event.item;
+        const existing = this.work.findIndex((entry) => entry.item.id === item.id);
+        if (existing >= 0) this.work[existing] = { ...this.work[existing]!, item };
+        else this.work.push({ afterEntryCount: 0, order: this.presentationOrder++, item });
+      }
+      if (event.type === 'context.assembled' && this.contextView) this.contextView.content = contextText(event.diagnostics);
+    }
+    for (const [index, interruption] of this.session.interruptions.entries()) {
+      if (interruption.callId && this.work.some((entry) => entry.item.operationId === interruption.callId)) continue;
+      this.work.push({
+        afterEntryCount: 0, order: this.presentationOrder++,
+        item: {
+          id: `history:interruption:${index}`, turnId: interruption.turnId ?? 'history', operationId: interruption.callId ?? interruption.kind,
+          category: 'recovery', status: 'interrupted', summary: `Previous ${interruption.kind}${interruption.name ? ` (${interruption.name})` : ''} was interrupted`, details: {},
+        },
+      });
+    }
+  }
+
   private recordDiagnostic(event: ApplicationEvent): void {
     if (event.type === 'tool.failed') {
       this.diagnostics.push({
@@ -517,7 +549,7 @@ export class GeorgeTui {
 
   private async showSkills(): Promise<void> {
     try {
-      const catalog = await this.service.skillCatalog();
+      const catalog = await (this.service instanceof CodingWorkflowApplicationService ? this.service.agent : this.service).skillCatalog();
       const shown = catalog.skills.slice(0, 3);
       const details = shown.map((skill) => `${bounded(skill.id, 48)} — ${bounded(skill.description, 84)}`);
       if (catalog.skills.length > shown.length) details.push(`… ${catalog.skills.length - shown.length} more skill(s)`);
