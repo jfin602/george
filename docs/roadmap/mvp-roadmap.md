@@ -1,6 +1,6 @@
 # George MVP Roadmap
 
-Status: CURRENT ROADMAP — PHASE 4 OWNER-CLOSED; PHASE 5 PLANNING
+Status: CURRENT ROADMAP — PHASE 4 OWNER-CLOSED; PHASE 5 CURRENT
 
 The roadmap deliberately proves the provider, read-only tool foundation, real interactive terminal surface, and safe autonomous tool execution before broader coding workflow, networking, or a desktop GUI.
 
@@ -207,25 +207,59 @@ Non-goals:
 
 ## Phase 5 — Reliability + Long Runs
 
-Status: CURRENT PLANNING GATE — baseline package `0.5.0`
+Status: CURRENT IMPLEMENTATION GATE — baseline target package `0.5.0`
 
-Goal: support longer autonomous local jobs safely and establish George's lifecycle hook runtime.
+Goal: support longer autonomous local jobs safely and establish George's lifecycle hook runtime without weakening the existing context, permission, process, session, or evidence boundaries.
+
+Decision authority: `docs/planning/p5-reliability-long-runs/decision-record.md`.
 
 Scope:
-- compaction/summarization;
-- budgets/limits beyond the Phase 2 hard loop guard;
-- retries/backoff;
-- crash/interruption recovery and side-effect reconciliation beyond Phase 4 safe non-replay resume;
-- child-process cleanup hardening;
-- observability/logging;
-- performance baselines including TUI responsiveness under streaming;
-- extended Qwen qualification;
-- normalized George lifecycle hook bus;
-- deterministic hook ordering and enable/disable state;
-- hook timeout/cancellation and bounded input/output;
-- structured hook result/error events and failure isolation;
-- sanitized executable-hook environment and preservation of George's existing process/tool permission boundaries;
-- recovery evidence sufficient to diagnose failed hooks without corrupting the surrounding agent run.
+- provider-independent long-run orchestration owned by the application/core;
+- normalized durable session/event history remains authoritative while compaction summaries, logs, recovery projections, hook results, and provider continuation state remain derived evidence;
+- versioned provider-facing compaction checkpoints with durable-history provenance rather than destructive replacement of canonical history;
+- preservation through compaction of critical instructions, current user intent, unresolved failures, validation evidence, pending approvals, interrupted/ambiguous side effects, and current recovery state;
+- provider-independent compaction/summarizer boundary with deterministic structural reduction preferred where model inference is unnecessary;
+- multidimensional run budgets beyond the Phase 2 hard loop guard, including provider/tool/retry/compaction/process/time/context limits where measurable;
+- explicit soft-pressure degradation/compaction behavior and truthful hard budget-exhaustion terminal state;
+- bounded cancellable retry/backoff only for operations George can classify as replay-safe;
+- no transparent retry of writes, patches, approvals, arbitrary processes, or other side effects after ambiguous execution;
+- interruption/recovery ledger and evidence-based reconciliation that can distinguish confirmed complete, confirmed incomplete, interrupted, and outcome-unknown states without blind replay;
+- no claim of universal exactly-once side effects;
+- child-process ownership/cleanup hardening and inspectable cleanup uncertainty without changing the non-sandbox trust contract;
+- structured diagnostic observability with stable session/turn/operation correlation, bounded/redacted fields, and bounded retention;
+- performance baselines for context growth, compaction, TTFT, tool latency, cleanup, recovery/reopen, hook overhead, memory/session-log growth, and TUI responsiveness under long streaming/work-log load;
+- extended pinned Qwen3-Coder/LM Studio qualification through context pressure, compaction, continued tool use, validation, and bounded interruption/recovery;
+- normalized George lifecycle hook bus with George-owned event names/payloads;
+- deterministic hook ordering, enable/disable state, and duplicate/conflict behavior;
+- hook timeout/cancellation, bounded input/output, sanitized environment, structured result/error evidence, and failure isolation;
+- hooks remain non-authoritative and cannot manufacture approval, suppress policy, mutate execution through hidden authority, replace canonical evidence, or bypass the ToolRegistry/process boundary;
+- Phase 5 proves hook runtime semantics only; plugin manifests/install lifecycle and plugin contribution discovery remain Phase 6.
+
+Success condition:
+- a deterministic long coding workflow crosses context pressure, produces a versioned compaction checkpoint, continues useful tool work, validates, persists, and completes truthfully while canonical history remains intact;
+- repeated compaction never silently drops safety-critical/current state and compaction failure degrades or terminates explicitly;
+- run budgets and replay-safe retry behavior are deterministic, bounded, observable, and cancellable;
+- an interrupted workflow can reopen and reconcile provable side effects while leaving ambiguous outcomes explicit and never blindly replaying them;
+- process cleanup and recovery uncertainty remain inspectable without implying OS sandboxing or unsupported causal certainty;
+- long-run diagnostic state remains bounded/redacted and correlated to authoritative events;
+- lifecycle hooks execute deterministically under timeout/cancellation/failure isolation and cannot expand George's permission ceiling or replace canonical evidence;
+- long-run memory, session/log growth, recovery cost, and TUI responsiveness are characterized before hard performance thresholds are frozen;
+- provider/TUI code remain adapters over reusable long-run, context, session, recovery, hook, tool, and observability services.
+
+Non-goals:
+- automatic semantic skill selection;
+- dedicated secondary utility-model runtime;
+- browser/web/network tools or Parallel/GitHub/Chrome DevTools/MCP adapters;
+- frozen plugin manifest, plugin installation/packaging, or foreign plugin compatibility adapters;
+- remembered broad approval profiles;
+- general mutating Git operations;
+- OS/container sandboxing;
+- daemon/server mode or detached background-job ownership;
+- scheduling;
+- Tauri desktop UI;
+- multi-agent scheduling/execution.
+
+Long-running in Phase 5 means a bounded attached local George run with durable recovery evidence. Phase 7 remains the boundary for a long-lived local service.
 
 ## Phase 6 — Plugins + External Adapters
 
