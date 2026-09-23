@@ -221,9 +221,26 @@ Any phase that mutates files must prove pre-existing user work survives success,
 
 Tests should use fixture repositories with known dirty files and verify George never resets, cleans, stashes, checks out, or overwrites them without an explicit tool/write action and applicable approval.
 
+## Future project-graph qualification
+
+When the post-MVP living project map/software graph is implemented, qualification must prove the graph is useful evidence rather than decorative generated prose.
+
+At minimum, deterministic and integrated coverage should include:
+- identical repository states producing stable deterministic structural graphs;
+- incremental updates converging to the same structural result as a clean rebuild;
+- file/symbol add, delete, move, and rename handling without stale relationships;
+- statically recoverable imports, exports, routes, schemas, or equivalent relationships not being invented or silently dropped;
+- semantic/model-derived architecture relationships remaining distinguishable from deterministic source evidence;
+- expected task impact remaining distinguishable from observed changed/validated impact;
+- runtime observations being labeled as observed runtime evidence rather than generalized into unsupported static claims;
+- stale or incompatible cached graph state being detected and rebuilt or failed visibly rather than silently trusted;
+- derived graph state remaining workspace-bound and not mutating the target repository unless an explicit project-owned workflow authorizes it;
+- presentation adapters producing views from the same graph contract without becoming graph authority;
+- large-repository indexing/update cost, memory growth, and visualization payload size being measured before hard limits are adopted.
+
 ## Performance
 
-Measure where architecture can regress materially: prompt/context size, time-to-first-token, tool-loop latency, process cleanup, memory growth, and session-log growth.
+Measure where architecture can regress materially: prompt/context size, time-to-first-token, tool-loop latency, process cleanup, memory growth, session-log growth, and, when implemented, project-graph indexing/update cost.
 
 Do not establish hard performance budgets until baseline measurements exist; once adopted, keep them versioned and explicit.
 
