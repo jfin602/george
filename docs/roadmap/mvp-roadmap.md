@@ -1,6 +1,6 @@
 # George MVP Roadmap
 
-Status: CURRENT ROADMAP — PHASE 4 OWNER-CLOSED; PHASE 5 CURRENT
+Status: CURRENT ROADMAP — PHASE 5 OWNER-CLOSED; PHASE 6 PLANNING
 
 The roadmap deliberately proves the provider, read-only tool foundation, real interactive terminal surface, and safe autonomous tool execution before broader coding workflow, networking, or a desktop GUI.
 
@@ -207,7 +207,10 @@ Non-goals:
 
 ## Phase 5 — Reliability + Long Runs
 
-Status: CURRENT IMPLEMENTATION GATE — baseline target package `0.5.0`
+Status: OWNER-CLOSED WITH NATIVE-TERMINAL EVIDENCE GAP AND LIVE-MODEL NOT-GREEN RESULT
+
+Formal evidence: `docs/phase-5-closeout.md`.  
+Owner closeout: `docs/phase-5-owner-closeout.md`.
 
 Goal: support longer autonomous local jobs safely and establish George's lifecycle hook runtime without weakening the existing context, permission, process, session, or evidence boundaries.
 
@@ -263,6 +266,8 @@ Non-goals:
 Long-running in Phase 5 means a bounded attached local George run with durable recovery evidence. Phase 7 remains the boundary for a long-lived local service.
 
 ## Phase 6 — Plugins + External Adapters
+
+Status: CURRENT PLANNING GATE — baseline package `0.6.0`
 
 Goal: package extensions and add network/browser intelligence without contaminating the core or weakening George's trust boundaries.
 
