@@ -46,6 +46,12 @@ function identifier(value: unknown, name: string): string {
   return result;
 }
 
+function safeHookOrigin(value: unknown): Readonly<{ hookId: string }> {
+  const origin = record(value, 'hook origin');
+  exactKeys(origin, ['hookId'], 'hook origin');
+  return { hookId: identifier(origin.hookId, 'hook ID') };
+}
+
 function record(value: unknown, name: string): Record<string, unknown> {
   if (!value || typeof value !== 'object' || Array.isArray(value)) invalid(`${name} must be an object.`);
   return value as Record<string, unknown>;
@@ -223,6 +229,8 @@ function durableEvent(event: ApplicationEvent): ApplicationEvent | undefined {
     case 'provider.error': return { type: event.type, error: safeError(event.error) };
     case 'turn.started': case 'turn.completed': return { type: event.type, turnId: string(event.turnId, 'turn ID', 256) };
     case 'turn.cancelled': case 'turn.failed': return { type: event.type, turnId: string(event.turnId, 'turn ID', 256), error: safeError(event.error) };
+    case 'hook.started': return { type: event.type, ...(event.turnId === undefined ? {} : { turnId: string(event.turnId, 'turn ID', 256) }), hookId: identifier(event.hookId, 'hook ID'), event: string(event.event, 'hook event', 128) };
+    case 'hook.completed': return { type: event.type, ...(event.turnId === undefined ? {} : { turnId: string(event.turnId, 'turn ID', 256) }), hookId: identifier(event.hookId, 'hook ID'), event: string(event.event, 'hook event', 128), status: oneOf(event.status, 'hook status', ['succeeded', 'failed', 'timed_out', 'cancelled']), ...(event.message === undefined ? {} : { message: boundedMessage(string(event.message, 'hook message', 512)) }) };
     case 'recovery.intent': return { type: event.type, turnId: string(event.turnId, 'turn ID', 256), callId: string(event.callId, 'call ID', 256), intent: safeRecoveryIntent(event.intent) };
     case 'recovery.decision': return {
       type: event.type, turnId: string(event.turnId, 'turn ID', 256), ...(event.callId === undefined ? {} : { callId: string(event.callId, 'call ID', 256) }),
@@ -231,13 +239,13 @@ function durableEvent(event: ApplicationEvent): ApplicationEvent | undefined {
     };
     case 'context.source': return { type: event.type, turnId: string(event.turnId, 'turn ID', 256), sourceId: string(event.sourceId, 'context source ID', 1024), kind: string(event.kind, 'context source kind', 128), status: oneOf(event.status, 'context source status', ['loading', 'loaded', 'missing', 'oversized', 'failed']), ...(event.bytes === undefined ? {} : { bytes: boundedInteger(event.bytes, 'context source bytes') }) };
     case 'context.assembled': return { type: event.type, turnId: string(event.turnId, 'turn ID', 256), diagnostics: safeDiagnostics(event.diagnostics) };
-    case 'tool.requested': return { type: event.type, turnId: string(event.turnId, 'turn ID', 256), callId: string(event.callId, 'call ID', 256), name: string(event.name, 'tool name', 256), arguments: '{}' };
-    case 'tool.started': return { type: event.type, turnId: string(event.turnId, 'turn ID', 256), callId: string(event.callId, 'call ID', 256), name: string(event.name, 'tool name', 256) };
-    case 'tool.completed': return { type: event.type, turnId: string(event.turnId, 'turn ID', 256), callId: string(event.callId, 'call ID', 256), name: string(event.name, 'tool name', 256), result: { ok: true, value: {} } };
-    case 'tool.failed': return { type: event.type, turnId: string(event.turnId, 'turn ID', 256), callId: string(event.callId, 'call ID', 256), name: string(event.name, 'tool name', 256), result: { ok: false, error: safeError(event.result.error) } };
+    case 'tool.requested': return { type: event.type, turnId: string(event.turnId, 'turn ID', 256), callId: string(event.callId, 'call ID', 256), name: string(event.name, 'tool name', 256), arguments: '{}', ...(event.origin === undefined ? {} : { origin: safeHookOrigin(event.origin) }) };
+    case 'tool.started': return { type: event.type, turnId: string(event.turnId, 'turn ID', 256), callId: string(event.callId, 'call ID', 256), name: string(event.name, 'tool name', 256), ...(event.origin === undefined ? {} : { origin: safeHookOrigin(event.origin) }) };
+    case 'tool.completed': return { type: event.type, turnId: string(event.turnId, 'turn ID', 256), callId: string(event.callId, 'call ID', 256), name: string(event.name, 'tool name', 256), result: { ok: true, value: {} }, ...(event.origin === undefined ? {} : { origin: safeHookOrigin(event.origin) }) };
+    case 'tool.failed': return { type: event.type, turnId: string(event.turnId, 'turn ID', 256), callId: string(event.callId, 'call ID', 256), name: string(event.name, 'tool name', 256), result: { ok: false, error: safeError(event.result.error) }, ...(event.origin === undefined ? {} : { origin: safeHookOrigin(event.origin) }) };
     case 'approval.requested': case 'approval.allowed': case 'approval.denied': return {
       type: event.type, turnId: string(event.turnId, 'turn ID', 256), callId: string(event.callId, 'call ID', 256),
-      request: safeApproval(event.request),
+      request: safeApproval(event.request), ...(event.origin === undefined ? {} : { origin: safeHookOrigin(event.origin) }),
     } as ApplicationEvent;
     case 'validation.started': return { type: event.type, turnId: string(event.turnId, 'turn ID', 256), callId: string(event.callId, 'validation call ID', 256), label: boundedMessage(string(event.label, 'validation label', 1024)), intent: boundedMessage(string(event.intent, 'validation intent')) };
     case 'validation.completed': {

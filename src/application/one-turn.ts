@@ -14,6 +14,9 @@ import {
   resolveWorkspacePath,
   resolveGeorgeUserConfigRoot,
   RunBudget,
+  HookRegistry,
+  type HookRegistration,
+  type HookEvent,
   type RunBudgetClock,
   type RunBudgetConfig,
   type RunBudgetDimension,
@@ -72,6 +75,7 @@ export type OneTurnServiceOptions = Readonly<{
   providerRetryPolicy?: ProviderRetryPolicy;
   retrySleeper?: RetrySleeper;
   approvalPort?: ApprovalPort;
+  hooks?: readonly HookRegistration[];
 }>;
 
 export type AgentLoopServiceOptions = OneTurnServiceOptions;
@@ -86,6 +90,9 @@ export type ProcessSubmission = Readonly<{
   callId?: string;
   signal?: AbortSignal;
   budget?: RunBudget;
+  /** Internal hook payload. This is not exposed in the model tool schema. */
+  input?: string;
+  hookId?: string;
 }>;
 
 const DEFAULT_MAX_TOOL_CALLS = 32;
@@ -174,6 +181,7 @@ export class AgentLoopApplicationService {
   private readonly providerRetryPolicy: ProviderRetryPolicy;
   private readonly retrySleeper: RetrySleeper;
   private readonly recovery: RecoveryCoordinator;
+  readonly hooks: HookRegistry;
   private readonly projections = new WeakMap<Session, WorkProjection>();
   readonly workspace: Workspace;
 
@@ -194,6 +202,7 @@ export class AgentLoopApplicationService {
     compactor: ContextCompactor,
     providerRetryPolicy: ProviderRetryPolicy,
     retrySleeper: RetrySleeper,
+    hooks: HookRegistry,
   ) {
     this.provider = provider;
     this.workspace = workspace;
@@ -212,6 +221,7 @@ export class AgentLoopApplicationService {
     this.providerRetryPolicy = providerRetryPolicy;
     this.retrySleeper = retrySleeper;
     this.recovery = new RecoveryCoordinator(workspace);
+    this.hooks = hooks;
   }
 
   async skillCatalog(): Promise<SkillCatalog> {
@@ -239,6 +249,34 @@ export class AgentLoopApplicationService {
       yield* this.record(session, { type: 'budget.exhausted', turnId, runId: budget.id, dimension: decision.exhausted, budget: decision.snapshot });
       throw new GeorgeError('budget', `Run budget exhausted: ${decision.exhausted}.`);
     }
+  }
+
+  /** Hooks are observers: their bounded output is recorded, never returned to the agent loop. */
+  private async *invokeHooks(session: Session, event: HookEvent, budget: RunBudget, signal?: AbortSignal): AsyncGenerator<ApplicationEvent> {
+    const emitted: ApplicationEvent[] = [];
+    const turnId = event.turnId ?? 'hook';
+    await this.hooks.dispatch(event, async (hook, input, hookSignal) => {
+      const hookEvents: ApplicationEvent[] = [];
+      try {
+        for await (const item of this.runProcess({
+          session, turnId, callId: `hook-${hook.id}-${randomUUID()}`, executable: hook.executable,
+          arguments: hook.arguments ?? [], ...(hook.cwd === undefined ? {} : { cwd: hook.cwd }),
+          ...(hook.timeoutMs === undefined ? {} : { timeoutMs: hook.timeoutMs }), input, hookId: hook.id,
+          signal: hookSignal, budget,
+        })) hookEvents.push(item);
+      } finally { emitted.push(...hookEvents); }
+      const finished = hookEvents.findLast((item) => (item.type === 'tool.completed' || item.type === 'tool.failed') && item.name === 'run_process');
+      if (finished?.type === 'tool.completed') {
+        const result = finished.result.value as unknown as { outcome?: 'completed' | 'failed' | 'timed_out'; stdout?: string };
+        return { outcome: result.outcome ?? 'failed', stdout: typeof result.stdout === 'string' ? result.stdout : '' };
+      }
+      return { outcome: 'failed', stdout: '' };
+    }, signal, (invocation) => {
+      emitted.push(...this.record(session, invocation.status === 'started'
+        ? { type: 'hook.started', ...(event.turnId === undefined ? {} : { turnId: event.turnId }), hookId: invocation.id, event: invocation.event }
+        : { type: 'hook.completed', ...(event.turnId === undefined ? {} : { turnId: event.turnId }), hookId: invocation.id, event: invocation.event, status: invocation.status, ...(invocation.message === undefined ? {} : { message: invocation.message }) }));
+    });
+    yield* emitted;
   }
 
   private checkpoints(session: Session): ContextCheckpoint[] {
@@ -340,12 +378,17 @@ export class AgentLoopApplicationService {
     call: { callId: string; name: string; arguments: string },
     signal?: AbortSignal,
     budget?: RunBudget,
+    input?: string,
+    hookId?: string,
   ): AsyncGenerator<ApplicationEvent, import('../tools/index.ts').ToolResult> {
     const emit = (event: ApplicationEvent): readonly ApplicationEvent[] => this.record(session, event);
-    yield* emit({ type: 'tool.requested', turnId, callId: call.callId, name: call.name, arguments: call.arguments });
+    const origin = hookId === undefined ? {} : { origin: { hookId } };
+    yield* emit({ type: 'tool.requested', turnId, callId: call.callId, name: call.name, arguments: call.arguments, ...origin });
+    if (!hookId && budget) yield* this.invokeHooks(session, { name: 'tool.before', sessionId: session.id, turnId, runId: budget.id, operation: { callId: call.callId, name: call.name } }, budget, signal);
+    if (signal?.aborted) throw cancellationError(signal);
     const validation = this.registry.validate(call);
     if ('callId' in validation) {
-      yield* emit({ type: 'tool.failed', turnId, callId: call.callId, name: call.name, result: validation.result as Extract<typeof validation.result, { ok: false }> });
+      yield* emit({ type: 'tool.failed', turnId, callId: call.callId, name: call.name, result: validation.result as Extract<typeof validation.result, { ok: false }>, ...origin });
       return validation;
     }
     let request: ApprovalRequest | undefined;
@@ -355,19 +398,19 @@ export class AgentLoopApplicationService {
       const normalized = asGeorgeError(error, 'validation');
       if (normalized.code === 'cancelled') throw normalized;
       const result = { callId: call.callId, name: call.name, result: { ok: false as const, error: { code: normalized.code, message: normalized.message } } };
-      yield* emit({ type: 'tool.failed', turnId, callId: call.callId, name: call.name, result: result.result });
+      yield* emit({ type: 'tool.failed', turnId, callId: call.callId, name: call.name, result: result.result, ...origin });
       return result;
     }
     if (request) {
-      yield* emit({ type: 'approval.requested', turnId, callId: call.callId, request });
+      yield* emit({ type: 'approval.requested', turnId, callId: call.callId, request, ...origin });
       const decision = await this.approvalPort.request(request, { signal });
       if (decision !== 'allow_once') {
-        yield* emit({ type: 'approval.denied', turnId, callId: call.callId, request });
+        yield* emit({ type: 'approval.denied', turnId, callId: call.callId, request, ...origin });
         const result = { callId: call.callId, name: call.name, result: { ok: false as const, error: { code: 'denied', message: `Approval denied for tool ${call.name}.` } } };
-        yield* emit({ type: 'tool.failed', turnId, callId: call.callId, name: call.name, result: result.result });
+        yield* emit({ type: 'tool.failed', turnId, callId: call.callId, name: call.name, result: result.result, ...origin });
         return result;
       }
-      yield* emit({ type: 'approval.allowed', turnId, callId: call.callId, request });
+      yield* emit({ type: 'approval.allowed', turnId, callId: call.callId, request, ...origin });
     }
     if (budget) {
       yield* this.consumeBudget(session, turnId, budget, 'toolExecutions', 1, signal);
@@ -381,12 +424,14 @@ export class AgentLoopApplicationService {
         : { name: 'apply_patch' as const, path: target.relativePath, precondition: validation.arguments.expectedSha256 as string, edits: (validation.arguments.edits as readonly unknown[]).length };
       if (intent) yield* emit({ type: 'recovery.intent', turnId, callId: call.callId, intent });
     }
-    yield* emit({ type: 'tool.started', turnId, callId: call.callId, name: call.name });
+    yield* emit({ type: 'tool.started', turnId, callId: call.callId, name: call.name, ...origin });
     const startedAt = call.name === 'run_process' ? this.clock() : undefined;
-    const result = await this.registry.dispatch(call, { signal });
-    if (result.result.ok) yield* emit({ type: 'tool.completed', turnId, callId: call.callId, name: call.name, result: result.result });
-    else yield* emit({ type: 'tool.failed', turnId, callId: call.callId, name: call.name, result: result.result });
+    const result = await this.registry.dispatch(call, { signal, ...(input === undefined ? {} : { input }) });
+    if (result.result.ok) yield* emit({ type: 'tool.completed', turnId, callId: call.callId, name: call.name, result: result.result, ...origin });
+    else yield* emit({ type: 'tool.failed', turnId, callId: call.callId, name: call.name, result: result.result, ...origin });
     if (budget && startedAt !== undefined) yield* this.consumeBudget(session, turnId, budget, 'processRuntimeMs', Math.max(0, Math.floor(this.clock() - startedAt)), signal);
+    if (!hookId && budget) yield* this.invokeHooks(session, { name: 'tool.after', sessionId: session.id, turnId, runId: budget.id, operation: { callId: call.callId, name: call.name } }, budget, signal);
+    if (signal?.aborted) throw cancellationError(signal);
     return result;
   }
 
@@ -396,7 +441,7 @@ export class AgentLoopApplicationService {
       callId: submission.callId ?? randomUUID(), name: 'run_process',
       arguments: JSON.stringify({ executable: submission.executable, arguments: submission.arguments, ...(submission.cwd === undefined ? {} : { cwd: submission.cwd }), ...(submission.timeoutMs === undefined ? {} : { timeoutMs: submission.timeoutMs }) }),
     };
-    return yield* this.executeTool(submission.session, submission.turnId, call, submission.signal, submission.budget ?? this.createRunBudget());
+    return yield* this.executeTool(submission.session, submission.turnId, call, submission.signal, submission.budget ?? this.createRunBudget(), submission.input, submission.hookId);
   }
 
   async *run(submission: AgentLoopSubmission): AsyncGenerator<ApplicationEvent> {
@@ -406,8 +451,10 @@ export class AgentLoopApplicationService {
     yield* emit({ type: 'turn.started', turnId });
     yield* emit({ type: 'reliability.run.started', turnId, runId: budget.id, budget: budget.snapshot() });
     yield* emit({ type: 'budget.state', turnId, runId: budget.id, budget: budget.snapshot() });
+    yield* this.invokeHooks(submission.session, { name: 'turn.started', sessionId: submission.session.id, turnId, runId: budget.id }, budget, submission.signal);
     const priorTranscript = completedHistory(submission.session.transcript);
     yield* emit({ type: 'input.submitted', text: submission.input });
+    yield* this.invokeHooks(submission.session, { name: 'input.submitted', sessionId: submission.session.id, turnId, runId: budget.id }, budget, submission.signal);
     try {
       if (submission.signal?.aborted) throw cancellationError(submission.signal);
       let context: AssembledContext | undefined;
@@ -486,6 +533,8 @@ export class AgentLoopApplicationService {
       if (!context) throw new GeorgeError('validation', 'Context assembly ended without a result.');
       if (submission.signal?.aborted) throw cancellationError(submission.signal);
       yield* emit({ type: 'context.assembled', turnId, diagnostics: contextDiagnostics(context, this.profile) });
+      yield* this.invokeHooks(submission.session, { name: 'context.assembled', sessionId: submission.session.id, turnId, runId: budget.id }, budget, submission.signal);
+      if (submission.signal?.aborted) throw cancellationError(submission.signal);
       yield* this.consumeBudget(submission.session, turnId, budget, 'contextTokens', context.estimatedTokens, submission.signal);
       const baseRequest = { instructions: context.rendered.guidance, input: context.rendered.conversation, tools: this.registry.definitions };
       let continuation: ProviderContinuation | undefined;
@@ -507,6 +556,8 @@ export class AgentLoopApplicationService {
           try {
             yield* this.consumeBudget(submission.session, turnId, budget, 'providerAttempts', 1, submission.signal);
             yield* emit({ type: 'provider.attempt.started', turnId, runId: budget.id, attemptId });
+            yield* this.invokeHooks(submission.session, { name: 'provider.requested', sessionId: submission.session.id, turnId, runId: budget.id }, budget, submission.signal);
+            if (submission.signal?.aborted) throw cancellationError(submission.signal);
             for await (const event of this.provider.stream(
               { ...baseRequest, ...(continuation === undefined ? {} : { continuation }) },
               { signal: submission.signal, timeoutMs: submission.timeoutMs },
@@ -524,6 +575,8 @@ export class AgentLoopApplicationService {
             }
             yield* this.consumeBudget(submission.session, turnId, budget, 'wallClockMs', 0, submission.signal);
             if (!completed) throw { code: 'provider', message: 'Provider stream ended without a completion event.' } satisfies GeorgeErrorShape;
+            yield* this.invokeHooks(submission.session, { name: 'provider.responded', sessionId: submission.session.id, turnId, runId: budget.id, provider: { ...(responseId === undefined ? {} : { responseId }), completed, hadToolCalls: calls.length > 0 } }, budget, submission.signal);
+            if (submission.signal?.aborted) throw cancellationError(submission.signal);
             break;
           } catch (error) {
             const normalized = asGeorgeError(error);
@@ -576,6 +629,7 @@ export class AgentLoopApplicationService {
         }
         continuation = { responseId, toolResults: results };
       }
+      yield* this.invokeHooks(submission.session, { name: 'turn.completed', sessionId: submission.session.id, turnId, runId: budget.id }, budget, submission.signal);
       yield* emit({ type: 'turn.completed', turnId });
     } catch (error) {
       const normalized = asGeorgeError(error);
@@ -619,6 +673,7 @@ export async function createAgentLoopApplicationService(
     options.compactor ?? new ProviderContextCompactor(options.provider),
     validateProviderRetryPolicy(options.providerRetryPolicy ?? DEFAULT_PROVIDER_RETRY_POLICY),
     options.retrySleeper ?? sleepForRetry,
+    (() => { const hooks = new HookRegistry(); for (const hook of options.hooks ?? []) hooks.register(hook); return hooks; })(),
   );
 }
 

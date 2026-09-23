@@ -32,7 +32,8 @@ export type ToolDefinition = Readonly<{
   execute: (arguments_: JsonObject, options: ToolExecutionOptions) => Promise<JsonValue>;
 }>;
 
-export type ToolExecutionOptions = Readonly<{ signal?: AbortSignal }>;
+/** `input` is internal process stdin, not part of any model-visible tool schema. */
+export type ToolExecutionOptions = Readonly<{ signal?: AbortSignal; input?: string }>;
 export type ToolCall = Readonly<{ callId: string; name: string; arguments: string }>;
 export type ToolResult = ProviderToolResult;
 export type ValidatedToolCall = Readonly<{ definition: ToolDefinition; arguments: JsonObject }>;

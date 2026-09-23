@@ -74,6 +74,43 @@ test('one-turn service keeps George context first and invokes the provider exact
   assert.deepEqual(session.transcript, [{ role: 'user', text: 'Hi' }, { role: 'assistant', text: 'Hello.' }]);
 });
 
+test('process hooks use the normal approval boundary and remain non-authoritative', async (t) => {
+  const root = await workspace();
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const approvals: string[] = [];
+  const previousSecret = process.env.GEORGE_HOOK_SECRET;
+  process.env.GEORGE_HOOK_SECRET = 'must-not-reach-hook';
+  t.after(() => { if (previousSecret === undefined) delete process.env.GEORGE_HOOK_SECRET; else process.env.GEORGE_HOOK_SECRET = previousSecret; });
+  const service = await createOneTurnApplicationService({
+    provider: new ScriptedProvider([{ type: 'provider.text.delta', delta: 'canonical' }, { type: 'provider.response.completed' }]), workspace: root,
+    approvalPort: { request: async (request) => { approvals.push(request.toolName); return 'allow_once'; } },
+    hooks: [{ id: 'observe-provider', event: 'provider.responded', kind: 'process', executable: 'node', arguments: ['-e', "process.stdin.resume();process.stdin.on('end',()=>process.stdout.write(JSON.stringify({message:process.env.GEORGE_HOOK_SECRET||'not canonical'})))"] }],
+  });
+  const session = createSession({ workspace: root });
+  const events = await collect(service.run({ session, input: 'go', turnId: 'hook-turn' }));
+  assert.deepEqual(approvals, ['run_process']);
+  assert.equal(events.some((event) => event.type === 'hook.completed' && event.hookId === 'observe-provider' && event.status === 'succeeded'), true);
+  assert.equal(events.some((event) => event.type === 'hook.completed' && event.hookId === 'observe-provider' && event.message === 'not canonical'), true);
+  assert.equal(events.some((event) => event.type === 'tool.started' && event.origin?.hookId === 'observe-provider'), true);
+  assert.equal(session.transcript.at(-1)?.text, 'canonical');
+  assert.equal(session.transcript.some((item) => item.text.includes('not canonical')), false);
+});
+
+test('timed-out process hooks are isolated from the turn', async (t) => {
+  const root = await workspace();
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const service = await createOneTurnApplicationService({
+    provider: new ScriptedProvider([{ type: 'provider.text.delta', delta: 'still canonical' }, { type: 'provider.response.completed' }]), workspace: root,
+    approvalPort: { request: async () => 'allow_once' },
+    hooks: [{ id: 'slow', event: 'provider.responded', kind: 'process', executable: 'node', arguments: ['-e', 'setTimeout(()=>{},1000)'], timeoutMs: 1 }],
+  });
+  const session = createSession({ workspace: root });
+  const events = await collect(service.run({ session, input: 'go' }));
+  assert.equal(events.some((event) => event.type === 'hook.completed' && event.hookId === 'slow' && event.status === 'timed_out'), true);
+  assert.equal(events.at(-1)?.type, 'turn.completed');
+  assert.equal(session.transcript.at(-1)?.text, 'still canonical');
+});
+
 test('provider-facing history compacts only completed older pairs, retains a raw tail, and reuses its checkpoint', async (t) => {
   const root = await workspace();
   t.after(() => rm(root, { recursive: true, force: true }));

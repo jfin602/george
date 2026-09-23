@@ -199,12 +199,12 @@ export type ProcessToolExecutor = Readonly<{
   workspace: Workspace;
   registry: ToolRegistry;
   definitions: ToolRegistry['definitions'];
-  execute: (call: ProcessToolCall, options?: Readonly<{ signal?: AbortSignal }>) => Promise<ProcessToolResult>;
+  execute: (call: ProcessToolCall, options?: Readonly<{ signal?: AbortSignal; input?: string }>) => Promise<ProcessToolResult>;
 }>;
 
 export function createProcessToolExecutor(workspace: Workspace, configuredLimits: ProcessToolLimits = {}): ProcessToolExecutor {
   const bounded = limits(configuredLimits);
-  const executeRaw = async (call: ProcessToolCall, options: Readonly<{ signal?: AbortSignal }> = {}): Promise<ProcessToolResult> => {
+  const executeRaw = async (call: ProcessToolCall, options: Readonly<{ signal?: AbortSignal; input?: string }> = {}): Promise<ProcessToolResult> => {
     if (options.signal?.aborted) throw cancellationError(options.signal);
     await assertCanonicalWorkspace(workspace);
     const cwd = await processCwd(workspace, call.cwd ?? '.');
@@ -218,7 +218,7 @@ export function createProcessToolExecutor(workspace: Workspace, configuredLimits
           cwd,
           env: childEnvironment(bounded.trustedEnvironment),
           shell: false,
-          stdio: ['ignore', 'pipe', 'pipe'],
+          stdio: ['pipe', 'pipe', 'pipe'],
           windowsHide: true,
         });
       } catch (error) {
@@ -240,6 +240,8 @@ export function createProcessToolExecutor(workspace: Workspace, configuredLimits
         return terminateTree(child.pid);
       })();
       const timeout = setTimeout(() => { timedOut = true; void stop(); }, timeoutMs);
+      if (options.input !== undefined) child.stdin.end(options.input);
+      else child.stdin.end();
       const cancelled = () => { void stop(); };
       options.signal?.addEventListener('abort', cancelled, { once: true });
       child.stdout.on('data', (chunk: Buffer) => {
@@ -281,7 +283,7 @@ export function createProcessToolExecutor(workspace: Workspace, configuredLimits
       ...(typeof arguments_.timeoutMs === 'number' ? { timeoutMs: arguments_.timeoutMs } : {}),
     }, options) as unknown as JsonObject,
   }]);
-  const execute = async (call: ProcessToolCall, options: Readonly<{ signal?: AbortSignal }> = {}): Promise<ProcessToolResult> => {
+  const execute = async (call: ProcessToolCall, options: Readonly<{ signal?: AbortSignal; input?: string }> = {}): Promise<ProcessToolResult> => {
     const { name, ...arguments_ } = call;
     const validation = registry.validate({ callId: 'process-compatibility', name, arguments: JSON.stringify(arguments_) });
     if ('callId' in validation) {

@@ -146,3 +146,18 @@ test('durable sessions retain bounded valid compaction checkpoints without chang
   assert.deepEqual(reopened.events, session.events);
   assert.deepEqual(reopened.transcript, []);
 });
+
+test('durable hook evidence retains only bounded normalized outcome metadata', async () => {
+  const { workspace, state } = await fixture();
+  const store = new LocalSessionStore({ root: state });
+  const session = createSession({ id: 'hook-session', workspace });
+  appendSessionEvent(session, { type: 'hook.started', turnId: 'turn-1', hookId: 'audit-hook', event: 'provider.responded' });
+  appendSessionEvent(session, { type: 'hook.completed', turnId: 'turn-1', hookId: 'audit-hook', event: 'provider.responded', status: 'succeeded', message: 'bounded result' });
+  appendSessionEvent(session, { type: 'tool.started', turnId: 'turn-1', callId: 'hook-call', name: 'run_process', origin: { hookId: 'audit-hook' } });
+  await store.save(session);
+  const reopened = await store.open('hook-session', workspace);
+  assert.deepEqual(reopened.events.map((event) => event.type), ['hook.started', 'hook.completed', 'tool.started']);
+  assert.equal(reopened.events.at(-1)?.type === 'tool.started' && reopened.events.at(-1).origin?.hookId, 'audit-hook');
+  const serialized = await readFile(join(state, 'hook-session.json'), 'utf8');
+  assert.doesNotMatch(serialized, /stdout|environment|arguments/i);
+});

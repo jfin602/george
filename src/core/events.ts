@@ -116,6 +116,7 @@ export type RecoveryIntent =
   | Readonly<{ name: 'apply_patch'; path: string; precondition: string; edits: number }>;
 
 export type RecoveryOutcome = 'confirmed_complete' | 'confirmed_incomplete' | 'interrupted' | 'outcome_unknown';
+export type HookOrigin = Readonly<{ hookId: string }>;
 
 export type ProviderEvent =
   | Readonly<{ type: 'provider.response.started'; responseId?: string }>
@@ -149,6 +150,8 @@ export type ApplicationEvent =
   | Readonly<{ type: 'turn.completed'; turnId: string }>
   | Readonly<{ type: 'turn.cancelled'; turnId: string; error: GeorgeErrorShape }>
   | Readonly<{ type: 'turn.failed'; turnId: string; error: GeorgeErrorShape }>
+  | Readonly<{ type: 'hook.started'; turnId?: string; hookId: string; event: string }>
+  | Readonly<{ type: 'hook.completed'; turnId?: string; hookId: string; event: string; status: 'succeeded' | 'failed' | 'timed_out' | 'cancelled'; message?: string }>
   | Readonly<{ type: 'recovery.intent'; turnId: string; callId: string; intent: RecoveryIntent }>
   | Readonly<{ type: 'recovery.decision'; turnId: string; callId?: string; kind: 'mutation' | 'process' | 'approval' | 'provider-continuation'; name?: string; outcome: RecoveryOutcome; evidence: string }>
   | Readonly<{
@@ -157,11 +160,12 @@ export type ApplicationEvent =
       callId: string;
       name: string;
       arguments: string;
+      origin?: HookOrigin;
     }>
-  | Readonly<{ type: 'tool.started'; turnId: string; callId: string; name: string }>
-  | Readonly<{ type: 'approval.requested'; turnId: string; callId: string; request: ApprovalRequest }>
-  | Readonly<{ type: 'approval.allowed'; turnId: string; callId: string; request: ApprovalRequest }>
-  | Readonly<{ type: 'approval.denied'; turnId: string; callId: string; request: ApprovalRequest }>
+  | Readonly<{ type: 'tool.started'; turnId: string; callId: string; name: string; origin?: HookOrigin }>
+  | Readonly<{ type: 'approval.requested'; turnId: string; callId: string; request: ApprovalRequest; origin?: HookOrigin }>
+  | Readonly<{ type: 'approval.allowed'; turnId: string; callId: string; request: ApprovalRequest; origin?: HookOrigin }>
+  | Readonly<{ type: 'approval.denied'; turnId: string; callId: string; request: ApprovalRequest; origin?: HookOrigin }>
   | Readonly<{ type: 'validation.started'; turnId: string; callId: string; label: string; intent: string }>
   | Readonly<{ type: 'validation.completed'; turnId: string; callId: string; status: 'passed' | 'failed' | 'denied' | 'cancelled'; exitCode: number | null; signal: string | null; outcome?: 'completed' | 'failed' | 'timed_out' | 'spawn_failed'; stdoutTruncated: boolean; stderrTruncated: boolean; error?: Readonly<{ code: string; message: string }> }>
   | Readonly<{ type: 'workflow.completed'; turnId: string; completion: WorkflowCompletion }>
@@ -174,6 +178,7 @@ export type ApplicationEvent =
       callId: string;
       name: string;
       result: Readonly<{ ok: true; value: import('./provider.ts').JsonValue }>;
+      origin?: HookOrigin;
     }>
   | Readonly<{
       type: 'tool.failed';
@@ -181,4 +186,5 @@ export type ApplicationEvent =
       callId: string;
       name: string;
       result: Readonly<{ ok: false; error: Readonly<{ code: string; message: string }> }>;
+      origin?: HookOrigin;
     }>;
