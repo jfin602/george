@@ -351,6 +351,47 @@ Workspace/repository configuration is untrusted relative to George's permission 
 - no database in MVP;
 - no web framework in MVP.
 
+## Future project graph boundary
+
+Post-MVP, George may maintain a presentation-independent software graph for the target repository being worked on.
+
+The intended boundary is:
+
+```text
+target repository
+       |
+       v
+deterministic code/config index
+       |
+       v
+software graph
+   +---+------------------+
+   |                      |
+semantic architecture   task/runtime evidence
+   |                      |
+   +----------+-----------+
+              |
+              v
+presentation adapters
+OpenTUI / Tauri / browser / network client
+```
+
+The graph service belongs below presentation adapters and must not be owned by OpenTUI, Tauri, or a browser renderer. Presentation clients choose layout and interaction; they do not become the authority for project structure.
+
+The graph should preserve evidence layers rather than flattening all relationships into equal-confidence edges:
+
+1. **Deterministic structural evidence** — files, modules, imports/exports, symbols, packages, schemas, routes, and other relationships George can recover directly from repository contents.
+2. **Semantic project model** — higher-level components and responsibilities such as renderer, simulation, API, authentication, persistence, or tool system. These may be derived from code, project documentation, and bounded model assistance, but must remain distinguishable from deterministic facts.
+3. **Task/runtime evidence** — what George inspected, changed, validated, or actually observed during execution. Runtime evidence augments static structure but does not rewrite deterministic source relationships.
+
+Incremental graph updates should eventually consume authoritative repository/change/session evidence so a coding run can show added, modified, removed, affected, and validated components. Expected task impact and observed impact must remain distinguishable.
+
+The software graph should support multiple projections over the same underlying model, including architecture, modules/dependencies, data flow, control/runtime flow where evidence exists, API/network boundaries, persistence/database structure, tests/validation, and current-task impact. The default experience should favor useful conceptual structure and drill-down rather than rendering every file and symbol at once.
+
+Derived graph/index state should be stored in George's own state area keyed to canonical workspace identity by default. George must not silently add `.george/project-map.json` or equivalent metadata to user repositories merely to support this feature. Explicit project-owned/committed architecture metadata may be added later as a separate opt-in contract.
+
+No Phase 4 behavior depends on this future boundary.
+
 ## Future boundaries
 
-Designed, not implemented initially: daemon/server transport, Tauri desktop UI, Chrome DevTools, Parallel Search, GitHub/MCP adapters, multiple inference providers, OS/container sandboxing, remembered permission profiles, authenticated remote clients, and multi-agent execution.
+Designed, not implemented initially: daemon/server transport, Tauri desktop UI, Chrome DevTools, Parallel Search, GitHub/MCP adapters, multiple inference providers, project software-graph/index services, OS/container sandboxing, remembered permission profiles, authenticated remote clients, and multi-agent execution.
