@@ -127,6 +127,8 @@ export type ApplicationEvent =
   | ProviderEvent
   | Readonly<{ type: 'reliability.run.started'; turnId: string; runId: string; budget: RunBudgetSnapshot }>
   | Readonly<{ type: 'provider.attempt.started'; turnId: string; runId: string; attemptId: string }>
+  | Readonly<{ type: 'provider.retry.scheduled'; turnId: string; runId: string; attemptId: string; retry: number; delayMs: number; category: 'provider' }>
+  | Readonly<{ type: 'provider.retry.exhausted'; turnId: string; runId: string; attemptId: string; retries: number; category: 'provider' }>
   | Readonly<{ type: 'budget.state'; turnId: string; runId: string; budget: RunBudgetSnapshot }>
   | Readonly<{ type: 'budget.pressure'; turnId: string; runId: string; dimensions: readonly RunBudgetDimension[]; budget: RunBudgetSnapshot }>
   | Readonly<{ type: 'budget.exhausted'; turnId: string; runId: string; dimension: RunBudgetDimension; budget: RunBudgetSnapshot }>

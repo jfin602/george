@@ -6,6 +6,7 @@ import test from 'node:test';
 
 import {
   GeorgeError,
+  RunBudget,
   DEFAULT_CONTEXT_PROFILE,
   createSession,
   type ModelProvider,
@@ -290,7 +291,7 @@ test('context budget failures are retained as bounded diagnostic evidence', asyn
   assert.equal(provider.calls.length, 0);
 });
 
-test('one-turn service reports cancellation and provider failure without a retry', async (t) => {
+test('one-turn service reports cancellation and configured no-retry provider failure', async (t) => {
   const root = await workspace();
   t.after(() => rm(root, { recursive: true, force: true }));
   let providerStarted: (() => void) | undefined;
@@ -321,7 +322,7 @@ test('one-turn service reports cancellation and provider failure without a retry
   assert.equal(cancelledEvents.at(-1)?.type, 'turn.cancelled');
 
   const failed = new ScriptedProvider([], new Error('offline'));
-  const failedService = await createOneTurnApplicationService({ provider: failed, workspace: root });
+  const failedService = await createOneTurnApplicationService({ provider: failed, workspace: root, providerRetryPolicy: { maxRetries: 0, initialDelayMs: 0, maxDelayMs: 0 } });
   const failedEvents = await collect(failedService.run({ session: createSession({ workspace: root }), input: 'Fail', turnId: 'turn-4' }));
   assert.equal(failed.calls.length, 1);
   assert.equal(failedEvents.at(-1)?.type, 'turn.failed');
@@ -406,4 +407,103 @@ test('wall-clock budget is checked after a provider wait', async (t) => {
   const events = await collect(service.run({ session: createSession({ workspace: root }), input: 'wait' }));
   assert.equal(events.some((event) => event.type === 'budget.exhausted' && event.dimension === 'wallClockMs'), true);
   assert.equal(events.at(-1)?.type === 'turn.failed' && events.at(-1).error.code, 'budget');
+});
+
+test('retries only a pre-response provider failure with stable evidence and bounded backoff', async (t) => {
+  const root = await workspace();
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const provider = new class implements ModelProvider {
+    calls = 0;
+    async *stream(): AsyncGenerator<ProviderEvent> {
+      this.calls += 1;
+      if (this.calls < 3) throw new GeorgeError('provider', 'offline');
+      yield { type: 'provider.text.delta', delta: 'Recovered.' };
+      yield { type: 'provider.response.completed' };
+    }
+  }();
+  const delays: number[] = [];
+  const service = await createOneTurnApplicationService({
+    provider, workspace: root,
+    providerRetryPolicy: { maxRetries: 2, initialDelayMs: 7, maxDelayMs: 20 },
+    retrySleeper: async (delay) => { delays.push(delay); },
+  });
+  const events = await collect(service.run({ session: createSession({ workspace: root }), input: 'recover', turnId: 'retry-turn', budget: new RunBudget('retry-run') }));
+  const attempts = events.filter((event): event is Extract<typeof event, { type: 'provider.attempt.started' }> => event.type === 'provider.attempt.started');
+  const scheduled = events.filter((event): event is Extract<typeof event, { type: 'provider.retry.scheduled' }> => event.type === 'provider.retry.scheduled');
+  assert.equal(provider.calls, 3);
+  assert.deepEqual(delays, [7, 14]);
+  assert.deepEqual(attempts.map((event) => event.attemptId), ['p1a1-retry-run', 'p1a2-retry-run', 'p1a3-retry-run']);
+  assert.deepEqual(scheduled.map(({ attemptId, retry, delayMs, category }) => ({ attemptId, retry, delayMs, category })), [
+    { attemptId: 'p1a1-retry-run', retry: 1, delayMs: 7, category: 'provider' },
+    { attemptId: 'p1a2-retry-run', retry: 2, delayMs: 14, category: 'provider' },
+  ]);
+  assert.equal(events.at(-1)?.type, 'turn.completed');
+});
+
+test('cancellation during provider backoff stops before the next attempt', async (t) => {
+  const root = await workspace();
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const provider = new class implements ModelProvider {
+    calls = 0;
+    async *stream(): AsyncGenerator<ProviderEvent> { this.calls += 1; throw new GeorgeError('provider', 'offline'); }
+  }();
+  const controller = new AbortController();
+  const service = await createOneTurnApplicationService({
+    provider, workspace: root, providerRetryPolicy: { maxRetries: 2, initialDelayMs: 1, maxDelayMs: 1 },
+    retrySleeper: (_delay, signal) => new Promise((resolve, reject) => signal?.addEventListener('abort', () => reject(signal.reason), { once: true }) ?? resolve()),
+  });
+  const iterator = service.run({ session: createSession({ workspace: root }), input: 'recover', signal: controller.signal })[Symbol.asyncIterator]();
+  let next = await iterator.next();
+  while (!next.done && next.value.type !== 'provider.retry.scheduled') next = await iterator.next();
+  assert.equal(next.value?.type, 'provider.retry.scheduled');
+  controller.abort(new GeorgeError('cancelled', 'Stopped'));
+  const remainder: Array<{ type: string }> = [];
+  for (;;) {
+    const item = await iterator.next();
+    if (item.done) break;
+    remainder.push(item.value);
+  }
+  assert.equal(provider.calls, 1);
+  assert.equal(remainder.at(-1)?.type, 'turn.cancelled');
+});
+
+test('provider and retry budget exhaustion remain explicit during retry', async (t) => {
+  const root = await workspace();
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const offline = new class implements ModelProvider {
+    async *stream(): AsyncGenerator<ProviderEvent> { throw new GeorgeError('provider', 'offline'); }
+  }();
+  const baseBudget = { providerAttempts: 2, toolExecutions: 1, retryAttempts: 2, compactionAttempts: 1, compactionCheckpoints: 1, processExecutions: 1, processRuntimeMs: 1, wallClockMs: 1_000, contextTokens: 1_000_000, providerInputTokens: 1_000_000, providerOutputTokens: 1_000_000, softLimitPercent: 80 };
+  const retryLimited = await createOneTurnApplicationService({ provider: offline, workspace: root, runBudget: { ...baseBudget, retryAttempts: 1 }, providerRetryPolicy: { maxRetries: 2, initialDelayMs: 0, maxDelayMs: 0 }, retrySleeper: async () => {} });
+  const retryEvents = await collect(retryLimited.run({ session: createSession({ workspace: root }), input: 'retry' }));
+  assert.equal(retryEvents.some((event) => event.type === 'budget.exhausted' && event.dimension === 'retryAttempts'), true);
+  const providerLimited = await createOneTurnApplicationService({ provider: offline, workspace: root, runBudget: { ...baseBudget, providerAttempts: 1 }, providerRetryPolicy: { maxRetries: 2, initialDelayMs: 0, maxDelayMs: 0 }, retrySleeper: async () => {} });
+  const providerEvents = await collect(providerLimited.run({ session: createSession({ workspace: root }), input: 'provider' }));
+  assert.equal(providerEvents.some((event) => event.type === 'budget.exhausted' && event.dimension === 'providerAttempts'), true);
+});
+
+test('provider failures after response evidence never retry or commit provisional output', async (t) => {
+  const root = await workspace();
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const provider = new class implements ModelProvider {
+    calls = 0;
+    async *stream(): AsyncGenerator<ProviderEvent> {
+      this.calls += 1;
+      yield { type: 'provider.response.started', responseId: 'partial' };
+      yield { type: 'provider.text.delta', delta: 'Do not commit me.' };
+      yield { type: 'provider.tool.call', callId: 'write', name: 'write_file', arguments: '{"path":"later.txt","content":"x"}' };
+      yield { type: 'provider.tool.call', callId: 'patch', name: 'apply_patch', arguments: '{"path":"later.txt","patch":""}' };
+      yield { type: 'provider.tool.call', callId: 'process', name: 'run_process', arguments: '{"executable":"node","arguments":[]}' };
+      throw new GeorgeError('provider', 'offline after output');
+    }
+  }();
+  const session = createSession({ workspace: root });
+  const service = await createOneTurnApplicationService({ provider, workspace: root, retrySleeper: async () => { throw new Error('must not sleep'); } });
+  const events = await collect(service.run({ session, input: 'partial' }));
+  assert.equal(provider.calls, 1);
+  assert.equal(events.some((event) => event.type === 'provider.retry.scheduled'), false);
+  assert.equal(events.some((event) => event.type === 'assistant.response.completed'), false);
+  assert.equal(events.some((event) => event.type === 'tool.requested'), false);
+  assert.equal(events.some((event) => event.type === 'approval.requested'), false);
+  assert.deepEqual(session.transcript, [{ role: 'user', text: 'partial' }]);
 });

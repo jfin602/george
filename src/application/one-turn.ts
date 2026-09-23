@@ -36,6 +36,7 @@ import {
 } from '../context/index.ts';
 import { join } from 'node:path';
 import { WorkProjection } from './progress.ts';
+import { DEFAULT_PROVIDER_RETRY_POLICY, retryDelay, sleepForRetry, validateProviderRetryPolicy, type ProviderRetryPolicy, type RetrySleeper } from './retry.ts';
 import { defaultSkillRoots, SkillRegistry, type SkillCatalog, type SkillRoots } from '../skills/index.ts';
 import {
   createProcessToolExecutor,
@@ -66,6 +67,8 @@ export type OneTurnServiceOptions = Readonly<{
   runBudget?: RunBudgetConfig;
   clock?: RunBudgetClock;
   compactor?: ContextCompactor;
+  providerRetryPolicy?: ProviderRetryPolicy;
+  retrySleeper?: RetrySleeper;
   approvalPort?: ApprovalPort;
 }>;
 
@@ -166,6 +169,8 @@ export class AgentLoopApplicationService {
   private readonly runBudget: RunBudgetConfig;
   private readonly clock: RunBudgetClock;
   private readonly compactor: ContextCompactor;
+  private readonly providerRetryPolicy: ProviderRetryPolicy;
+  private readonly retrySleeper: RetrySleeper;
   private readonly projections = new WeakMap<Session, WorkProjection>();
   readonly workspace: Workspace;
 
@@ -184,6 +189,8 @@ export class AgentLoopApplicationService {
     runBudget: RunBudgetConfig,
     clock: RunBudgetClock,
     compactor: ContextCompactor,
+    providerRetryPolicy: ProviderRetryPolicy,
+    retrySleeper: RetrySleeper,
   ) {
     this.provider = provider;
     this.workspace = workspace;
@@ -199,6 +206,8 @@ export class AgentLoopApplicationService {
     this.runBudget = runBudget;
     this.clock = clock;
     this.compactor = compactor;
+    this.providerRetryPolicy = providerRetryPolicy;
+    this.retrySleeper = retrySleeper;
   }
 
   async skillCatalog(): Promise<SkillCatalog> {
@@ -463,29 +472,55 @@ export class AgentLoopApplicationService {
       let toolCalls = 0;
       let toolRounds = 0;
       while (true) {
-        yield* this.consumeBudget(submission.session, turnId, budget, 'providerAttempts', 1, submission.signal);
-        const attemptId = randomUUID();
-        yield* emit({ type: 'provider.attempt.started', turnId, runId: budget.id, attemptId });
-        const calls: Array<Extract<ApplicationEvent, { type: 'provider.tool.call' }>> = [];
+        let calls: Array<Extract<ApplicationEvent, { type: 'provider.tool.call' }>> = [];
         let text = '';
         let responseId: string | undefined;
         let completed = false;
-        for await (const event of this.provider.stream(
-          { ...baseRequest, ...(continuation === undefined ? {} : { continuation }) },
-          { signal: submission.signal, timeoutMs: submission.timeoutMs },
-        )) {
-          if (submission.signal?.aborted) throw cancellationError(submission.signal);
-          yield* emit(event);
-          if (event.type === 'provider.response.started') responseId = event.responseId;
-          if (event.type === 'provider.text.delta') text += event.delta;
-          if (event.type === 'provider.tool.call') calls.push(event);
-          if (event.type === 'provider.response.completed') completed = true;
-          if (event.type === 'provider.response.completed' && event.usage?.inputTokens !== undefined) yield* this.consumeBudget(submission.session, turnId, budget, 'providerInputTokens', event.usage.inputTokens, submission.signal);
-          if (event.type === 'provider.response.completed' && event.usage?.outputTokens !== undefined) yield* this.consumeBudget(submission.session, turnId, budget, 'providerOutputTokens', event.usage.outputTokens, submission.signal);
-          if (event.type === 'provider.error') throw event.error;
+        let retries = 0;
+        for (;;) {
+          const attemptId = `p${toolRounds + 1}a${retries + 1}-${budget.id.slice(0, 110)}`;
+          let observedResponseEvidence = false;
+          calls = [];
+          text = '';
+          responseId = undefined;
+          completed = false;
+          try {
+            yield* this.consumeBudget(submission.session, turnId, budget, 'providerAttempts', 1, submission.signal);
+            yield* emit({ type: 'provider.attempt.started', turnId, runId: budget.id, attemptId });
+            for await (const event of this.provider.stream(
+              { ...baseRequest, ...(continuation === undefined ? {} : { continuation }) },
+              { signal: submission.signal, timeoutMs: submission.timeoutMs },
+            )) {
+              if (submission.signal?.aborted) throw cancellationError(submission.signal);
+              if (event.type === 'provider.response.started' || event.type === 'provider.text.delta' || event.type === 'provider.tool.call') observedResponseEvidence = true;
+              yield* emit(event);
+              if (event.type === 'provider.response.started') responseId = event.responseId;
+              if (event.type === 'provider.text.delta') text += event.delta;
+              if (event.type === 'provider.tool.call') calls.push(event);
+              if (event.type === 'provider.response.completed') completed = true;
+              if (event.type === 'provider.response.completed' && event.usage?.inputTokens !== undefined) yield* this.consumeBudget(submission.session, turnId, budget, 'providerInputTokens', event.usage.inputTokens, submission.signal);
+              if (event.type === 'provider.response.completed' && event.usage?.outputTokens !== undefined) yield* this.consumeBudget(submission.session, turnId, budget, 'providerOutputTokens', event.usage.outputTokens, submission.signal);
+              if (event.type === 'provider.error') throw event.error;
+            }
+            yield* this.consumeBudget(submission.session, turnId, budget, 'wallClockMs', 0, submission.signal);
+            if (!completed) throw { code: 'provider', message: 'Provider stream ended without a completion event.' } satisfies GeorgeErrorShape;
+            break;
+          } catch (error) {
+            const normalized = asGeorgeError(error);
+            if (submission.signal?.aborted) throw cancellationError(submission.signal);
+            if (normalized.code !== 'provider' || observedResponseEvidence) throw normalized;
+            if (retries >= this.providerRetryPolicy.maxRetries) {
+              yield* emit({ type: 'provider.retry.exhausted', turnId, runId: budget.id, attemptId, retries, category: 'provider' });
+              throw normalized;
+            }
+            retries += 1;
+            yield* this.consumeBudget(submission.session, turnId, budget, 'retryAttempts', 1, submission.signal);
+            const delayMs = retryDelay(this.providerRetryPolicy, retries);
+            yield* emit({ type: 'provider.retry.scheduled', turnId, runId: budget.id, attemptId, retry: retries, delayMs, category: 'provider' });
+            await this.retrySleeper(delayMs, submission.signal);
+            if (submission.signal?.aborted) throw cancellationError(submission.signal);
+          }
         }
-        yield* this.consumeBudget(submission.session, turnId, budget, 'wallClockMs', 0, submission.signal);
-        if (!completed) throw { code: 'provider', message: 'Provider stream ended without a completion event.' } satisfies GeorgeErrorShape;
         if (calls.length === 0) {
           if (text) yield* emit({ type: 'assistant.response.completed', turnId, text });
           break;
@@ -562,6 +597,8 @@ export async function createAgentLoopApplicationService(
     validateRunBudget(options.runBudget ?? DEFAULT_RUN_BUDGET),
     options.clock ?? Date.now,
     options.compactor ?? new ProviderContextCompactor(options.provider),
+    validateProviderRetryPolicy(options.providerRetryPolicy ?? DEFAULT_PROVIDER_RETRY_POLICY),
+    options.retrySleeper ?? sleepForRetry,
   );
 }
 
