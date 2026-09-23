@@ -16,6 +16,9 @@ export { DEFAULT_PROVIDER_TIMEOUT_MS, MAX_PROVIDER_TIMEOUT_MS } from '../core/co
 
 type SseMessage = Readonly<{ event?: string; data: string }>;
 
+const MAX_PROVIDER_DIAGNOSTIC_BYTES = 480;
+const MAX_PROVIDER_CODE_BYTES = 128;
+
 export type LmStudioProviderConfig = Readonly<{
   baseUrl: URL | string;
   model?: string;
@@ -60,6 +63,45 @@ function numberAt(value: unknown, key: string): number | undefined {
   if (!value || typeof value !== 'object') return undefined;
   const candidate = (value as Record<string, unknown>)[key];
   return typeof candidate === 'number' && Number.isInteger(candidate) ? candidate : undefined;
+}
+
+function objectAt(value: unknown, key: string): Record<string, unknown> | undefined {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
+  const candidate = (value as Record<string, unknown>)[key];
+  return candidate && typeof candidate === 'object' && !Array.isArray(candidate)
+    ? candidate as Record<string, unknown>
+    : undefined;
+}
+
+function safeProviderText(value: unknown, limit = MAX_PROVIDER_DIAGNOSTIC_BYTES): string | undefined {
+  if (typeof value !== 'string') return undefined;
+  const normalized = value.replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim();
+  if (!normalized) return undefined;
+  return Buffer.byteLength(normalized, 'utf8') <= limit
+    ? normalized
+    : `${Buffer.from(normalized, 'utf8').subarray(0, limit - 3).toString('utf8')}...`;
+}
+
+function providerFailure(wireType: 'error' | 'response.failed' | 'response.incomplete', payload: Record<string, unknown>): GeorgeError {
+  const response = objectAt(payload, 'response');
+  const error = objectAt(payload, 'error') ?? objectAt(response, 'error');
+  const incomplete = objectAt(payload, 'incomplete_details') ?? objectAt(response, 'incomplete_details');
+  const providerCode = safeProviderText(stringAt(error, 'code') ?? stringAt(payload, 'code') ?? stringAt(response, 'code'), MAX_PROVIDER_CODE_BYTES);
+  const providerMessage = safeProviderText(stringAt(error, 'message') ?? stringAt(payload, 'message') ?? stringAt(response, 'message'));
+  const providerReason = safeProviderText(stringAt(incomplete, 'reason') ?? stringAt(payload, 'reason') ?? stringAt(response, 'reason'), MAX_PROVIDER_CODE_BYTES);
+  const status = [numberAt(payload, 'status'), numberAt(response, 'status'), numberAt(error, 'status')]
+    .find((value) => value !== undefined && value >= 100 && value <= 599);
+  const label = wireType === 'error' ? 'LM Studio provider error' : `LM Studio ${wireType}`;
+  const detail = providerCode === undefined
+    ? providerMessage ?? providerReason
+    : providerMessage === undefined ? providerCode : `${providerCode} — ${providerMessage}`;
+  return providerError(detail === undefined ? `${label}.` : `${label}: ${detail}`, {
+    kind: 'provider_event', providerEventType: wireType,
+    ...(providerCode === undefined ? {} : { providerCode }),
+    ...(providerMessage === undefined ? {} : { providerMessage }),
+    ...(providerReason === undefined ? {} : { providerReason }),
+    ...(status === undefined ? {} : { status }),
+  });
 }
 
 type FunctionCallState = {
@@ -214,7 +256,8 @@ function normalizeMessage(message: SseMessage, functionCalls: FunctionCallAssemb
   const wireType = message.event && message.event !== 'message'
     ? message.event
     : stringAt(payload, 'type');
-  const response = (payload as Record<string, unknown>).response;
+  const eventPayload = payload as Record<string, unknown>;
+  const response = eventPayload.response;
   const functionCall = functionCalls.consume(wireType, payload);
   if (functionCall) return functionCall;
   switch (wireType) {
@@ -239,7 +282,7 @@ function normalizeMessage(message: SseMessage, functionCalls: FunctionCallAssemb
     case 'error':
     case 'response.failed':
     case 'response.incomplete':
-      throw providerError('LM Studio reported a provider error.', { event: wireType });
+      throw providerFailure(wireType, eventPayload);
     default:
       return undefined;
   }

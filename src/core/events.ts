@@ -63,7 +63,7 @@ export type WorkflowCompletion = Readonly<{
   finalAssistantResponse: string;
 }>;
 
-export type WorkStatus = 'requested' | 'running' | 'waiting' | 'succeeded' | 'failed' | 'denied' | 'cancelled' | 'interrupted';
+export type WorkStatus = 'requested' | 'running' | 'waiting' | 'succeeded' | 'missing' | 'skipped' | 'failed' | 'denied' | 'cancelled' | 'interrupted';
 export type WorkCategory = 'context' | 'inspection' | 'editing' | 'approval' | 'process' | 'validation' | 'recovery' | 'completion';
 export type ProgressCategory = 'context' | 'inspection' | 'editing' | 'validation' | 'recovery' | 'completion';
 
@@ -78,11 +78,13 @@ export type WorkDetails = Readonly<{
   executable?: string;
   argv?: readonly string[];
   cwd?: string;
+  timeoutMs?: number;
   exitCode?: number | null;
   signal?: string | null;
   outcome?: 'completed' | 'failed' | 'timed_out' | 'spawn_failed';
   truncated?: boolean;
   error?: string;
+  requestedArguments?: string;
 }>;
 
 export type WorkItem = Readonly<{
@@ -111,6 +113,7 @@ export type ApplicationEvent =
   | ProviderEvent
   | Readonly<{ type: 'turn.started'; turnId: string }>
   | Readonly<{ type: 'input.submitted'; text: string }>
+  | Readonly<{ type: 'assistant.response.completed'; turnId: string; text: string }>
   | Readonly<{ type: 'context.source'; turnId: string; sourceId: string; kind: string; status: 'loading' | 'loaded' | 'missing' | 'oversized' | 'failed'; bytes?: number }>
   | Readonly<{ type: 'context.assembled'; turnId: string; diagnostics: ContextDiagnostics }>
   | Readonly<{ type: 'turn.completed'; turnId: string }>

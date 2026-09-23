@@ -19,7 +19,7 @@ export const READ_ONLY_TOOL_DEFINITIONS = [
   },
   {
     name: 'list_directory', description: 'List bounded direct entries in a workspace directory.', permission: 'read',
-    inputSchema: { type: 'object', properties: { path: { type: 'string', minLength: 1 } }, required: ['path'], additionalProperties: false },
+    inputSchema: { type: 'object', properties: { path: { type: 'string' } }, additionalProperties: false },
   },
   {
     name: 'search_text', description: 'Search bounded workspace text without executing a shell.', permission: 'read',
@@ -40,7 +40,7 @@ export const READ_ONLY_TOOL_DEFINITIONS = [
 
 export type ReadOnlyToolCall =
   | Readonly<{ name: 'read_file'; path: string }>
-  | Readonly<{ name: 'list_directory'; path: string }>
+  | Readonly<{ name: 'list_directory'; path?: string }>
   | Readonly<{ name: 'search_text'; query: string; path?: string }>
   | Readonly<{ name: 'git_status' }>
   | Readonly<{ name: 'git_diff' }>;
@@ -202,7 +202,7 @@ export function createReadOnlyToolExecutor(
         return { name: call.name, path: relativePath(workspace, path), ...await boundedRead(path, bounded.maxReadBytes) };
       }
       case 'list_directory': {
-        const path = await resolveWorkspacePath(workspace, call.path);
+        const path = await resolveWorkspacePath(workspace, call.path === '' ? '.' : call.path ?? '.');
         if (!(await stat(path)).isDirectory()) throw new GeorgeError('validation', 'Path must name a directory.');
         const directory = await opendir(path);
         const entries: Array<{ name: string; kind: 'file' | 'directory' | 'symlink' | 'other' }> = [];
@@ -268,7 +268,7 @@ export function createReadOnlyToolExecutor(
     },
     {
       ...READ_ONLY_TOOL_DEFINITIONS[1],
-      execute: async (arguments_, options) => resultJson(await executeRaw({ name: 'list_directory', path: arguments_.path as string }, options)),
+      execute: async (arguments_, options) => resultJson(await executeRaw({ name: 'list_directory', ...(typeof arguments_.path === 'string' ? { path: arguments_.path } : {}) }, options)),
     },
     {
       ...READ_ONLY_TOOL_DEFINITIONS[2],

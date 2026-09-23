@@ -81,6 +81,27 @@ test('coding workflow preserves dirty work, records direct mutations, and does n
   if (durable?.type === 'workflow.completed') assert.equal(durable.completion.validations[0]?.status, 'failed');
 });
 
+test('workflow completion takes only the final tool-free provider round', async (t) => {
+  const root = await fixture();
+  const state = await mkdtemp(join(tmpdir(), 'george-workflow-buffer-state-'));
+  t.after(() => Promise.all([rm(root, { recursive: true, force: true }), rm(state, { recursive: true, force: true })]));
+  const provider = new ScriptedProvider([
+    [
+      { type: 'provider.response.started', responseId: 'mixed' },
+      { type: 'provider.text.delta', delta: 'Provisional answer' },
+      { type: 'provider.tool.call', callId: 'read', name: 'read_file', arguments: '{"path":"BOOT.md"}' },
+      { type: 'provider.response.completed' },
+    ],
+    [{ type: 'provider.text.delta', delta: 'Final answer' }, { type: 'provider.response.completed' }],
+  ]);
+  const workflow = await createCodingWorkflowApplicationService({ provider, workspace: root, sessionStore: new LocalSessionStore({ root: state }) });
+  const session = createSession({ id: 'buffered-workflow', workspace: root });
+  const completion = await workflow.run({ session, input: 'Inspect.' });
+  assert.equal(completion.finalAssistantResponse, 'Final answer');
+  assert.deepEqual(session.transcript, [{ role: 'user', text: 'Inspect.' }, { role: 'assistant', text: 'Final answer' }]);
+  assert.deepEqual((await new LocalSessionStore({ root: state }).open('buffered-workflow', root)).transcript, session.transcript);
+});
+
 test('coding workflow captures clean and non-Git baselines without treating either as a mutation', async (t) => {
   const clean = await fixture();
   const nonGit = await fixture(false);

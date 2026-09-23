@@ -314,6 +314,7 @@ export class AgentLoopApplicationService {
       let toolRounds = 0;
       while (true) {
         const calls: Array<Extract<ApplicationEvent, { type: 'provider.tool.call' }>> = [];
+        let text = '';
         let responseId: string | undefined;
         let completed = false;
         for await (const event of this.provider.stream(
@@ -323,12 +324,16 @@ export class AgentLoopApplicationService {
           if (submission.signal?.aborted) throw cancellationError(submission.signal);
           yield* emit(event);
           if (event.type === 'provider.response.started') responseId = event.responseId;
+          if (event.type === 'provider.text.delta') text += event.delta;
           if (event.type === 'provider.tool.call') calls.push(event);
           if (event.type === 'provider.response.completed') completed = true;
           if (event.type === 'provider.error') throw event.error;
         }
         if (!completed) throw { code: 'provider', message: 'Provider stream ended without a completion event.' } satisfies GeorgeErrorShape;
-        if (calls.length === 0) break;
+        if (calls.length === 0) {
+          if (text) yield* emit({ type: 'assistant.response.completed', turnId, text });
+          break;
+        }
         if (!responseId) throw { code: 'provider', message: 'Provider response with tool calls did not include a response ID.' } satisfies GeorgeErrorShape;
         if (toolRounds >= this.maxToolRounds) {
           const message = `Tool round limit of ${this.maxToolRounds} exhausted.`;

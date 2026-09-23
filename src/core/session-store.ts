@@ -101,7 +101,7 @@ function safeArguments(): Record<string, never> {
 
 function safeWorkDetails(value: unknown): Extract<ApplicationEvent, { type: 'work.updated' }>['item']['details'] {
   const details = record(value, 'work details');
-  const allowed = ['path', 'query', 'count', 'bytes', 'scannedFiles', 'scannedBytes', 'executable', 'argv', 'cwd', 'exitCode', 'signal', 'outcome', 'truncated', 'error'];
+  const allowed = ['path', 'query', 'count', 'bytes', 'scannedFiles', 'scannedBytes', 'executable', 'argv', 'cwd', 'timeoutMs', 'exitCode', 'signal', 'outcome', 'truncated', 'error', 'requestedArguments'];
   if (Object.keys(details).some((key) => !allowed.includes(key))) invalid('work details has an invalid shape.');
   const integer = (key: string): number | undefined => details[key] === undefined ? undefined : boundedInteger(details[key], `work ${key}`);
   const maybeString = (key: string, limit = 4096): string | undefined => details[key] === undefined ? undefined : boundedMessage(string(details[key], `work ${key}`, limit));
@@ -116,9 +116,10 @@ function safeWorkDetails(value: unknown): Extract<ApplicationEvent, { type: 'wor
     ...(integer('scannedFiles') === undefined ? {} : { scannedFiles: integer('scannedFiles') }), ...(integer('scannedBytes') === undefined ? {} : { scannedBytes: integer('scannedBytes') }),
     ...(maybeString('executable', 1024) === undefined ? {} : { executable: maybeString('executable', 1024) }),
     ...(details.argv === undefined ? {} : { argv: boundedArray(details.argv, 'work argv', 64).map((item) => boundedMessage(string(item, 'work argv item', 8192))) }),
-    ...(maybeString('cwd') === undefined ? {} : { cwd: maybeString('cwd') }), ...(exitCode === undefined ? {} : { exitCode: exitCode as number | null }),
+    ...(maybeString('cwd') === undefined ? {} : { cwd: maybeString('cwd') }), ...(integer('timeoutMs') === undefined ? {} : { timeoutMs: integer('timeoutMs') }), ...(exitCode === undefined ? {} : { exitCode: exitCode as number | null }),
     ...(details.signal === undefined ? {} : { signal: details.signal === null ? null : maybeString('signal', 128)! }), ...(outcome === undefined ? {} : { outcome: outcome as 'completed' | 'failed' | 'timed_out' | 'spawn_failed' }),
     ...(details.truncated === undefined ? {} : { truncated: details.truncated as boolean }), ...(maybeString('error') === undefined ? {} : { error: maybeString('error') }),
+    ...(maybeString('requestedArguments', 480) === undefined ? {} : { requestedArguments: maybeString('requestedArguments', 480) }),
   };
 }
 
@@ -128,7 +129,7 @@ function safeWorkItem(value: unknown): Extract<ApplicationEvent, { type: 'work.u
   const category = string(item.category, 'work category', 32);
   const status = string(item.status, 'work status', 32);
   if (!['context', 'inspection', 'editing', 'approval', 'process', 'validation', 'recovery', 'completion'].includes(category)) invalid('work category is invalid.');
-  if (!['requested', 'running', 'waiting', 'succeeded', 'failed', 'denied', 'cancelled', 'interrupted'].includes(status)) invalid('work status is invalid.');
+  if (!['requested', 'running', 'waiting', 'succeeded', 'missing', 'skipped', 'failed', 'denied', 'cancelled', 'interrupted'].includes(status)) invalid('work status is invalid.');
   return { id: string(item.id, 'work ID', 512), turnId: string(item.turnId, 'work turn ID', 256), operationId: string(item.operationId, 'work operation ID', 512), category: category as Extract<ApplicationEvent, { type: 'work.updated' }>['item']['category'], status: status as Extract<ApplicationEvent, { type: 'work.updated' }>['item']['status'], summary: boundedMessage(string(item.summary, 'work summary', 4096)), details: safeWorkDetails(item.details) };
 }
 
@@ -185,6 +186,7 @@ function safeWorkflowCompletion(value: Extract<ApplicationEvent, { type: 'workfl
 function durableEvent(event: ApplicationEvent): ApplicationEvent | undefined {
   switch (event.type) {
     case 'input.submitted': return undefined; // Completed user input lives only in the canonical transcript.
+    case 'assistant.response.completed': return { type: event.type, turnId: string(event.turnId, 'turn ID', 256), text: boundedMessage(string(event.text, 'assistant response')) };
     case 'provider.text.delta': return undefined; // The clean transcript is authoritative for completed assistant text.
     case 'provider.response.started': return event.responseId === undefined ? { type: event.type } : { type: event.type, responseId: string(event.responseId, 'response ID', 256) };
     case 'provider.response.completed': return event.usage === undefined ? { type: event.type } : { type: event.type, usage: safeUsage(event.usage) };
@@ -314,11 +316,8 @@ function completedTranscript(events: readonly ApplicationEvent[]): TranscriptEnt
   let current: TranscriptEntry[] = [];
   for (const event of events) {
     if (event.type === 'input.submitted') current = [{ role: 'user', text: event.text }];
-    else if (event.type === 'provider.text.delta' && current.length > 0) {
-      const previous = current.at(-1);
-      if (previous?.role === 'assistant') current[current.length - 1] = { role: 'assistant', text: previous.text + event.delta };
-      else current.push({ role: 'assistant', text: event.delta });
-    } else if (event.type === 'turn.completed') {
+    else if (event.type === 'assistant.response.completed' && current.length > 0) current.push({ role: 'assistant', text: event.text });
+    else if (event.type === 'turn.completed') {
       result.push(...current);
       current = [];
     } else if (event.type === 'turn.cancelled' || event.type === 'turn.failed') current = [];

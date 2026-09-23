@@ -20,7 +20,7 @@ import {
   type ProviderStreamOptions,
 } from '../../../src/core/index.ts';
 import { createCodingWorkflowApplicationService, createOneTurnApplicationService, WorkProjection, type OneTurnServiceOptions } from '../../../src/application/index.ts';
-import { GeorgeTui, NEON_THEME, renderTranscript, type GeorgeTuiOptions, type TranscriptWorkEntry } from '../../../src/tui/app.ts';
+import { GeorgeTui, NEON_THEME, renderTranscript, type GeorgeTuiOptions, type ThinkingClock, type TranscriptWorkEntry } from '../../../src/tui/app.ts';
 
 class ScriptedProvider implements ModelProvider {
   calls: Array<{ request: ProviderRequest; options: ProviderStreamOptions }> = [];
@@ -83,10 +83,51 @@ class ApprovalProvider implements ModelProvider {
   }
 }
 
+class FakeThinkingClock implements ThinkingClock {
+  private nextId = 0;
+  private readonly callbacks = new Map<number, () => void>();
+
+  get size(): number { return this.callbacks.size; }
+  setInterval(callback: () => void): number {
+    const id = ++this.nextId;
+    this.callbacks.set(id, callback);
+    return id;
+  }
+  clearInterval(timer: number | ReturnType<typeof setInterval>): void { this.callbacks.delete(timer as number); }
+  tick(): void { for (const callback of [...this.callbacks.values()]) callback(); }
+}
+
+class ThinkingToolProvider implements ModelProvider {
+  calls: Array<{ request: ProviderRequest; options: ProviderStreamOptions }> = [];
+  releaseThinking = Promise.withResolvers<void>();
+
+  async *stream(request: ProviderRequest, options: ProviderStreamOptions = {}): AsyncGenerator<ProviderEvent> {
+    this.calls.push({ request, options });
+    if (this.calls.length === 1) {
+      yield { type: 'provider.response.started', responseId: 'thinking-tool' };
+      await this.releaseThinking.promise;
+      yield { type: 'provider.tool.call', callId: 'write', name: 'write_file', arguments: '{"path":"later.txt","content":"x"}' };
+    }
+    yield { type: 'provider.response.completed' };
+  }
+}
+
+class FailingThinkingProvider implements ModelProvider {
+  calls: Array<{ request: ProviderRequest; options: ProviderStreamOptions }> = [];
+  release = Promise.withResolvers<void>();
+
+  async *stream(request: ProviderRequest, options: ProviderStreamOptions = {}): AsyncGenerator<ProviderEvent> {
+    this.calls.push({ request, options });
+    yield { type: 'provider.response.started' };
+    await this.release.promise;
+    yield { type: 'provider.error', error: new GeorgeError('provider', 'offline') };
+  }
+}
+
 async function tui(
   provider: ModelProvider,
   options: Omit<OneTurnServiceOptions, 'provider' | 'workspace' | 'approvalPort'> = {},
-  uiOptions: Pick<GeorgeTuiOptions, 'clipboard'> = {},
+  uiOptions: Pick<GeorgeTuiOptions, 'clipboard' | 'thinkingClock'> = {},
 ) {
   const workspace = await mkdtemp(join(tmpdir(), 'george-tui-'));
   await writeFile(join(workspace, 'BOOT.md'), 'fixture boot');
@@ -125,6 +166,153 @@ test('test renderer shows identity, configuration, streamed text, and read-only 
   assert.match(frame, /streamed answer/);
 });
 
+test('committed final answers reveal progressively without delaying canonical durability, and cancellation stops the reveal', async (t) => {
+  const answer = `START ${'x'.repeat(3_000)} END`;
+  const item = await tui(new ScriptedProvider([{ type: 'provider.text.delta', delta: answer }, { type: 'provider.response.completed' }]));
+  const state = await mkdtemp(join(tmpdir(), 'george-tui-reveal-'));
+  t.after(async () => {
+    await cleanup(item);
+    await rm(state, { recursive: true, force: true });
+  });
+
+  const began = Date.now();
+  await item.setup.mockInput.typeText('show a long answer');
+  item.setup.mockInput.pressEnter();
+  await item.setup.waitForFrame((frame) => frame.includes('START') && !frame.includes('END'));
+  assert.deepEqual(item.app.session.transcript, [{ role: 'user', text: 'show a long answer' }, { role: 'assistant', text: answer }]);
+  item.app.escape();
+  await item.app.waitForIdle();
+  assert.ok(Date.now() - began < 2_000);
+
+  const store = new LocalSessionStore({ root: state });
+  await store.save(item.app.session);
+  assert.deepEqual((await store.open(item.app.session.id, item.workspace)).transcript, item.app.session.transcript);
+});
+
+test('provider waits and continuation rounds render Thinking until tool activity replaces it', async (t) => {
+  const provider = new PausedProvider(true);
+  const item = await tui(provider);
+  t.after(() => cleanup(item));
+
+  await item.setup.mockInput.typeText('inspect boot');
+  item.setup.mockInput.pressEnter();
+  await provider.started.promise;
+  await item.setup.waitForFrame((frame) => /Thinking(?:\.\.\.)?/.test(frame));
+  provider.release.resolve();
+  await item.app.waitForIdle();
+  assert.doesNotMatch(item.setup.captureCharFrame(), /Provider responding/);
+});
+
+test('provider thinking animates deterministically without creating transcript, work, durable, or provider-context frames', async (t) => {
+  const clock = new FakeThinkingClock();
+  const provider = new PausedProvider();
+  const item = await tui(provider, {}, { thinkingClock: clock });
+  const state = await mkdtemp(join(tmpdir(), 'george-tui-thinking-'));
+  t.after(async () => {
+    await cleanup(item);
+    await rm(state, { recursive: true, force: true });
+  });
+
+  await item.setup.mockInput.typeText('wait for an answer');
+  item.setup.mockInput.pressEnter();
+  await provider.started.promise;
+  await item.setup.flush();
+  assert.equal(clock.size, 1);
+  assert.match(item.setup.captureCharFrame(), /Thinking/);
+  const eventCount = item.app.session.events.length;
+  const activityCount = item.app.session.events.filter((event) => event.type === 'activity.updated').length;
+  const work = JSON.stringify(item.app.work);
+  for (const label of ['Thinking.', 'Thinking..', 'Thinking...', 'Thinking']) {
+    clock.tick();
+    await item.setup.flush();
+    assert.equal(item.setup.captureCharFrame().split('\n').find((line) => line.includes('Thinking'))?.trim(), label);
+  }
+  assert.equal(item.app.session.events.length, eventCount);
+  assert.equal(item.app.session.events.filter((event) => event.type === 'activity.updated').length, activityCount);
+  assert.equal(JSON.stringify(item.app.work), work);
+  assert.doesNotMatch(provider.calls[0]?.request.input ?? '', /Thinking/);
+  const store = new LocalSessionStore({ root: state });
+  await store.save(item.app.session);
+  assert.doesNotMatch(JSON.stringify((await store.open(item.app.session.id, item.workspace)).events), /Thinking/);
+
+  provider.release.resolve();
+  await item.app.waitForIdle();
+  assert.equal(clock.size, 0);
+});
+
+test('tool activity, provider failure, cancellation, and teardown clear the thinking timer', async (t) => {
+  const toolClock = new FakeThinkingClock();
+  const toolProvider = new ThinkingToolProvider();
+  const tool = await tui(toolProvider, {}, { thinkingClock: toolClock });
+  t.after(() => cleanup(tool));
+  await tool.setup.mockInput.typeText('read boot');
+  tool.setup.mockInput.pressEnter();
+  await tool.setup.waitForFrame((frame) => frame.includes('Thinking'));
+  assert.equal(toolClock.size, 1);
+  toolProvider.releaseThinking.resolve();
+  await tool.setup.waitForFrame((frame) => frame.includes('Awaiting approval for write_file'));
+  assert.equal(toolClock.size, 0);
+  tool.setup.mockInput.pressKey('d', { ctrl: true });
+  await tool.app.waitForIdle();
+
+  const failureClock = new FakeThinkingClock();
+  const failureProvider = new FailingThinkingProvider();
+  const failure = await tui(failureProvider, {}, { thinkingClock: failureClock });
+  t.after(() => cleanup(failure));
+  await failure.setup.mockInput.typeText('fail');
+  failure.setup.mockInput.pressEnter();
+  await failure.setup.waitForFrame((frame) => frame.includes('Thinking'));
+  failureProvider.release.resolve();
+  await failure.app.waitForIdle();
+  assert.equal(failureClock.size, 0);
+
+  const cancellationClock = new FakeThinkingClock();
+  const cancellationProvider = new PausedProvider();
+  const cancellation = await tui(cancellationProvider, {}, { thinkingClock: cancellationClock });
+  t.after(() => cleanup(cancellation));
+  await cancellation.setup.mockInput.typeText('cancel');
+  cancellation.setup.mockInput.pressEnter();
+  await cancellationProvider.started.promise;
+  cancellation.app.escape();
+  await cancellation.app.waitForIdle();
+  assert.equal(cancellationClock.size, 0);
+
+  const teardownClock = new FakeThinkingClock();
+  const teardownProvider = new PausedProvider();
+  const teardown = await tui(teardownProvider, {}, { thinkingClock: teardownClock });
+  t.after(async () => { await rm(teardown.workspace, { recursive: true, force: true }); });
+  await teardown.setup.mockInput.typeText('close');
+  teardown.setup.mockInput.pressEnter();
+  await teardownProvider.started.promise;
+  teardown.app.close();
+  assert.equal(teardownClock.size, 0);
+});
+
+test('tool-bearing provider text never becomes a George transcript block', async (t) => {
+  const provider = new class implements ModelProvider {
+    calls = 0;
+    async *stream(): AsyncGenerator<ProviderEvent> {
+      this.calls += 1;
+      if (this.calls === 1) {
+        yield { type: 'provider.response.started', responseId: 'tool-round' };
+        yield { type: 'provider.text.delta', delta: 'provisional text' };
+        yield { type: 'provider.tool.call', callId: 'read', name: 'read_file', arguments: '{"path":"BOOT.md"}' };
+      } else yield { type: 'provider.text.delta', delta: 'final text' };
+      yield { type: 'provider.response.completed' };
+    }
+  }();
+  const item = await tui(provider);
+  t.after(() => cleanup(item));
+
+  await item.setup.mockInput.typeText('read boot');
+  item.setup.mockInput.pressEnter();
+  await item.app.waitForIdle();
+  const visible = renderTranscript(item.app.session.transcript, item.app.diagnostics, 80, item.app.work).chunks.map((chunk) => chunk.text).join('');
+  assert.match(visible, /George\n│   final text/);
+  assert.doesNotMatch(visible, /provisional text/);
+  assert.equal(item.app.session.transcript.filter((entry) => entry.role === 'assistant').length, 1);
+});
+
 test('reopened workflow renders historical evidence as idle and starts a fresh provider turn', async (t) => {
   const root = await mkdtemp(join(tmpdir(), 'george-tui-resume-'));
   const workspace = join(root, 'workspace');
@@ -138,8 +326,10 @@ test('reopened workflow renders historical evidence as idle and starts a fresh p
   appendSessionEvent(prior, { type: 'input.submitted', text: 'old request' });
   appendSessionEvent(prior, { type: 'provider.text.delta', delta: 'old answer' });
   appendSessionEvent(prior, { type: 'provider.response.completed' });
+  appendSessionEvent(prior, { type: 'assistant.response.completed', turnId: 'old', text: 'old answer' });
   appendSessionEvent(prior, { type: 'turn.completed', turnId: 'old' });
   appendSessionEvent(prior, { type: 'work.updated', item: { id: 'old:read', turnId: 'old', operationId: 'read', category: 'inspection', status: 'succeeded', summary: 'Read BOOT.md (12 bytes)', details: { path: 'BOOT.md', bytes: 12 } } });
+  appendSessionEvent(prior, { type: 'work.updated', item: { id: 'old:context:missing', turnId: 'old', operationId: 'user:personality', category: 'context', status: 'missing', summary: 'Context source user:personality: missing', details: {} } });
   appendSessionEvent(prior, { type: 'work.updated', item: { id: 'old:write', turnId: 'old', operationId: 'write', category: 'editing', status: 'waiting', summary: 'Awaiting approval for write_file', details: { path: 'later.txt' } } });
   appendSessionEvent(prior, { type: 'provider.response.started', responseId: 'old-provider-id' });
   await store.save(prior);
@@ -154,6 +344,12 @@ test('reopened workflow renders historical evidence as idle and starts a fresh p
   const restored = renderTranscript(app.session.transcript, app.diagnostics, 80, app.work).chunks.map((chunk) => chunk.text).join('');
   assert.match(restored, /old request[\s\S]*old answer/);
   assert.match(restored, /Read BOOT\.md/);
+  assert.equal((restored.match(/^Work$/gm) ?? []).length, 1);
+  assert.match(restored, /Read BOOT\.md \(12 bytes\) \(succeeded\)\n│   Context source user:personality: missing \(missing\)\n│   Previous operation interrupted: Awaiting approval for write_file \(interrupted\)/);
+  assert.equal(app.work.find((entry) => entry.item.operationId === 'user:personality')?.item.status, 'missing');
+  setup.resize(48, 12);
+  await setup.flush();
+  assert.equal((renderTranscript(app.session.transcript, app.diagnostics, 48, app.work).chunks.map((chunk) => chunk.text).join('').match(/^Work$/gm) ?? []).length, 1);
   assert.equal(app.work.some((entry) => ['requested', 'running', 'waiting'].includes(entry.item.status)), false);
   assert.equal(app.work.filter((entry) => entry.item.status === 'interrupted').length, 2);
 
@@ -196,6 +392,40 @@ test('transcript styles distinct multiline You and George headers without changi
   assert.match(renderTranscript([{ role: 'assistant', text: 'one two three four' }], [], 7).chunks.map((chunk) => chunk.text).join(''), /George\n│   one two\n│   three\n│   four/);
 });
 
+test('failed work renders its safe requested arguments but successful work stays concise', () => {
+  const failed = renderTranscript([], [], 120, [{ afterEntryCount: 0, item: {
+    id: 'bad', turnId: 'turn', operationId: 'bad', category: 'inspection', status: 'failed', summary: 'List . failed: invalid',
+    details: { requestedArguments: '{"unexpected":["directory"]}', error: 'invalid' },
+  } }]).chunks.map((chunk) => chunk.text).join('');
+  const success = renderTranscript([], [], 120, [{ afterEntryCount: 0, item: {
+    id: 'good', turnId: 'turn', operationId: 'good', category: 'inspection', status: 'succeeded', summary: 'Listed . (0 entries)',
+    details: { path: '.', requestedArguments: '{}' },
+  } }]).chunks.map((chunk) => chunk.text).join('');
+  assert.match(failed, /Requested args: \{"unexpected":\["directory"\]\}/);
+  assert.doesNotMatch(success, /Requested args/);
+});
+
+test('groups adjacent work rows, keeps per-row status text and styling, and breaks at transcript or diagnostic blocks', () => {
+  const work = (id: string, status: TranscriptWorkEntry['item']['status'], afterEntryCount: number, order: number): TranscriptWorkEntry => ({
+    afterEntryCount, order, item: { id, turnId: 'turn', operationId: id, category: 'inspection', status, summary: `Operation ${id}`, details: {} },
+  });
+  const transcript = renderTranscript(
+    [{ role: 'user', text: 'next request' }],
+    [{ afterEntryCount: 0, order: 3, title: 'Error', source: 'Provider failure', code: 'provider', message: 'offline', details: [] }],
+    80,
+    [work('one', 'succeeded', 0, 0), work('missing', 'missing', 0, 1), work('skipped', 'skipped', 0, 1.5), work('two', 'failed', 0, 2), work('three', 'waiting', 0, 4), work('four', 'running', 1, 5)],
+  );
+  const visible = transcript.chunks.map((chunk) => chunk.text).join('');
+  assert.equal((visible.match(/Work/g) ?? []).length, 3);
+  assert.match(visible, /Work\n│   Operation one \(succeeded\)\n│   Operation missing \(missing\)\n│   Operation skipped \(skipped\)\n│   Operation two \(failed\)\n\nError/);
+  assert.match(visible, /Error[\s\S]*\n\nWork\n│   Operation three \(waiting\)\n\nYou[\s\S]*\n\nWork\n│   Operation four \(running\)/);
+  assert.deepEqual(transcript.chunks.find((chunk) => chunk.text === '(succeeded)')?.fg?.toInts(), RGBA.fromHex(NEON_THEME.assistant).toInts());
+  assert.deepEqual(transcript.chunks.find((chunk) => chunk.text === '(failed)')?.fg?.toInts(), RGBA.fromHex(NEON_THEME.error).toInts());
+  assert.deepEqual(transcript.chunks.find((chunk) => chunk.text === '(waiting)')?.fg?.toInts(), RGBA.fromHex(NEON_THEME.user).toInts());
+  assert.deepEqual(transcript.chunks.find((chunk) => chunk.text === '(missing)')?.fg?.toInts(), RGBA.fromHex(NEON_THEME.muted).toInts());
+  assert.deepEqual(transcript.chunks.find((chunk) => chunk.text === '(skipped)')?.fg?.toInts(), RGBA.fromHex(NEON_THEME.muted).toInts());
+});
+
 test('execution transcript updates one stable work row and renders bounded concrete operations', () => {
   const projection = new WorkProjection();
   const projected = [
@@ -226,16 +456,16 @@ test('execution transcript updates one stable work row and renders bounded concr
   const work = [...new Map(updates.map((event) => [event.item.id, event.item])).values()].map((item, order): TranscriptWorkEntry => ({ afterEntryCount: 1, order, item }));
   const running = renderTranscript([{ role: 'user', text: 'inspect and validate' }], [], 120, [{ afterEntryCount: 1, item: read[1]!.item }]).chunks.map((chunk) => chunk.text).join('');
   const visible = renderTranscript([{ role: 'user', text: 'inspect and validate' }], [], 120, work).chunks.map((chunk) => chunk.text).join('');
-  assert.match(running, /Work · running\n│   Read src\/app\.ts/);
+  assert.match(running, /Work\n│   Read src\/app\.ts \(running\)/);
   assert.equal((visible.match(/Read src\/app\.ts \(12 bytes\)/g) ?? []).length, 1);
   assert.match(visible, /Context source workspace:AGENTS\.md: loaded/);
   assert.match(visible, /Listed src \(2 entries\)/);
-  assert.match(visible, /Searched src \(1 matches in 3 files\)\n│   Query: needle/);
-  assert.match(visible, /Inspected Git status/);
+  assert.match(visible, /Searched src \(1 matches in 3 files\) \(succeeded\)\n│     Query: needle/);
+  assert.match(visible, /Inspected Git status · Exit: 0 \(succeeded\)/);
   assert.match(visible, /Inspected Git diff/);
   assert.match(visible, /Wrote src\/app\.ts \(24 bytes\)/);
-  assert.match(visible, /Executable: node\n│   Argv: \["--check","src\/app\.ts"\]\n│   Cwd: \.\n│   Exit: 0\n│   Outcome: completed/);
-  assert.match(visible, /Work · succeeded\n│   Validation passed/);
+  assert.match(visible, /Executable: node\n│     Argv: \["--check","src\/app\.ts"\]\n│     Cwd: \.\n│     Outcome: completed/);
+  assert.match(visible, /Validation passed · Exit: 0 \(succeeded\)/);
   assert.doesNotMatch(visible, /SECRET_(FILE|SEARCH|GIT|DIFF|WRITE|PROCESS)_/);
 });
 
@@ -255,20 +485,21 @@ test('transcript presentation stays out of provider context', async (t) => {
   await item.app.waitForIdle();
   const context = provider.calls[1]?.request.input ?? '';
   const visible = renderTranscript(item.app.session.transcript, item.app.diagnostics, 80, item.app.work).chunks.map((chunk) => chunk.text).join('');
-  assert.match(visible, /Work · succeeded/);
+  assert.match(visible, /Work\n│   Context source/);
   assert.match(context, /user: first user question\n\nassistant: first George answer/);
   assert.doesNotMatch(context, /Work ·|Context source|│|\nYou\n|\nGeorge\n/);
 });
 
 test('provider failure stays visible once with safe metadata and never enters later model context', async (t) => {
   const timeout = new GeorgeError('provider', 'LM Studio request timed out after 30000 ms.', {
-    cause: { kind: 'timeout', status: 504, providerEventType: 'response.error', raw: 'secret'.repeat(10_000) },
+    cause: { kind: 'provider_event', status: 504, providerEventType: 'response.failed', providerCode: 'context_length_exceeded', providerReason: 'max_input_tokens', raw: 'secret'.repeat(10_000) },
   });
   const provider = new class implements ModelProvider {
     calls: Array<{ request: ProviderRequest; options: ProviderStreamOptions }> = [];
     async *stream(request: ProviderRequest, options: ProviderStreamOptions = {}): AsyncGenerator<ProviderEvent> {
       this.calls.push({ request, options });
       if (this.calls.length === 1) {
+        yield { type: 'provider.response.started', responseId: 'failed-response' };
         yield { type: 'provider.error', error: timeout };
         return;
       }
@@ -285,8 +516,9 @@ test('provider failure stays visible once with safe metadata and never enters la
   const visible = renderTranscript(item.app.session.transcript, item.app.diagnostics).chunks.map((chunk) => chunk.text).join('');
   assert.equal(item.app.diagnostics.length, 1);
   assert.equal(item.app.session.events.filter((event) => event.type === 'provider.error' || event.type === 'turn.failed').length, 2);
-  assert.match(visible, /Error\nProvider failure\nCode: provider\nLM Studio request timed out after 30000 ms\.\nKind: timeout\nHTTP status: 504\nProvider event: response\.error/);
+  assert.match(visible, /Error\nProvider failure\nCode: provider\nLM Studio request timed out after 30000 ms\.\nKind: provider_event\nHTTP status: 504\nProvider event: response\.failed\nProvider code: context_length_exceeded\nProvider reason: max_input_tokens/);
   assert.doesNotMatch(visible, /secret/);
+  assert.doesNotMatch(item.setup.captureCharFrame(), /Thinking\.\.\./);
   assert.deepEqual(item.app.session.transcript, [{ role: 'user', text: 'first turn' }]);
   assert.equal(item.app.work.some((entry) => entry.item.status === 'interrupted'), true);
 
@@ -435,11 +667,12 @@ test('/skills stays local and /skill activates exactly one recoverable non-stick
   await item.setup.mockInput.typeText('/skills');
   item.setup.mockInput.pressEnter();
   await item.setup.waitForFrame((frame) => frame.includes('Skills (3):'));
+  await new Promise<void>((resolve) => setTimeout(resolve, 50));
   assert.match(item.setup.captureCharFrame(), /builtin:focused/);
   assert.equal(provider.calls.length, 0);
 
   await item.setup.mockInput.typeText('/skill focused write this');
-  item.setup.mockInput.pressEnter();
+  await item.app.submit();
   await item.setup.waitForFrame((frame) => frame.includes('Ambiguous skill focused'));
   assert.equal(provider.calls.length, 0);
   assert.equal(item.app.input.plainText, '/skill focused write this');
@@ -448,7 +681,7 @@ test('/skills stays local and /skill activates exactly one recoverable non-stick
   item.app.input.focus();
   await item.setup.flush();
   await item.setup.mockInput.typeText('/skill missing write this');
-  item.setup.mockInput.pressEnter();
+  await item.app.submit();
   await item.setup.waitForFrame((frame) => frame.includes('Unknown skill missing'));
   assert.equal(provider.calls.length, 0);
   assert.equal(item.app.input.plainText, '/skill missing write this');
@@ -591,6 +824,8 @@ test('Esc cancels an active turn, then exits and destroys the renderer while idl
   assert.equal(provider.calls[0]?.options.signal?.aborted, true);
   assert.equal(item.setup.renderer.isDestroyed, false);
   assert.equal(item.app.session.events.at(-1)?.type, 'turn.cancelled');
+  await item.setup.flush();
+  assert.match(item.setup.captureCharFrame(), /Turn cancelled/);
   assert.equal(item.setup.renderer.isDestroyed, false);
   item.setup.mockInput.pressEscape();
   assert.equal(item.setup.renderer.isDestroyed, true);
@@ -605,6 +840,7 @@ test('test renderer presents normalized approvals and allow, deny, and Esc keep 
   const allowed = await write('allow', 'allowed.txt', 'yes');
   await allowed.setup.mockInput.typeText('write it');
   allowed.setup.mockInput.pressEnter();
+  await new Promise<void>((resolve) => setTimeout(resolve, 50));
   await allowed.setup.waitForFrame((frame) => frame.includes('Approval required'));
   assert.match(allowed.setup.captureCharFrame(), /Target: allowed.txt/);
   await allowed.setup.mockInput.typeText('next draft');
@@ -618,6 +854,7 @@ test('test renderer presents normalized approvals and allow, deny, and Esc keep 
   await writeFile(join(denied.workspace, 'denied.txt'), 'before');
   await denied.setup.mockInput.typeText('deny it');
   denied.setup.mockInput.pressEnter();
+  await new Promise<void>((resolve) => setTimeout(resolve, 50));
   await denied.setup.waitForFrame((frame) => frame.includes('[Ctrl+A]llow once'));
   assert.match(denied.setup.captureCharFrame(), /Target: denied.txt \(already dirty\)/);
   denied.setup.mockInput.pressKey('d', { ctrl: true });
@@ -628,6 +865,7 @@ test('test renderer presents normalized approvals and allow, deny, and Esc keep 
   const cancelled = await write('cancel', 'cancelled.txt', 'never');
   await cancelled.setup.mockInput.typeText('cancel it');
   cancelled.setup.mockInput.pressEnter();
+  await new Promise<void>((resolve) => setTimeout(resolve, 50));
   await cancelled.setup.waitForFrame((frame) => frame.includes('Approval required'));
   cancelled.setup.resize(48, 12);
   cancelled.setup.mockInput.pressEscape();
@@ -640,6 +878,7 @@ test('test renderer presents normalized approvals and allow, deny, and Esc keep 
   t.after(() => cleanup(process));
   await process.setup.mockInput.typeText('show process');
   process.setup.mockInput.pressEnter();
+  await new Promise<void>((resolve) => setTimeout(resolve, 50));
   await process.setup.waitForFrame((frame) => frame.includes('not OS/workspace sandboxed'));
   assert.match(process.setup.captureCharFrame(), /Executable: node/);
   process.setup.mockInput.pressKey('d', { ctrl: true });

@@ -41,6 +41,13 @@ const ASCII_BORDER = {
 } as const;
 
 type Clipboard = Pick<HostClipboardService, 'read' | 'writeText' | 'dispose'>;
+type ThinkingTimer = ReturnType<typeof setInterval> | number;
+
+/** Presentation-only clock seam so thinking animation stays deterministic in tests. */
+export type ThinkingClock = Readonly<{
+  setInterval(callback: () => void, delayMs: number): ThinkingTimer;
+  clearInterval(timer: ThinkingTimer): void;
+}>;
 
 export type GeorgeTuiOptions = Readonly<{
   renderer: CliRenderer;
@@ -51,6 +58,7 @@ export type GeorgeTuiOptions = Readonly<{
   session?: Session;
   approvals: ApprovalResolver;
   clipboard?: Clipboard;
+  thinkingClock?: ThinkingClock;
 }>;
 
 export type TranscriptDiagnosticEntry = Readonly<{
@@ -81,12 +89,21 @@ function errorFingerprint(code: string, message: string): string {
 function safeCauseDetails(cause: unknown): string[] {
   if (!cause || typeof cause !== 'object' || Array.isArray(cause)) return [];
   const record = cause as Record<string, unknown>;
+  const detail = (value: unknown, limit: number): string | undefined => {
+    if (typeof value !== 'string') return undefined;
+    const normalized = value.replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim();
+    return normalized ? bounded(normalized, limit) : undefined;
+  };
   const details: string[] = [];
-  if (typeof record.kind === 'string') details.push(`Kind: ${bounded(record.kind, 64)}`);
+  const kind = detail(record.kind, 64);
+  if (kind) details.push(`Kind: ${kind}`);
   if (typeof record.status === 'number' && Number.isInteger(record.status)) details.push(`HTTP status: ${record.status}`);
-  for (const key of ['providerEventType', 'eventType'] as const) {
-    if (typeof record[key] === 'string') details.push(`Provider event: ${bounded(record[key], 64)}`);
-  }
+  const event = detail(record.providerEventType, 64) ?? detail(record.eventType, 64);
+  if (event) details.push(`Provider event: ${event}`);
+  const code = detail(record.providerCode, 128);
+  if (code) details.push(`Provider code: ${code}`);
+  const reason = detail(record.providerReason, 128);
+  if (reason) details.push(`Provider reason: ${reason}`);
   return details;
 }
 
@@ -100,27 +117,51 @@ export function renderTranscript(
   const chunks: StyledText['chunks'] = [];
   let blockCount = 0;
   const separator = () => { if (blockCount++ > 0) chunks.push(plain('\n\n')); };
+  const renderWork = (item: WorkItem) => {
+    const status = `(${item.status})`;
+    const primary = workPrimary(item);
+    const lines = wrapTranscriptBody(primary, Math.max(1, bodyWidth - status.length - 1));
+    for (const [index, line] of lines.entries()) {
+      chunks.push(fg(NEON_THEME.muted)('\n│   '));
+      chunks.push(plain(line));
+      if (index === lines.length - 1) {
+        chunks.push(plain(' '));
+        chunks.push(fg(workColor(item.status))(status));
+      }
+    }
+    for (const line of workDetails(item, bodyWidth)) {
+      chunks.push(fg(NEON_THEME.muted)('\n│     '));
+      chunks.push(plain(line));
+    }
+  };
   const presentationAt = (count: number) => {
     const items = [
       ...diagnostics.filter((item) => item.afterEntryCount === count).map((item, index) => ({ kind: 'diagnostic' as const, item, order: item.order ?? index })),
       ...work.filter((item) => item.afterEntryCount === count).map((item, index) => ({ kind: 'work' as const, item, order: item.order ?? diagnostics.length + index })),
     ].sort((left, right) => left.order - right.order);
+    let workGroup: WorkItem[] = [];
+    const flushWork = () => {
+      if (workGroup.length === 0) return;
+      separator();
+      chunks.push(bold(fg(NEON_THEME.assistant)('Work')));
+      for (const item of workGroup) renderWork(item);
+      workGroup = [];
+    };
     for (const entry of items) {
+      if (entry.kind === 'work') {
+        workGroup.push(entry.item.item);
+        continue;
+      }
+      flushWork();
       separator();
       if (entry.kind === 'diagnostic') {
         const diagnostic = entry.item;
         chunks.push(bold(fg(NEON_THEME.error)(diagnostic.title)));
         chunks.push(plain(`\n${diagnostic.source}\nCode: ${diagnostic.code}\n${diagnostic.message}`));
         if (diagnostic.details.length > 0) chunks.push(plain(`\n${diagnostic.details.join('\n')}`));
-        continue;
-      }
-      const item = entry.item.item;
-      chunks.push(bold(fg(workColor(item.status))(`Work · ${item.status}`)));
-      for (const line of [...wrapTranscriptBody(item.summary, bodyWidth), ...workDetails(item, bodyWidth)]) {
-        chunks.push(fg(NEON_THEME.muted)('\n│   '));
-        chunks.push(plain(line));
       }
     }
+    flushWork();
   };
   presentationAt(0);
   entries.forEach((entry, index) => {
@@ -137,7 +178,13 @@ export function renderTranscript(
 
 function workColor(status: WorkItem['status']): string {
   if (status === 'failed' || status === 'denied' || status === 'cancelled' || status === 'interrupted') return NEON_THEME.error;
+  if (status === 'missing' || status === 'skipped') return NEON_THEME.muted;
   return status === 'requested' || status === 'running' || status === 'waiting' ? NEON_THEME.user : NEON_THEME.assistant;
+}
+
+function workPrimary(item: WorkItem): string {
+  const exit = item.details.exitCode;
+  return exit === undefined || /\bexit\s/.test(item.summary) ? item.summary : `${item.summary} · Exit: ${exit === null ? 'none' : exit}`;
 }
 
 function workDetails(item: WorkItem, width: number): string[] {
@@ -150,11 +197,12 @@ function workDetails(item: WorkItem, width: number): string[] {
     ...(details.executable === undefined ? [] : [`Executable: ${bounded(details.executable, 160)}`]),
     ...argv,
     ...(details.cwd === undefined ? [] : [`Cwd: ${bounded(details.cwd, 160)}`]),
-    ...(details.exitCode === undefined ? [] : [`Exit: ${details.exitCode === null ? 'none' : details.exitCode}`]),
+    ...(details.timeoutMs === undefined ? [] : [`Timeout: ${details.timeoutMs} ms`]),
     ...(details.signal === undefined || details.signal === null ? [] : [`Signal: ${bounded(details.signal, 80)}`]),
     ...(details.outcome === undefined ? [] : [`Outcome: ${details.outcome}`]),
     ...(details.truncated ? ['Output truncated'] : []),
     ...(details.error === undefined ? [] : [`Error: ${bounded(details.error, 240)}`]),
+    ...(item.status === 'failed' && details.requestedArguments !== undefined ? [`Requested args: ${bounded(details.requestedArguments, 480)}`] : []),
   ];
   return values.flatMap((value) => wrapTranscriptBody(value, width));
 }
@@ -178,7 +226,7 @@ function wrapTranscriptBody(text: string, width: number): string[] {
 
 function activityFor(event: ApplicationEvent): string | undefined {
   switch (event.type) {
-    case 'provider.response.started': return 'Thinking…';
+    case 'provider.response.started': return 'Thinking...';
     case 'provider.response.completed': return 'Response complete';
     case 'tool.requested': return `Tool requested: ${event.name}`;
     case 'tool.started': return `Running tool: ${event.name}`;
@@ -238,6 +286,7 @@ export class GeorgeTui {
   private readonly approvals: ApprovalResolver;
   private readonly clipboard: Clipboard;
   private readonly ownsClipboard: boolean;
+  private readonly thinkingClock: ThinkingClock;
   private readonly done: Promise<void>;
   private resolveDone!: () => void;
   private controller: AbortController | undefined;
@@ -245,6 +294,9 @@ export class GeorgeTui {
   private pendingApproval: ApprovalRequest | undefined;
   private readonly terminalFailureFingerprints = new Set<string>();
   private presentationOrder = 0;
+  private revealedAssistant: Readonly<{ index: number; text: string }> | undefined;
+  private thinkingTimer: ThinkingTimer | undefined;
+  private thinkingDots = 0;
   private closed = false;
 
   constructor(options: GeorgeTuiOptions) {
@@ -253,6 +305,7 @@ export class GeorgeTui {
     this.approvals = options.approvals;
     this.clipboard = options.clipboard ?? createHostClipboard();
     this.ownsClipboard = options.clipboard === undefined;
+    this.thinkingClock = options.thinkingClock ?? { setInterval, clearInterval };
     const agent = options.service instanceof CodingWorkflowApplicationService ? options.service.agent : options.service;
     this.session = options.session ?? createSession({ workspace: options.workspace ?? agent.workspace.root });
     this.statusDetails = `${options.provider} · ${options.model} · session ${this.session.id} · ${this.session.workspace}`;
@@ -329,6 +382,7 @@ export class GeorgeTui {
       this.renderer.requestRender();
     });
     this.renderer.on(CliRenderEvents.DESTROY, () => {
+      this.stopThinking();
       this.controller?.abort();
       this.closed = true;
       this.finish();
@@ -367,11 +421,13 @@ export class GeorgeTui {
   }
 
   private async start(text: string, activatedSkills?: readonly string[]): Promise<void> {
+    this.stopThinking();
     this.clearComposer();
     this.controller = new AbortController();
     this.statusView.content = this.status('Working');
     this.activityView.content = 'Starting turn';
     this.active = this.consume(text, this.controller.signal, activatedSkills).finally(() => {
+      this.stopThinking();
       this.controller = undefined;
       this.active = undefined;
       if (!this.closed) this.statusView.content = this.status('Ready');
@@ -386,6 +442,7 @@ export class GeorgeTui {
 
   escape(): boolean {
     if (this.controller) {
+      this.stopThinking();
       this.activityView.content = 'Cancelling…';
       this.controller.abort();
       return true;
@@ -410,6 +467,7 @@ export class GeorgeTui {
   close(): void {
     if (this.closed) return;
     this.closed = true;
+    this.stopThinking();
     this.controller?.abort();
     this.renderer.destroy();
     if (this.ownsClipboard) void this.clipboard.dispose();
@@ -422,7 +480,7 @@ export class GeorgeTui {
       return;
     }
     for await (const event of this.service.run({ session: this.session, input, signal, ...(activatedSkills === undefined ? {} : { activatedSkills }) })) {
-      this.render(event);
+      await this.render(event);
     }
   }
 
@@ -457,7 +515,8 @@ export class GeorgeTui {
     this.composerOverflowView.height = 0;
   }
 
-  private render(event: ApplicationEvent): void {
+  private async render(event: ApplicationEvent): Promise<void> {
+    if (this.closed) return;
     if (event.type === 'turn.started') this.terminalFailureFingerprints.clear();
     this.recordDiagnostic(event);
     this.recordWork(event);
@@ -476,13 +535,71 @@ export class GeorgeTui {
       this.approvalView.content = '';
       this.approvalView.height = 0;
     }
+    if (event.type === 'provider.response.started') this.startThinking();
+    else if (this.thinkingTimer !== undefined && !this.thinkingContinues(event)) this.stopThinking();
     const activity = activityFor(event);
-    if (activity) this.activityView.content = activity;
+    if (activity && !(event.type === 'activity.updated' && event.message === 'Thinking...' && this.thinkingTimer !== undefined)) this.activityView.content = activity;
     this.renderer.requestRender();
+    if (event.type === 'assistant.response.completed') await this.revealAssistant(event.text);
+  }
+
+  private thinkingContinues(event: ApplicationEvent): boolean {
+    return event.type === 'provider.text.delta' || (event.type === 'activity.updated' && event.message === 'Thinking...');
+  }
+
+  private startThinking(): void {
+    this.stopThinking();
+    this.thinkingDots = 0;
+    this.activityView.content = 'Thinking';
+    this.thinkingTimer = this.thinkingClock.setInterval(() => {
+      this.thinkingDots = (this.thinkingDots + 1) % 4;
+      this.activityView.content = `Thinking${'.'.repeat(this.thinkingDots)}`;
+      this.activityView.requestRender();
+    }, 333);
+    (this.thinkingTimer as { unref?: () => void }).unref?.();
+  }
+
+  private stopThinking(): void {
+    if (this.thinkingTimer !== undefined) this.thinkingClock.clearInterval(this.thinkingTimer);
+    this.thinkingTimer = undefined;
+    this.thinkingDots = 0;
   }
 
   private refreshTranscript(): void {
-    this.transcriptView.content = renderTranscript(this.session.transcript, this.diagnostics, Math.max(1, this.transcriptView.width - 4), this.work);
+    const entries = this.revealedAssistant === undefined ? this.session.transcript : this.session.transcript.map((entry, index) =>
+      index === this.revealedAssistant!.index ? { ...entry, text: this.revealedAssistant!.text } : entry,
+    );
+    this.transcriptView.content = renderTranscript(entries, this.diagnostics, Math.max(1, this.transcriptView.width - 4), this.work);
+  }
+
+  private async revealAssistant(text: string): Promise<void> {
+    const index = this.session.transcript.length - 1;
+    if (!text || this.session.transcript[index]?.role !== 'assistant') return;
+    this.revealedAssistant = { index, text: '' };
+    const chunkSize = Math.max(4, Math.ceil(text.length / 60));
+    for (let end = 0; end < text.length && !this.closed && !this.controller?.signal.aborted;) {
+      end = Math.min(text.length, end + chunkSize);
+      this.revealedAssistant = { index, text: text.slice(0, end) };
+      this.refreshTranscript();
+      this.renderer.requestRender();
+      if (end < text.length) await this.revealPause();
+    }
+    this.revealedAssistant = undefined;
+    this.refreshTranscript();
+  }
+
+  private async revealPause(): Promise<void> {
+    const signal = this.controller?.signal;
+    if (signal?.aborted || this.closed) return;
+    await new Promise<void>((resolve) => {
+      const timer = setTimeout(done, 12);
+      const abort = () => { clearTimeout(timer); done(); };
+      function done() {
+        signal?.removeEventListener('abort', abort);
+        resolve();
+      }
+      signal?.addEventListener('abort', abort, { once: true });
+    });
   }
 
   private recordWork(event: ApplicationEvent): void {
@@ -498,20 +615,25 @@ export class GeorgeTui {
 
   /** Restored operations are evidence, never live work or a reusable approval. */
   private restoreHistory(): void {
+    let afterEntryCount = 0;
     for (const event of this.session.events) {
+      if (event.type === 'input.submitted' || event.type === 'assistant.response.completed') {
+        afterEntryCount += 1;
+        continue;
+      }
       if (event.type === 'work.updated') {
         const active = event.item.status === 'requested' || event.item.status === 'running' || event.item.status === 'waiting';
         const item = active ? { ...event.item, status: 'interrupted' as const, summary: `Previous operation interrupted: ${event.item.summary}` } : event.item;
         const existing = this.work.findIndex((entry) => entry.item.id === item.id);
         if (existing >= 0) this.work[existing] = { ...this.work[existing]!, item };
-        else this.work.push({ afterEntryCount: 0, order: this.presentationOrder++, item });
+        else this.work.push({ afterEntryCount, order: this.presentationOrder++, item });
       }
       if (event.type === 'context.assembled' && this.contextView) this.contextView.content = contextText(event.diagnostics);
     }
     for (const [index, interruption] of this.session.interruptions.entries()) {
       if (interruption.callId && this.work.some((entry) => entry.item.operationId === interruption.callId)) continue;
       this.work.push({
-        afterEntryCount: 0, order: this.presentationOrder++,
+        afterEntryCount, order: this.presentationOrder++,
         item: {
           id: `history:interruption:${index}`, turnId: interruption.turnId ?? 'history', operationId: interruption.callId ?? interruption.kind,
           category: 'recovery', status: 'interrupted', summary: `Previous ${interruption.kind}${interruption.name ? ` (${interruption.name})` : ''} was interrupted`, details: {},

@@ -68,7 +68,7 @@ test('one-turn service keeps George context first and invokes the provider exact
   assert.doesNotMatch(provider.calls[0]?.request.instructions ?? '', /Repository boot\./);
   assert.match(provider.calls[0]?.request.input ?? '', /\[conversation:current-user-input; user-intent\]\nHi/);
   assert.deepEqual(events.filter((event) => !['context.source', 'activity.updated', 'progress.milestone', 'work.updated'].includes(event.type)).map((event) => event.type), [
-    'turn.started', 'input.submitted', 'context.assembled', 'provider.response.started', 'provider.text.delta', 'provider.response.completed', 'turn.completed',
+    'turn.started', 'input.submitted', 'context.assembled', 'provider.response.started', 'provider.text.delta', 'provider.response.completed', 'assistant.response.completed', 'turn.completed',
   ]);
   assert.deepEqual(session.transcript, [{ role: 'user', text: 'Hi' }, { role: 'assistant', text: 'Hello.' }]);
 });
@@ -274,4 +274,14 @@ test('one-turn service reports cancellation and provider failure without a retry
   const failedEvents = await collect(failedService.run({ session: createSession({ workspace: root }), input: 'Fail', turnId: 'turn-4' }));
   assert.equal(failed.calls.length, 1);
   assert.equal(failedEvents.at(-1)?.type, 'turn.failed');
+
+  const partial = new ScriptedProvider([
+    { type: 'provider.text.delta', delta: 'Do not commit me.' },
+    { type: 'provider.error', error: { code: 'provider', message: 'offline after text' } },
+  ]);
+  const partialService = await createOneTurnApplicationService({ provider: partial, workspace: root });
+  const partialSession = createSession({ workspace: root });
+  const partialEvents = await collect(partialService.run({ session: partialSession, input: 'Fail after text', turnId: 'turn-5' }));
+  assert.equal(partialEvents.some((event) => event.type === 'assistant.response.completed'), false);
+  assert.deepEqual(partialSession.transcript, [{ role: 'user', text: 'Fail after text' }]);
 });

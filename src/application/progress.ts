@@ -27,6 +27,41 @@ function argv(value: unknown): readonly string[] | undefined {
     ? value.map((item) => text(item)!) : undefined;
 }
 
+function valueSummary(value: unknown): unknown {
+  if (value === null) return null;
+  if (typeof value === 'string') return text(value, 160) ?? { type: 'string' };
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value === 'boolean') return value;
+  if (Array.isArray(value)) return value.length <= 8 && value.every((item) => typeof item === 'string' && text(item, 160) !== undefined)
+    ? value.map((item) => text(item, 160)!)
+    : { type: 'array', count: Math.min(value.length, 128) };
+  return { type: Array.isArray(value) ? 'array' : typeof value };
+}
+
+function requestedArguments(name: string, arguments_: string): string {
+  let value: unknown;
+  try { value = JSON.parse(arguments_); } catch { return 'malformed JSON'; }
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return JSON.stringify({ type: Array.isArray(value) ? 'array' : value === null ? 'null' : typeof value });
+  const source = value as Record<string, unknown>;
+  const fields = name === 'run_process' ? ['executable', 'arguments', 'cwd', 'timeoutMs']
+    : name === 'search_text' ? ['query', 'path']
+      : name === 'apply_patch' ? ['path', 'edits']
+        : ['path'];
+  const detail: Record<string, unknown> = {};
+  for (const field of fields) {
+    if (!(field in source)) continue;
+    if ((name === 'write_file' && field === 'content') || (name === 'apply_patch' && field === 'edits')) {
+      detail[field] = name === 'apply_patch' && Array.isArray(source[field]) ? { count: Math.min(source[field].length, 128) } : { redacted: true };
+    } else detail[field] = valueSummary(source[field]);
+  }
+  const unexpected = Object.keys(source)
+    .filter((key) => !fields.includes(key) && key !== 'content' && key !== 'expectedSha256')
+    .slice(0, 8)
+    .map((key) => bounded(key, 64));
+  if (unexpected.length > 0) detail.unexpected = unexpected;
+  return bounded(JSON.stringify(detail), 480);
+}
+
 function detailsFor(name: string, arguments_: string): WorkDetails {
   const value = object(arguments_);
   const path = text(value.path);
@@ -34,10 +69,13 @@ function detailsFor(name: string, arguments_: string): WorkDetails {
     ...(text(value.executable) === undefined ? {} : { executable: text(value.executable) }),
     ...(argv(value.arguments) === undefined ? {} : { argv: argv(value.arguments) }),
     ...(text(value.cwd) === undefined ? { cwd: '.' } : { cwd: text(value.cwd) }),
+    ...(typeof value.timeoutMs === 'number' && Number.isInteger(value.timeoutMs) && value.timeoutMs > 0 ? { timeoutMs: value.timeoutMs } : {}),
+    requestedArguments: requestedArguments(name, arguments_),
   };
   return {
-    ...(path === undefined ? {} : { path }),
+    ...((path === undefined || path === '') && name === 'list_directory' ? { path: '.' } : path === undefined ? {} : { path }),
     ...(name === 'search_text' && text(value.query) !== undefined ? { query: text(value.query) } : {}),
+    requestedArguments: requestedArguments(name, arguments_),
   };
 }
 
@@ -66,7 +104,7 @@ function resultDetails(name: string, value: unknown, details: WorkDetails): Work
   const result = value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};
   const number = (key: string): number | undefined => typeof result[key] === 'number' && Number.isFinite(result[key]) ? result[key] : undefined;
   const bool = (key: string): boolean | undefined => typeof result[key] === 'boolean' ? result[key] : undefined;
-  const base = { ...details };
+  const { requestedArguments: _requestedArguments, ...base } = details;
   if (name === 'read_file' || name === 'write_file' || name === 'apply_patch') {
     return { ...base, ...(number('bytes') === undefined ? {} : { bytes: number('bytes') }), ...(bool('truncated') === undefined ? {} : { truncated: bool('truncated') }) };
   }
@@ -86,7 +124,7 @@ function resultDetails(name: string, value: unknown, details: WorkDetails): Work
 function completed(name: string, details: WorkDetails): string {
   const suffix = details.truncated ? ', truncated' : '';
   if (name === 'read_file') return `Read ${details.path ?? 'file'} (${details.bytes ?? 0} bytes${suffix})`;
-  if (name === 'list_directory') return `Listed ${details.path ?? 'directory'} (${details.count ?? 0} entries${suffix})`;
+  if (name === 'list_directory') return `Listed ${details.path ?? '.'} (${details.count ?? 0} entries${suffix})`;
   if (name === 'search_text') return `Searched ${details.path ?? '.'} (${details.count ?? 0} matches in ${details.scannedFiles ?? 0} files${suffix})`;
   if (name === 'write_file') return `Wrote ${details.path ?? 'file'} (${details.bytes ?? 0} bytes)`;
   if (name === 'apply_patch') return `Patched ${details.path ?? 'file'} (${details.bytes ?? 0} bytes)`;
@@ -147,12 +185,12 @@ export class WorkProjection {
       case 'turn.started': return [this.activityEvent(event.turnId, 'context', 'Assembling context'), ...this.progressEvent(event.turnId, 'context', 'Assembling context')];
       case 'context.source': {
         const id = `${event.turnId}:context:${event.sourceId}`;
-        const status: WorkStatus = event.status === 'loading' ? 'running' : event.status === 'failed' ? 'failed' : 'succeeded';
+        const status: WorkStatus = event.status === 'loading' ? 'running' : event.status === 'loaded' ? 'succeeded' : event.status === 'oversized' ? 'skipped' : event.status;
         const summary = event.status === 'loading' ? `Loading context source ${event.sourceId}` : `Context source ${event.sourceId}: ${event.status}`;
         return [this.activityEvent(event.turnId, 'context', summary), ...this.update({ id, turnId: event.turnId, operationId: event.sourceId, category: 'context', status, summary, details: event.bytes === undefined ? {} : { bytes: event.bytes } })];
       }
       case 'context.assembled': return [this.activityEvent(event.turnId, 'context', 'Context assembled'), ...this.progressEvent(event.turnId, 'context', 'Context assembled')];
-      case 'provider.response.started': return [this.activityEvent(undefined, 'inspection', 'Provider responding')];
+      case 'provider.response.started': return [this.activityEvent(undefined, 'inspection', 'Thinking...')];
       case 'provider.error': return [this.activityEvent(undefined, 'recovery', 'Provider failed')];
       case 'tool.requested': {
         const details = detailsFor(event.name, event.arguments);

@@ -76,17 +76,19 @@ test('configuration rejects invalid workspace, model, and non-loopback provider 
   assert.equal(validateProviderBaseUrl('http://[::1]:1234').hostname, '[::1]');
 });
 
-test('session retains normalized events and builds a transcript from input and deltas', () => {
+test('session records provider deltas without committing them before a completed response', () => {
   const session = createSession({ id: 'session-1', workspace: '/workspace' });
   appendSessionEvent(session, { type: 'turn.started', turnId: 'turn-1' });
   appendSessionEvent(session, { type: 'input.submitted', text: 'Hello' });
   appendSessionEvent(session, { type: 'provider.text.delta', delta: 'Hi' });
   appendSessionEvent(session, { type: 'provider.text.delta', delta: ' there' });
+  assert.deepEqual(session.transcript, [{ role: 'user', text: 'Hello' }]);
+  appendSessionEvent(session, { type: 'assistant.response.completed', turnId: 'turn-1', text: 'Hi there' });
   assert.deepEqual(session.transcript, [
     { role: 'user', text: 'Hello' },
     { role: 'assistant', text: 'Hi there' },
   ]);
-  assert.equal(session.events.length, 4);
+  assert.equal(session.events.length, 5);
 });
 
 test('cancellation exposes a normalized cancellation error', () => {

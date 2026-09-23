@@ -38,6 +38,7 @@ test('durable sessions bind a canonical workspace and reconstruct clean complete
   appendSessionEvent(session, { type: 'provider.text.delta', delta: 'It is ' });
   appendSessionEvent(session, { type: 'provider.text.delta', delta: 'ready.' });
   appendSessionEvent(session, { type: 'provider.response.completed', usage: { inputTokens: 3, outputTokens: 2 } });
+  appendSessionEvent(session, { type: 'assistant.response.completed', turnId: 'turn-1', text: 'It is ready.' });
   appendSessionEvent(session, { type: 'turn.completed', turnId: 'turn-1' });
   await store.save(session);
 
@@ -88,6 +89,7 @@ test('durable evidence is bounded, excludes raw payloads, and classifies incompl
   const store = new LocalSessionStore({ root: state });
   const session = createSession({ id: 'session-1', workspace });
   appendSessionEvent(session, { type: 'input.submitted', text: 'continue safely' });
+  appendSessionEvent(session, { type: 'provider.error', error: { code: 'provider', message: 'LM Studio response.failed: server_error', cause: { providerCode: 'server_error', raw: 'TOP_SECRET_PROVIDER_PAYLOAD' } } });
   appendSessionEvent(session, { type: 'provider.response.started', responseId: 'provider-continuation-id' });
   appendSessionEvent(session, { type: 'provider.tool.call', callId: 'wire', name: 'read_file', arguments: '{"wire":"RAW_PROVIDER_WIRE"}' });
   appendSessionEvent(session, { type: 'tool.completed', turnId: 'turn-1', callId: 'finished', name: 'run_process', result: { ok: true, value: { stdout: 'UNBOUNDED_PROCESS_OUTPUT', renderable: 'TUI_RENDERABLE' } } });
@@ -99,7 +101,7 @@ test('durable evidence is bounded, excludes raw payloads, and classifies incompl
   });
   await store.save(session);
   const serialized = await readFile(join(state, 'session-1.json'), 'utf8');
-  assert.doesNotMatch(serialized, /SECRET_WRITE_BODY|SECRET_ENV|SECRET_APPROVAL_BODY|RAW_PROVIDER_WIRE|UNBOUNDED_PROCESS_OUTPUT|TUI_RENDERABLE|stdout|stderr|environment/);
+  assert.doesNotMatch(serialized, /SECRET_WRITE_BODY|SECRET_ENV|SECRET_APPROVAL_BODY|RAW_PROVIDER_WIRE|UNBOUNDED_PROCESS_OUTPUT|TUI_RENDERABLE|TOP_SECRET_PROVIDER_PAYLOAD|stdout|stderr|environment/);
 
   const reopened = await store.open('session-1', workspace);
   assert.deepEqual(reopened.interruptions.map((item) => item.kind).sort(), ['approval', 'mutation', 'process', 'provider-continuation']);

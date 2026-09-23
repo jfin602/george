@@ -286,6 +286,54 @@ test('LM Studio provider reports caller aborts and bounded timeouts', async (t) 
   assert.equal((timeoutEvents.at(-1) as { type: string }).type, 'provider.error');
 });
 
+test('LM Studio provider preserves bounded safe diagnostics from failure events', async (t) => {
+  const cases = [
+    {
+      name: 'response.failed',
+      data: { type: 'response.failed', response: { status: 422, error: { code: 'context_length_exceeded', message: 'input exceeds context window', raw: 'TOP_SECRET_PAYLOAD' } } },
+      message: 'LM Studio response.failed: context_length_exceeded — input exceeds context window',
+      cause: { kind: 'provider_event', providerEventType: 'response.failed', providerCode: 'context_length_exceeded', providerMessage: 'input exceeds context window', status: 422 },
+    },
+    {
+      name: 'response.incomplete',
+      data: { type: 'response.incomplete', response: { incomplete_details: { reason: 'max_output_tokens', raw: 'TOP_SECRET_PAYLOAD' } } },
+      message: 'LM Studio response.incomplete: max_output_tokens',
+      cause: { kind: 'provider_event', providerEventType: 'response.incomplete', providerReason: 'max_output_tokens' },
+    },
+    {
+      name: 'error',
+      data: { type: 'error', error: { code: 'server_error', message: 'generation failed', raw: 'TOP_SECRET_PAYLOAD' } },
+      message: 'LM Studio provider error: server_error — generation failed',
+      cause: { kind: 'provider_event', providerEventType: 'error', providerCode: 'server_error', providerMessage: 'generation failed' },
+    },
+    {
+      name: 'unexpected payload',
+      data: { type: 'response.failed', response: { error: { message: { raw: 'TOP_SECRET_PAYLOAD' } }, raw: 'TOP_SECRET_PAYLOAD' }, raw: 'TOP_SECRET_PAYLOAD' },
+      message: 'LM Studio response.failed.',
+      cause: { kind: 'provider_event', providerEventType: 'response.failed' },
+    },
+  ] as const;
+
+  for (const item of cases) {
+    await t.test(item.name, async (subtest) => {
+      const { server, baseUrl } = await fixture((_request, response) => sse(response, [`data: ${JSON.stringify(item.data)}\n\n`]));
+      subtest.after(() => close(server));
+      const seen: unknown[] = [];
+      let failure: unknown;
+      try {
+        for await (const event of new LmStudioResponsesProvider({ baseUrl, model: 'local-model' }).stream({ input: 'Hello' })) seen.push(event);
+      } catch (error) {
+        failure = error;
+      }
+      assert.ok(failure instanceof GeorgeError);
+      assert.equal(failure.message, item.message);
+      assert.deepEqual(failure.cause, item.cause);
+      assert.equal((seen.at(-1) as { type: string }).type, 'provider.error');
+      assert.doesNotMatch(JSON.stringify({ message: failure.message, cause: failure.cause }), /TOP_SECRET_PAYLOAD/);
+    });
+  }
+});
+
 test('LM Studio provider normalizes HTTP, provider-event, malformed, and incomplete failures', async (t) => {
   const cases: ReadonlyArray<{
     name: string;
@@ -326,4 +374,17 @@ test('LM Studio provider normalizes HTTP, provider-event, malformed, and incompl
       assert.equal((seen.at(-1) as { type: string }).type, 'provider.error');
     });
   }
+});
+
+test('LM Studio provider keeps the HTTP status in normalized failure metadata', async (t) => {
+  const { server, baseUrl } = await fixture((_request, response) => { response.writeHead(503).end('unavailable'); });
+  t.after(() => close(server));
+  let failure: unknown;
+  try {
+    for await (const _event of new LmStudioResponsesProvider({ baseUrl, model: 'local-model' }).stream({ input: 'Hello' })) { /* consume */ }
+  } catch (error) {
+    failure = error;
+  }
+  assert.ok(failure instanceof GeorgeError);
+  assert.deepEqual(failure.cause, { kind: 'http', status: 503 });
 });

@@ -34,16 +34,20 @@ export function appendSessionEvent(session: Session, event: ApplicationEvent): v
   session.events.push(event);
   if (event.type === 'input.submitted') {
     session.transcript.push({ role: 'user', text: event.text });
-    return;
+  } else if (event.type === 'assistant.response.completed') {
+    appendAssistantResponse(session, event.text);
   }
-  if (event.type !== 'provider.text.delta') return;
+}
+
+function appendAssistantResponse(session: Session, text: string): void {
+  if (!text) return;
   const previous = session.transcript.at(-1);
   if (previous?.role === 'assistant') {
     session.transcript[session.transcript.length - 1] = {
       role: 'assistant',
-      text: previous.text + event.delta,
+      text: previous.text + text,
     };
   } else {
-    session.transcript.push({ role: 'assistant', text: event.delta });
+    session.transcript.push({ role: 'assistant', text });
   }
 }

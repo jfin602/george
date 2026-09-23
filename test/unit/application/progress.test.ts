@@ -63,6 +63,70 @@ test('projection safely summarizes every built-in plus truthful denial, interrup
   assert.equal(work.find((item) => item.operationId === 'completion')?.status, 'succeeded');
 });
 
+test('root list work normalizes omitted and empty paths with one truthful row', () => {
+  const projection = new WorkProjection();
+  projection.observe({ type: 'tool.requested', turnId: 't', callId: 'root', name: 'list_directory', arguments: '{}' });
+  assert.equal(projection.snapshot().work.find((item) => item.operationId === 'root')?.summary, 'List .');
+  projection.observe({ type: 'tool.completed', turnId: 't', callId: 'root', name: 'list_directory', result: { ok: true, value: { entries: [], truncated: false } } });
+  const success = projection.snapshot().work.find((item) => item.operationId === 'root');
+  assert.equal(success?.summary, 'Listed . (0 entries)');
+  assert.equal(success?.details.path, '.');
+
+  projection.observe({ type: 'tool.requested', turnId: 't', callId: 'empty', name: 'list_directory', arguments: '{"path":""}' });
+  projection.observe({ type: 'tool.completed', turnId: 't', callId: 'empty', name: 'list_directory', result: { ok: true, value: { entries: [], truncated: false } } });
+  const empty = projection.snapshot().work.find((item) => item.operationId === 'empty');
+  assert.equal(empty?.summary, 'Listed . (0 entries)');
+  assert.equal(empty?.details.path, '.');
+
+  const error = 'x'.repeat(500);
+  projection.observe({ type: 'tool.requested', turnId: 't', callId: 'failed-root', name: 'list_directory', arguments: '{}' });
+  projection.observe({ type: 'tool.failed', turnId: 't', callId: 'failed-root', name: 'list_directory', result: { ok: false, error: { code: 'tool', message: error } } });
+  const failure = projection.snapshot().work.find((item) => item.operationId === 'failed-root');
+  assert.equal(failure?.status, 'failed');
+  assert.match(failure?.summary ?? '', /^List \. failed: /);
+  assert.ok(Buffer.byteLength(failure?.summary ?? '', 'utf8') <= 240);
+  assert.ok(Buffer.byteLength(failure?.details.error ?? '', 'utf8') <= 240);
+});
+
+test('failed calls retain bounded safe requested arguments without content or patch bodies', () => {
+  const projection = new WorkProjection();
+  const failed = (callId: string, name: string, arguments_: string) => {
+    projection.observe({ type: 'tool.requested', turnId: 't', callId, name, arguments: arguments_ });
+    projection.observe({ type: 'tool.failed', turnId: 't', callId, name, result: { ok: false, error: { code: 'validation', message: 'invalid' } } });
+    return projection.snapshot().work.find((item) => item.operationId === callId)!;
+  };
+  assert.equal(failed('bad-json', 'list_directory', '{').details.requestedArguments, 'malformed JSON');
+  const wrong = failed('wrong-field', 'list_directory', '{"directory":"."}');
+  assert.match(wrong.details.requestedArguments ?? '', /"unexpected":\["directory"\]/);
+  const wrongType = failed('wrong-type', 'read_file', '{"path":null}');
+  assert.match(wrongType.details.requestedArguments ?? '', /"path":null/);
+  const write = failed('write', 'write_file', '{"path":"a.txt","content":"SECRET_WRITE"}');
+  const patch = failed('patch', 'apply_patch', '{"path":"a.txt","edits":[{"oldText":"SECRET_OLD","newText":"SECRET_NEW"}]}');
+  assert.doesNotMatch(JSON.stringify([write, patch]), /SECRET_(WRITE|OLD|NEW)/);
+  projection.observe({ type: 'tool.requested', turnId: 't', callId: 'process', name: 'run_process', arguments: '{"executable":"node","arguments":["--check","a.ts"],"cwd":"src","timeoutMs":50}' });
+  const process = projection.snapshot().work.find((item) => item.operationId === 'process');
+  assert.deepEqual(process?.details, { executable: 'node', argv: ['--check', 'a.ts'], cwd: 'src', timeoutMs: 50, requestedArguments: '{"executable":"node","arguments":["--check","a.ts"],"cwd":"src","timeoutMs":50}' });
+  assert.ok(Buffer.byteLength(wrong.details.requestedArguments ?? '', 'utf8') <= 480);
+});
+
+test('context-source lifecycle projects loading, loaded, missing, oversized, and failed truthfully', () => {
+  const projection = new WorkProjection();
+  const statuses = [
+    ['loading', 'running'],
+    ['loaded', 'succeeded'],
+    ['missing', 'missing'],
+    ['oversized', 'skipped'],
+    ['failed', 'failed'],
+  ] as const;
+  for (const [sourceId, status] of statuses) projection.observe({ type: 'context.source', turnId: 't', sourceId, kind: 'workspace', status });
+  const work = new Map(projection.snapshot().work.map((item) => [item.operationId, item]));
+  for (const [sourceId, expected] of statuses) {
+    assert.equal(work.get(sourceId)?.status, expected);
+  }
+  assert.notEqual(work.get('missing')?.status, 'succeeded');
+  assert.notEqual(work.get('oversized')?.status, 'succeeded');
+});
+
 test('work/progress events remain outside the canonical transcript', () => {
   const session = createSession({ workspace: '/tmp/workspace' });
   appendSessionEvent(session, { type: 'progress.milestone', turnId: 't', category: 'context', message: 'Loading context' });

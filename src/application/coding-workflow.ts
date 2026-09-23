@@ -163,7 +163,7 @@ export class CodingWorkflowApplicationService {
     const completion: CodingWorkflowCompletion = {
       turnId, baseline, finalState, baselineAvailable: baseline !== undefined, finalStateAvailable: finalState !== undefined,
       changes: changes(baseline, finalState, directMutations), directMutations, validations, warnings, terminalState,
-      finalAssistantResponse: events.filter((event): event is Extract<ApplicationEvent, { type: 'provider.text.delta' }> => event.type === 'provider.text.delta').map((event) => event.delta).join(''),
+      finalAssistantResponse: events.filter((event): event is Extract<ApplicationEvent, { type: 'assistant.response.completed' }> => event.type === 'assistant.response.completed').map((event) => event.text).join(''),
     };
     const { turnId: _turnId, baseline: _baseline, finalState: _finalState, ...durableCompletion } = completion;
     await observe(this.agent.record(submission.session, { type: 'workflow.completed', turnId, completion: durableCompletion }));

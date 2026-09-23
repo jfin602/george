@@ -7,7 +7,7 @@ import { join } from 'node:path';
 import test from 'node:test';
 
 import { createAgentLoopApplicationService } from '../../src/application/index.ts';
-import { createSession, GeorgeError, PendingApprovalPort, type ApprovalDecision, type ApprovalPort, type ApprovalRequest, type ApplicationEvent, type ModelProvider, type ProviderEvent, type ProviderRequest, type ProviderStreamOptions } from '../../src/core/index.ts';
+import { createSession, GeorgeError, LocalSessionStore, PendingApprovalPort, type ApprovalDecision, type ApprovalPort, type ApprovalRequest, type ApplicationEvent, type ModelProvider, type ProviderEvent, type ProviderRequest, type ProviderStreamOptions } from '../../src/core/index.ts';
 
 class ScriptedProvider implements ModelProvider {
   readonly calls: Array<{ request: ProviderRequest; options: ProviderStreamOptions }> = [];
@@ -71,6 +71,40 @@ test('fixture repository completes read tool -> result -> final answer with orig
   assert.deepEqual(events.filter((event) => event.type.startsWith('tool.')).map((event) => event.type), ['tool.requested', 'tool.started', 'tool.completed']);
   assert.deepEqual(session.events, events);
   assert.deepEqual(session.transcript, [{ role: 'user', text: 'Read the boot.' }, { role: 'assistant', text: 'The fixture boot was read.' }]);
+});
+
+test('a mixed provider round never commits provisional text, including after durable reopen', async (t) => {
+  const root = await fixture();
+  const state = await mkdtemp(join(tmpdir(), 'george-round-buffer-state-'));
+  t.after(() => Promise.all([rm(root, { recursive: true, force: true }), rm(state, { recursive: true, force: true })]));
+  const provider = new ScriptedProvider([
+    [
+      { type: 'provider.response.started', responseId: 'mixed' },
+      { type: 'provider.text.delta', delta: 'I am done' },
+      { type: 'provider.tool.call', callId: 'read', name: 'read_file', arguments: '{"path":"BOOT.md"}' },
+      { type: 'provider.text.delta', delta: ' despite the tool' },
+      { type: 'provider.response.completed' },
+    ],
+    [{ type: 'provider.text.delta', delta: 'Final answer' }, { type: 'provider.response.completed' }],
+    [{ type: 'provider.text.delta', delta: 'Later answer' }, { type: 'provider.response.completed' }],
+  ]);
+  const service = await createAgentLoopApplicationService({ provider, workspace: root });
+  const session = createSession({ id: 'buffered', workspace: root });
+  const events = await collect(service.run({ session, input: 'Read the boot.', turnId: 'turn-buffered' }));
+
+  assert.deepEqual(session.transcript, [{ role: 'user', text: 'Read the boot.' }, { role: 'assistant', text: 'Final answer' }]);
+  assert.equal(events.filter((event) => event.type === 'provider.text.delta').map((event) => event.delta).join(''), 'I am done despite the toolFinal answer');
+  assert.equal(provider.calls[1]?.request.continuation?.toolResults[0]?.callId, 'read');
+  assert.doesNotMatch(provider.calls[1]?.request.input ?? '', /I am done|despite the tool/);
+
+  const store = new LocalSessionStore({ root: state });
+  await store.save(session);
+  const reopened = await store.open('buffered', root);
+  assert.deepEqual(reopened.transcript, session.transcript);
+  assert.doesNotMatch(JSON.stringify(reopened), /I am done|despite the tool/);
+  await collect(service.run({ session: reopened, input: 'Continue.', turnId: 'turn-later' }));
+  assert.match(provider.calls[2]?.request.input ?? '', /assistant: Final answer/);
+  assert.doesNotMatch(provider.calls[2]?.request.input ?? '', /I am done|despite the tool/);
 });
 
 test('calls execute in provider order across same-response and multiple tool rounds', async (t) => {
