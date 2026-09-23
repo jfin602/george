@@ -48,6 +48,14 @@ Phase 2 uses a simple configurable hard ceiling on tool rounds/calls to prevent 
 
 Tool execution is sequential in Phase 2. Parallel tool execution is deferred until ordering semantics and real need justify it.
 
+### Provider-round assistant commit semantics
+
+Assistant text is buffered per provider response round until George knows whether that completed round contains tool calls. A round with one or more tool calls is provisional: its text is not appended to the canonical assistant transcript, is not used as the workflow's final assistant response, is not persisted as completed assistant history, and is not reintroduced into later provider-facing completed conversation. George executes the tool calls, submits normalized results through the existing continuation path, and starts the next provider round.
+
+Only a completed provider round with no tool calls may commit assistant text as the single final assistant response for that turn. Provider failure or cancellation before such completion leaves buffered text non-canonical. This buffering is a transcript-integrity rule, not a retry-safety signal: a provider attempt that has emitted response-start/text/tool evidence may still be non-replay-safe even when its provisional text was never committed.
+
+OpenTUI may progressively reveal an already-committed final response at a fast bounded cadence so the final answer still feels streamed. Reveal/animation state is presentation-only and must not alter canonical transcript, durable session content, provider-facing history, cancellation truth, or completion evidence.
+
 ## Progress and status events
 
 George's normalized application event stream is the presentation-independent source for visible work state.
@@ -64,6 +72,10 @@ Progress events use bounded categories/messages and may coalesce repeated low-va
 
 The observable execution transcript covers meaningful context-source discovery/loading, file reads/listing/search, Git inspection, writes/patches, approvals, process execution, validation, recovery, and completion. Safe renderings may include bounded paths, queries, counts, byte sizes, literal process executable/argv, workspace-relative cwd, exit/signal state, durations, truncation markers, and concise errors. They must not automatically copy raw file contents, write/patch bodies, arbitrary tool-result JSON, unrestricted stdout/stderr, unrestricted environment state, secrets, or provider payloads.
 
+Schema-invalid or otherwise failed tool requests may additionally retain a bounded allowlisted argument summary so developers can distinguish cases such as omitted fields, empty strings, wrong field names, or wrong primitive types. That diagnostic projection must redact write/patch bodies and must never become a generic raw-JSON dump. For the model-facing `list_directory` root case specifically, omitted `path`, empty-string `path`, and `path: "."` normalize to the active workspace root before the existing canonical workspace/traversal/symlink checks; this normalization does not broaden filesystem authority or imply similar coercion for unrelated tools.
+
+Consecutive work items may be grouped under one visual `Work` header to reduce vertical noise. Grouping is presentation-only: each operation keeps its stable ID, chronological position, details, and explicit textual status such as `(running)`, `(succeeded)`, `(failed)`, `(denied)`, `(cancelled)`, or `(interrupted)`. Semantic color may reinforce status but must not replace the text label. Safe secondary details may be compacted inline when readable.
+
 Authoritative lifecycle/evidence events remain separately available and progress/work text must not be used as the only proof that an operation succeeded or failed. The work log is a projection, not a second execution authority.
 
 Progress/work state is excluded from canonical assistant transcript and provider-facing conversation/context assembly. Rendering an operation in the conversation view must not consume future model context merely because the user saw it.
@@ -78,10 +90,10 @@ The initial user interface uses `@opentui/core` directly from TypeScript, withou
 
 It should provide a Codex-style terminal experience:
 - owned screen regions and in-place redraw;
-- streamed assistant text;
-- a single fast-changing live activity indicator;
+- progressively revealed final assistant text, while preserving the provider-round commit rule above;
+- a single fast-changing live activity indicator that renders provider generation as `Thinking...` rather than exposing provider-protocol wording;
 - a persistent scrollable execution/work log interleaved chronologically with the conversation presentation;
-- one stable visible work item per concrete operation, updated in place as lifecycle state changes;
+- compact grouping of consecutive work items beneath one visual `Work` header, with one stable item per concrete operation and explicit per-item textual status;
 - intelligible operation summaries for context loading, file read/list/search, Git inspection, mutations, approvals, process commands, validation, recovery, and completion;
 - literal executable/argv display for process execution with bounded safe outcome metadata;
 - visible permission requests with normalized tool/arguments and affected path or process command;
@@ -111,6 +123,7 @@ Provider responsibilities include:
 - translation of normalized tool results/continuations back into provider protocol;
 - cancellation and timeout behavior;
 - provider error normalization.
+- bounded safe provider diagnostics that preserve available wire/event type, provider error code, bounded message, incomplete/failure reason, and HTTP status while excluding raw provider payloads, prompts, tool results, secrets, and unrestricted wire content.
 
 Provider-native state such as response identifiers may be retained for efficient continuation, but George's normalized session/tool event history remains authoritative and sufficient to diagnose a run.
 
