@@ -55,7 +55,9 @@ The owner explicitly accepts the recorded Phase 1-4 native-terminal/live-model E
 
 **Phase 6 — Plugins + External Adapters — is the current planning gate.**
 
-Phase 6 planning authority starts with the current product, architecture, workflow, stability, roadmap, and Phase 5 closeout contracts. Establish a Phase 6 decision record through the normal `/docs-review -> /docs-apply` workflow before implementation prompts are written.
+Phase 6 planning authority starts with the current product, architecture, workflow, stability, roadmap, Phase 5 closeout contracts, and the approved Phase 6 decision record at `docs/planning/p6-plugins-external-adapters/decision-record.md`.
+
+Phase 6 documentation alignment is approved. Implementation planning now proceeds through the normal `/prompt-ass -> /prompt-plan -> /prompt-write p6` workflow.
 
 ## Core premise
 
@@ -91,6 +93,7 @@ Read:
 - workflow: `docs/workflow.md`;
 - stability/testing: `docs/stability-contract.md`;
 - roadmap: `docs/roadmap/mvp-roadmap.md`;
+- Phase 6 decision authority: `docs/planning/p6-plugins-external-adapters/decision-record.md`;
 - Phase 5 closeout/history when needed: `docs/phase-5-closeout.md`, `docs/phase-5-owner-closeout.md`, `docs/planning/p5-reliability-long-runs/decision-record.md`;
 - Phase 4 closeout/history when needed: `docs/phase-4-closeout.md`, `docs/phase-4-owner-closeout.md`, `docs/planning/p4-coding-workflow-sessions/decision-record.md`;
 - Phase 3 closeout/history when needed: `docs/phase-3-closeout.md`, `docs/phase-3-owner-closeout.md`, `docs/planning/p3-context-skills/decision-record.md`;

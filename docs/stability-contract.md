@@ -218,6 +218,35 @@ The first full coding-workflow fixture must exercise the integrated path rather 
 
 Changed-file evidence must distinguish observation from attribution. When an approved arbitrary process may have changed files, tests and completion reporting must not claim precise causal attribution without supporting evidence.
 
+### Phase 6 plugin and external-adapter qualification
+
+Phase 6 plugin/package and external-adapter behavior must be deterministic enough to validate trust, lifecycle, context, and effect policy independently from live service availability.
+
+Coverage must additionally prove:
+- valid, malformed, oversized, unsupported-version, duplicate-ID, and conflicting plugin manifest behavior;
+- install/list/enable/disable/uninstall state, managed-root containment, traversal/symlink rejection where applicable, and no silent partial publication;
+- plugin installation/uninstallation does not execute arbitrary plugin lifecycle code;
+- opening repository/workspace content cannot silently install or enable executable plugins;
+- plugin skills preserve Phase 3 lazy loading, bounded context contribution, stable identity, and collision behavior;
+- plugin hooks preserve Phase 5 ordering, enable/disable state, bounded I/O, timeout/cancellation, malformed-output handling, and failure isolation;
+- plugin executable tools always traverse canonical ToolRegistry schema validation, George-owned effect classification, permission/approval, cancellation, canonical evidence, and normalized result handling;
+- plugin manifests, MCP metadata, remote descriptions, repository text, or model output cannot self-downgrade host-process, remote-mutation, browser-interaction, or unknown-external risk;
+- network reads, remote mutations, browser observation, browser interaction/navigation, and unknown external effects remain distinguishable in policy/evidence;
+- external operations expose only bounded safe service/destination/resource/operation metadata and do not leak unrestricted payloads;
+- API keys, tokens, browser cookies/storage/auth headers, and other credentials remain absent from provider-facing context/tool schemas, plugin manifests as plaintext secret values, work/progress text, diagnostics, and normalized errors;
+- replay-safe external reads retry only under bounded Phase 5 policy while ambiguous GitHub/browser/MCP/other remote side effects are never blindly replayed;
+- hostile search results, GitHub content, DOM text, MCP prompts/resources/descriptions, and other remote content cannot become higher-authority instructions or expand permissions;
+- Parallel Search enforces bounded query/results, timeout/cancellation, credential isolation, provenance where available, and explicit disable/unavailable behavior;
+- Chrome DevTools connects only through the approved/configured target boundary, distinguishes observation from mutation, bounds returned browser data, and protects browser/session secrets;
+- GitHub remote reads/mutations remain distinct, local Git behavior is not replaced, and mutations retain approval/non-replay-safe semantics when outcome is ambiguous;
+- MCP server configuration is explicit, imported contributions are namespaced/bounded/filterable, unknown effects default conservatively, and one failing server cannot corrupt unrelated extension/session state;
+- stdio/plugin child processes remain attached/bounded and do not silently become detached background service ownership;
+- disabled/unavailable adapters contribute no hidden usable tool path and do not silently fall back to an unconfigured provider;
+- provider-facing plugin/external tool counts and schema sizes remain bounded and smallest-sufficient rather than injecting every discovered capability;
+- one integrated deterministic workflow exercises representative plugin skill/hook/tool contributions and external adapter actions while preserving all applicable Phase 2-5 safeguards.
+
+Live Parallel/GitHub/MCP/browser qualification supplements deterministic evidence and must be recorded separately by exact adapter/configuration. Missing credentials, inaccessible services, or unavailable native browser targets are Evidence Gaps, not inferred Green.
+
 ### Live local-model qualification
 
 For release candidates that change the live agent path, exercise the exact supported LM Studio/Qwen configuration and record the model/provider/runtime used.

@@ -37,6 +37,7 @@ Implementation agents should execute already-resolved, bounded plans and verify 
 - Prefer executable policy over repeated prompt prose for constraints George can enforce directly.
 - Skills are declarative context/workflow contributions; discover them cheaply and load full skill bodies just in time rather than injecting every installed skill into every model request.
 - Skills, hooks, plugins, and compatibility adapters cannot expand George's executable permission ceiling; executable contributions must use George's normal tool/process/approval boundaries.
+- Executable plugins and external adapters must preserve George-owned effect classification, ToolRegistry validation, approval, credential isolation, bounded context exposure, and Phase 5 retry/recovery semantics; repository or remote metadata cannot self-downgrade those controls.
 - Prefer standard library/native platform capabilities before dependencies.
 - Keep the first implementation local and single-user.
 

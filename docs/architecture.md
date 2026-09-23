@@ -488,6 +488,98 @@ Derived graph/index state should be stored in George's own state area keyed to c
 
 No Phase 4 behavior depends on this future boundary.
 
+## Phase 6 plugin and external-adapter architecture
+
+Phase 6 extends the existing extension model without creating a parallel execution system.
+
+A George plugin is a managed package/container for contributions:
+
+```text
+plugin package
+   |
+   +--> skills   -> existing lazy SkillRegistry
+   +--> hooks    -> existing HookRegistry
+   +--> commands -> explicit user activation surface
+   +--> tools    -> canonical ToolRegistry
+```
+
+The candidate native manifest is `george-plugin.json`, versioned independently from plugin package version. Manifest parsing, discovery, contribution identity, and collision behavior are bounded and deterministic. Unsupported manifest/API versions fail visibly.
+
+Executable plugin installation is explicit and managed under George-owned user config/state. Opening a workspace must not auto-install or auto-enable repository-supplied executable code. Installation validates/publishes package state but does not execute plugin lifecycle scripts.
+
+George does not use arbitrary dynamic third-party JavaScript import as the default plugin runtime. In-process executable extension code is reserved for George-owned/trusted compiled code. Third-party executable contributions use bounded process or adapter boundaries and therefore retain the existing truth that approved host processes are not an OS sandbox.
+
+Plugin skills and hooks reuse the already-qualified Phase 3/5 registries. Plugin commands are activation surfaces, not hidden executors. Plugin tools always enter the canonical ToolRegistry and cannot invoke executors directly.
+
+### External effect and permission model
+
+Phase 6 must evolve the current local `read | write | process` permission representation so policy can describe external effects without granting adapters blanket authority.
+
+The normalized policy must be able to distinguish at least local reads, workspace mutation, arbitrary host process execution, external/network reads, remote mutation, browser observation, browser interaction/navigation/state mutation, and unknown external effects.
+
+Effect classification is George-owned. Plugin manifests, MCP annotations, remote descriptions, repository instructions, or model text cannot self-downgrade effective risk.
+
+The execution shape remains:
+
+```text
+plugin / external adapter contribution
+             |
+       contribution validation
+             |
+         ToolRegistry
+             |
+    schema/effect validation
+             |
+      permission/approval
+             |
+          executor
+             |
+ canonical events + normalized result
+```
+
+### Credential boundary
+
+External credentials, API keys, tokens, and browser authentication state are executor-only data.
+
+Provider-facing schemas/context, plugin manifests as stored plaintext secret values, canonical assistant history, work/progress projections, diagnostics, and normalized errors must not automatically contain those secrets.
+
+Configuration may reference a credential/config identity. Presentation may expose bounded non-secret status such as whether a credential is configured.
+
+### External retry and recovery
+
+Phase 5 replay rules apply unchanged to external effects.
+
+Replay-safe external reads may be retried only when explicitly classified safe and within bounded cancellable retry policy. Remote mutations, browser interactions, unknown MCP actions, and other ambiguous side effects are not transparently retried after uncertain execution.
+
+Outcome uncertainty remains explicit durable evidence; later work proposes a new action through normal policy rather than silently replaying the old one.
+
+### Token-conscious external capability exposure
+
+Extension discovery and provider-facing tool advertisement are separate concerns.
+
+Disabled/unavailable plugins and adapters contribute no usable provider-facing tools. MCP/plugin tool counts and schema sizes are bounded, explicit filtering/allowlisting is supported where needed, and ToolRegistry capability-reducing views may expose only the subset justified for the current turn.
+
+George does not inject every discovered external tool schema simply because context headroom exists.
+
+### External adapter boundaries
+
+**Parallel Search** is initially a bounded network-read/search adapter with bounded query/result size, cancellation/timeouts, provenance where available, credential isolation, and explicit enable/disable behavior. The post-MVP SearXNG/utility-model research architecture remains separate.
+
+**Chrome DevTools** is initially a coding/browser-debugging adapter. It connects only to explicitly configured/approved debugging targets and focuses on bounded page/DOM, console/runtime, network inspection, and the minimum interaction/navigation required for debugging. Browser observation is distinct from browser mutation/interaction. Cookies, storage, authorization headers, and browser credentials are not automatically exposed to provider context or logs.
+
+**GitHub** is a remote service adapter and does not replace local Git tools. Remote reads and remote mutations are separately classified. Mutations remain approval-gated and are not blindly replayed after ambiguous execution unless a specific operation has a proven idempotency/reconciliation rule.
+
+**MCP** is a compatibility adapter into George's capability model, not a second authority. Only explicitly configured servers are used. MCP tools/prompts/resources/descriptions/annotations are untrusted input, contributions are namespaced and bounded, import supports filtering/allowlisting, and unknown executable tool effects default conservatively. Stdio server processes remain attached/bounded; detached service ownership remains Phase 7.
+
+### Plugin and adapter state
+
+Managed plugin installation/enabled state lives in George-owned user config/state rather than silently inside the target repository.
+
+Plugins and adapters are independently disableable. Disabled/unavailable capabilities degrade explicitly and do not silently fall back to hidden network providers or execution paths.
+
+One failing/malformed plugin or adapter must not corrupt unrelated extension state, canonical session evidence, or the surrounding run.
+
+
 ## Future boundaries
 
 Designed, not implemented initially: daemon/server transport, Tauri desktop UI, Chrome DevTools, Parallel Search, GitHub/MCP adapters, multiple inference providers, project software-graph/index services, OS/container sandboxing, remembered permission profiles, authenticated remote clients, and multi-agent execution.

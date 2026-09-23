@@ -191,3 +191,22 @@ Phase 5 succeeds when George can run materially longer local coding jobs through
 - proves the long-run path with deterministic integrated fixtures plus separately classified pinned Qwen3-Coder/LM Studio and native-terminal qualification where available.
 
 Phase 5 does not add a utility-model runtime, automatic semantic skill routing, plugin packaging/install lifecycle, browser/network adapters, daemon/background-job ownership, a sandbox, Tauri, scheduling, or multi-agent execution.
+
+## Phase 6 success condition
+
+Phase 6 succeeds when George can package and use explicit local extensions plus bounded external adapters without creating new hidden authority:
+
+- a versioned George-native plugin can be installed into George-managed state without executing plugin code, then listed, enabled, disabled, and uninstalled deterministically;
+- workspace/repository content cannot silently install or activate executable plugins;
+- plugin skills/hooks/tools reuse the qualified SkillRegistry, HookRegistry, and ToolRegistry rather than parallel extension systems;
+- arbitrary third-party plugin JavaScript is not imported into George's process as a general execution path;
+- external operations are classified by effect rather than adapter identity, with unknown/MCP executable effects handled conservatively;
+- credentials and browser/session secrets are resolved at the executor boundary and remain excluded from provider context and bounded/redacted evidence surfaces;
+- external reads, remote mutations, browser observation/interaction, and MCP capabilities remain explicit, bounded, cancellable, observable, and subject to George policy;
+- Phase 5 replay-safe retry/recovery rules apply to external effects, including no blind retry of ambiguous remote/browser/MCP side effects;
+- provider-facing external tool/schema exposure remains bounded under the Phase 3 smallest-sufficient-working-set policy;
+- Parallel Search, Chrome DevTools, GitHub, and MCP each have a smallest useful independently disableable adapter path;
+- hostile remote/plugin/MCP/browser content cannot raise instruction authority or executable permissions;
+- deterministic fixture evidence remains separate from live external-service/browser qualification.
+
+Phase 6 does not add a plugin marketplace, arbitrary in-process third-party modules, an OS sandbox, automatic semantic tool selection, the post-MVP local web-research/utility-model stack, detached background service ownership, daemon mode, Tauri, scheduling, or multi-agent execution.

@@ -269,19 +269,57 @@ Long-running in Phase 5 means a bounded attached local George run with durable r
 
 Status: CURRENT PLANNING GATE — baseline package `0.6.0`
 
-Goal: package extensions and add network/browser intelligence without contaminating the core or weakening George's trust boundaries.
+Goal: package extensions and add useful network/browser intelligence without contaminating the core, bypassing canonical execution/evidence paths, leaking credentials, or weakening George's trust boundaries.
+
+Decision authority: `docs/planning/p6-plugins-external-adapters/decision-record.md`.
 
 Scope:
-- George-native plugin discovery and manifest contract;
-- plugin install/enable/disable lifecycle;
-- plugin-provided skills, hooks, commands, and tool contributions;
-- compatibility adapters for portable or host-specific extension formats where semantics can be translated safely;
-- plugin-provided executable tools registered through the canonical ToolRegistry and normal permission policy;
-- Parallel Search, Chrome DevTools, GitHub, and MCP adapters;
-- explicit trust/permission boundaries for every executable or network-capable adapter;
-- independently disableable extension/adaptor capabilities.
+- George-native versioned plugin manifest and deterministic discovery/identity contract;
+- explicit managed plugin install/list/enable/disable/uninstall lifecycle under George-owned user config/state;
+- no plugin code execution during installation and no repository-driven executable plugin auto-activation;
+- plugin-provided skills, hooks, commands, and executable tools integrated through the existing SkillRegistry, HookRegistry, command surface, and ToolRegistry rather than parallel subsystems;
+- namespaced contribution identities with visible deterministic collision handling;
+- no general arbitrary third-party JavaScript import into the George process; third-party executable contributions remain bounded process/adapter capabilities unless a later isolation contract changes that;
+- George-owned effect/risk classification extending beyond the Phase 2 local `read | write | process` representation to external reads, remote mutations, browser observation/interaction, and unknown external effects;
+- plugin/external executable tools always passing canonical schema validation, policy/approval, cancellation, normalized evidence, and result handling;
+- executor-only credential resolution with secrets excluded from model context, manifests as plaintext values, tool schemas/descriptions, work/progress text, diagnostics, and normalized errors;
+- network/remote operations represented as explicit observable capabilities rather than implicit model network access;
+- Phase 5 replay-safe retry/recovery rules extended to external effects, with no blind replay of ambiguous remote/browser/MCP mutations;
+- bounded provider-facing external tool/schema exposure so enabled adapters do not defeat Phase 3 smallest-sufficient context policy;
+- bounded Parallel Search network-read adapter;
+- bounded Chrome DevTools coding/browser-debugging adapter with observation distinguished from interaction/mutation and browser secrets protected;
+- GitHub remote adapter with reads distinguished from approval-gated remote mutations and local Git remaining separate;
+- MCP compatibility adapter for explicitly configured servers, translating namespaced/bounded/allowlisted MCP contributions into George's own capability model rather than creating a second authority;
+- independent enable/disable state and failure isolation for plugins and adapters;
+- deterministic/integrated qualification plus separately classified live external-service/browser evidence.
 
-The exact George plugin manifest schema is intentionally deferred until this phase; Phase 3 proves the skill substrate and Phase 5 proves hook lifecycle semantics before packaging freezes those interfaces.
+Success condition:
+- a deterministic plugin fixture can be installed without executing code, enabled, discovered, contribute a lazy skill/hook/tool through George's existing extension subsystems, disabled, and uninstalled without escaping George-managed state;
+- workspace/repository content cannot silently install or activate executable plugin code;
+- plugin and MCP tools cannot self-downgrade their effective risk class or bypass ToolRegistry/approval/evidence paths;
+- external credentials and browser/session secrets remain outside provider context and bounded/redacted evidence surfaces;
+- representative external reads, remote mutations, browser actions, and MCP tools are classified by effect, bounded/cancellable, and observable;
+- replay-safe external reads may retry only under Phase 5 rules while ambiguous remote/browser/MCP side effects remain explicit and are not blindly replayed;
+- Parallel Search, Chrome DevTools, GitHub, and MCP each have a smallest useful bounded adapter path with explicit disable/unavailable behavior;
+- external/plugin tool discovery remains bounded enough that unrelated schemas are not injected merely because provider context has headroom;
+- one failing plugin/adapter cannot corrupt unrelated extension state or canonical session evidence;
+- all applicable Phase 2 permission/process/Git safeguards, Phase 3 context/skill rules, Phase 4 workflow/session evidence, and Phase 5 reliability/hook semantics remain intact.
+
+Non-goals:
+- plugin marketplace/public registry or automatic plugin download/update;
+- npm/package-manager lifecycle scripts or arbitrary install/uninstall hooks;
+- arbitrary in-process third-party Node modules;
+- package-signing/trust marketplace infrastructure;
+- OS/container sandboxing;
+- automatic semantic skill/tool selection;
+- remembered broad approval profiles;
+- full post-MVP SearXNG/local utility-model web-research pipeline;
+- general unrestricted autonomous browser/personal-session automation;
+- unrestricted MCP tool import;
+- detached/background plugin or MCP process ownership;
+- daemon/server mode, scheduling/background jobs, Tauri, or multi-agent execution.
+
+The exact manifest fields and TypeScript representations should follow this decision record and be finalized through `/prompt-plan` against current source. Phase 6 freezes a safe extension/package/effect contract; it does not make external systems authoritative.
 
 ## Phase 7 — Local Daemon
 
