@@ -2,7 +2,7 @@
 
 George is a local-first coding agent harness for running capable local language models against real software repositories.
 
-The initial target is Qwen3-Coder served by LM Studio through its OpenAI-compatible Responses API. George owns the agent loop, tools, context, permissions, project instructions, and session state instead of depending on model-specific orchestration assumptions in another coding harness.
+The pinned default local model is LM Studio ID `qwen3-coder-30b-a3b-instruct@q4_k_m`, served through LM Studio's OpenAI-compatible Responses API. Set `GEORGE_MODEL` only when intentionally overriding that default. George owns the agent loop, tools, context, permissions, project instructions, and session state instead of depending on model-specific orchestration assumptions in another coding harness.
 
 Start with `BOOT.md` before substantial repository-aware work.
 

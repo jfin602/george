@@ -51,7 +51,7 @@ Phase 5 planning authority starts with the current product, architecture, workfl
 
 ## Core premise
 
-George is a local-first coding agent harness. The first supported brain is Qwen3-Coder running locally through LM Studio's OpenAI-compatible Responses API.
+George is a local-first coding agent harness. The pinned default local brain is LM Studio model ID `qwen3-coder-30b-a3b-instruct@q4_k_m`, with Qwen3-Coder served through LM Studio's OpenAI-compatible Responses API. `GEORGE_MODEL` remains an explicit override for deliberate model testing.
 
 George owns repository/project instruction loading, context, tools, process lifecycle, filesystem/Git work, validation, permissions, streaming/recovery, and session persistence.
 
@@ -68,6 +68,7 @@ The model provider is replaceable. LM Studio/Qwen is the first provider, not an 
 - TUI behavior: owns/redraws terminal regions in place, streams assistant output, shows live tool activity/status, keeps persistent interactive input, supports scrollback/resize/cancellation, and restores the terminal cleanly on exit.
 - Core: reusable library modules independent from TUI rendering.
 - Inference: provider interface; first adapter is LM Studio Responses API.
+- Default LM Studio model ID: `qwen3-coder-30b-a3b-instruct@q4_k_m`; `GEORGE_MODEL` may explicitly override it.
 - Persistence: simple local filesystem state first; no database until justified.
 - Desktop: deferred; Tauri is the preferred later native shell.
 - Networking: architecture must permit a later daemon/server mode without rewriting the agent core.

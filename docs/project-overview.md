@@ -6,7 +6,7 @@ Status: INITIAL PRODUCT CONTRACT
 
 George is a local-first coding agent harness that lets a locally running language model perform useful repository-aware software development work through a controlled set of developer tools.
 
-The initial model is Qwen3-Coder served by LM Studio. George is not coupled to Qwen or LM Studio: inference is a provider boundary and future local or remote providers may be added without rewriting the agent loop.
+The pinned default local model is LM Studio ID `qwen3-coder-30b-a3b-instruct@q4_k_m`. `GEORGE_MODEL` remains an explicit override for deliberate model testing. George is not architecturally coupled to Qwen or LM Studio: inference is a provider boundary and future local or remote providers may be added without rewriting the agent loop.
 
 George exists because a capable local model is most useful when paired with a strong harness: project instructions, context assembly, tool schemas, filesystem and Git access, command execution, patching, validation, recovery, and eventually optional web/browser/network tools.
 

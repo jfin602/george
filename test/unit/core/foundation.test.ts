@@ -3,6 +3,7 @@ import test from 'node:test';
 
 import {
   DEFAULT_LM_STUDIO_BASE_URL,
+  DEFAULT_LM_STUDIO_MODEL_ID,
   DEFAULT_PROVIDER_TIMEOUT_MS,
   DEFAULT_CONTEXT_PROFILE,
   GeorgeError,
@@ -17,11 +18,20 @@ import {
   validateWorkspace,
 } from '../../../src/core/index.ts';
 
-test('configuration resolves safe defaults without inventing a model', () => {
+test('configuration resolves the pinned Qwen default while preserving model overrides', () => {
   const config = resolveGeorgeConfig({}, '/workspace');
   assert.equal(config.workspace, '/workspace');
   assert.equal(config.provider.baseUrl.href, `${DEFAULT_LM_STUDIO_BASE_URL}/`);
-  assert.equal(config.provider.model, undefined);
+  assert.equal(config.provider.model, DEFAULT_LM_STUDIO_MODEL_ID);
+  assert.equal(DEFAULT_LM_STUDIO_MODEL_ID, 'qwen3-coder-30b-a3b-instruct@q4_k_m');
+  const environmentOverride = resolveGeorgeConfig({}, '/workspace', {
+    environment: { GEORGE_MODEL: 'environment-model' },
+  });
+  assert.equal(environmentOverride.provider.model, 'environment-model');
+  const explicitOverride = resolveGeorgeConfig({ model: 'explicit-model' }, '/workspace', {
+    environment: { GEORGE_MODEL: 'environment-model' },
+  });
+  assert.equal(explicitOverride.provider.model, 'explicit-model');
   assert.equal(config.provider.timeoutMs, 120_000);
   assert.equal(DEFAULT_PROVIDER_TIMEOUT_MS, 120_000);
   assert.equal(validateWorkspace('project', '/workspace'), '/workspace/project');

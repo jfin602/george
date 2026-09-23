@@ -4,6 +4,7 @@ import { join, resolve } from 'node:path';
 import { GeorgeError } from './errors.ts';
 
 export const DEFAULT_LM_STUDIO_BASE_URL = 'http://127.0.0.1:1234';
+export const DEFAULT_LM_STUDIO_MODEL_ID = 'qwen3-coder-30b-a3b-instruct@q4_k_m';
 export const DEFAULT_PROVIDER_TIMEOUT_MS = 120_000;
 export const MAX_PROVIDER_TIMEOUT_MS = 120_000;
 export const DEFAULT_CONTEXT_PROFILE: ContextProfile = {
@@ -33,7 +34,7 @@ export type GeorgeConfig = Readonly<{
   context: Readonly<{ profile: ContextProfile }>;
   provider: Readonly<{
     baseUrl: URL;
-    model?: string;
+    model: string;
     timeoutMs: number;
   }>;
 }>;
@@ -166,7 +167,7 @@ export function resolveGeorgeConfig(
       baseUrl: validateProviderBaseUrl(
         input.baseUrl ?? DEFAULT_LM_STUDIO_BASE_URL,
       ),
-      ...(input.model === undefined ? {} : { model: validateModelId(input.model) }),
+      model: validateModelId(input.model ?? variables.GEORGE_MODEL ?? DEFAULT_LM_STUDIO_MODEL_ID),
       timeoutMs: input.providerTimeoutMs === undefined
         ? providerTimeoutFromEnvironment(variables.GEORGE_PROVIDER_TIMEOUT_MS)
         : validateProviderTimeoutMs(input.providerTimeoutMs),

@@ -21,7 +21,6 @@ async function main(): Promise<void> {
     baseUrl: process.env.GEORGE_BASE_URL,
     model: process.env.GEORGE_MODEL,
   });
-  if (!config.provider.model) throw new Error('Set GEORGE_MODEL before starting George.');
   const approvals = new PendingApprovalPort();
   const store = new LocalSessionStore();
   const session = resume === undefined ? undefined : await store.open(resume, config.workspace);
