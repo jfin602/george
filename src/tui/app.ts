@@ -21,8 +21,7 @@ export const COMPOSER_KEY_BINDINGS: TextareaKeyBinding[] = [
 
 export const NEON_THEME = {
   background: '#04130d',
-  composer: '#25292b',
-  focusedComposer: '#303638',
+  transcript: '#25292b',
   foreground: '#d7ffe8',
   muted: '#7dbf9f',
   green: '#18d976',
@@ -131,7 +130,7 @@ export class GeorgeTui {
     layout.add(this.statusView);
     this.contextView = new TextRenderable(this.renderer, { id: 'context', width: '100%', height: 2, flexShrink: 0, fg: NEON_THEME.muted, content: 'Context: awaiting first turn' });
     layout.add(this.contextView);
-    this.transcript = new ScrollBoxRenderable(this.renderer, { id: 'transcript', flexGrow: 1, scrollY: true, stickyScroll: true, stickyStart: 'bottom', border: true, borderColor: NEON_THEME.border, focusedBorderColor: NEON_THEME.mint, customBorderChars: ASCII_BORDER, backgroundColor: NEON_THEME.composer, title: 'Transcript', titleColor: NEON_THEME.mint });
+    this.transcript = new ScrollBoxRenderable(this.renderer, { id: 'transcript', flexGrow: 1, scrollY: true, stickyScroll: true, stickyStart: 'bottom', border: true, borderStyle: 'single', borderColor: NEON_THEME.border, focusedBorderColor: NEON_THEME.mint, backgroundColor: NEON_THEME.transcript, title: 'Transcript', titleColor: NEON_THEME.mint });
     this.transcriptView = new TextRenderable(this.renderer, { id: 'transcript-text', fg: NEON_THEME.foreground, content: '' });
     this.transcript.add(this.transcriptView);
     layout.add(this.transcript);
@@ -145,11 +144,11 @@ export class GeorgeTui {
     layout.add(this.composerOverflowView);
     this.composerKeysView = new TextRenderable(this.renderer, { id: 'composer-keys', width: '100%', height: 1, flexShrink: 0, fg: NEON_THEME.muted, content: 'Enter send · Ctrl+A all · Ctrl+C copy · Ctrl+V paste · Esc exit' });
     layout.add(this.composerKeysView);
-    const composer = new BoxRenderable(this.renderer, { id: 'composer', width: '100%', height: 7, flexShrink: 0, border: true, borderColor: NEON_THEME.border, focusedBorderColor: NEON_THEME.mint, customBorderChars: ASCII_BORDER, backgroundColor: NEON_THEME.composer });
+    const composer = new BoxRenderable(this.renderer, { id: 'composer', width: '100%', height: 7, flexShrink: 0, border: true, borderColor: NEON_THEME.border, focusedBorderColor: NEON_THEME.mint, customBorderChars: ASCII_BORDER, backgroundColor: NEON_THEME.background });
     this.input = new TextareaRenderable(this.renderer, {
       id: 'input', height: 5, minHeight: 5, maxHeight: 10, wrapMode: 'word', placeholder: 'Message George', keyBindings: COMPOSER_KEY_BINDINGS,
-      backgroundColor: NEON_THEME.composer, textColor: NEON_THEME.foreground,
-      focusedBackgroundColor: NEON_THEME.focusedComposer, focusedTextColor: NEON_THEME.foreground,
+      backgroundColor: NEON_THEME.background, textColor: NEON_THEME.foreground,
+      focusedBackgroundColor: NEON_THEME.background, focusedTextColor: NEON_THEME.foreground,
       placeholderColor: NEON_THEME.muted, selectionBg: NEON_THEME.green, selectionFg: NEON_THEME.background,
       cursorColor: NEON_THEME.mint,
       onSubmit: () => { void this.submit(); },
