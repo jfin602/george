@@ -13,15 +13,21 @@ Replace George's bootstrap raw repository-instruction concatenation with the P1 
 
 Read the Phase-3 authority, assessment, implementation plan, and exact P1 source/tests before editing. Inspect `AgentLoopApplicationService`, config, application events/session handling, TUI launch wiring, provider contracts, and integration tests.
 
-Extend George configuration with a deterministic user-config root and estimated-token context budget. On Linux honor `XDG_CONFIG_HOME/george` with `~/.config/george` fallback; keep paths/config injectable for tests so no test reads the developer's actual home. Support optional conventional `instructions.md` and `personality.md`; missing optional files are normal.
+Extend George configuration with a deterministic user-config root and provider-independent context profile. On Linux honor `XDG_CONFIG_HOME/george` with `~/.config/george` fallback; keep paths/config injectable for tests so no test reads the developer's actual home. Support optional conventional `instructions.md` and `personality.md`; missing optional files are normal.
 
-Wire the canonical agent loop through the P1 context assembler. Remove the old live `instructions()` / partial `loadRepositoryInstructions()` assembly path rather than leaving two competing systems. Assemble compact George invariants, current conversation/user input, workspace/project guidance, optional global/personality sources, and normalized tool-definition overhead.
+The initial qualified profile is Qwen3-Coder-30B-A3B-Instruct / Q4_K_M / LM Studio with: physical target 32,768 tokens; preferred ordinary assembled working set ~12,000-18,000; soft pressure ~20,000; hard provider-input budget 24,576; reserved generation/tool-loop headroom ~8,192; normal always-on George + project-instruction target <=~2,560. Treat these as configurable engineering defaults, not model capability claims or LM Studio/Qwen wire semantics.
+
+Wire the canonical agent loop through the exact P1 context assembler without discarding or rewriting the generic P1 primitives. Remove the old live `instructions()` / partial `loadRepositoryInstructions()` assembly path rather than leaving two competing systems. Assemble the **smallest sufficient working set** from compact George invariants, current conversation/user input, workspace/project guidance, optional global/personality sources, and normalized tool-definition overhead. Do not inject optional material merely because profile capacity remains; preserve intentional headroom.
 
 Add an explicit current-turn routed-document field/API. Routed paths are workspace-relative, bounded, non-sticky, and included only when explicitly requested; `BOOT.md` references must not trigger eager loading of every mentioned file.
 
-Add bounded structured context diagnostics to application/session events: estimated token total with estimator label, active source IDs, and omitted/deferred/duplicate/failure evidence. Preserve provider-reported `provider.response.completed.usage` as actual provider usage; never relabel estimates as actual.
+Where the existing provider-independent request shape permits without changing semantic roles or the documented logical precedence contract, render stable repeated material before more volatile turn material to preserve a cache-friendly request prefix. Do not move this optimization into Qwen-specific core behavior.
+
+Add bounded structured context diagnostics to application/session events: selected profile; estimated token total with estimator label; provider-input budget and remaining headroom; soft-pressure state; bounded category contributions for core/project/tools/task/skills/routed/conversation/tool-results or equivalent; active source IDs; and omitted/deferred/duplicate/failure evidence. Preserve provider-reported `provider.response.completed.usage` as actual provider usage; never relabel estimates as actual.
 
 Render the assembled context into the existing provider-independent request boundary. Do not move precedence/budget logic into the LM Studio adapter and do not alter ToolRegistry permission classes or approval behavior.
+
+Do not add dynamic tool-surface routing in this prompt. Continue exposing the canonical qualified Phase-2 tool registry and account truthfully for its schema overhead.
 
 Set `package.json` version to `0.3.2`.
 
@@ -30,7 +36,10 @@ Required proof:
 - missing optional global/personality/workspace-native sources do not break startup;
 - a path merely mentioned in `BOOT.md` is not eagerly injected;
 - an explicit routed document is included only for that turn and escape/symlink attempts fail;
-- context budget failures/deferred sources are visible in diagnostics;
+- the initial profile exposes the 24,576 provider-input ceiling, ~20k soft-pressure state, and intentional headroom without treating 32,768 as a fill target;
+- a many-document/large-repository fixture proves unrelated/routed material is not eagerly injected merely because it fits;
+- pressure behavior drops/defers lower-value optional material before critical instructions, and a representative ordinary fixture targets ~12k-18k where practical;
+- context budget failures/deferred sources and bounded category contributions are visible in diagnostics;
 - estimated context diagnostics and actual provider usage remain distinguishable;
 - existing multi-round tool continuation, approvals, process/write safeguards, session transcript, TUI behavior, provider tests, integration tests, typecheck, broad deterministic tests, `git diff --check`, and no-`package-lock.json` remain Green.
 

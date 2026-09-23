@@ -18,8 +18,10 @@ Audit and report:
 - George/current-user/workspace/global/personality precedence and stable same-tier ordering;
 - whole-source loading, oversize behavior, exact duplicate suppression, routing behavior, and no silent critical truncation;
 - provider-facing estimated-token diagnostics vs actual provider usage;
+- selected context-profile abstraction plus the initial Qwen/Q4_K_M 32K operating profile, smallest-sufficient-working-set behavior, provider-input ceiling, soft pressure, reserved headroom, stable-prefix behavior, and bounded category diagnostics;
+- large-repository/no-eager-fill and representative ordinary/pressure qualification evidence;
 - optional user-global/personality/workspace source handling;
-- portable skill discovery across built-in/user/workspace roots, stable IDs, collisions, parser bounds, metadata-only catalog, JIT body loading, and turn-scoped non-leakage;
+- portable skill discovery across built-in/user/workspace roots, stable IDs, collisions, parser bounds, application/TUI-local metadata-only catalog with no ordinary-turn provider injection, JIT body loading, and turn-scoped non-leakage;
 - hostile context/skill inability to expand executable permissions or bypass Phase-2 approval/tool/process safeguards;
 - TUI `/skills` and `/skill` usability plus bounded context/activation observability;
 - integrated disposable-repository fixture evidence;

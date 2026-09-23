@@ -1,6 +1,6 @@
 # Phase 3 Task Stack
 
-Status: READY FOR EXECUTION
+Status: P1 PRESERVED; P2-P6 REVISED FOR INITIAL QWEN CONTEXT PROFILE
 
 Phase: 3 — Context + Skills  
 Execution folder: `p3`  
@@ -21,14 +21,18 @@ Current authority:
 
 ## Stack
 
-- P1 / `0.3.1` — context source model, discovery, ordering, deduplication, and token budget.
-- P2 / `0.3.2` — canonical loop integration, user config, routed documents, and context diagnostics.
-- P3 / `0.3.3` — portable skill registry, bounded catalog, and turn-scoped activation.
-- P4 / `0.3.4` — OpenTUI skill commands and context/activation observability.
-- P5 / `0.3.5` — integrated Phase-3 qualification and bounded hardening.
+- P1 / `0.3.1` — **preserve; do not regenerate/rerun** — context source model, discovery, ordering, deduplication, and token budget.
+- P2 / `0.3.2` — canonical loop integration, initial context profile, smallest-sufficient working set, user config, routed documents, and context/headroom diagnostics.
+- P3 / `0.3.3` — portable skill registry, application/TUI-local bounded catalog, and turn-scoped JIT activation.
+- P4 / `0.3.4` — OpenTUI skill commands and profile/context/activation observability.
+- P5 / `0.3.5` — integrated Phase-3 profile/context/skills qualification and bounded hardening.
 - P6 / `0.3.6` — evidence-only Phase-3 closeout.
 
 P1-P5 use Terra High. P6 uses Terra Medium.
+
+Initial Phase-3 qualification profile: Qwen3-Coder-30B-A3B-Instruct / Q4_K_M / LM Studio, 32,768-token physical target, approximately 12k-18k ordinary working set, approximately 20k soft pressure, 24,576-token provider-input ceiling, and approximately 8,192 tokens reserved for generation/tool-loop headroom. These are replaceable operating defaults, not core architectural limits.
+
+The assembly rule is **smallest sufficient working set**. Unused context is valid headroom.
 
 Every prompt is:
 
@@ -38,7 +42,7 @@ Phase 3 intentionally contains no browser/network requirement, so the ordinary C
 
 ## Safety ordering
 
-P1 builds deterministic context policy independently before P2 replaces the current bootstrap instruction concatenation.
+P1 built the deterministic context-policy substrate and is preserved. P2 extends that exact source/tests with context-profile policy before replacing the current bootstrap instruction concatenation.
 
 P2 integrates context while preserving the existing provider/tool/approval loop; no skill bodies exist yet.
 

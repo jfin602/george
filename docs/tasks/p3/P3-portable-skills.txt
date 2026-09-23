@@ -22,7 +22,7 @@ Support the portable directory shape `<root>/<name>/SKILL.md`. Use a small bound
 
 Give every skill a stable qualified identity such as `builtin:name`, `user:name`, or `workspace:name`. Unqualified names resolve only when exactly one discovered skill matches. Ambiguous names must fail visibly rather than silently choosing an origin.
 
-Expose a deterministic bounded catalog containing metadata only. Ordinary discovery/catalog assembly must not read or inject every full skill body.
+Expose a deterministic bounded catalog containing metadata only through reusable application/TUI services. Because Phase 3 skill selection is explicit, do **not** inject the skill catalog into ordinary provider turns by default. Ordinary discovery/catalog operations must not read or inject every full skill body.
 
 Extend turn submission/context assembly with explicit activated skill IDs. Resolve activation before provider invocation; load full bodies just in time through the existing whole-source budget machinery; keep activated content available across all provider/tool rounds of that one user turn; drop it for unrelated later turns unless explicitly activated again. Origin determines its context trust/priority, and explicit current user intent still outranks skill text.
 
@@ -32,9 +32,9 @@ Set `package.json` version to `0.3.3`.
 
 Required proof:
 - tests cover all three roots, missing roots, portable external `SKILL.md`, metadata-only catalog behavior, stable ordering, qualified and unique unqualified resolution, collision failure, malformed/missing/oversized skill behavior, and bounded catalog/body handling;
-- provider/application tests prove no full body is injected before activation, an activated body persists across multiple tool rounds in that turn, and it is absent from a later unrelated turn;
+- provider/application tests prove ordinary turns receive neither the skill catalog nor any full body by default, an activated body persists across multiple tool rounds in that turn, and it is absent from a later unrelated turn;
 - hostile repository/personality/skill text attempting to grant write/process/network authority does not alter Phase-2 tool validation/approval behavior;
-- context budgeting/diagnostics include skill catalog/activated sources truthfully;
+- context budgeting/diagnostics include activated-skill contributions truthfully while local catalog access itself costs no provider-context tokens;
 - typecheck, broad deterministic provider/tool/application/integration tests, `git diff --check`, and no-`package-lock.json` pass.
 
 Do not add executable hooks, plugin manifests/install lifecycle, automatic semantic skill selection, durable sessions, coding completion workflow, or network tools.

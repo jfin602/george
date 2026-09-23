@@ -15,9 +15,11 @@ Read `BOOT.md`, all current product/architecture/workflow/stability contracts, t
 
 Build/run the deterministic qualification matrix required by `docs/stability-contract.md`:
 - context-source discovery, stable identity/order/precedence, exact duplicate handling, missing optionals, routing, workspace containment, and provider independence;
-- provider-facing estimated-token sizing, tool-schema/conversation overhead, whole-source required failure and optional omit/defer behavior, and no silent critical truncation;
+- provider-facing estimated-token sizing, selected context profile, tool-schema/conversation overhead, whole-source required failure and optional omit/defer behavior, intentional headroom, and no silent critical truncation;
+- initial Qwen/Q4_K_M profile behavior: 32,768 physical target, 24,576 provider-input ceiling, ~20k soft pressure, ~8,192 reserved headroom, and bounded category diagnostics;
+- a large-repository/many-document fixture proving George does not fill context eagerly, plus a representative ordinary fixture targeting ~12k-18k and a pressure fixture proving lower-value optional/routed material is shed before critical instructions;
 - user-global instructions, personality, `.george/instructions.md`, `AGENTS.md`, and routing-oriented `BOOT.md`;
-- built-in/user/workspace skill discovery, portable external `SKILL.md`, metadata-only bounded catalog, collision/malformed/oversized behavior, JIT body loading, multi-round turn lifetime, and no unrelated-turn leakage;
+- built-in/user/workspace skill discovery, portable external `SKILL.md`, application/TUI-local metadata-only bounded catalog with no ordinary-turn provider injection, collision/malformed/oversized behavior, JIT body loading, multi-round turn lifetime, and no unrelated-turn leakage;
 - hostile repository/personality/skill guidance cannot raise filesystem/process/network/approval authority;
 - canonical application-loop/provider continuation/usage behavior and all Phase-2 tool/process/approval safeguards;
 - OpenTUI `/skills`, `/skill`, estimated-context/active-skill diagnostics, draft preservation, approvals, cancellation, resize, scrollback, and cleanup;
@@ -25,7 +27,7 @@ Build/run the deterministic qualification matrix required by `docs/stability-con
 
 Add at least one integrated disposable-repository fixture combining precedence/budgeting, an explicitly routed document, one portable skill activation, an existing multi-round read-only tool cycle, a later unrelated turn with no skill leakage, and an approval-required operation that remains gated despite hostile model-facing text.
 
-Record exact Node/platform versions. If a genuine usable TTY is available, exercise the real terminal command surface/cleanup; otherwise record Evidence Gap. If the supported loopback LM Studio endpoint plus explicit Qwen model are configured, run the bounded live smoke through the exact P5 context/application path; otherwise record Evidence Gap. Deterministic fixtures remain the authority for correctness.
+Record exact Node/platform versions. If a genuine usable TTY is available, exercise the real terminal command surface/cleanup; otherwise record Evidence Gap. If the supported loopback LM Studio endpoint plus explicit Qwen model are configured, run the bounded live smoke through the exact P5 context/application path and record the model identifier, quant/runtime profile when observable, George estimated context, and provider-reported usage when available. Include one representative ordinary-context multi-round tool cycle and, when feasible without manufacturing product behavior, one bounded higher-context/near-pressure characterization. Otherwise record Evidence Gap. Deterministic fixtures remain the authority for correctness.
 
 Permit at most two substantial evidence-driven correction cycles. Every correction adds a permanent executable regression guard for the defect class, reruns focused affected evidence, then the broad applicable matrix.
 
