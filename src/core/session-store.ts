@@ -99,6 +99,45 @@ function safeArguments(): Record<string, never> {
   return {};
 }
 
+function safeWorkDetails(value: unknown): Extract<ApplicationEvent, { type: 'work.updated' }>['item']['details'] {
+  const details = record(value, 'work details');
+  const allowed = ['path', 'query', 'count', 'bytes', 'scannedFiles', 'scannedBytes', 'executable', 'argv', 'cwd', 'exitCode', 'signal', 'outcome', 'truncated', 'error'];
+  if (Object.keys(details).some((key) => !allowed.includes(key))) invalid('work details has an invalid shape.');
+  const integer = (key: string): number | undefined => details[key] === undefined ? undefined : boundedInteger(details[key], `work ${key}`);
+  const maybeString = (key: string, limit = 4096): string | undefined => details[key] === undefined ? undefined : boundedMessage(string(details[key], `work ${key}`, limit));
+  const outcome = details.outcome === undefined ? undefined : string(details.outcome, 'work outcome', 32);
+  if (outcome !== undefined && !['completed', 'failed', 'timed_out', 'spawn_failed'].includes(outcome)) invalid('work outcome is invalid.');
+  const exitCode = details.exitCode;
+  if (exitCode !== undefined && exitCode !== null && (!Number.isInteger(exitCode) || (exitCode as number) < -1_000_000 || (exitCode as number) > 1_000_000)) invalid('work exit code is invalid.');
+  if (details.truncated !== undefined && typeof details.truncated !== 'boolean') invalid('work truncation is invalid.');
+  return {
+    ...(maybeString('path') === undefined ? {} : { path: maybeString('path') }), ...(maybeString('query') === undefined ? {} : { query: maybeString('query') }),
+    ...(integer('count') === undefined ? {} : { count: integer('count') }), ...(integer('bytes') === undefined ? {} : { bytes: integer('bytes') }),
+    ...(integer('scannedFiles') === undefined ? {} : { scannedFiles: integer('scannedFiles') }), ...(integer('scannedBytes') === undefined ? {} : { scannedBytes: integer('scannedBytes') }),
+    ...(maybeString('executable', 1024) === undefined ? {} : { executable: maybeString('executable', 1024) }),
+    ...(details.argv === undefined ? {} : { argv: boundedArray(details.argv, 'work argv', 64).map((item) => boundedMessage(string(item, 'work argv item', 8192))) }),
+    ...(maybeString('cwd') === undefined ? {} : { cwd: maybeString('cwd') }), ...(exitCode === undefined ? {} : { exitCode: exitCode as number | null }),
+    ...(details.signal === undefined ? {} : { signal: details.signal === null ? null : maybeString('signal', 128)! }), ...(outcome === undefined ? {} : { outcome: outcome as 'completed' | 'failed' | 'timed_out' | 'spawn_failed' }),
+    ...(details.truncated === undefined ? {} : { truncated: details.truncated as boolean }), ...(maybeString('error') === undefined ? {} : { error: maybeString('error') }),
+  };
+}
+
+function safeWorkItem(value: unknown): Extract<ApplicationEvent, { type: 'work.updated' }>['item'] {
+  const item = record(value, 'work item');
+  exactKeys(item, ['id', 'turnId', 'operationId', 'category', 'status', 'summary', 'details'], 'work item');
+  const category = string(item.category, 'work category', 32);
+  const status = string(item.status, 'work status', 32);
+  if (!['context', 'inspection', 'editing', 'approval', 'process', 'validation', 'recovery', 'completion'].includes(category)) invalid('work category is invalid.');
+  if (!['requested', 'running', 'waiting', 'succeeded', 'failed', 'denied', 'cancelled', 'interrupted'].includes(status)) invalid('work status is invalid.');
+  return { id: string(item.id, 'work ID', 512), turnId: string(item.turnId, 'work turn ID', 256), operationId: string(item.operationId, 'work operation ID', 512), category: category as Extract<ApplicationEvent, { type: 'work.updated' }>['item']['category'], status: status as Extract<ApplicationEvent, { type: 'work.updated' }>['item']['status'], summary: boundedMessage(string(item.summary, 'work summary', 4096)), details: safeWorkDetails(item.details) };
+}
+
+function oneOf<T extends string>(value: unknown, name: string, values: readonly T[]): T {
+  const result = string(value, name, 32);
+  if (!values.includes(result as T)) invalid(`${name} is invalid.`);
+  return result as T;
+}
+
 function safeWorkflowCompletion(value: Extract<ApplicationEvent, { type: 'workflow.completed' }>['completion']): Extract<ApplicationEvent, { type: 'workflow.completed' }>['completion'] {
   const completion = record(value, 'workflow completion');
   exactKeys(completion, ['baselineAvailable', 'finalStateAvailable', 'changes', 'directMutations', 'validations', 'warnings', 'terminalState', 'finalAssistantResponse'], 'workflow completion');
@@ -153,6 +192,7 @@ function durableEvent(event: ApplicationEvent): ApplicationEvent | undefined {
     case 'provider.error': return { type: event.type, error: safeError(event.error) };
     case 'turn.started': case 'turn.completed': return { type: event.type, turnId: string(event.turnId, 'turn ID', 256) };
     case 'turn.cancelled': case 'turn.failed': return { type: event.type, turnId: string(event.turnId, 'turn ID', 256), error: safeError(event.error) };
+    case 'context.source': return { type: event.type, turnId: string(event.turnId, 'turn ID', 256), sourceId: string(event.sourceId, 'context source ID', 1024), kind: string(event.kind, 'context source kind', 128), status: oneOf(event.status, 'context source status', ['loading', 'loaded', 'missing', 'oversized', 'failed']), ...(event.bytes === undefined ? {} : { bytes: boundedInteger(event.bytes, 'context source bytes') }) };
     case 'context.assembled': return { type: event.type, turnId: string(event.turnId, 'turn ID', 256), diagnostics: safeDiagnostics(event.diagnostics) };
     case 'tool.requested': return { type: event.type, turnId: string(event.turnId, 'turn ID', 256), callId: string(event.callId, 'call ID', 256), name: string(event.name, 'tool name', 256), arguments: '{}' };
     case 'tool.started': return { type: event.type, turnId: string(event.turnId, 'turn ID', 256), callId: string(event.callId, 'call ID', 256), name: string(event.name, 'tool name', 256) };
@@ -162,7 +202,16 @@ function durableEvent(event: ApplicationEvent): ApplicationEvent | undefined {
       type: event.type, turnId: string(event.turnId, 'turn ID', 256), callId: string(event.callId, 'call ID', 256),
       request: safeApproval(event.request),
     } as ApplicationEvent;
+    case 'validation.started': return { type: event.type, turnId: string(event.turnId, 'turn ID', 256), callId: string(event.callId, 'validation call ID', 256), label: boundedMessage(string(event.label, 'validation label', 1024)), intent: boundedMessage(string(event.intent, 'validation intent')) };
+    case 'validation.completed': {
+      const exitCode = event.exitCode;
+      if (exitCode !== null && (!Number.isInteger(exitCode) || exitCode < -1_000_000 || exitCode > 1_000_000)) invalid('validation exit code is invalid.');
+      return { type: event.type, turnId: string(event.turnId, 'turn ID', 256), callId: string(event.callId, 'validation call ID', 256), status: oneOf(event.status, 'validation status', ['passed', 'failed', 'denied', 'cancelled']), exitCode, signal: event.signal === null ? null : string(event.signal, 'validation signal', 128), ...(event.outcome === undefined ? {} : { outcome: oneOf(event.outcome, 'validation outcome', ['completed', 'failed', 'timed_out', 'spawn_failed']) as 'completed' | 'failed' | 'timed_out' | 'spawn_failed' }), stdoutTruncated: event.stdoutTruncated === true, stderrTruncated: event.stderrTruncated === true, ...(event.error === undefined ? {} : { error: safeError(event.error) }) };
+    }
     case 'workflow.completed': return { type: event.type, turnId: string(event.turnId, 'turn ID', 256), completion: safeWorkflowCompletion(event.completion) };
+    case 'activity.updated': return undefined; // Live state is intentionally not durable history.
+    case 'progress.milestone': return { type: event.type, turnId: string(event.turnId, 'turn ID', 256), category: oneOf(event.category, 'progress category', ['context', 'inspection', 'editing', 'validation', 'recovery', 'completion']), message: boundedMessage(string(event.message, 'progress message', 4096)) };
+    case 'work.updated': return { type: event.type, item: safeWorkItem(event.item) };
     default: return invalid('event type is invalid.');
   }
 }

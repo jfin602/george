@@ -26,6 +26,7 @@ import {
 } from '../core/index.ts';
 import { assembleContext, ContextAssemblyError, type AssembledContext } from '../context/index.ts';
 import { join } from 'node:path';
+import { WorkProjection } from './progress.ts';
 import { defaultSkillRoots, SkillRegistry, type SkillCatalog, type SkillRoots } from '../skills/index.ts';
 import {
   createProcessToolExecutor,
@@ -127,6 +128,7 @@ export class AgentLoopApplicationService {
   private readonly maxToolRounds: number;
   private readonly approvalPort: ApprovalPort;
   private readonly skills: SkillRegistry;
+  private readonly projections = new WeakMap<Session, WorkProjection>();
   readonly workspace: Workspace;
 
   constructor(
@@ -157,6 +159,20 @@ export class AgentLoopApplicationService {
 
   async skillCatalog(): Promise<SkillCatalog> {
     return this.skills.catalog();
+  }
+
+  /** Records one authoritative event and its display-safe projections without touching the transcript. */
+  record(session: Session, event: ApplicationEvent): readonly ApplicationEvent[] {
+    let projection = this.projections.get(session);
+    if (!projection) {
+      projection = new WorkProjection();
+      this.projections.set(session, projection);
+    }
+    const projected = projection.observe(event);
+    const events = event.type === 'turn.completed' || event.type === 'turn.cancelled' || event.type === 'turn.failed'
+      ? [...projected, event] : [event, ...projected];
+    for (const item of events) appendSessionEvent(session, item);
+    return events;
   }
 
   /** Prepares a single explicit skill turn without making skill state sticky. */
@@ -196,14 +212,11 @@ export class AgentLoopApplicationService {
     call: { callId: string; name: string; arguments: string },
     signal?: AbortSignal,
   ): AsyncGenerator<ApplicationEvent, import('../tools/index.ts').ToolResult> {
-    const emit = (event: ApplicationEvent): ApplicationEvent => {
-      appendSessionEvent(session, event);
-      return event;
-    };
-    yield emit({ type: 'tool.requested', turnId, callId: call.callId, name: call.name, arguments: call.arguments });
+    const emit = (event: ApplicationEvent): readonly ApplicationEvent[] => this.record(session, event);
+    yield* emit({ type: 'tool.requested', turnId, callId: call.callId, name: call.name, arguments: call.arguments });
     const validation = this.registry.validate(call);
     if ('callId' in validation) {
-      yield emit({ type: 'tool.failed', turnId, callId: call.callId, name: call.name, result: validation.result as Extract<typeof validation.result, { ok: false }> });
+      yield* emit({ type: 'tool.failed', turnId, callId: call.callId, name: call.name, result: validation.result as Extract<typeof validation.result, { ok: false }> });
       return validation;
     }
     let request: ApprovalRequest | undefined;
@@ -213,24 +226,24 @@ export class AgentLoopApplicationService {
       const normalized = asGeorgeError(error, 'validation');
       if (normalized.code === 'cancelled') throw normalized;
       const result = { callId: call.callId, name: call.name, result: { ok: false as const, error: { code: normalized.code, message: normalized.message } } };
-      yield emit({ type: 'tool.failed', turnId, callId: call.callId, name: call.name, result: result.result });
+      yield* emit({ type: 'tool.failed', turnId, callId: call.callId, name: call.name, result: result.result });
       return result;
     }
     if (request) {
-      yield emit({ type: 'approval.requested', turnId, callId: call.callId, request });
+      yield* emit({ type: 'approval.requested', turnId, callId: call.callId, request });
       const decision = await this.approvalPort.request(request, { signal });
       if (decision !== 'allow_once') {
-        yield emit({ type: 'approval.denied', turnId, callId: call.callId, request });
+        yield* emit({ type: 'approval.denied', turnId, callId: call.callId, request });
         const result = { callId: call.callId, name: call.name, result: { ok: false as const, error: { code: 'denied', message: `Approval denied for tool ${call.name}.` } } };
-        yield emit({ type: 'tool.failed', turnId, callId: call.callId, name: call.name, result: result.result });
+        yield* emit({ type: 'tool.failed', turnId, callId: call.callId, name: call.name, result: result.result });
         return result;
       }
-      yield emit({ type: 'approval.allowed', turnId, callId: call.callId, request });
+      yield* emit({ type: 'approval.allowed', turnId, callId: call.callId, request });
     }
-    yield emit({ type: 'tool.started', turnId, callId: call.callId, name: call.name });
+    yield* emit({ type: 'tool.started', turnId, callId: call.callId, name: call.name });
     const result = await this.registry.dispatch(call, { signal });
-    if (result.result.ok) yield emit({ type: 'tool.completed', turnId, callId: call.callId, name: call.name, result: result.result });
-    else yield emit({ type: 'tool.failed', turnId, callId: call.callId, name: call.name, result: result.result });
+    if (result.result.ok) yield* emit({ type: 'tool.completed', turnId, callId: call.callId, name: call.name, result: result.result });
+    else yield* emit({ type: 'tool.failed', turnId, callId: call.callId, name: call.name, result: result.result });
     return result;
   }
 
@@ -245,19 +258,21 @@ export class AgentLoopApplicationService {
 
   async *run(submission: AgentLoopSubmission): AsyncGenerator<ApplicationEvent> {
     const turnId = submission.turnId ?? randomUUID();
-    const emit = (event: ApplicationEvent): ApplicationEvent => {
-      appendSessionEvent(submission.session, event);
-      return event;
-    };
-    yield emit({ type: 'turn.started', turnId });
+    const emit = (event: ApplicationEvent): readonly ApplicationEvent[] => this.record(submission.session, event);
+    yield* emit({ type: 'turn.started', turnId });
     const priorTranscript = [...submission.session.transcript];
-    yield emit({ type: 'input.submitted', text: submission.input });
+    yield* emit({ type: 'input.submitted', text: submission.input });
     try {
       if (submission.signal?.aborted) throw cancellationError(submission.signal);
       let context: AssembledContext;
       try {
         const activatedSkills = submission.activatedSkills === undefined ? undefined : await this.skills.activate(submission.activatedSkills);
-        context = await assembleContext({
+        const observations: Array<Extract<ApplicationEvent, { type: 'context.source' }>> = [];
+        let wake: (() => void) | undefined;
+        let finished = false;
+        let assembled: AssembledContext | undefined;
+        let assemblyError: unknown;
+        const assembly = assembleContext({
           invariants: this.georgeInstructions, userInput: submission.input,
           ...(priorTranscript.length === 0 ? {} : { conversation: conversation(priorTranscript) }),
           workspace: this.workspace,
@@ -266,13 +281,33 @@ export class AgentLoopApplicationService {
           ...(activatedSkills === undefined ? {} : { activatedSkills }),
           normalizedToolDefinitions: JSON.stringify(this.registry.definitions), maxTokens: this.profile.providerInputTokens, optionalMaxTokens: this.profile.softPressureTokens,
           ...(this.maxContextSourceBytes === undefined ? {} : { maxSourceBytes: this.maxContextSourceBytes }),
-        });
+          onSource: (source) => {
+            observations.push({ type: 'context.source', turnId, sourceId: source.id, kind: source.kind, status: source.status, ...(source.bytes === undefined ? {} : { bytes: source.bytes }) });
+            wake?.();
+            wake = undefined;
+          },
+        }).then((value) => { assembled = value; }, (error: unknown) => { assemblyError = error; }).finally(() => { finished = true; wake?.(); });
+        while (!finished || observations.length > 0) {
+          const observation = observations.shift();
+          if (observation) {
+            yield* emit(observation);
+            continue;
+          }
+          await new Promise<void>((resolve) => {
+            wake = resolve;
+            if (finished || observations.length > 0) { wake = undefined; resolve(); }
+          });
+        }
+        await assembly;
+        if (assemblyError) throw assemblyError;
+        if (!assembled) throw new GeorgeError('validation', 'Context assembly ended without a result.');
+        context = assembled;
       } catch (error) {
-        if (error instanceof ContextAssemblyError) yield emit({ type: 'context.assembled', turnId, diagnostics: contextDiagnostics(error, this.profile) });
+        if (error instanceof ContextAssemblyError) yield* emit({ type: 'context.assembled', turnId, diagnostics: contextDiagnostics(error, this.profile) });
         throw error;
       }
       if (submission.signal?.aborted) throw cancellationError(submission.signal);
-      yield emit({ type: 'context.assembled', turnId, diagnostics: contextDiagnostics(context, this.profile) });
+      yield* emit({ type: 'context.assembled', turnId, diagnostics: contextDiagnostics(context, this.profile) });
       const baseRequest = { instructions: context.rendered.guidance, input: context.rendered.conversation, tools: this.registry.definitions };
       let continuation: ProviderContinuation | undefined;
       let toolCalls = 0;
@@ -286,7 +321,7 @@ export class AgentLoopApplicationService {
           { signal: submission.signal, timeoutMs: submission.timeoutMs },
         )) {
           if (submission.signal?.aborted) throw cancellationError(submission.signal);
-          yield emit(event);
+          yield* emit(event);
           if (event.type === 'provider.response.started') responseId = event.responseId;
           if (event.type === 'provider.tool.call') calls.push(event);
           if (event.type === 'provider.response.completed') completed = true;
@@ -299,8 +334,8 @@ export class AgentLoopApplicationService {
           const message = `Tool round limit of ${this.maxToolRounds} exhausted.`;
           for (const call of calls) {
             toolCalls += 1;
-            yield emit({ type: 'tool.requested', turnId, callId: call.callId, name: call.name, arguments: call.arguments });
-            yield emit({ type: 'tool.failed', turnId, callId: call.callId, name: call.name, result: { ok: false, error: { code: 'tool', message } } });
+            yield* emit({ type: 'tool.requested', turnId, callId: call.callId, name: call.name, arguments: call.arguments });
+            yield* emit({ type: 'tool.failed', turnId, callId: call.callId, name: call.name, result: { ok: false, error: { code: 'tool', message } } });
           }
           throw new GeorgeError('tool', message);
         }
@@ -311,8 +346,8 @@ export class AgentLoopApplicationService {
           toolCalls += 1;
           if (toolCalls > this.maxToolCalls) {
             const result = { ok: false as const, error: { code: 'tool', message: `Tool call limit of ${this.maxToolCalls} exhausted.` } };
-            yield emit({ type: 'tool.requested', turnId, callId: call.callId, name: call.name, arguments: call.arguments });
-            yield emit({ type: 'tool.failed', turnId, callId: call.callId, name: call.name, result });
+            yield* emit({ type: 'tool.requested', turnId, callId: call.callId, name: call.name, arguments: call.arguments });
+            yield* emit({ type: 'tool.failed', turnId, callId: call.callId, name: call.name, result });
             throw new GeorgeError('tool', result.error.message);
           }
           const iterator = this.executeTool(submission.session, turnId, call, submission.signal);
@@ -325,10 +360,10 @@ export class AgentLoopApplicationService {
         }
         continuation = { responseId, toolResults: results };
       }
-      yield emit({ type: 'turn.completed', turnId });
+      yield* emit({ type: 'turn.completed', turnId });
     } catch (error) {
       const normalized = asGeorgeError(error);
-      yield emit(normalized.code === 'cancelled'
+      yield* emit(normalized.code === 'cancelled'
         ? { type: 'turn.cancelled', turnId, error: normalized }
         : { type: 'turn.failed', turnId, error: normalized });
     }

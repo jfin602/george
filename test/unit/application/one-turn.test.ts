@@ -67,7 +67,7 @@ test('one-turn service keeps George context first and invokes the provider exact
   assert.match(provider.calls[0]?.request.instructions ?? '', /\[workspace:AGENTS.md; workspace-untrusted\]\nRepository agents\./);
   assert.doesNotMatch(provider.calls[0]?.request.instructions ?? '', /Repository boot\./);
   assert.match(provider.calls[0]?.request.input ?? '', /\[conversation:current-user-input; user-intent\]\nHi/);
-  assert.deepEqual(events.map((event) => event.type), [
+  assert.deepEqual(events.filter((event) => !['context.source', 'activity.updated', 'progress.milestone', 'work.updated'].includes(event.type)).map((event) => event.type), [
     'turn.started', 'input.submitted', 'context.assembled', 'provider.response.started', 'provider.text.delta', 'provider.response.completed', 'turn.completed',
   ]);
   assert.deepEqual(session.transcript, [{ role: 'user', text: 'Hi' }, { role: 'assistant', text: 'Hello.' }]);

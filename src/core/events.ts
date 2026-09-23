@@ -63,6 +63,38 @@ export type WorkflowCompletion = Readonly<{
   finalAssistantResponse: string;
 }>;
 
+export type WorkStatus = 'requested' | 'running' | 'waiting' | 'succeeded' | 'failed' | 'denied' | 'cancelled' | 'interrupted';
+export type WorkCategory = 'context' | 'inspection' | 'editing' | 'approval' | 'process' | 'validation' | 'recovery' | 'completion';
+export type ProgressCategory = 'context' | 'inspection' | 'editing' | 'validation' | 'recovery' | 'completion';
+
+/** Deliberately small, display-safe operation metadata. It never contains result bodies or environment data. */
+export type WorkDetails = Readonly<{
+  path?: string;
+  query?: string;
+  count?: number;
+  bytes?: number;
+  scannedFiles?: number;
+  scannedBytes?: number;
+  executable?: string;
+  argv?: readonly string[];
+  cwd?: string;
+  exitCode?: number | null;
+  signal?: string | null;
+  outcome?: 'completed' | 'failed' | 'timed_out' | 'spawn_failed';
+  truncated?: boolean;
+  error?: string;
+}>;
+
+export type WorkItem = Readonly<{
+  id: string;
+  turnId: string;
+  operationId: string;
+  category: WorkCategory;
+  status: WorkStatus;
+  summary: string;
+  details: WorkDetails;
+}>;
+
 export type ProviderEvent =
   | Readonly<{ type: 'provider.response.started'; responseId?: string }>
   | Readonly<{ type: 'provider.text.delta'; delta: string }>
@@ -79,6 +111,7 @@ export type ApplicationEvent =
   | ProviderEvent
   | Readonly<{ type: 'turn.started'; turnId: string }>
   | Readonly<{ type: 'input.submitted'; text: string }>
+  | Readonly<{ type: 'context.source'; turnId: string; sourceId: string; kind: string; status: 'loading' | 'loaded' | 'missing' | 'oversized' | 'failed'; bytes?: number }>
   | Readonly<{ type: 'context.assembled'; turnId: string; diagnostics: ContextDiagnostics }>
   | Readonly<{ type: 'turn.completed'; turnId: string }>
   | Readonly<{ type: 'turn.cancelled'; turnId: string; error: GeorgeErrorShape }>
@@ -94,7 +127,12 @@ export type ApplicationEvent =
   | Readonly<{ type: 'approval.requested'; turnId: string; callId: string; request: ApprovalRequest }>
   | Readonly<{ type: 'approval.allowed'; turnId: string; callId: string; request: ApprovalRequest }>
   | Readonly<{ type: 'approval.denied'; turnId: string; callId: string; request: ApprovalRequest }>
+  | Readonly<{ type: 'validation.started'; turnId: string; callId: string; label: string; intent: string }>
+  | Readonly<{ type: 'validation.completed'; turnId: string; callId: string; status: 'passed' | 'failed' | 'denied' | 'cancelled'; exitCode: number | null; signal: string | null; outcome?: 'completed' | 'failed' | 'timed_out' | 'spawn_failed'; stdoutTruncated: boolean; stderrTruncated: boolean; error?: Readonly<{ code: string; message: string }> }>
   | Readonly<{ type: 'workflow.completed'; turnId: string; completion: WorkflowCompletion }>
+  | Readonly<{ type: 'activity.updated'; turnId?: string; category: WorkCategory; message: string }>
+  | Readonly<{ type: 'progress.milestone'; turnId: string; category: ProgressCategory; message: string }>
+  | Readonly<{ type: 'work.updated'; item: WorkItem }>
   | Readonly<{
       type: 'tool.completed';
       turnId: string;

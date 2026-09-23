@@ -1,7 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
 import {
-  appendSessionEvent,
   asGeorgeError,
   type ApplicationEvent,
   type LocalSessionStore,
@@ -122,12 +121,20 @@ export class CodingWorkflowApplicationService {
     const validations: WorkflowValidation[] = [];
     for (const request of submission.validations ?? []) {
       if (!request.label.trim() || !request.intent.trim()) throw new Error('Validation label and intent must be explicit.');
+      const callId = randomUUID();
+      this.agent.record(submission.session, { type: 'validation.started', turnId, callId, label: bounded(request.label, 1024), intent: bounded(request.intent) });
       const validationEvents: ApplicationEvent[] = [];
       let failure: unknown;
       try {
-        for await (const event of this.agent.runProcess({ session: submission.session, turnId, ...request, signal: submission.signal })) validationEvents.push(event);
+        for await (const event of this.agent.runProcess({ session: submission.session, turnId, callId, ...request, signal: submission.signal })) validationEvents.push(event);
       } catch (error) { failure = error; }
-      validations.push(validationFromEvents(request, validationEvents, failure));
+      const validation = validationFromEvents(request, validationEvents, failure);
+      validations.push(validation);
+      this.agent.record(submission.session, {
+        type: 'validation.completed', turnId, callId, status: validation.status, exitCode: validation.exitCode, signal: validation.signal,
+        ...(validation.outcome === undefined ? {} : { outcome: validation.outcome }), stdoutTruncated: validation.stdoutTruncated, stderrTruncated: validation.stderrTruncated,
+        ...(validation.error === undefined ? {} : { error: validation.error }),
+      });
     }
 
     let finalState: GitWorkingTreeSnapshot | undefined;
@@ -145,7 +152,7 @@ export class CodingWorkflowApplicationService {
       finalAssistantResponse: events.filter((event): event is Extract<ApplicationEvent, { type: 'provider.text.delta' }> => event.type === 'provider.text.delta').map((event) => event.delta).join(''),
     };
     const { turnId: _turnId, baseline: _baseline, finalState: _finalState, ...durableCompletion } = completion;
-    appendSessionEvent(submission.session, { type: 'workflow.completed', turnId, completion: durableCompletion });
+    this.agent.record(submission.session, { type: 'workflow.completed', turnId, completion: durableCompletion });
     if (this.store) {
       try { await this.store.save(submission.session); }
       catch (error) { warnings.push(`Completion evidence was not persisted: ${bounded(asGeorgeError(error).message)}`); }

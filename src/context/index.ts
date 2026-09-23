@@ -52,6 +52,14 @@ export type ContextFileLoad = Readonly<
   | { status: 'failed'; reason: string }
 >;
 
+/** Bounded lifecycle evidence only; source text never crosses this seam. */
+export type ContextSourceObservation = Readonly<{
+  id: string;
+  kind: ContextSourceKind;
+  status: 'loading' | 'loaded' | 'missing' | 'oversized' | 'failed';
+  bytes?: number;
+}>;
+
 export type ActivatedContextSkill = Readonly<{
   id: string;
   text: string;
@@ -74,6 +82,7 @@ export type ContextAssemblyOptions = Readonly<{
   optionalMaxTokens?: number;
   maxTokens: number;
   estimator?: ContextTokenEstimator;
+  onSource?: (observation: ContextSourceObservation) => void;
 }>;
 
 export type AssembledContext = Readonly<{
@@ -206,8 +215,11 @@ export async function loadWorkspaceContextFile(workspace: Workspace, path: strin
   return readWholeFile(resolved, maxBytes);
 }
 
-async function fileCandidate(candidate: Candidate, load: Promise<ContextFileLoad>): Promise<Candidate> {
-  const result = await load;
+async function fileCandidate(candidate: Candidate, load: () => Promise<ContextFileLoad>, onSource?: ContextAssemblyOptions['onSource']): Promise<Candidate> {
+  const observe = (observation: ContextSourceObservation) => { try { onSource?.(observation); } catch { /* Observation cannot affect assembly. */ } };
+  observe({ id: candidate.id, kind: candidate.kind, status: 'loading' });
+  const result = await load();
+  observe({ id: candidate.id, kind: candidate.kind, status: result.status, ...(result.status === 'loaded' || result.status === 'oversized' ? { bytes: result.bytes } : {}) });
   if (result.status === 'loaded') return { ...candidate, text: result.text };
   if (result.status === 'missing') return { ...candidate, disposition: 'omitted', reason: 'optional source is missing' };
   if (result.status === 'oversized') return { ...candidate, disposition: 'deferred', reason: `source exceeds ${result.bytes - 1} byte safety limit` };
@@ -253,26 +265,26 @@ export async function assembleContext(options: ContextAssemblyOptions): Promise<
   if (options.normalizedToolDefinitions) candidates.push({ id: 'tools:normalized-definition-overhead', kind: 'tool-definition-overhead', origin: 'tooling', trust: 'tooling', precedence: 20, order: 0, required: true, channel: 'tools', text: normalize(options.normalizedToolDefinitions) });
 
   if (options.workspace) {
-    const workspaceCandidates = await Promise.all([
-      fileCandidate({ id: 'workspace:.george/instructions.md', kind: 'workspace-instructions', origin: 'workspace', trust: 'workspace-untrusted', precedence: 30, order: 0, required: false, channel: 'guidance' }, loadWorkspaceContextFile(options.workspace, '.george/instructions.md', maxSourceBytes)),
-      fileCandidate({ id: 'workspace:AGENTS.md', kind: 'repository-agents', origin: 'workspace', trust: 'workspace-untrusted', precedence: 30, order: 1, required: false, channel: 'guidance' }, loadWorkspaceContextFile(options.workspace, 'AGENTS.md', maxSourceBytes)),
-      fileCandidate({ id: 'workspace:BOOT.md', kind: 'workspace-routing', origin: 'workspace', trust: 'workspace-untrusted', precedence: 30, order: 2, required: false, channel: 'guidance', disposition: 'routed' }, loadWorkspaceContextFile(options.workspace, 'BOOT.md', maxSourceBytes)),
-    ]);
+    const workspaceCandidates = [
+      await fileCandidate({ id: 'workspace:.george/instructions.md', kind: 'workspace-instructions', origin: 'workspace', trust: 'workspace-untrusted', precedence: 30, order: 0, required: false, channel: 'guidance' }, () => loadWorkspaceContextFile(options.workspace!, '.george/instructions.md', maxSourceBytes), options.onSource),
+      await fileCandidate({ id: 'workspace:AGENTS.md', kind: 'repository-agents', origin: 'workspace', trust: 'workspace-untrusted', precedence: 30, order: 1, required: false, channel: 'guidance' }, () => loadWorkspaceContextFile(options.workspace!, 'AGENTS.md', maxSourceBytes), options.onSource),
+      await fileCandidate({ id: 'workspace:BOOT.md', kind: 'workspace-routing', origin: 'workspace', trust: 'workspace-untrusted', precedence: 30, order: 2, required: false, channel: 'guidance', disposition: 'routed' }, () => loadWorkspaceContextFile(options.workspace!, 'BOOT.md', maxSourceBytes), options.onSource),
+    ];
     candidates.push(...workspaceCandidates);
     const paths = stableRoutedPaths(options.routedDocuments ?? [], options.maxRoutedDocuments ?? DEFAULT_MAX_ROUTED_DOCUMENTS);
-    candidates.push(...await Promise.all(paths.map((path, order) => fileCandidate(
+    for (const [order, path] of paths.entries()) candidates.push(await fileCandidate(
       { id: `workspace:routed:${path}`, kind: 'routed-document', origin: 'workspace', trust: 'workspace-untrusted', precedence: 30, order: order + 3, required: false, channel: 'guidance' },
-      loadWorkspaceContextFile(options.workspace!, path, maxSourceBytes),
-    ))));
+      () => loadWorkspaceContextFile(options.workspace!, path, maxSourceBytes), options.onSource,
+    ));
   }
 
   if (options.userGlobalInstructionsPath) candidates.push(await fileCandidate(
     { id: 'user:global-instructions', kind: 'user-global-instructions', origin: 'user', trust: 'user-default', precedence: 40, order: 0, required: false, channel: 'guidance' },
-    loadBoundedContextFile(options.userGlobalInstructionsPath, maxSourceBytes),
+    () => loadBoundedContextFile(options.userGlobalInstructionsPath!, maxSourceBytes), options.onSource,
   ));
   if (options.personalityPath) candidates.push(await fileCandidate(
     { id: 'user:personality', kind: 'personality', origin: 'user', trust: 'personality', precedence: 50, order: 0, required: false, channel: 'guidance' },
-    loadBoundedContextFile(options.personalityPath, maxSourceBytes),
+    () => loadBoundedContextFile(options.personalityPath!, maxSourceBytes), options.onSource,
   ));
   for (const [order, skill] of (options.activatedSkills ?? []).entries()) {
     const source = skill.origin === 'builtin'

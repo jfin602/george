@@ -52,6 +52,21 @@ test('missing optional files are recorded and oversized files never expose a pre
   assert.equal((await loadBoundedContextFile(oversized, 4)).status, 'oversized');
 });
 
+test('source observation reports bounded lifecycle metadata without changing assembly output', async (t) => {
+  const root = await fixture();
+  t.after(() => rm(root, { recursive: true, force: true }));
+  await writeFile(join(root, 'AGENTS.md'), 'SECRET_CONTEXT_BODY');
+  const observations: Array<{ id: string; status: string; bytes?: number }> = [];
+  const observed = await assemble(root, { onSource: (source) => observations.push(source) });
+  const plain = await assemble(root);
+  const ignoredObserver = await assemble(root, { onSource: () => { throw new Error('observer must not control assembly'); } });
+  assert.deepEqual(observed, plain);
+  assert.deepEqual(ignoredObserver, plain);
+  assert.deepEqual(observations.filter((source) => source.id === 'workspace:AGENTS.md').map((source) => source.status), ['loading', 'loaded']);
+  assert.equal(observations.find((source) => source.id === 'workspace:AGENTS.md' && source.status === 'loaded')?.bytes, 19);
+  assert.equal(JSON.stringify(observations).includes('SECRET_CONTEXT_BODY'), false);
+});
+
 test('exact normalized duplicates keep the higher-precedence source and record the duplicate', async (t) => {
   const root = await fixture();
   t.after(() => rm(root, { recursive: true, force: true }));
