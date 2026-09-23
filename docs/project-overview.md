@@ -118,15 +118,29 @@ Phase 2 does not yet own context compaction, durable resume, comprehensive chang
 
 ## Phase 3 success condition
 
-Phase 3 succeeds when George can complete a bounded coding task in a disposable repository through one provider-independent workflow that:
+Phase 3 succeeds when George has a deterministic, provider-independent context and declarative-skill substrate that:
 
 - assembles compact model context from George-owned instructions, current user intent, user-global/personality input, workspace instructions, routed project guidance, conversation state, and activated skills under explicit precedence and context budgets;
 - exposes observable provider-facing context size and does not silently present truncated critical instructions as complete;
-- discovers portable skills cheaply, loads a selected skill body just in time, and prevents declarative extension content from expanding executable authority;
-- tracks a pre-run repository baseline and reports observed changed files without claiming unsupported attribution for arbitrary process side effects;
-- runs requested validation through George's existing process/tool/approval boundary and records the resulting evidence;
-- persists normalized session history outside the repository and can resume from completed durable history without automatically replaying interrupted writes, processes, approvals, or provider continuations;
-- emits a structured completion result covering observed changes, validation, unresolved failures/warnings, and the final assistant response;
-- proves the workflow with deterministic fixture coverage, including pre-existing dirty work and at least one portable external-skill fixture.
+- keeps always-on instructions distinct from routed/retrievable project knowledge;
+- discovers portable skills cheaply, exposes bounded metadata, loads a selected skill body just in time, and scopes explicit activation to the current user turn;
+- handles source ordering, duplicates, malformed/oversized optional sources, and skill collisions deterministically;
+- prevents repository, personality, routed-document, and skill content from expanding executable authority;
+- proves the behavior with deterministic fixtures, including at least one portable external-skill fixture.
 
-Phase 3 does not add LLM-based compaction, automatic semantic skill routing, executable hooks, plugin packaging, browser/network adapters, daemon mode, or multi-agent scheduling.
+Phase 3 does not add coding-run change accounting, validation orchestration, durable sessions/resume, LLM-based compaction, automatic semantic skill routing, executable hooks, plugin packaging, browser/network adapters, daemon mode, or multi-agent scheduling.
+
+## Phase 4 success condition
+
+Phase 4 succeeds when George can complete a bounded coding task in a disposable repository through one provider-independent workflow that:
+
+- uses the qualified Phase 3 context and skill substrate;
+- captures a pre-run repository baseline and reports observed changed files while preserving and distinguishing pre-existing dirty work;
+- avoids unsupported causal attribution for arbitrary process side effects;
+- runs requested validation through George's existing process/tool/approval boundary and records the resulting evidence;
+- emits a structured completion result covering observed changes, validation, unresolved failures/warnings, completion state, and the final assistant response;
+- persists schema-versioned normalized session history outside the repository and can reopen completed durable history;
+- surfaces interrupted writes, processes, approvals, and provider continuations without automatically replaying them;
+- proves the workflow with deterministic integrated fixture coverage.
+
+Phase 4 does not add LLM-based compaction, automatic semantic skill routing, executable hooks, plugin packaging, browser/network adapters, crash-safe side-effect reconciliation, long-job retries/backoff, daemon mode, or multi-agent scheduling.

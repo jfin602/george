@@ -98,13 +98,13 @@ Non-goals:
 - Tauri;
 - multi-agent scheduling.
 
-## Phase 3 — Coding Workflow
+## Phase 3 — Context + Skills
 
 Status: CURRENT IMPLEMENTATION GATE — baseline package `0.3.0`
 
-Goal: make George useful for bounded implementation tasks without weakening the Phase 2 tool/permission boundary.
+Goal: give George a deterministic, token-conscious, provider-independent context and declarative-skill substrate without weakening the Phase 2 tool/permission boundary.
 
-Decision authority: `docs/planning/p3-coding-workflow/decision-record.md`.
+Decision authority: `docs/planning/p3-context-skills/decision-record.md`.
 
 Scope:
 - provider-independent deterministic context assembly rather than raw instruction concatenation;
@@ -121,21 +121,20 @@ Scope:
 - compact bounded skill metadata/catalog exposure without injecting every installed skill body into every request;
 - explicit just-in-time skill activation, scoped to the current user turn across that turn's provider/tool rounds;
 - no executable authority granted by declarative skill content;
-- mutating-run workspace/Git baseline capture and observed changed-file accounting that preserves pre-existing dirty work;
-- validation-command workflow through the existing canonical process/tool/approval boundary;
-- structured completion evidence covering observed changes, validation, unresolved failures/warnings, and final assistant output;
-- schema-versioned filesystem session persistence outside the repository by default;
-- resume from durable completed history, with interrupted side effects surfaced but never silently replayed;
-- correction/regression testing discipline;
-- first end-to-end coding qualification against a disposable fixture repo, including pre-existing dirty work and at least one portable external-skill fixture.
+- deterministic context/skill qualification independent from model nondeterminism;
+- correction/regression testing discipline.
 
 Success condition:
-- a deterministic disposable repository can be opened, context assembled under the documented precedence/budget contract, a portable skill activated, files changed through approved tools, validation run through the normal process boundary, completion evidence produced, session state persisted, and a later turn resumed from durable completed history;
-- the run preserves pre-existing dirty work and accurately separates it from newly observed changes;
-- interruption/resume tests prove incomplete writes/processes/approvals/provider continuations are not automatically replayed;
-- provider/TUI code remains adapters over reusable context, session, tool, and coding-workflow services.
+- a deterministic repository fixture can be opened and its applicable context sources discovered under the documented trust, precedence, routing, deduplication, and budget contract;
+- provider-facing context size is observable, critical instruction sources are never silently truncated and presented as complete, and optional/routed material is explicitly omitted, deferred, or rejected when required;
+- at least one portable external `SKILL.md` fixture is discovered and explicitly activated just in time for one user turn without leaking into an unrelated later turn;
+- repository/personality/skill content cannot expand George's executable permission ceiling;
+- provider and TUI code remain adapters over reusable context and skill services.
 
 Non-goals:
+- mutating-run changed-file accounting or comprehensive completion summaries;
+- validation-command orchestration;
+- durable session persistence/resume;
 - LLM-based compaction/summarization;
 - automatic semantic skill selection;
 - executable lifecycle hooks;
@@ -146,7 +145,49 @@ Non-goals:
 - crash-safe side-effect replay/reconciliation;
 - daemon/server mode, Tauri, or multi-agent scheduling.
 
-## Phase 4 — Reliability + Long Runs
+## Phase 4 — Coding Workflow + Sessions
+
+Status: PLANNED — baseline established after Phase 3 owner closeout
+
+Goal: turn the Phase 3 context-aware safe agent into a durable bounded coding workflow that can modify, validate, report, persist, and safely resume work.
+
+Decision authority: `docs/planning/p4-coding-workflow-sessions/decision-record.md`.
+
+Scope:
+- one provider-independent coding workflow owned by the application/core;
+- mutating-run workspace/Git baseline capture;
+- observed changed-file accounting that preserves and distinguishes pre-existing dirty work;
+- conservative attribution when approved arbitrary child processes may have modified files;
+- validation-command workflow through the existing canonical process/tool/approval boundary;
+- structured validation evidence;
+- structured completion evidence covering observed changes, validation, unresolved failures/warnings, completion state, and final assistant output;
+- schema-versioned filesystem session persistence outside the repository by default;
+- canonical workspace identity binding;
+- reconstruction of completed durable history after reopen;
+- interrupted writes/processes/approvals/provider continuations surfaced as interrupted and never silently replayed;
+- first end-to-end coding qualification against a disposable fixture repo using the already-qualified Phase 3 context and skill substrate;
+- preservation of Phase 2 tool, permission, process, and Git safeguards throughout the workflow.
+
+Success condition:
+- a deterministic disposable repository with pre-existing dirty work can be opened using the qualified Phase 3 context/skill system, changed through approved tools, validated through the normal process boundary, and completed with structured evidence;
+- the run accurately separates pre-existing dirty work from newly observed changes without overclaiming process attribution;
+- normalized session state persists outside the repository and a later turn can reopen completed history;
+- interruption/resume tests prove incomplete writes, processes, approvals, and provider continuations are not automatically replayed;
+- provider/TUI code remains adapters over reusable context, session, tool, and coding-workflow services.
+
+Non-goals:
+- LLM-based compaction/summarization;
+- automatic semantic skill selection;
+- executable lifecycle hooks;
+- plugin packaging/install lifecycle;
+- browser/web/network tools or external adapters;
+- remembered approval profiles or OS/container sandboxing;
+- general mutating Git operations;
+- crash-safe side-effect replay/reconciliation;
+- long-job retries/backoff;
+- daemon/server mode, Tauri, or multi-agent scheduling.
+
+## Phase 5 — Reliability + Long Runs
 
 Goal: support longer autonomous local jobs safely and establish George's lifecycle hook runtime.
 
@@ -154,7 +195,7 @@ Scope:
 - compaction/summarization;
 - budgets/limits beyond the Phase 2 hard loop guard;
 - retries/backoff;
-- crash/interruption recovery;
+- crash/interruption recovery and side-effect reconciliation beyond Phase 4 safe non-replay resume;
 - child-process cleanup hardening;
 - observability/logging;
 - performance baselines including TUI responsiveness under streaming;
@@ -166,7 +207,7 @@ Scope:
 - sanitized executable-hook environment and preservation of George's existing process/tool permission boundaries;
 - recovery evidence sufficient to diagnose failed hooks without corrupting the surrounding agent run.
 
-## Phase 5 — Plugins + External Adapters
+## Phase 6 — Plugins + External Adapters
 
 Goal: package extensions and add network/browser intelligence without contaminating the core or weakening George's trust boundaries.
 
@@ -180,9 +221,9 @@ Scope:
 - explicit trust/permission boundaries for every executable or network-capable adapter;
 - independently disableable extension/adaptor capabilities.
 
-The exact George plugin manifest schema is intentionally deferred until this phase; Phase 3 should prove the skill substrate and Phase 4 should prove hook lifecycle semantics before packaging freezes those interfaces.
+The exact George plugin manifest schema is intentionally deferred until this phase; Phase 3 proves the skill substrate and Phase 5 proves hook lifecycle semantics before packaging freezes those interfaces.
 
-## Phase 6 — Local Daemon
+## Phase 7 — Local Daemon
 
 Goal: separate the long-lived George service from presentation clients.
 
@@ -196,7 +237,7 @@ Scope:
 
 No LAN/Internet exposure by default.
 
-## Phase 7 — Native Desktop
+## Phase 8 — Native Desktop
 
 Goal: provide a polished native application without rewriting the agent.
 

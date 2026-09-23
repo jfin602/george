@@ -29,11 +29,13 @@ Phase 3 baseline transition: `ce0d6b4a81000ed60f58772a67cd2a783998fbd6` at packa
 
 The owner explicitly accepts the recorded Phase 1 and Phase 2 native-terminal/live LM Studio/Qwen Evidence Gaps for roadmap progression. They remain Evidence Gaps, not Green evidence.
 
-**Phase 3 — Coding Workflow — is the current implementation gate.**
+**Phase 3 — Context + Skills — is the current implementation gate.**
 
-Phase 3 decision authority: `docs/planning/p3-coding-workflow/decision-record.md`.
+Phase 3 decision authority: `docs/planning/p3-context-skills/decision-record.md`.
 
-That approved decision record, together with the current product, architecture, stability, and roadmap contracts, is the implementation authority for Phase 3.
+Phase 4 — Coding Workflow + Sessions — follows Phase 3 and owns mutation bookkeeping, validation/completion evidence, durable sessions, and safe non-replay resume semantics.
+
+The approved Phase 3 decision record, together with the current product, architecture, stability, and roadmap contracts, is the implementation authority for the current gate.
 
 ## Core premise
 
@@ -68,7 +70,9 @@ Read:
 - workflow: `docs/workflow.md`;
 - stability/testing: `docs/stability-contract.md`;
 - roadmap: `docs/roadmap/mvp-roadmap.md`;
-- Phase 3 decision authority: `docs/planning/p3-coding-workflow/decision-record.md`;
+- Phase 3 decision authority: `docs/planning/p3-context-skills/decision-record.md`;
+- planned Phase 4 decision authority: `docs/planning/p4-coding-workflow-sessions/decision-record.md`;
+- superseded combined Phase 3 record/history when needed: `docs/planning/p3-coding-workflow/decision-record.md`;
 - Phase 2 closeout/history when needed: `docs/phase-2-closeout.md`, `docs/phase-2-owner-closeout.md`, `docs/planning/p2-safe-tool-loop/decision-record.md`;
 - Phase 1 closeout/history when needed: `docs/phase-1-owner-closeout.md`, `docs/planning/p1-local-agent-foundation/decision-record.md`.
 

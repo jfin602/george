@@ -50,7 +50,7 @@ When Phase 3 introduces the skill registry, deterministic coverage must include:
 - workspace/repository skill text being unable to raise process, filesystem, network, secret-access, or approval permissions;
 - at least one portable external-skill fixture proving that compatibility does not require a George-specific skill format.
 
-When Phase 4 introduces executable hooks, deterministic/integration coverage must additionally include:
+When Phase 5 introduces executable hooks, deterministic/integration coverage must additionally include:
 - lifecycle ordering;
 - enable/disable behavior;
 - timeout and cancellation;
@@ -111,7 +111,7 @@ Live-model tests supplement this evidence but do not replace deterministic cover
 
 Verify interrupted runs remain inspectable, retain structured tool/approval/failure evidence, and do not duplicate writes/tool effects silently.
 
-Phase 3 durable-session qualification must additionally prove:
+Phase 4 durable-session qualification must additionally prove:
 - persisted session data is schema-versioned and stored outside the fixture repository by default;
 - a persisted session remains bound to the canonical workspace it was created for;
 - completed conversation/tool/context/skill/validation/change evidence can be reconstructed after reopening;
@@ -120,9 +120,9 @@ Phase 3 durable-session qualification must additionally prove:
 - resume begins subsequent work as a new turn from durable normalized history;
 - secrets, unrestricted environment dumps, and unbounded process output are not introduced into persisted state.
 
-Crash-safe side-effect replay/reconciliation remains a Phase 4 concern; Phase 3 evidence must not imply that capability exists.
+Crash-safe side-effect replay/reconciliation remains a Phase 5 concern; Phase 4 evidence must not imply that capability exists.
 
-### Phase 3 coding-workflow qualification
+### Phase 4 coding-workflow qualification
 
 The first full coding-workflow fixture must exercise the integrated path rather than proving each feature only in isolation. Deterministic coverage must include:
 - a repository with pre-existing dirty work;

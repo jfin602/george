@@ -163,7 +163,7 @@ George should define its own normalized lifecycle hook model rather than adoptin
 
 Candidate lifecycle boundaries include session start/end, user input, context assembly, provider request/response, tool before/after, and turn completion. Exact event names and payloads are implementation decisions for the hook-runtime phase.
 
-Phase 4 owns executable hook runtime behavior because hooks require the same reliability properties as other long-running executable work: deterministic ordering, timeout, cancellation, bounded input/output, structured success/failure evidence, failure isolation, sanitized environment handling, and recovery semantics.
+Phase 5 owns executable hook runtime behavior because hooks require the same reliability properties as other long-running executable work: deterministic ordering, timeout, cancellation, bounded input/output, structured success/failure evidence, failure isolation, sanitized environment handling, and recovery semantics.
 
 A hook cannot silently suppress George policy or convert declarative extension content into executable authority. Process-backed hooks remain subject to George's process trust boundary; tool-like hook actions must use the canonical tool/approval path.
 
@@ -250,11 +250,11 @@ Phase 2 must preserve pre-existing changes:
 - use write/patch preconditions to avoid blind stale replacement;
 - prove failed/cancelled operations preserve the user's original dirty state.
 
-Comprehensive changed-file tracking and final summaries remain Phase 3.
+Comprehensive changed-file tracking and final summaries remain Phase 4.
 
 ## Coding workflow evidence
 
-Phase 3 promotes coding-task bookkeeping into structured harness evidence rather than leaving it only in assistant prose.
+Phase 4 promotes coding-task bookkeeping into structured harness evidence rather than leaving it only in assistant prose.
 
 At the beginning of a mutating coding run, George captures an observable workspace/Git baseline when available. George-native write/patch tools record their own direct effects. At completion, George reconciles the observed repository state against the baseline so the final result can distinguish pre-existing dirty state from newly observed changes.
 
@@ -266,15 +266,15 @@ The application layer should produce a structured completion result that can be 
 
 ## Session/event store
 
-Phase 3 introduces durable local session state using filesystem-backed storage outside the active repository. On Linux, the preferred default follows the user state directory convention (for example `$XDG_STATE_HOME/george`, falling back to `~/.local/state/george`). Equivalent platform-appropriate user state locations may be used elsewhere. Repository-local session files are not the default.
+Phase 4 introduces durable local session state using filesystem-backed storage outside the active repository. On Linux, the preferred default follows the user state directory convention (for example `$XDG_STATE_HOME/george`, falling back to `~/.local/state/george`). Equivalent platform-appropriate user state locations may be used elsewhere. Repository-local session files are not the default.
 
 Persisted session data is schema-versioned and binds the session to its canonical workspace identity. Append-friendly normalized events remain the durable evidence source where practical; derived transcript/summary views may be reconstructed from that evidence rather than becoming an independent authority.
 
 Persist enough to reconstruct completed user/assistant turns, normalized provider events needed for diagnosis, tool requests/results, approval decisions, context/source diagnostics, activated-skill identity, observed change summaries, validation evidence, interruption state, and completion state. Do not persist secrets, unrestricted environment dumps, or unbounded process output.
 
-Phase 3 resume means **continue from durable completed history**, not replay an interrupted side effect. If a prior turn ended while a write, process, approval request, or provider continuation was in flight, the resumed session exposes that turn as interrupted and starts subsequent work from a new turn. George must not silently re-run the incomplete write/process, synthesize an approval, or depend on a provider-native continuation identifier as the only recoverable state.
+Phase 4 resume means **continue from durable completed history**, not replay an interrupted side effect. If a prior turn ended while a write, process, approval request, or provider continuation was in flight, the resumed session exposes that turn as interrupted and starts subsequent work from a new turn. George must not silently re-run the incomplete write/process, synthesize an approval, or depend on a provider-native continuation identifier as the only recoverable state.
 
-Exact crash-safe replay/reconciliation of partially completed long-running work belongs to Phase 4. Phase 3 only needs deterministic durable history, interruption visibility, and safe non-replay resume semantics.
+Exact crash-safe replay/reconciliation of partially completed long-running work belongs to Phase 5. Phase 4 only needs deterministic durable history, interruption visibility, and safe non-replay resume semantics.
 
 ## Interfaces
 
