@@ -1,0 +1,41 @@
+TASK: Phase 5 / P3 — Replay-safe provider retries and backoff
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Terra High`.
+- Browser required: no.
+
+VERSIONING
+- This prompt's assigned project version is `0.5.3`.
+
+GOAL
+
+Add a narrow application-owned retry/backoff policy that automatically retries only when replay safety is established.
+
+Read the Phase-5 authority/assessment/plan and inspect exact P1-P2 state plus provider normalization, agent loop streaming/event recording, cancellation, budget accounting, and provider/application tests.
+
+Create stable provider-attempt identity and bounded retry lifecycle evidence.
+
+The first supported automatic retry class is a provider request/transport failure that occurs **before** George observes response acceptance/output for that attempt. Once the attempt has emitted `provider.response.started`, any text delta, or tool-call evidence, do not automatically retry it.
+
+Do not automatically retry writes, patches, approvals, arbitrary processes, partially observed provider responses, or any other operation whose replay/side-effect status is uncertain.
+
+Known tool failure remains a normal structured tool result; if the model later proposes another call, that is a new policy-checked operation rather than a hidden retry.
+
+Backoff must be finite, cancellation-aware, and deterministic under injected clock/sleeper fixtures. Retry/provider attempts consume the P1 run budget and hard exhaustion terminates truthfully.
+
+LM Studio/provider adapters continue to normalize transport/protocol errors; retry ownership stays in the application/core layer.
+
+Do not buffer or rewrite partial assistant output merely to manufacture retryability. Preserve the Phase-4 canonical transcript/event semantics.
+
+Set `package.json` version to `0.5.3`.
+
+Required proof:
+- failure before response-start retries and may succeed;
+- retry count/backoff/attempt IDs are deterministic and observable;
+- cancellation during backoff stops promptly;
+- retry/provider budget exhaustion is explicit;
+- failure after response-start does not retry;
+- failure after text/tool-call evidence does not retry or duplicate canonical transcript/work;
+- writes/patches/processes/approvals are never transparently retried;
+- provider adapter behavior remains independently testable and provider-independent policy stays outside LM Studio code;
+- Phase-2/3/4 and P1-P2 regressions, typecheck, broad deterministic tests, `git diff --check`, and no-`package-lock.json` are Green.
