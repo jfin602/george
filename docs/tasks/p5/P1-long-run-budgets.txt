@@ -1,0 +1,41 @@
+TASK: Phase 5 / P1 — Long-run budgets and reliability events
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Terra High`.
+- Browser required: no.
+
+VERSIONING
+- This prompt's assigned project version is `0.5.1`.
+
+GOAL
+
+Establish Phase-5 application-owned long-run budget/accounting and normalized reliability lifecycle primitives without implementing compaction, retries, recovery, hooks, or diagnostics yet.
+
+Read `BOOT.md`, `AGENTS.md`, the current product/architecture/workflow/stability/roadmap contracts, `docs/planning/p5-reliability-long-runs/decision-record.md`, `docs/tasks/p5/prompt-assessment.md`, and `docs/tasks/p5/implementation-plan.md`. Inspect the exact Phase-4 application loop, events, config, session-store sanitization, process results, and tests before editing.
+
+Add a provider-independent run-budget contract/tracker owned by application/core code. It must support finite validated configured ceilings and observable consumption for dimensions George can measure reliably, including provider attempts, retry attempts, compaction attempts/checkpoints, process executions/cumulative process runtime, wall-clock runtime, and context/provider usage where available.
+
+Keep the existing Phase-2 `maxToolCalls` and `maxToolRounds` limits as independent final loop guards; do not silently weaken or remove them.
+
+Budget scope is one run/turn workflow invocation, never mutable global state. Provide deterministic clock/config injection where needed so tests can exercise pressure and exhaustion cheaply.
+
+Add normalized bounded lifecycle evidence for budget state/pressure/exhaustion and any common Phase-5 attempt/correlation identity needed by later prompts. Add an explicit budget error/terminal classification rather than misreporting exhaustion as provider or tool failure.
+
+Product defaults must be finite and documented in code/config, but must not make an ordinary previously valid Phase-4 workflow stricter by accident. Repository/model/skill text cannot raise the configured ceilings.
+
+Extend durable-event sanitization/parsing for the new bounded evidence. Preserve schema/workspace/session safety and do not persist secrets, raw provider payloads, file bodies, unrestricted process output, or environment state.
+
+Set `package.json` version to `0.5.1`.
+
+Required proof:
+- validated finite defaults and deterministic tiny-budget fixtures;
+- independent accounting for provider/tool/process/time/context-related dimensions actually implemented;
+- soft pressure is observable and hard exhaustion is an explicit terminal result;
+- cancellation still wins promptly over waiting/time accounting;
+- model/repository text cannot alter the active budget;
+- existing hard tool-call/tool-round guards still behave as before;
+- durable budget evidence is bounded/sanitized;
+- Phase-2/3/4 regression suites remain Green;
+- typecheck, broad deterministic tests, `git diff --check`, and no-`package-lock.json` pass.
+
+If current source materially contradicts the approved Phase-5 contracts, stop with `Planning needed` rather than silently changing scope.
