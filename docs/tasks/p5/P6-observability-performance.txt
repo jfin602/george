@@ -1,0 +1,49 @@
+TASK: Phase 5 / P6 — Structured observability and performance substrate
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Terra High`.
+- Browser required: no.
+
+VERSIONING
+- This prompt's assigned project version is `0.5.6`.
+
+GOAL
+
+Add bounded structured diagnostic observability and reproducible performance-characterization primitives as consumers of the authoritative Phase-5 lifecycle.
+
+Read the Phase-5 authority/assessment/plan and inspect exact P1-P5 state plus session state-root resolution, durable sanitization, application events, work projection, TUI rendering/tests, and current performance-sensitive paths.
+
+Create a structured diagnostic record/sink under George's user state area, outside the target repository by default.
+
+Use stable available correlation identities for session, turn, operation/tool call, provider attempt/retry, compaction checkpoint, recovery decision, and hook invocation.
+
+Do not serialize arbitrary `ApplicationEvent` objects wholesale. Define bounded/redacted diagnostic fields and exclude raw file bodies, write/patch bodies, arbitrary tool-result JSON, unrestricted stdout/stderr, unrestricted environment data, secrets, and complete provider wire/payload content.
+
+Implement deterministic bounded rotation/retention by bytes/files or an equally explicit policy. Logging failure must not corrupt canonical session/tool execution; surface bounded observability degradation evidence where practical without recursive logging failure loops.
+
+Add the smallest reusable measurement helpers/counters needed to characterize, with explicit units/workload identity:
+- provider-facing context size/growth and compaction cost;
+- provider attempt latency / time-to-first-token where observable;
+- tool-loop latency;
+- process cleanup duration/outcome;
+- reopen/recovery latency;
+- hook overhead;
+- memory snapshots/growth;
+- durable session and diagnostic-log growth.
+
+Do not freeze arbitrary hard performance thresholds before baseline measurements exist. Keep measurements separate from execution policy unless a P1 run budget already defines the corresponding limit.
+
+Keep Phase-4 user-visible work history distinct from diagnostics. OpenTUI may render existing reliability work events but must not become diagnostics authority.
+
+Set `package.json` version to `0.5.6`.
+
+Required proof:
+- diagnostics live outside the target repository;
+- records carry stable bounded correlation metadata;
+- redaction excludes file/write/patch bodies, unrestricted process output/environment, secrets, and raw provider payloads;
+- rotation/retention prevents unbounded log growth;
+- diagnostic sink failure does not corrupt the run or create recursion;
+- measurement helpers are deterministic enough for qualification and report explicit units;
+- repeated fixture runs characterize session/log/memory growth without claiming unmeasured guarantees;
+- existing TUI transcript remains canonical-transcript isolated and usable;
+- Phase-2/3/4 and P1-P5 regressions, typecheck, broad deterministic tests, `git diff --check`, and no-`package-lock.json` are Green.
