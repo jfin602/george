@@ -75,6 +75,22 @@ When Phase 5 introduces executable hooks, deterministic/integration coverage mus
 
 Plugin packaging and external adapters introduced later inherit the same regression-permanence, permission, secrets, network, and failure-isolation requirements as equivalent built-in capabilities.
 
+### Hardened transcript, work-log, and provider-diagnostic floor
+
+Phase 5 inherits the post-Phase-4 transcript/presentation hardening as a regression floor. Deterministic coverage must preserve:
+- one canonical assistant response only from a completed provider round with no tool calls;
+- no canonical/durable/provider-facing resurrection of provisional text from tool-bearing rounds, provider failures, or cancellations;
+- a progressively revealed final response whose visual animation cannot corrupt or duplicate the stored response;
+- save/reopen of the complete singular final assistant response independent from reveal state;
+- bounded safe failed-tool argument summaries that diagnose missing/empty/wrong-field/wrong-type input without exposing write/patch bodies, unrestricted arbitrary JSON, secrets, or raw provider payloads;
+- `list_directory` root normalization for omitted `path`, empty-string `path`, and `.` while traversal/outside-workspace/symlink protections remain unchanged;
+- bounded LM Studio/provider failure diagnostics carrying safe available event/code/message/reason/status metadata without raw wire payload leakage;
+- consecutive work items rendered compactly without merging their authoritative identity/order, with explicit textual status preserved independently from color;
+- provider generation presented as `Thinking...` while underlying lifecycle event names remain unchanged;
+- work/progress/presentation state remaining outside canonical assistant transcript and provider-facing conversation.
+
+Native OpenTUI qualification should additionally verify progressive final reveal, compact Work grouping under resize/scrollback/restored-session conditions, semantic status coloring with textual fallbacks, and no duplicate/premature final assistant block around tool continuations.
+
 ### Provider contract
 
 Use deterministic/mock provider fixtures for ordinary tests and bounded live LM Studio qualification when provider integration changes.
