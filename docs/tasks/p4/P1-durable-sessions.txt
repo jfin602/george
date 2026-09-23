@@ -1,0 +1,36 @@
+TASK: Phase 4 / P1 — Durable session model and local store
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Terra High`.
+- Browser required: no.
+
+VERSIONING
+- This prompt's assigned project version is `0.4.1`.
+
+GOAL
+
+Establish Phase-4 schema-versioned local session persistence without changing the normal OpenTUI workflow yet.
+
+Read `BOOT.md`, `AGENTS.md`, the current product/architecture/workflow/stability contracts, `docs/planning/p4-coding-workflow-sessions/decision-record.md`, `docs/tasks/p4/prompt-assessment.md`, and `docs/tasks/p4/implementation-plan.md`. Inspect the current session/events/application/workspace tests before editing.
+
+Add a provider-independent durable session representation and filesystem store outside the active repository. Linux default state location must honor `$XDG_STATE_HOME/george` with fallback `~/.local/state/george`; provide a deterministic override for tests and platform-appropriate behavior elsewhere.
+
+Persist schema version, session ID, canonical workspace identity, completed canonical user/assistant history, and bounded normalized evidence needed to diagnose context/tool/approval/failure state. Do not serialize OpenTUI renderables, raw provider wire/SSE payloads, unrestricted environment state, or unbounded process/tool output.
+
+Use safe small-filesystem write semantics so a failed update cannot silently replace a valid session with malformed partial state. Opening must visibly reject malformed/unsupported schema, invalid normalized structure, excessive durable bounds, and workspace mismatch.
+
+On open, classify incomplete mutation/process/approval/provider-response or continuation lifecycle as historical interruption evidence. Opening a session must never execute, retry, approve, or submit anything.
+
+Completed history must reconstruct the canonical transcript faithfully enough for a later normal context turn. Keep provider-specific continuation identifiers non-authoritative.
+
+Do not implement changed-file workflow evidence, validation orchestration, completion summaries, progress/work projection, TUI work rendering, or resume UX yet.
+
+Set `package.json` version to `0.4.1`.
+
+Required proof:
+- focused tests cover state-root resolution/override, schema version, canonical workspace binding, round-trip reconstruction, malformed/unsupported/oversized rejection, safe-write preservation where practical, interrupted mutation/process/approval/provider classification, and zero side-effect replay during open;
+- persisted evidence stays bounded and excludes TUI/provider-wire/environment/unbounded-output state;
+- existing Phase-2/3 application/context/skill/tool/provider/TUI tests remain Green;
+- typecheck, broad applicable deterministic tests, `git diff --check`, and no-`package-lock.json` checks pass.
+
+If current source materially contradicts the approved Phase-4 contracts, stop with `Planning needed` rather than silently changing scope.

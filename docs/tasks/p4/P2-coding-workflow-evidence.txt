@@ -1,0 +1,43 @@
+TASK: Phase 4 / P2 — Coding workflow evidence and completion
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Terra High`.
+- Browser required: no.
+
+VERSIONING
+- This prompt's assigned project version is `0.4.2`.
+
+GOAL
+
+Create the first provider-independent Phase-4 coding workflow over the existing qualified agent loop and P1 durable-session substrate.
+
+Read the Phase-4 authority/assessment/plan and inspect the exact P1 state plus current mutation/process/tool/application tests.
+
+Add a reusable coding-workflow application service; do not move workflow policy into OpenTUI or duplicate the model/tool loop.
+
+At coding-run start, capture an observable Git/workspace baseline using the existing read-only snapshot boundary where possible. Preserve and identify pre-existing dirty work. Never reset, clean, stash, checkout, or otherwise normalize the user's tree.
+
+Track direct George-native mutation evidence from `write_file` / `apply_patch` results. At completion compare final observable state with the baseline and report newly observed changes conservatively. When an approved arbitrary process ran, do not claim it caused a specific file change without direct evidence; distinguish direct mutation evidence from merely observed changes/unknown attribution.
+
+Add explicit validation evidence tied to actual canonical `run_process` execution. Use the existing ToolRegistry/ApprovalPort/process executor path, including literal executable/argv, workspace cwd, sanitized environment, timeout/cancellation, bounded output, and cleanup. Validation intent/label must be explicit; do not infer it from command names and do not add a privileged validation executor. A denied/timed-out/failed validation remains failed evidence.
+
+Produce one structured completion result containing observed change evidence, validation executions/outcomes, unresolved warnings/failures/evidence gaps, terminal state, and final assistant response.
+
+Add compact workflow-scoped guidance so final coding responses summarize what was inspected, what changed, validation performed, and unresolved issues/evidence gaps. Routine step-by-step progress remains harness-owned.
+
+Persist normalized completed workflow evidence through the P1 substrate where appropriate, but do not implement normal TUI reopen/resume wiring yet.
+
+Do not add progress/work projection or OpenTUI execution-transcript rendering in this prompt.
+
+Set `package.json` version to `0.4.2`.
+
+Required proof:
+- clean, non-Git, and pre-existing-dirty fixture baselines;
+- direct write/patch accounting;
+- final observed-change comparison preserving user work;
+- arbitrary process side effects are not over-attributed;
+- explicit validation pass/fail/deny/timeout/cancel through the canonical process/approval boundary;
+- completion evidence stays truthful even when model prose conflicts with failed validation;
+- compact completion guidance does not inject harness progress into canonical transcript;
+- Phase-2 permission/process/tool and Phase-3 context/skill behavior remain Green;
+- typecheck, broad deterministic tests, `git diff --check`, and no-`package-lock.json`.

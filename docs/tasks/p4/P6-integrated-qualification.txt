@@ -1,0 +1,38 @@
+TASK: Phase 4 / P6 — Integrated Phase 4 qualification
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Terra High`.
+- Browser required: no.
+
+VERSIONING
+- This prompt's assigned project version is `0.4.6`.
+
+GOAL
+
+Qualify and narrowly harden the exact Phase-4 coding-workflow + sessions candidate from P1-P5. Do not broaden product scope.
+
+Read `BOOT.md`, all current product/architecture/workflow/stability contracts, the Phase-4 decision record, assessment/implementation plan, and exact P1-P5 source/tests.
+
+Build/run the deterministic Phase-4 qualification matrix required by `docs/stability-contract.md`.
+
+Create at least one integrated disposable Git-repository fixture that combines known pre-existing dirty user work; Phase-3 context precedence/budget behavior; one portable external `SKILL.md` activated just in time; concrete read/list/search/Git inspection; one approved George-native mutation; one explicit approval-gated validation `run_process`; structured changed-file/validation/completion evidence; persistent presentation-independent work projection; OpenTUI chronological execution transcript; durable session persistence; and reopen followed by an unrelated later turn with no leaked skill activation.
+
+Verify completion keeps pre-existing changes, newly observed changes, direct George-native mutation evidence, and unknown process attribution distinct. Failed/denied validation remains failed evidence regardless of assistant prose.
+
+Exercise interrupted durable cases for mutation, process, approval, and provider continuation. Reopen each and prove no automatic replay, no reused approval, no stale active work, and a later user request starts a fresh turn.
+
+Exercise every current built-in tool through the work projection and verify stable operation identity, bounded safe summaries, literal process executable/argv/cwd, and no raw file body/write body/patch body/arbitrary result JSON/unrestricted stdout/environment/provider-payload leakage. Verify visible work/history never becomes canonical transcript/provider context.
+
+Run focused session/workflow/progress/TUI tests plus Phase-2 tool/process/approval, Phase-3 context/skills, integrated agent-loop, exact runner tests, typecheck, broad deterministic aggregate checks, `git diff --check`, and explicit no-`package-lock.json`.
+
+Record exact Node/platform versions. If a genuine usable TTY is available, exercise the real OpenTUI execution transcript, approval/cancellation, reopen, draft preservation, resize/scrollback, and terminal cleanup; otherwise record Evidence Gap.
+
+If the supported loopback LM Studio endpoint plus explicit Qwen model are configured, run a bounded live coding/tool cycle through the exact P6 workflow/session/projection path and record exact model/provider/runtime, estimated/provider-reported context usage when available, visible work progression, tool/validation behavior, and final completion. Otherwise record Evidence Gap. Deterministic fixtures remain correctness authority.
+
+Permit at most two substantial evidence-driven correction cycles. Every correction adds a permanent executable regression guard for the defect class and reruns focused plus broad affected evidence.
+
+Create `docs/tasks/p4/P6-qualification-evidence.md` tied to the exact final candidate with per-layer Green / Not Green / Evidence Gap truth. Do not relabel missing native/live evidence Green.
+
+Set `package.json` version to `0.4.6`.
+
+Do not implement Phase-5 compaction/retries/hooks, Phase-6 plugins/network/browser adapters, daemon/Tauri, or multi-agent behavior.

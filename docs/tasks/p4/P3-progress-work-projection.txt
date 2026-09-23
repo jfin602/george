@@ -1,0 +1,44 @@
+TASK: Phase 4 / P3 — Progress and observable work projection
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Terra High`.
+- Browser required: no.
+
+VERSIONING
+- This prompt's assigned project version is `0.4.3`.
+
+GOAL
+
+Add Phase-4 presentation-independent activity/progress/work semantics over authoritative application lifecycle evidence, including truthful context-source loading observability.
+
+Read the Phase-4 authority/assessment/plan and inspect exact P1-P2 source plus current context/events/tool/application tests.
+
+Keep authoritative provider/tool/approval/validation/session/completion events as source of truth. Add reusable projection types/services for fast-changing activity, lower-frequency progress milestones, and persistent concrete-operation work items.
+
+Give each concrete operation a stable turn/tool/operation identity and lifecycle state so one item updates through requested/running/waiting/succeeded/failed/denied/cancelled/interrupted rather than producing duplicate requested/started/completed rows.
+
+Create deterministic bounded safe summaries for current built-ins: `read_file`, `list_directory`, `search_text`, `git_status`, `git_diff`, `write_file`, `apply_patch`, `run_process`, approval lifecycle, explicit validation, recovery, and completion. Safe detail may include paths, search query, counts/bytes, literal process executable/argv, workspace-relative cwd, exit/signal/outcome/duration when available, truncation, and concise errors.
+
+Never automatically project raw file bodies, write content, patch old/new bodies, arbitrary tool-result JSON, unrestricted stdout/stderr, unrestricted environment state, secrets, or raw provider payloads.
+
+The context assembler currently exposes only final `context.assembled`. Add the smallest provider-independent observer/event seam necessary to report relevant context-source discovery/load outcomes while they happen. The seam carries bounded source identity/status metadata only and cannot influence context source ordering, precedence, trust, dedupe, budgets, or provider-facing content.
+
+Emit deterministic context/inspection/editing/validation/recovery/completion progress from George-owned workflow state. Do not add a model-facing progress tool or extra inference turn for narration.
+
+Ensure work/progress history stays separate from canonical user/assistant transcript and provider-facing conversation merely because it was displayed or persisted.
+
+Do not change OpenTUI rendering yet.
+
+Set `package.json` version to `0.4.3`.
+
+Required proof:
+- projection works with a presentation-independent consumer;
+- one tool call produces one stable work item across lifecycle updates;
+- context source loading is observable without exposing source bodies or changing Phase-3 assembly results;
+- all current built-in tools have intelligible bounded work summaries;
+- process executable/argv/cwd are represented while output/environment stay bounded/absent;
+- denial/failure/cancel/interruption states are truthful;
+- explicit size bounds/coalescing prevent work-log flooding;
+- progress/work never enter canonical transcript/provider context;
+- authoritative evidence remains available separately;
+- Phase-2/3 regressions, typecheck, broad deterministic tests, `git diff --check`, and no-`package-lock.json` are Green.

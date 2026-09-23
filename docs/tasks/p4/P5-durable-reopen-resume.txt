@@ -1,0 +1,39 @@
+TASK: Phase 4 / P5 — Durable reopen and safe resume integration
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Terra High`.
+- Browser required: no.
+
+VERSIONING
+- This prompt's assigned project version is `0.4.5`.
+
+GOAL
+
+Wire the P1-P4 durable session, coding workflow, work projection, and execution-transcript behavior into George's normal local application/TUI path with safe non-replay reopen semantics.
+
+Read the Phase-4 authority/assessment/plan and inspect exact P1-P4 source, TUI startup/config wiring, session store, coding workflow, and tests.
+
+Persist bounded normalized session/workflow evidence during the normal coding path according to the P1 store contract. Completed durable sessions must reopen against the same canonical workspace with reconstructed conversation history, historical work/progress, validation/change/completion evidence, and no stale activity shown as running.
+
+Add only the smallest explicit single-user reopen affordance that fits the current CLI/TUI architecture, such as an explicit launch/resume argument or equally small command surface. Preserve existing workspace selection behavior where practical. Do not build a session browser/dashboard, naming/branching system, sync, remote access, or multi-workspace scheduler.
+
+When prior durable evidence shows an incomplete write, process, approval wait, or provider response/continuation: mark/display the prior operation as interrupted historical evidence; do not rerun/restart/resubmit it; do not synthesize or reuse approval; do not submit an old provider continuation as if side effects were complete.
+
+The next user request after reopen starts a fresh turn from durable completed normalized history. Completed conversation may feed normal Phase-3 context. Prior explicit skill activation must not become sticky. Provider-native response IDs remain non-authoritative.
+
+Ensure OpenTUI can continue normal input, approvals, streaming, cancellation, selection/scrollback, and execution-transcript rendering after reopen.
+
+Do not implement Phase-5 crash-safe side-effect reconciliation, retries/backoff, hooks, or compaction.
+
+Set `package.json` version to `0.4.5`.
+
+Required proof:
+- completed durable session reopens with correct workspace-bound conversation/work/evidence history;
+- workspace mismatch fails visibly;
+- interrupted mutation/process/approval/provider cases reopen as interrupted and execute zero replayed side effects;
+- next input uses a fresh turn and normal provider request from completed history only;
+- prior skill activation/approval decisions do not leak;
+- stale work is never shown active;
+- TUI remains usable after reopen;
+- durable history stays within explicit bounds;
+- Phase-2/3 regressions, typecheck, broad deterministic tests, `git diff --check`, and no-`package-lock.json`.

@@ -1,0 +1,39 @@
+TASK: Phase 4 / P4 — OpenTUI observable execution transcript
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Terra High`.
+- Browser required: no.
+
+VERSIONING
+- This prompt's assigned project version is `0.4.4`.
+
+GOAL
+
+Render the P3 presentation-independent work projection as a persistent chronological execution transcript in OpenTUI without moving execution semantics into the TUI.
+
+Read the Phase-4 authority/assessment/plan and inspect exact P1-P3 source plus current `src/tui/app.ts` and TUI tests.
+
+Preserve canonical user/assistant transcript as the only conversation text that enters future provider context. Build a presentation composition that can visually interleave You/George messages, persistent work items, and presentation-only diagnostics in chronological order.
+
+Keep the existing fast-changing activity line. For persistent work, render one stable item per operation and update its state in place rather than appending separate requested/started/completed rows.
+
+The normal transcript must visibly show, when they occur: context-source loading/disposition; file reads/listing/search; Git status/diff inspection; writes/patches; approval wait/allow/deny; literal process executable/argv and relevant cwd; validation outcome; recovery/failure/cancellation/completion.
+
+Use concise bounded metadata such as counts, bytes, exit/signal/outcome, truncation, or safe errors. Do not dump raw file bodies, write/patch bodies, arbitrary result JSON, unrestricted stdout/stderr, environment state, secrets, or provider payloads into the visible log.
+
+Preserve existing OpenTUI behavior: assistant streaming, draft input, approval interaction, selection/copy precedence, scrollback/sticky scrolling, wrapping, resize, Esc cancellation, and clean terminal restoration.
+
+Historical work-log presentation must remain presentation-only and must never appear in the provider request merely because it was rendered.
+
+Do not add durable reopen UX in this prompt.
+
+Set `package.json` version to `0.4.4`.
+
+Required proof:
+- deterministic TUI fixtures show concrete running -> terminal work-item updates without duplicate rows;
+- actual file/search/Git/write/process/validation operations are intelligible in the transcript;
+- process executable/argv/cwd are visible with bounded outcomes;
+- work rendering remains absent from later provider context;
+- draft/streaming/approval/cancel/selection/resize/scrollback/cleanup regressions remain Green;
+- failure/denial/cancel states stay visible and truthful;
+- typecheck, broad deterministic tests, `git diff --check`, and no-`package-lock.json`.
