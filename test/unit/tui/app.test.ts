@@ -124,7 +124,7 @@ test('uses the green neon palette for the transcript and focused composer', asyn
   const item = await tui(new ScriptedProvider([]));
   t.after(() => cleanup(item));
 
-  assert.deepEqual(item.app.transcript.backgroundColor.toInts(), RGBA.fromHex(NEON_THEME.panel).toInts());
+  assert.deepEqual(item.app.transcript.backgroundColor.toInts(), RGBA.fromHex(NEON_THEME.composer).toInts());
   assert.deepEqual(item.app.transcript.borderColor.toInts(), RGBA.fromHex(NEON_THEME.border).toInts());
   assert.deepEqual(item.app.input.backgroundColor.toInts(), RGBA.fromHex(NEON_THEME.composer).toInts());
   assert.deepEqual(item.app.input.cursorColor.toInts(), RGBA.fromHex(NEON_THEME.mint).toInts());

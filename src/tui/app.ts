@@ -21,7 +21,6 @@ export const COMPOSER_KEY_BINDINGS: TextareaKeyBinding[] = [
 
 export const NEON_THEME = {
   background: '#04130d',
-  panel: '#071f16',
   composer: '#25292b',
   focusedComposer: '#303638',
   foreground: '#d7ffe8',
@@ -127,7 +126,7 @@ export class GeorgeTui {
     layout.add(this.statusView);
     this.contextView = new TextRenderable(this.renderer, { id: 'context', width: '100%', height: 2, flexShrink: 0, fg: NEON_THEME.muted, content: 'Context: awaiting first turn' });
     layout.add(this.contextView);
-    this.transcript = new ScrollBoxRenderable(this.renderer, { id: 'transcript', flexGrow: 1, scrollY: true, stickyScroll: true, stickyStart: 'bottom', border: true, borderColor: NEON_THEME.border, focusedBorderColor: NEON_THEME.mint, backgroundColor: NEON_THEME.panel, title: 'Transcript', titleColor: NEON_THEME.mint });
+    this.transcript = new ScrollBoxRenderable(this.renderer, { id: 'transcript', flexGrow: 1, scrollY: true, stickyScroll: true, stickyStart: 'bottom', border: true, borderColor: NEON_THEME.border, focusedBorderColor: NEON_THEME.mint, backgroundColor: NEON_THEME.composer, title: 'Transcript', titleColor: NEON_THEME.mint });
     this.transcriptView = new TextRenderable(this.renderer, { id: 'transcript-text', fg: NEON_THEME.foreground, content: '' });
     this.transcript.add(this.transcriptView);
     layout.add(this.transcript);
