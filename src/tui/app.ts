@@ -456,6 +456,18 @@ export class GeorgeTui {
       }
       return;
     }
+    if (text.startsWith('$')) {
+      try {
+        const submission = await (this.service instanceof CodingWorkflowApplicationService ? this.service.agent : this.service).skillShorthandTurn(text);
+        if (submission) {
+          await this.start(submission.input, submission.activatedSkills);
+          return;
+        }
+      } catch (error) {
+        this.showCommand(`Skill activation: ${error instanceof Error ? bounded(error.message, 180) : 'failed'}`);
+        return;
+      }
+    }
     await this.start(text);
   }
 
@@ -736,7 +748,8 @@ export class GeorgeTui {
     try {
       const catalog = await (this.service instanceof CodingWorkflowApplicationService ? this.service.agent : this.service).skillCatalog();
       const shown = catalog.skills.slice(0, 3);
-      const details = shown.map((skill) => `${bounded(skill.id, 48)} — ${bounded(skill.description, 84)}`);
+      const colliding = new Set(catalog.collisions.map((item) => item.name));
+      const details = shown.map((skill) => `${colliding.has(skill.name) ? `$${skill.name} (ambiguous)` : `$${skill.name}`} — ${bounded(skill.description, 84)} (${bounded(skill.id, 48)})`);
       if (catalog.skills.length > shown.length) details.push(`… ${catalog.skills.length - shown.length} more skill(s)`);
       if (catalog.collisions.length > 0) details.push(`Collisions: ${catalog.collisions.slice(0, 2).map((item) => bounded(item.name, 32)).join(', ')} (use qualified IDs)`);
       if (catalog.issues.length > 0) details.push(`Discovery issues: ${catalog.issues.length}`);

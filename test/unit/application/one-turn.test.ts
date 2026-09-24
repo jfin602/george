@@ -158,15 +158,40 @@ test('enabled managed plugin contributions stay bounded, approved, lazy, and com
   const service = await createOneTurnApplicationService({ provider, workspace: root, pluginManager: manager, approvalPort: { request: async (request) => { approvals.push(request.toolName); return 'allow_once'; } } });
   assert.equal((await service.skillCatalog()).skills.some((skill) => skill.id === 'plugin:fixture.plugin:review'), true);
   assert.equal(provider.calls.length, 0, 'catalog discovery does not activate a plugin body');
-  const submission = await service.plugins.activate('plugin:fixture.plugin:run-review', 'review this');
+  assert.equal(await service.skillShorthandTurn('$something shell-variable'), undefined, 'unknown $ input stays ordinary');
+  const submission = await service.skillShorthandTurn('$review Review this code');
+  assert.deepEqual(submission, { input: 'Review this code', activatedSkills: ['plugin:fixture.plugin:review'] });
+  if (!submission) throw new Error('Expected plugin skill shorthand.');
   const events = await collect(service.run({ session: createSession({ workspace: root }), ...submission }));
+  assert.match(provider.calls[0]?.input ?? '', /Review this code/);
+  assert.doesNotMatch(provider.calls[0]?.input ?? '', /\$review/);
   assert.deepEqual(approvals, ['plugin:fixture.plugin:inspect', 'run_process']);
   assert.equal(provider.calls[0]?.tools.some((tool) => tool.name === 'plugin:fixture.plugin:inspect'), true);
   assert.match(provider.calls[0]?.instructions ?? '', /PLUGIN BODY/);
   await collect(service.run({ session: createSession({ workspace: root }), input: 'ordinary' }));
   assert.doesNotMatch(provider.calls[2]?.instructions ?? '', /PLUGIN BODY/, 'command activation is not sticky');
+  const bare = await service.skillShorthandTurn('$review');
+  assert.deepEqual(bare, { input: '$review', activatedSkills: ['plugin:fixture.plugin:review'] }, 'bare shorthand preserves the only user input');
+  if (!bare) throw new Error('Expected bare plugin skill shorthand.');
+  await collect(service.run({ session: createSession({ workspace: root }), ...bare }));
+  assert.match(provider.calls[3]?.input ?? '', /\$review/);
+  assert.match(provider.calls[3]?.instructions ?? '', /PLUGIN BODY/);
+  const qualified = await service.skillTurn('plugin:fixture.plugin:review', 'qualified fallback');
+  assert.deepEqual(qualified, { input: 'qualified fallback', activatedSkills: ['plugin:fixture.plugin:review'] });
+  assert.deepEqual(await service.plugins.activate('plugin:fixture.plugin:run-review', 'plugin command'), { input: 'plugin command', activatedSkills: ['plugin:fixture.plugin:review'] });
   assert.equal(service.hooks.list().some((hook) => hook.id === 'plugin:fixture.plugin:observe'), true);
   assert.equal(events.some((event) => event.type === 'hook.completed' && event.hookId === 'plugin:fixture.plugin:observe' && event.status === 'failed'), true);
+
+  const builtinSkills = join(root, 'builtin-skills');
+  await portableSkill(builtinSkills, 'review', 'BUILTIN REVIEW BODY');
+  const collisionProvider = new ScriptedProvider([{ type: 'provider.response.completed' }]);
+  const collision = await createOneTurnApplicationService({ provider: collisionProvider, workspace: root, pluginManager: manager, skillRoots: { builtin: builtinSkills, user: join(root, 'no-user'), workspace: join(root, 'no-workspace') } });
+  await assert.rejects(() => collision.skillShorthandTurn('$review ambiguous'), /Ambiguous skill review; use \/skill builtin:review <message> or \/skill plugin:fixture\.plugin:review <message>/);
+  assert.equal(collisionProvider.calls.length, 0, 'ambiguity fails before provider execution');
+
+  await manager.disable('fixture.plugin');
+  const shorthandDisabled = await createOneTurnApplicationService({ provider: new ScriptedProvider([{ type: 'provider.response.completed' }]), workspace: root, pluginManager: manager });
+  assert.equal(await shorthandDisabled.skillShorthandTurn('$review unavailable'), undefined);
 });
 
 test('provider-facing history compacts only completed older pairs, retains a raw tail, and reuses its checkpoint', async (t) => {

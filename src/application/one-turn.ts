@@ -390,6 +390,15 @@ export class AgentLoopApplicationService {
     return { input, activatedSkills: [skill.id] };
   }
 
+  /** Converts a leading Codex-style alias into a normal, one-turn skill submission. */
+  async skillShorthandTurn(input: string): Promise<Pick<AgentLoopSubmission, 'input' | 'activatedSkills'> | undefined> {
+    const match = /^\$([A-Za-z0-9][A-Za-z0-9._-]{0,127})(?:\s+([\s\S]*))?$/.exec(input);
+    if (!match) return undefined;
+    const skill = await this.skills.resolveShorthand(match[1]!);
+    if (!skill) return undefined;
+    return { input: match[2]?.trim() || input, activatedSkills: [skill.id] };
+  }
+
   private async approvalRequest(callId: string, validated: ValidatedToolCall, signal?: AbortSignal): Promise<ApprovalRequest | undefined> {
     const { definition, arguments: arguments_ } = validated;
     if (definition.execution.effect === 'local_read') return undefined;

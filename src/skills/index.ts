@@ -216,6 +216,11 @@ export class SkillRegistry {
     return (await this.discover()).catalog;
   }
 
+  private ambiguous(name: string, matches: readonly DiscoveredSkill[]): GeorgeError {
+    const fallbacks = matches.map((skill) => `/skill ${skill.metadata.id} <message>`).join(' or ');
+    return invalid(`Ambiguous skill ${name}; use ${fallbacks}.`);
+  }
+
   /** Resolves one explicit request without loading its declarative body. */
   async resolve(requestedId: string): Promise<SkillMetadata> {
     const { discovered } = await this.discover();
@@ -223,7 +228,16 @@ export class SkillRegistry {
       ? discovered.filter((skill) => skill.metadata.id === requestedId)
       : discovered.filter((skill) => skill.metadata.name === requestedId);
     if (matches.length === 0) throw invalid(`Unknown skill ${requestedId}.`);
-    if (matches.length > 1) throw invalid(`Ambiguous skill ${requestedId}; use a qualified ID.`);
+    if (matches.length > 1) throw this.ambiguous(requestedId, matches);
+    return matches[0]!.metadata;
+  }
+
+  /** Resolves a human-facing `$name` alias without treating an unknown name as a command error. */
+  async resolveShorthand(name: string): Promise<SkillMetadata | undefined> {
+    if (!safeName(name)) return undefined;
+    const matches = (await this.discover()).discovered.filter((skill) => skill.metadata.name === name);
+    if (matches.length === 0) return undefined;
+    if (matches.length > 1) throw this.ambiguous(name, matches);
     return matches[0]!.metadata;
   }
 
@@ -235,7 +249,7 @@ export class SkillRegistry {
         ? discovered.filter((skill) => skill.metadata.id === requestedId)
         : discovered.filter((skill) => skill.metadata.name === requestedId);
       if (matches.length === 0) throw invalid(`Unknown skill ${requestedId}.`);
-      if (matches.length > 1) throw invalid(`Ambiguous skill ${requestedId}; use a qualified ID.`);
+      if (matches.length > 1) throw this.ambiguous(requestedId, matches);
       const skill = matches[0]!;
       if (activated.some((item) => item.id === skill.metadata.id)) continue;
       const loaded = await loadBoundedContextFile(skill.path, this.maxSkillBytes);

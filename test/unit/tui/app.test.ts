@@ -695,6 +695,7 @@ test('/skills stays local and /skill activates exactly one recoverable non-stick
   await item.setup.waitForFrame((frame) => frame.includes('Skills (3):'));
   await new Promise<void>((resolve) => setTimeout(resolve, 50));
   assert.match(item.setup.captureCharFrame(), /builtin:focused/);
+  assert.match(item.setup.captureCharFrame(), /\$other/);
   assert.equal(provider.calls.length, 0);
 
   await item.setup.mockInput.typeText('/skill focused write this');
@@ -715,20 +716,31 @@ test('/skills stays local and /skill activates exactly one recoverable non-stick
   item.app.input.clear();
   item.app.input.focus();
   await item.setup.flush();
-  await item.setup.mockInput.typeText('/skill workspace:focused use it');
+  await item.setup.mockInput.typeText('$other use it');
   await item.app.submit();
   await item.setup.flush();
   assert.equal(provider.calls.length, 1);
-  assert.match(provider.calls[0]?.request.instructions ?? '', /WORKSPACE BODY/);
+  assert.match(provider.calls[0]?.request.instructions ?? '', /OTHER BODY/);
   assert.match(item.setup.captureCharFrame(), /Context estimated .*profile .*input/);
   assert.match(item.setup.captureCharFrame(), /Headroom .*pressure no/);
   assert.match(item.setup.captureCharFrame(), /categories/);
-  assert.match(item.setup.captureCharFrame(), /Active skill: workspace:focused/);
+  assert.match(item.setup.captureCharFrame(), /Active skill: workspace:other/);
 
   await item.setup.mockInput.typeText('normal turn');
   await item.app.submit();
   assert.equal(provider.calls.length, 2);
-  assert.doesNotMatch(provider.calls[1]?.request.instructions ?? '', /WORKSPACE BODY/);
+  assert.doesNotMatch(provider.calls[1]?.request.instructions ?? '', /OTHER BODY/);
+
+  await item.setup.mockInput.typeText('$unknown shell-variable');
+  await item.app.submit();
+  assert.equal(provider.calls.length, 3);
+  assert.match(provider.calls[2]?.request.input ?? '', /\$unknown shell-variable/);
+
+  await item.setup.mockInput.typeText('/skill workspace:focused use it');
+  await item.app.submit();
+  await item.setup.flush();
+  assert.equal(provider.calls.length, 4);
+  assert.match(provider.calls[3]?.request.instructions ?? '', /WORKSPACE BODY/);
 
   await item.setup.mockInput.typeText('/skill');
   item.setup.mockInput.pressEnter();

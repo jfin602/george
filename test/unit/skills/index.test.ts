@@ -47,7 +47,10 @@ test('qualified and unique unqualified activation loads bodies only at activatio
   assert.doesNotMatch(JSON.stringify(catalog), /BODY/);
   assert.deepEqual(catalog.collisions, [{ name: 'same', ids: ['user:same', 'workspace:same'] }]);
   assert.deepEqual(await registry.activate(['unique']), [{ id: 'builtin:unique', origin: 'builtin', text: 'BUILTIN BODY' }]);
+  assert.equal(await registry.resolveShorthand('missing'), undefined);
+  assert.deepEqual(await registry.resolveShorthand('unique'), { id: 'builtin:unique', name: 'unique', description: 'unique description', origin: 'builtin' });
   await assert.rejects(() => registry.activate(['same']), (error: unknown) => error instanceof GeorgeError && /Ambiguous skill same/.test(error.message));
+  await assert.rejects(() => registry.resolveShorthand('same'), /\/skill user:same <message> or \/skill workspace:same <message>/);
   assert.deepEqual(await registry.activate(['workspace:same']), [{ id: 'workspace:same', origin: 'workspace', text: 'WORKSPACE BODY' }]);
 });
 
