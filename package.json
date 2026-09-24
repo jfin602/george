@@ -20,7 +20,8 @@
     "codex:phase": "node scripts/codex-phase.mjs",
     "codex:phase:validate": "node scripts/validate-codex-phase.mjs",
     "smoke:lm-studio": "node scripts/lm-studio-tool-cycle-smoke.ts",
-    "benchmark": "node scripts/benchmark.ts"
+    "benchmark": "node scripts/benchmark.ts",
+    "context:profile": "node scripts/context-profile.ts"
   },
   "dependencies": {
     "@modelcontextprotocol/client": "^2.1.0",

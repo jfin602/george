@@ -6,6 +6,10 @@ import {
   DEFAULT_LM_STUDIO_MODEL_ID,
   DEFAULT_PROVIDER_TIMEOUT_MS,
   DEFAULT_CONTEXT_PROFILE,
+  CONTEXT_PROFILE_REGISTRY,
+  LARGE_CONTEXT_PROFILE,
+  MEDIUM_CONTEXT_PROFILE,
+  ORDINARY_CONTEXT_PROFILE,
   GeorgeError,
   appendSessionEvent,
   cancellationError,
@@ -13,6 +17,8 @@ import {
   createSession,
   resolveGeorgeConfig,
   resolveGeorgeUserConfigRoot,
+  contextProfileForName,
+  validateContextProfile,
   validateModelId,
   validateProviderBaseUrl,
   validateWorkspace,
@@ -43,6 +49,25 @@ test('configuration resolves the pinned Qwen default while preserving model over
   assert.equal(configured.context.profile.providerInputTokens, 24_576);
   assert.equal(configured.context.profile.softPressureTokens, 20_000);
   assert.equal(configured.context.profile.reservedHeadroomTokens, 8_192);
+});
+
+test('Phase 8 context profiles are validated, stable, and preserve the large default', () => {
+  assert.deepEqual(ORDINARY_CONTEXT_PROFILE, {
+    id: 'qwen3-coder-30b-a3b-instruct-q4_k_m-lm-studio-32k-ordinary', physicalContextTokens: 32_768, preferredWorkingSetTokens: { min: 4_096, max: 6_144 }, softPressureTokens: 7_168, providerInputTokens: 8_192, reservedHeadroomTokens: 8_192, alwaysOnInstructionTokens: 2_560,
+  });
+  assert.deepEqual(MEDIUM_CONTEXT_PROFILE, {
+    id: 'qwen3-coder-30b-a3b-instruct-q4_k_m-lm-studio-32k-medium', physicalContextTokens: 32_768, preferredWorkingSetTokens: { min: 8_192, max: 12_288 }, softPressureTokens: 14_336, providerInputTokens: 16_384, reservedHeadroomTokens: 8_192, alwaysOnInstructionTokens: 2_560,
+  });
+  assert.deepEqual(LARGE_CONTEXT_PROFILE, {
+    id: 'qwen3-coder-30b-a3b-instruct-q4_k_m-lm-studio-32k', physicalContextTokens: 32_768, preferredWorkingSetTokens: { min: 12_000, max: 18_000 }, softPressureTokens: 20_000, providerInputTokens: 24_576, reservedHeadroomTokens: 8_192, alwaysOnInstructionTokens: 2_560,
+  });
+  for (const profile of Object.values(CONTEXT_PROFILE_REGISTRY)) assert.deepEqual(validateContextProfile(profile), profile);
+  assert.equal(contextProfileForName('ordinary'), ORDINARY_CONTEXT_PROFILE);
+  assert.equal(contextProfileForName('medium'), MEDIUM_CONTEXT_PROFILE);
+  assert.equal(contextProfileForName('large'), LARGE_CONTEXT_PROFILE);
+  assert.equal(contextProfileForName('unknown'), undefined);
+  assert.equal(contextProfileForName('toString'), undefined);
+  assert.equal(DEFAULT_CONTEXT_PROFILE, LARGE_CONTEXT_PROFILE);
 });
 
 test('configuration resolves and validates GEORGE_PROVIDER_TIMEOUT_MS', () => {

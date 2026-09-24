@@ -8,15 +8,6 @@ export const DEFAULT_LM_STUDIO_BASE_URL = 'http://127.0.0.1:1234';
 export const DEFAULT_LM_STUDIO_MODEL_ID = 'qwen3-coder-30b-a3b-instruct@q4_k_m';
 export const DEFAULT_PROVIDER_TIMEOUT_MS = 120_000;
 export const MAX_PROVIDER_TIMEOUT_MS = 120_000;
-export const DEFAULT_CONTEXT_PROFILE: ContextProfile = {
-  id: 'qwen3-coder-30b-a3b-instruct-q4_k_m-lm-studio-32k',
-  physicalContextTokens: 32_768,
-  preferredWorkingSetTokens: { min: 12_000, max: 18_000 },
-  softPressureTokens: 20_000,
-  providerInputTokens: 24_576,
-  reservedHeadroomTokens: 8_192,
-  alwaysOnInstructionTokens: 2_560,
-};
 
 /** Operating policy, not provider wire semantics or a claim about model capability. */
 export type ContextProfile = Readonly<{
@@ -28,6 +19,8 @@ export type ContextProfile = Readonly<{
   reservedHeadroomTokens: number;
   alwaysOnInstructionTokens: number;
 }>;
+
+export type ContextProfileName = 'ordinary' | 'medium' | 'large';
 
 export type GeorgeConfig = Readonly<{
   workspace: string;
@@ -109,6 +102,48 @@ export function validateContextProfile(value: ContextProfile): ContextProfile {
     configurationError('Context profile token targets are inconsistent.');
   }
   return { id: value.id.trim(), physicalContextTokens, preferredWorkingSetTokens: { min, max }, softPressureTokens, providerInputTokens, reservedHeadroomTokens, alwaysOnInstructionTokens };
+}
+
+export const ORDINARY_CONTEXT_PROFILE = validateContextProfile({
+  id: 'qwen3-coder-30b-a3b-instruct-q4_k_m-lm-studio-32k-ordinary',
+  physicalContextTokens: 32_768,
+  preferredWorkingSetTokens: { min: 4_096, max: 6_144 },
+  softPressureTokens: 7_168,
+  providerInputTokens: 8_192,
+  reservedHeadroomTokens: 8_192,
+  alwaysOnInstructionTokens: 2_560,
+});
+
+export const MEDIUM_CONTEXT_PROFILE = validateContextProfile({
+  id: 'qwen3-coder-30b-a3b-instruct-q4_k_m-lm-studio-32k-medium',
+  physicalContextTokens: 32_768,
+  preferredWorkingSetTokens: { min: 8_192, max: 12_288 },
+  softPressureTokens: 14_336,
+  providerInputTokens: 16_384,
+  reservedHeadroomTokens: 8_192,
+  alwaysOnInstructionTokens: 2_560,
+});
+
+export const LARGE_CONTEXT_PROFILE = validateContextProfile({
+  id: 'qwen3-coder-30b-a3b-instruct-q4_k_m-lm-studio-32k',
+  physicalContextTokens: 32_768,
+  preferredWorkingSetTokens: { min: 12_000, max: 18_000 },
+  softPressureTokens: 20_000,
+  providerInputTokens: 24_576,
+  reservedHeadroomTokens: 8_192,
+  alwaysOnInstructionTokens: 2_560,
+});
+
+export const CONTEXT_PROFILE_REGISTRY: Readonly<Record<ContextProfileName, ContextProfile>> = Object.freeze({
+  ordinary: ORDINARY_CONTEXT_PROFILE,
+  medium: MEDIUM_CONTEXT_PROFILE,
+  large: LARGE_CONTEXT_PROFILE,
+});
+
+export const DEFAULT_CONTEXT_PROFILE = LARGE_CONTEXT_PROFILE;
+
+export function contextProfileForName(name: string): ContextProfile | undefined {
+  return Object.hasOwn(CONTEXT_PROFILE_REGISTRY, name) ? CONTEXT_PROFILE_REGISTRY[name as ContextProfileName] : undefined;
 }
 
 export function resolveGeorgeUserConfigRoot(
