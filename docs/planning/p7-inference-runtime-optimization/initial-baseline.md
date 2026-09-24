@@ -285,3 +285,61 @@ Accepted Phase 7 runtime baseline remains:
 - GPU KV cache: on;
 - experts: 8;
 - speculative draft: off.
+
+
+## Rejected runtime experiment 4 — GPU KV cache offload ON → OFF
+
+Status: REJECTED
+
+Starting accepted state:
+- context length: 32768;
+- eval batch size: 2048;
+- physical batch size: 512;
+- parallel: 1;
+- Flash Attention: on;
+- GPU KV-cache offload: on;
+- experts: 8;
+- speculative draft: off.
+
+Experiment change:
+
+`offload_kv_cache_to_gpu: true -> false`
+
+LM Studio configuration was independently confirmed through `/api/v1/models` immediately before the benchmark.
+
+Artifact:
+
+`/home/jfin/dev/george/artifacts/benchmarks/2026-09-24T05-26-54-356Z-143418`
+
+Result:
+- 12 / 12 passed;
+- elapsed: 53.58 s;
+- provider/model time: 53.38 s (99.9%);
+- provider rounds: 18;
+- average provider round: 2.97 s;
+- retries: 0.
+
+The first repetition included the expected post-reload penalty. Warm repetitions still trailed the accepted GPU-KV baseline across the representative cases:
+- short reasoning: ~0.30 s versus ~0.23-0.25 s;
+- 2k context: ~0.90-0.98 s versus ~0.83-0.93 s;
+- structured tool workflow: ~3.34-3.54 s versus ~3.17-3.27 s;
+- independent three-read workflow: ~6.90-6.91 s versus ~6.55-6.74 s.
+
+### Decision
+
+Reject CPU-resident KV cache for this configuration and restore `offload_kv_cache_to_gpu=true`.
+
+Reason:
+- no latency benefit;
+- steady-state warm cases are consistently slower;
+- no correctness or reliability advantage was observed.
+
+Accepted Phase 7 runtime baseline remains:
+- context length: 32768;
+- eval batch size: 2048;
+- physical batch size: 512;
+- parallel: 1;
+- Flash Attention: on;
+- GPU KV cache: **on**;
+- experts: 8;
+- speculative draft: off.
