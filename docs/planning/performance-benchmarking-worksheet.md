@@ -344,3 +344,28 @@ Accepted Phase 7 runtime baseline remains:
 - GPU KV cache: **on**;
 - experts: 8;
 - speculative draft: off.
+
+
+### Rejected experiment 5 — Flash Attention
+
+Decision: **reject Flash Attention OFF; retain ON**.
+
+Evidence:
+- `p7-flash-attention-off`: 12/12 passed, 58.57 s total, 3.24 s average provider round;
+- first repetition included the normal post-reload startup penalty;
+- warm short/context/tool cases remained materially slower than the accepted Flash-Attention-on baseline.
+
+Reason:
+- no measured latency gain;
+- steady-state performance regressed;
+- no correctness/reliability benefit.
+
+Accepted Phase 7 runtime baseline remains:
+- context length: 32768;
+- eval batch size: 2048;
+- physical batch size: 512;
+- max concurrent predictions: 1;
+- Flash Attention: **on**;
+- GPU KV cache: on;
+- experts: 8;
+- speculative draft: off.
