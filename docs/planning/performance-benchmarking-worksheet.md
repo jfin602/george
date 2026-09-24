@@ -403,3 +403,18 @@ Accepted Phase 7 runtime baseline remains:
 - GPU KV cache: on;
 - experts: **8**;
 - speculative draft: off.
+
+
+### Aborted experiment 7 — Maximum main-model GPU offload
+
+Decision: **reject before benchmark**.
+
+Observed during load:
+- materially slower model loading;
+- noticeable machine lag;
+- LM Studio debug-console errors;
+- model had not completed loading.
+
+No benchmark result was recorded because the configuration failed the runtime stability/usability gate before inference.
+
+Accepted Phase 7 steady-state reference remains approximately **1.83 s average provider round**, with the previously retained runtime settings.
