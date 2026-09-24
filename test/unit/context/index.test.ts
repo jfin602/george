@@ -105,6 +105,20 @@ test('token estimates are deterministic, provider-independent, and include all n
   assert.equal('instructions' in first, false);
 });
 
+test('identical logical context keeps provider-facing portions and source precedence byte-stable', async (t) => {
+  const root = await fixture();
+  t.after(() => rm(root, { recursive: true, force: true }));
+  await Promise.all([writeFile(join(root, 'AGENTS.md'), 'project guidance'), writeFile(join(root, 'guide.md'), 'routed guidance')]);
+  const options = { conversation: 'earlier', normalizedToolDefinitions: 'tool schema', routedDocuments: ['guide.md'] };
+  const first = await assemble(root, options);
+  const second = await assemble(root, options);
+  assert.deepEqual(first.rendered, second.rendered);
+  assert.deepEqual(
+    first.sources.map(({ id, precedence, order, disposition }) => ({ id, precedence, order, disposition })),
+    second.sources.map(({ id, precedence, order, disposition }) => ({ id, precedence, order, disposition })),
+  );
+});
+
 test('required sources fail the budget while optional sources are omitted whole and routed sources defer', async (t) => {
   const root = await fixture();
   t.after(() => rm(root, { recursive: true, force: true }));
