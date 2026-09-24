@@ -52,11 +52,13 @@ import {
   createWorkspaceMutationToolExecutor,
   createParallelSearchTool,
   createGitHubTools,
+  ChromeDevtoolsAdapter,
   McpAdapter,
   captureGitWorkingTreeSnapshot,
   type GitHubOptions,
   type ParallelSearchOptions,
   type McpAdapterOptions,
+  type ChromeDevtoolsAdapterOptions,
   type McpCatalogIssue,
   ToolRegistry,
   type ReadOnlyToolLimits,
@@ -88,6 +90,8 @@ export type OneTurnServiceOptions = Readonly<{
   github?: GitHubOptions | false;
   /** User-global MCP configuration only; repository content is never consulted. */
   mcp?: McpAdapterOptions | false;
+  /** User-global Chrome DevTools MCP profile only; Chrome/CDP is never started implicitly. */
+  chromeDevtools?: ChromeDevtoolsAdapterOptions | false;
   maxToolCalls?: number;
   maxToolRounds?: number;
   runBudget?: RunBudgetConfig;
@@ -724,6 +728,7 @@ export async function createAgentLoopApplicationService(
   const enabled = await manager.enabled();
   const pluginTools = pluginToolDefinitions(enabled.plugins, process);
   const mcpCatalog = options.mcp === false ? { definitions: [], issues: [] } : await new McpAdapter({ ...(options.mcp ?? {}), userConfigRoot }).discover();
+  const chromeCatalog = options.chromeDevtools === false ? { definitions: [], issues: [] } : await new ChromeDevtoolsAdapter({ ...(options.chromeDevtools ?? {}), userConfigRoot }).discover();
   const roots = defaultSkillRoots(userConfigRoot, workspace.root);
   const skills = new SkillRegistry({ ...roots, ...options.skillRoots }, { maxSkillBytes: options.maxSkillBytes, maxMetadataBytes: options.maxSkillMetadataBytes, maxSkills: options.maxSkills, pluginSkills: enabled.plugins.flatMap((plugin) => plugin.manifest.skills.map((skill) => ({ pluginId: plugin.manifest.id, id: skill.id, path: join(plugin.root, skill.path), root: plugin.root }))) });
   const baseTools = [
@@ -736,8 +741,9 @@ export async function createAgentLoopApplicationService(
     ...(options.additionalTools ?? []),
   ];
   const occupied = new Set(baseTools.map((tool) => tool.name));
-  const mcpTools = mcpCatalog.definitions.filter((tool) => !occupied.has(tool.name));
-  const mcpIssues = [...mcpCatalog.issues, ...mcpCatalog.definitions.filter((tool) => occupied.has(tool.name)).map((tool) => ({ server: tool.execution.source.kind === 'adapter' ? tool.execution.source.server ?? 'unknown' : 'unknown', tool: tool.name, reason: 'tool name collides with an existing George tool' }))];
+  const adapterDefinitions = [...mcpCatalog.definitions, ...chromeCatalog.definitions];
+  const mcpTools = adapterDefinitions.filter((tool) => !occupied.has(tool.name));
+  const mcpIssues = [...mcpCatalog.issues, ...chromeCatalog.issues, ...adapterDefinitions.filter((tool) => occupied.has(tool.name)).map((tool) => ({ server: tool.execution.source.kind === 'adapter' ? tool.execution.source.server ?? 'unknown' : 'unknown', tool: tool.name, reason: 'tool name collides with an existing George tool' }))];
   const registry = new ToolRegistry([...baseTools, ...mcpTools]);
   const hooks = new HookRegistry();
   for (const hook of options.hooks ?? []) hooks.register(hook);

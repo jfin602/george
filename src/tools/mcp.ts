@@ -74,12 +74,12 @@ export async function loadMcpServerConfiguration(userConfigRoot = resolveGeorgeU
   const config = object(raw, 'MCP configuration'); exact(config, ['version', 'servers'], 'MCP configuration');
   if (config.version !== 1) throw new GeorgeError('configuration', 'Unsupported MCP configuration version.');
   if (!Array.isArray(config.servers) || config.servers.length > DEFAULT_MCP_MAX_SERVERS) throw new GeorgeError('configuration', 'MCP servers are invalid.');
-  const parsed = config.servers.map((item) => parseServer(item));
+  const parsed = config.servers.map((item) => parseMcpServerConfig(item));
   if (new Set(parsed.map((server) => server.id)).size !== parsed.length) throw new GeorgeError('configuration', 'MCP server IDs must be unique.');
   return parsed;
 }
 
-function parseServer(value: unknown): McpServerConfig {
+export function parseMcpServerConfig(value: unknown): McpServerConfig {
   const server = object(value, 'MCP server');
   exact(server, ['id', 'enabled', 'transport', 'command', 'args', 'cwd', 'env', 'url', 'headers', 'credentialReference', 'allowTools', 'effects', 'timeoutMs'], 'MCP server');
   const id = identifier(server.id, 'MCP server ID');
@@ -181,7 +181,7 @@ export class McpAdapter {
     const servers = this.options.servers ?? await loadMcpServerConfiguration(this.options.userConfigRoot);
     if (servers.length > this.options.maxServers) throw new GeorgeError('configuration', 'MCP server count exceeds its limit.');
     if (new Set(servers.map((server) => server.id)).size !== servers.length) throw new GeorgeError('configuration', 'MCP server IDs must be unique.');
-    return servers.map(parseServer);
+    return servers.map(parseMcpServerConfig);
   }
 
   private async session(server: McpServerConfig, signal?: AbortSignal): Promise<Session> {

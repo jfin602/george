@@ -770,7 +770,7 @@ export class GeorgeTui {
           ...(request.execution.descriptor?.resource ? [`Resource: ${request.execution.descriptor.resource}`] : []),
           ...(request.execution.descriptor?.operation ? [`Operation: ${request.execution.descriptor.operation}`] : []),
           ...(request.execution.descriptor?.credentialConfigured === undefined ? [] : [`Credential configured: ${request.execution.descriptor.credentialConfigured ? 'yes' : 'no'}`]),
-          `Warning: ${request.execution.effect === 'unknown_external' ? 'External effect is unknown; outcome may be unknown if interrupted.' : 'External operation requires explicit approval.'}`,
+          `Warning: ${request.execution.descriptor?.warning ?? (request.execution.effect === 'unknown_external' ? 'External effect is unknown; outcome may be unknown if interrupted.' : 'External operation requires explicit approval.')}`,
         ].join('\n');
     return `Approval required — ${request.toolName} (${request.execution.effect.replaceAll('_', ' ')})\n${detail}\n[Ctrl+A]llow once  [Ctrl+D]eny`;
   }
@@ -778,7 +778,7 @@ export class GeorgeTui {
   private approvalHeight(request: ApprovalRequest): number {
     if (request.target || request.process) return 6; // Preserve the established local write/process layout.
     const detail = request.execution.descriptor;
-    return Math.min(9, 4 + Number(detail?.service !== undefined) + Number(detail?.origin !== undefined) + Number(detail?.resource !== undefined) + Number(detail?.operation !== undefined) + Number(detail?.credentialConfigured !== undefined));
+    return Math.min(10, 4 + Number(detail?.service !== undefined) + Number(detail?.origin !== undefined) + Number(detail?.resource !== undefined) + Number(detail?.operation !== undefined) + Number(detail?.warning !== undefined) + Number(detail?.credentialConfigured !== undefined));
   }
 
   private finish(): void {

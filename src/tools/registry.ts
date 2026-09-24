@@ -69,6 +69,7 @@ function executionMetadata(value: ToolExecutionMetadata): ToolExecutionMetadata 
     ...(value.descriptor.origin === undefined ? {} : { origin: boundedText(value.descriptor.origin, 'origin', 512) }),
     ...(value.descriptor.resource === undefined ? {} : { resource: boundedText(value.descriptor.resource, 'resource', 512) }),
     ...(value.descriptor.operation === undefined ? {} : { operation: boundedText(value.descriptor.operation, 'operation') }),
+    ...(value.descriptor.warning === undefined ? {} : { warning: boundedText(value.descriptor.warning, 'warning', 512) }),
     ...(value.descriptor.credentialConfigured === undefined ? {} : { credentialConfigured: value.descriptor.credentialConfigured }),
   };
   return { effect: value.effect, replaySafety: value.replaySafety, source, ...(descriptor === undefined ? {} : { descriptor }) };

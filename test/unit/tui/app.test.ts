@@ -927,3 +927,18 @@ test('test renderer presents bounded generic external approval details', async (
   item.setup.mockInput.pressKey('d', { ctrl: true });
   await item.app.waitForIdle();
 });
+
+test('test renderer warns before authenticated Chrome browser access', async (t) => {
+  const tool: ToolDefinition = {
+    name: 'chrome:click', description: 'Chrome fixture.',
+    execution: { effect: 'browser_interaction', replaySafety: 'not_replay_safe', source: { kind: 'adapter', id: 'chrome-devtools' }, descriptor: { service: 'Chrome DevTools', operation: 'browser interaction', warning: 'This server may access content in the logged-in browser session.' } },
+    inputSchema: { type: 'object', properties: {}, additionalProperties: false }, execute: async () => ({}),
+  };
+  const item = await tui(new ApprovalProvider({ type: 'provider.tool.call', callId: 'chrome', name: tool.name, arguments: '{}' }), { additionalTools: [tool] });
+  t.after(() => cleanup(item));
+  await item.setup.mockInput.typeText('reproduce it');
+  item.setup.mockInput.pressEnter();
+  await item.setup.waitForFrame((frame) => frame.includes('logged-in browser'));
+  item.setup.mockInput.pressKey('d', { ctrl: true });
+  await item.app.waitForIdle();
+});

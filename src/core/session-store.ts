@@ -69,13 +69,14 @@ function safeExecution(value: ToolExecutionMetadata): ToolExecutionMetadata {
     : { kind, id: identifier(source.id, 'adapter source ID'), ...(source.server === undefined ? {} : { server: identifier(source.server, 'adapter server ID') }) } as const;
   if (execution.descriptor === undefined) return { effect, replaySafety, source: safeSource };
   const descriptor = record(execution.descriptor, 'tool execution descriptor');
-  if (Object.keys(descriptor).some((key) => !['service', 'origin', 'resource', 'operation', 'credentialConfigured'].includes(key))) invalid('tool execution descriptor has an invalid shape.');
-  const text = (key: 'service' | 'origin' | 'resource' | 'operation', maximum = 512) => descriptor[key] === undefined ? undefined : boundedMessage(string(descriptor[key], `tool ${key}`, maximum));
+  if (Object.keys(descriptor).some((key) => !['service', 'origin', 'resource', 'operation', 'warning', 'credentialConfigured'].includes(key))) invalid('tool execution descriptor has an invalid shape.');
+  const text = (key: 'service' | 'origin' | 'resource' | 'operation' | 'warning', maximum = 512) => descriptor[key] === undefined ? undefined : boundedMessage(string(descriptor[key], `tool ${key}`, maximum));
   return { effect, replaySafety, source: safeSource, descriptor: {
     ...(text('service', 256) === undefined ? {} : { service: text('service', 256)! }),
     ...(text('origin') === undefined ? {} : { origin: text('origin')! }),
     ...(text('resource') === undefined ? {} : { resource: text('resource')! }),
     ...(text('operation', 256) === undefined ? {} : { operation: text('operation', 256)! }),
+    ...(text('warning', 512) === undefined ? {} : { warning: text('warning', 512)! }),
     ...(descriptor.credentialConfigured === undefined ? {} : { credentialConfigured: typeof descriptor.credentialConfigured === 'boolean' ? descriptor.credentialConfigured : invalid('tool credential state is invalid.') }),
   } };
 }
