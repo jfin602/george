@@ -1,0 +1,44 @@
+TASK: Phase 8 / P6 — Integrated Phase 8 qualification
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Terra High`.
+- Browser required: no.
+
+VERSIONING
+- This prompt's assigned project version is `0.8.6`.
+
+GOAL
+
+Qualify and narrowly harden the exact accepted Phase-8 candidate from P1-P5 without introducing another optimization variable.
+
+Read BOOT/current contracts, Phase-8 decision/assessment/plan, P3 adaptive evidence, P4 prefix decision, P5 reuse decision, and exact current source/tests.
+
+Build/run the deterministic and integrated qualification matrix required by `docs/stability-contract.md`.
+
+Prove:
+- adaptive vs fixed config truth;
+- deterministic ordinary/medium/large selection and monotonic promotion;
+- selected profile immutable within a turn;
+- required/current/selected routed/project/skill context survives undersized probes;
+- lower-value optional omission/defer remains explicit;
+- probe execution is provider/tool/hook/session/permission neutral and non-canonical;
+- precedence/order/provenance stay stable;
+- no provider call is added merely for selection;
+- ordinary/medium promote before semantic compaction;
+- large preserves Phase-5 compaction checkpoints, failure/cancellation, recovery, and canonical history truth;
+- accepted/rejected P4 prefix state is preserved;
+- accepted/rejected P5 continuation/reuse state and fallback are preserved;
+- provider cache/continuation is optimization only;
+- context benchmark supports 24,576 requested band;
+- quick/full/context harness behavior remains truthful;
+- inherited tool permission, session, Git/user-work, and TUI authority boundaries remain intact.
+
+Run controlled live performance evidence where available using the accepted LM Studio runtime and record exact provenance. Never call an uncontrolled run comparable.
+
+Permit at most two substantial evidence-driven correction cycles. Every confirmed Phase-8 regression must add a permanent lowest-layer detector and rerun focused plus broad affected evidence.
+
+Create `docs/tasks/p8/P6-qualification-evidence.md` tied to the exact final candidate with Green / Not Green / Evidence Gap per layer. Keep the two known pre-existing TUI streaming failures explicitly separate if still present.
+
+Set `package.json` to `0.8.6`.
+
+Run typecheck, broad tests, exact runner tests, `git diff --check`, explicit no-`package-lock.json`, and the appropriate benchmark suites. Do not owner-close Phase 8 or advance Phase 9.
