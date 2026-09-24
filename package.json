@@ -19,7 +19,8 @@
     "test:runner": "node --test test/unit/codex-phase-prompt-grammar.test.ts test/unit/codex-phase-runner.test.ts",
     "codex:phase": "node scripts/codex-phase.mjs",
     "codex:phase:validate": "node scripts/validate-codex-phase.mjs",
-    "smoke:lm-studio": "node scripts/lm-studio-tool-cycle-smoke.ts"
+    "smoke:lm-studio": "node scripts/lm-studio-tool-cycle-smoke.ts",
+    "benchmark": "node scripts/benchmark.ts"
   },
   "dependencies": {
     "@modelcontextprotocol/client": "^2.1.0",
