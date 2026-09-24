@@ -20,7 +20,7 @@ import {
   type ProviderStreamOptions,
 } from '../../../src/core/index.ts';
 import { createCodingWorkflowApplicationService, createOneTurnApplicationService, WorkProjection, type OneTurnServiceOptions } from '../../../src/application/index.ts';
-import { GeorgeTui, NEON_THEME, renderTranscript, type GeorgeTuiOptions, type ThinkingClock, type TranscriptWorkEntry } from '../../../src/tui/app.ts';
+import { GeorgeTui, NEON_THEME, formatElapsedDuration, renderTranscript, type GeorgeTuiOptions, type ThinkingClock, type TranscriptWorkEntry } from '../../../src/tui/app.ts';
 import type { ToolDefinition } from '../../../src/tools/index.ts';
 
 class ScriptedProvider implements ModelProvider {
@@ -450,6 +450,18 @@ test('groups adjacent work rows, keeps per-row status text and styling, and brea
   assert.deepEqual(transcript.chunks.find((chunk) => chunk.text === '(waiting)')?.fg?.toInts(), RGBA.fromHex(NEON_THEME.user).toInts());
   assert.deepEqual(transcript.chunks.find((chunk) => chunk.text === '(missing)')?.fg?.toInts(), RGBA.fromHex(NEON_THEME.muted).toInts());
   assert.deepEqual(transcript.chunks.find((chunk) => chunk.text === '(skipped)')?.fg?.toInts(), RGBA.fromHex(NEON_THEME.muted).toInts());
+});
+
+test('work durations render after status in the muted treatment and workflow time stays presentation-only', () => {
+  const transcript = renderTranscript([], [], 120, [{ afterEntryCount: 0, item: {
+    id: 'timed', turnId: 'turn', operationId: 'timed', category: 'completion', status: 'succeeded', summary: 'Workflow completed', elapsedMs: 1420,
+    details: { timing: { totalMs: 1420, providerMs: 900, toolMs: 400, approvalMs: 20, otherMs: 100 } },
+  } }]);
+  const visible = transcript.chunks.map((chunk) => chunk.text).join('');
+  assert.match(visible, /Workflow completed \(succeeded\) 1\.42s[\s\S]*Time[\s\S]*Model calls       900ms[\s\S]*Total             1\.42s/);
+  assert.deepEqual(transcript.chunks.find((chunk) => chunk.text === '1.42s')?.fg?.toInts(), RGBA.fromHex(NEON_THEME.muted).toInts());
+  assert.equal(formatElapsedDuration(650), '650ms');
+  assert.equal(formatElapsedDuration(60_250), '1m0.3s');
 });
 
 test('execution transcript updates one stable work row and renders bounded concrete operations', () => {

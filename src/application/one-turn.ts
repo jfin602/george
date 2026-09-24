@@ -362,7 +362,7 @@ export class AgentLoopApplicationService {
   record(session: Session, event: ApplicationEvent): readonly ApplicationEvent[] {
     let projection = this.projections.get(session);
     if (!projection) {
-      projection = new WorkProjection();
+      projection = new WorkProjection({ clock: this.clock });
       this.projections.set(session, projection);
     }
     const projected = projection.observe(event);

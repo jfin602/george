@@ -133,7 +133,7 @@ function safeError<T extends string>(error: { code: T; message: string }): { cod
 
 function safeWorkDetails(value: unknown): Extract<ApplicationEvent, { type: 'work.updated' }>['item']['details'] {
   const details = record(value, 'work details');
-  const allowed = ['path', 'query', 'count', 'bytes', 'scannedFiles', 'scannedBytes', 'executable', 'argv', 'cwd', 'timeoutMs', 'exitCode', 'signal', 'outcome', 'truncated', 'error', 'requestedArguments'];
+  const allowed = ['path', 'query', 'count', 'bytes', 'scannedFiles', 'scannedBytes', 'executable', 'argv', 'cwd', 'timeoutMs', 'exitCode', 'signal', 'outcome', 'truncated', 'error', 'requestedArguments', 'timing'];
   if (Object.keys(details).some((key) => !allowed.includes(key))) invalid('work details has an invalid shape.');
   const integer = (key: string): number | undefined => details[key] === undefined ? undefined : boundedInteger(details[key], `work ${key}`);
   const maybeString = (key: string, limit = 4096): string | undefined => details[key] === undefined ? undefined : boundedMessage(string(details[key], `work ${key}`, limit));
@@ -142,6 +142,7 @@ function safeWorkDetails(value: unknown): Extract<ApplicationEvent, { type: 'wor
   const exitCode = details.exitCode;
   if (exitCode !== undefined && exitCode !== null && (!Number.isInteger(exitCode) || (exitCode as number) < -1_000_000 || (exitCode as number) > 1_000_000)) invalid('work exit code is invalid.');
   if (details.truncated !== undefined && typeof details.truncated !== 'boolean') invalid('work truncation is invalid.');
+  const timing = details.timing === undefined ? undefined : safeWorkflowTiming(details.timing);
   return {
     ...(maybeString('path') === undefined ? {} : { path: maybeString('path') }), ...(maybeString('query') === undefined ? {} : { query: maybeString('query') }),
     ...(integer('count') === undefined ? {} : { count: integer('count') }), ...(integer('bytes') === undefined ? {} : { bytes: integer('bytes') }),
@@ -152,17 +153,31 @@ function safeWorkDetails(value: unknown): Extract<ApplicationEvent, { type: 'wor
     ...(details.signal === undefined ? {} : { signal: details.signal === null ? null : maybeString('signal', 128)! }), ...(outcome === undefined ? {} : { outcome: outcome as 'completed' | 'failed' | 'timed_out' | 'spawn_failed' }),
     ...(details.truncated === undefined ? {} : { truncated: details.truncated as boolean }), ...(maybeString('error') === undefined ? {} : { error: maybeString('error') }),
     ...(maybeString('requestedArguments', 480) === undefined ? {} : { requestedArguments: maybeString('requestedArguments', 480) }),
+    ...(timing === undefined ? {} : { timing }),
   };
 }
 
 function safeWorkItem(value: unknown): Extract<ApplicationEvent, { type: 'work.updated' }>['item'] {
   const item = record(value, 'work item');
-  exactKeys(item, ['id', 'turnId', 'operationId', 'category', 'status', 'summary', 'details'], 'work item');
+  exactKeys(item, ['id', 'turnId', 'operationId', 'category', 'status', 'summary', 'details', ...(item.elapsedMs === undefined ? [] : ['elapsedMs'])], 'work item');
   const category = string(item.category, 'work category', 32);
   const status = string(item.status, 'work status', 32);
   if (!['context', 'inspection', 'editing', 'approval', 'process', 'validation', 'recovery', 'completion'].includes(category)) invalid('work category is invalid.');
   if (!['requested', 'running', 'waiting', 'succeeded', 'missing', 'skipped', 'failed', 'denied', 'cancelled', 'interrupted'].includes(status)) invalid('work status is invalid.');
-  return { id: string(item.id, 'work ID', 512), turnId: string(item.turnId, 'work turn ID', 256), operationId: string(item.operationId, 'work operation ID', 512), category: category as Extract<ApplicationEvent, { type: 'work.updated' }>['item']['category'], status: status as Extract<ApplicationEvent, { type: 'work.updated' }>['item']['status'], summary: boundedMessage(string(item.summary, 'work summary', 4096)), details: safeWorkDetails(item.details) };
+  const elapsedMs = item.elapsedMs === undefined ? undefined : boundedInteger(item.elapsedMs, 'work elapsed time');
+  return { id: string(item.id, 'work ID', 512), turnId: string(item.turnId, 'work turn ID', 256), operationId: string(item.operationId, 'work operation ID', 512), category: category as Extract<ApplicationEvent, { type: 'work.updated' }>['item']['category'], status: status as Extract<ApplicationEvent, { type: 'work.updated' }>['item']['status'], summary: boundedMessage(string(item.summary, 'work summary', 4096)), details: safeWorkDetails(item.details), ...(elapsedMs === undefined ? {} : { elapsedMs }) };
+}
+
+function safeWorkflowTiming(value: unknown): NonNullable<Extract<ApplicationEvent, { type: 'workflow.completed' }>['completion']['timing']> {
+  const timing = record(value, 'workflow timing');
+  exactKeys(timing, ['totalMs', 'providerMs', 'toolMs', 'approvalMs', 'otherMs'], 'workflow timing');
+  const totalMs = boundedInteger(timing.totalMs, 'workflow total time');
+  const providerMs = boundedInteger(timing.providerMs, 'workflow provider time');
+  const toolMs = boundedInteger(timing.toolMs, 'workflow tool time');
+  const approvalMs = boundedInteger(timing.approvalMs, 'workflow approval time');
+  const otherMs = boundedInteger(timing.otherMs, 'workflow other time');
+  if (providerMs + toolMs + approvalMs + otherMs > totalMs + 2) invalid('workflow timing exceeds total time.');
+  return { totalMs, providerMs, toolMs, approvalMs, otherMs };
 }
 
 function oneOf<T extends string>(value: unknown, name: string, values: readonly T[]): T {
@@ -173,7 +188,7 @@ function oneOf<T extends string>(value: unknown, name: string, values: readonly 
 
 function safeWorkflowCompletion(value: Extract<ApplicationEvent, { type: 'workflow.completed' }>['completion']): Extract<ApplicationEvent, { type: 'workflow.completed' }>['completion'] {
   const completion = record(value, 'workflow completion');
-  exactKeys(completion, ['baselineAvailable', 'finalStateAvailable', 'changes', 'directMutations', 'validations', 'warnings', 'terminalState', 'finalAssistantResponse'], 'workflow completion');
+  exactKeys(completion, ['baselineAvailable', 'finalStateAvailable', 'changes', 'directMutations', 'validations', 'warnings', 'terminalState', 'finalAssistantResponse', ...(completion.timing === undefined ? [] : ['timing'])], 'workflow completion');
   const bool = (item: unknown, name: string): boolean => typeof item === 'boolean' ? item : invalid(`${name} is invalid.`);
   const changes = boundedArray(completion.changes, 'workflow changes', 1024).map((item) => {
     const change = record(item, 'workflow change');
@@ -211,7 +226,8 @@ function safeWorkflowCompletion(value: Extract<ApplicationEvent, { type: 'workfl
   const warnings = boundedArray(completion.warnings, 'workflow warnings', 128).map((warning) => boundedMessage(string(warning, 'workflow warning')));
   const terminalState = string(completion.terminalState, 'workflow terminal state', 32);
   if (!['completed', 'failed', 'cancelled', 'budget_exhausted'].includes(terminalState)) invalid('workflow terminal state is invalid.');
-  return { baselineAvailable: bool(completion.baselineAvailable, 'workflow baseline availability'), finalStateAvailable: bool(completion.finalStateAvailable, 'workflow final state availability'), changes, directMutations, validations, warnings, terminalState: terminalState as 'completed' | 'failed' | 'cancelled' | 'budget_exhausted', finalAssistantResponse: boundedMessage(string(completion.finalAssistantResponse, 'workflow final response')) };
+  const timing = completion.timing === undefined ? undefined : safeWorkflowTiming(completion.timing);
+  return { baselineAvailable: bool(completion.baselineAvailable, 'workflow baseline availability'), finalStateAvailable: bool(completion.finalStateAvailable, 'workflow final state availability'), changes, directMutations, validations, warnings, terminalState: terminalState as 'completed' | 'failed' | 'cancelled' | 'budget_exhausted', finalAssistantResponse: boundedMessage(string(completion.finalAssistantResponse, 'workflow final response')), ...(timing === undefined ? {} : { timing }) };
 }
 
 function safeRecoveryIntent(value: Extract<ApplicationEvent, { type: 'recovery.intent' }>['intent']): Extract<ApplicationEvent, { type: 'recovery.intent' }>['intent'] {

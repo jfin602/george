@@ -5,7 +5,7 @@ const MAX_DETAIL_BYTES = 1_024;
 const DEFAULT_MAX_WORK_ITEMS = 128;
 const DEFAULT_MAX_PROGRESS = 64;
 
-export type WorkProjectionOptions = Readonly<{ maxWorkItems?: number; maxProgress?: number }>;
+export type WorkProjectionOptions = Readonly<{ maxWorkItems?: number; maxProgress?: number; clock?: () => number }>;
 
 function bounded(value: string, limit = MAX_MESSAGE_BYTES): string {
   return Buffer.byteLength(value, 'utf8') <= limit ? value : `${Buffer.from(value, 'utf8').subarray(0, limit - 3).toString('utf8')}...`;
@@ -143,12 +143,15 @@ export class WorkProjection {
   private readonly items = new Map<string, WorkItem>();
   private readonly maxWorkItems: number;
   private readonly maxProgress: number;
+  private readonly clock: () => number;
+  private readonly started = new Map<string, number>();
   private latestActivity: { turnId?: string; category: WorkCategory; message: string } | undefined;
   private progressItems: Extract<ApplicationEvent, { type: 'progress.milestone' }>[] = [];
 
   constructor(options: WorkProjectionOptions = {}) {
     this.maxWorkItems = options.maxWorkItems ?? DEFAULT_MAX_WORK_ITEMS;
     this.maxProgress = options.maxProgress ?? DEFAULT_MAX_PROGRESS;
+    this.clock = options.clock ?? performance.now.bind(performance);
     if (!Number.isInteger(this.maxWorkItems) || this.maxWorkItems < 1 || !Number.isInteger(this.maxProgress) || this.maxProgress < 1) throw new Error('Work projection limits must be positive integers.');
   }
 
@@ -173,11 +176,19 @@ export class WorkProjection {
     return [{ type: 'work.updated', item: safe }];
   }
 
-  private tool(turnId: string, callId: string, name: string, change: Partial<Pick<WorkItem, 'status' | 'summary' | 'details'>> = {}): ApplicationEvent[] {
+  private begin(id: string): void { if (!this.started.has(id)) this.started.set(id, this.clock()); }
+  private elapsed(id: string): number | undefined {
+    const started = this.started.get(id);
+    if (started === undefined) return undefined;
+    this.started.delete(id);
+    return Math.max(0, Math.round(this.clock() - started));
+  }
+
+  private tool(turnId: string, callId: string, name: string, change: Partial<Pick<WorkItem, 'status' | 'summary' | 'details' | 'elapsedMs'>> = {}): ApplicationEvent[] {
     const id = `${turnId}:tool:${callId}`;
     const previous = this.items.get(id);
     const details = change.details ?? previous?.details ?? {};
-    return this.update({ id, turnId, operationId: callId, category: category(name), status: change.status ?? previous?.status ?? 'requested', summary: change.summary ?? previous?.summary ?? requested(name, details), details });
+    return this.update({ id, turnId, operationId: callId, category: category(name), status: change.status ?? previous?.status ?? 'requested', summary: change.summary ?? previous?.summary ?? requested(name, details), details, ...(change.elapsedMs === undefined ? {} : { elapsedMs: change.elapsedMs }) });
   }
 
   observe(event: ApplicationEvent): ApplicationEvent[] {
@@ -185,9 +196,11 @@ export class WorkProjection {
       case 'turn.started': return [this.activityEvent(event.turnId, 'context', 'Assembling context'), ...this.progressEvent(event.turnId, 'context', 'Assembling context')];
       case 'context.source': {
         const id = `${event.turnId}:context:${event.sourceId}`;
+        if (event.status === 'loading') this.begin(id);
         const status: WorkStatus = event.status === 'loading' ? 'running' : event.status === 'loaded' ? 'succeeded' : event.status === 'oversized' ? 'skipped' : event.status;
         const summary = event.status === 'loading' ? `Loading context source ${event.sourceId}` : `Context source ${event.sourceId}: ${event.status}`;
-        return [this.activityEvent(event.turnId, 'context', summary), ...this.update({ id, turnId: event.turnId, operationId: event.sourceId, category: 'context', status, summary, details: event.bytes === undefined ? {} : { bytes: event.bytes } })];
+        const elapsedMs = event.status === 'loading' ? undefined : this.elapsed(id);
+        return [this.activityEvent(event.turnId, 'context', summary), ...this.update({ id, turnId: event.turnId, operationId: event.sourceId, category: 'context', status, summary, details: event.bytes === undefined ? {} : { bytes: event.bytes }, ...(elapsedMs === undefined ? {} : { elapsedMs }) })];
       }
       case 'context.assembled': return [this.activityEvent(event.turnId, 'context', 'Context assembled'), ...this.progressEvent(event.turnId, 'context', 'Context assembled')];
       case 'provider.response.started': return [this.activityEvent(undefined, 'inspection', 'Thinking...')];
@@ -201,30 +214,33 @@ export class WorkProjection {
         const details = detailsFor(event.name, event.arguments);
         return [this.activityEvent(event.turnId, category(event.name), requested(event.name, details)), ...this.tool(event.turnId, event.callId, event.name, { details, status: 'requested', summary: requested(event.name, details) })];
       }
-      case 'tool.started': return [this.activityEvent(event.turnId, category(event.name), `Running ${event.name}`), ...this.tool(event.turnId, event.callId, event.name, { status: 'running' })];
-      case 'approval.requested': return [this.activityEvent(event.turnId, 'approval', `Awaiting approval for ${event.request.toolName}`), ...this.tool(event.turnId, event.callId, event.request.toolName, { status: 'waiting', summary: `Awaiting approval for ${event.request.toolName}` })];
+      case 'tool.started': { const id = `${event.turnId}:tool:${event.callId}`; this.begin(id); return [this.activityEvent(event.turnId, category(event.name), `Running ${event.name}`), ...this.tool(event.turnId, event.callId, event.name, { status: 'running' })]; }
+      case 'approval.requested': { const id = `${event.turnId}:tool:${event.callId}`; this.begin(id); return [this.activityEvent(event.turnId, 'approval', `Awaiting approval for ${event.request.toolName}`), ...this.tool(event.turnId, event.callId, event.request.toolName, { status: 'waiting', summary: `Awaiting approval for ${event.request.toolName}` })]; }
       case 'approval.allowed': return [this.activityEvent(event.turnId, 'approval', `Approval granted for ${event.request.toolName}`), ...this.tool(event.turnId, event.callId, event.request.toolName, { status: 'requested', summary: `Approval granted for ${event.request.toolName}` })];
-      case 'approval.denied': return [this.activityEvent(event.turnId, 'approval', `Approval denied for ${event.request.toolName}`), ...this.tool(event.turnId, event.callId, event.request.toolName, { status: 'denied', summary: `Approval denied for ${event.request.toolName}` })];
+      case 'approval.denied': { const elapsedMs = this.elapsed(`${event.turnId}:tool:${event.callId}`); return [this.activityEvent(event.turnId, 'approval', `Approval denied for ${event.request.toolName}`), ...this.tool(event.turnId, event.callId, event.request.toolName, { status: 'denied', summary: `Approval denied for ${event.request.toolName}`, ...(elapsedMs === undefined ? {} : { elapsedMs }) })]; }
       case 'tool.completed': {
         const existing = this.items.get(`${event.turnId}:tool:${event.callId}`);
         const details = resultDetails(event.name, event.result.value, existing?.details ?? {});
         const status = terminalFromResult(event.name, details);
-        return [this.activityEvent(event.turnId, category(event.name), completed(event.name, details)), ...this.tool(event.turnId, event.callId, event.name, { status, details, summary: completed(event.name, details) }), ...(category(event.name) === 'inspection' ? this.progressEvent(event.turnId, 'inspection', 'Repository inspection completed') : category(event.name) === 'editing' ? this.progressEvent(event.turnId, 'editing', 'Repository editing completed') : [])];
+        const elapsedMs = this.elapsed(`${event.turnId}:tool:${event.callId}`);
+        return [this.activityEvent(event.turnId, category(event.name), completed(event.name, details)), ...this.tool(event.turnId, event.callId, event.name, { status, details, summary: completed(event.name, details), ...(elapsedMs === undefined ? {} : { elapsedMs }) }), ...(category(event.name) === 'inspection' ? this.progressEvent(event.turnId, 'inspection', 'Repository inspection completed') : category(event.name) === 'editing' ? this.progressEvent(event.turnId, 'editing', 'Repository editing completed') : [])];
       }
       case 'tool.failed': {
         const status: WorkStatus = event.result.error.code === 'denied' ? 'denied' : event.result.error.code === 'cancelled' ? 'cancelled' : 'failed';
         const summary = `${requested(event.name, this.items.get(`${event.turnId}:tool:${event.callId}`)?.details ?? {})} ${status}: ${bounded(event.result.error.message)}`;
-        return [this.activityEvent(event.turnId, category(event.name), summary), ...this.tool(event.turnId, event.callId, event.name, { status, summary, details: { ...(this.items.get(`${event.turnId}:tool:${event.callId}`)?.details ?? {}), error: bounded(event.result.error.message) } })];
+        const elapsedMs = this.elapsed(`${event.turnId}:tool:${event.callId}`);
+        return [this.activityEvent(event.turnId, category(event.name), summary), ...this.tool(event.turnId, event.callId, event.name, { status, summary, details: { ...(this.items.get(`${event.turnId}:tool:${event.callId}`)?.details ?? {}), error: bounded(event.result.error.message) }, ...(elapsedMs === undefined ? {} : { elapsedMs }) })];
       }
-      case 'validation.started': return [this.activityEvent(event.turnId, 'validation', `Validating: ${event.label}`), ...this.progressEvent(event.turnId, 'validation', `Validating: ${event.label}`), ...this.update({ id: `${event.turnId}:validation:${event.callId}`, turnId: event.turnId, operationId: event.callId, category: 'validation', status: 'running', summary: `Validate ${bounded(event.label)}`, details: {} })];
+      case 'validation.started': { const id = `${event.turnId}:validation:${event.callId}`; this.begin(id); return [this.activityEvent(event.turnId, 'validation', `Validating: ${event.label}`), ...this.progressEvent(event.turnId, 'validation', `Validating: ${event.label}`), ...this.update({ id, turnId: event.turnId, operationId: event.callId, category: 'validation', status: 'running', summary: `Validate ${bounded(event.label)}`, details: {} })]; }
       case 'validation.completed': {
         const status: WorkStatus = event.status === 'passed' ? 'succeeded' : event.status;
         const details: WorkDetails = { exitCode: event.exitCode, signal: event.signal, ...(event.outcome === undefined ? {} : { outcome: event.outcome }), ...(event.stdoutTruncated || event.stderrTruncated ? { truncated: true } : {}), ...(event.error === undefined ? {} : { error: bounded(event.error.message) }) };
-        return [this.activityEvent(event.turnId, 'validation', `Validation ${event.status}`), ...this.update({ id: `${event.turnId}:validation:${event.callId}`, turnId: event.turnId, operationId: event.callId, category: 'validation', status, summary: `Validation ${event.status}`, details }), ...(status === 'failed' ? this.progressEvent(event.turnId, 'recovery', 'Validation failed; recovery may be needed') : this.progressEvent(event.turnId, 'validation', 'Validation completed'))];
+        const id = `${event.turnId}:validation:${event.callId}`; const elapsedMs = this.elapsed(id);
+        return [this.activityEvent(event.turnId, 'validation', `Validation ${event.status}`), ...this.update({ id, turnId: event.turnId, operationId: event.callId, category: 'validation', status, summary: `Validation ${event.status}`, details, ...(elapsedMs === undefined ? {} : { elapsedMs }) }), ...(status === 'failed' ? this.progressEvent(event.turnId, 'recovery', 'Validation failed; recovery may be needed') : this.progressEvent(event.turnId, 'validation', 'Validation completed'))];
       }
       case 'workflow.completed': {
         const status: WorkStatus = event.completion.terminalState === 'completed' ? 'succeeded' : event.completion.terminalState === 'budget_exhausted' ? 'failed' : event.completion.terminalState;
-        return [this.activityEvent(event.turnId, 'completion', `Workflow ${event.completion.terminalState}`), ...this.progressEvent(event.turnId, 'completion', `Workflow ${event.completion.terminalState}`), ...this.update({ id: `${event.turnId}:completion`, turnId: event.turnId, operationId: 'completion', category: 'completion', status, summary: `Workflow ${event.completion.terminalState}`, details: { count: event.completion.changes.length } })];
+        return [this.activityEvent(event.turnId, 'completion', `Workflow ${event.completion.terminalState}`), ...this.progressEvent(event.turnId, 'completion', `Workflow ${event.completion.terminalState}`), ...this.update({ id: `${event.turnId}:completion`, turnId: event.turnId, operationId: 'completion', category: 'completion', status, summary: `Workflow ${event.completion.terminalState}`, details: { count: event.completion.changes.length, ...(event.completion.timing === undefined ? {} : { timing: event.completion.timing }) }, ...(event.completion.timing === undefined ? {} : { elapsedMs: event.completion.timing.totalMs }) })];
       }
       case 'turn.cancelled': return this.stopTurn(event.turnId, 'cancelled', 'Turn cancelled');
       case 'turn.failed': return this.stopTurn(event.turnId, 'interrupted', 'Turn failed; recovery may be needed');
@@ -235,7 +251,7 @@ export class WorkProjection {
 
   private stopTurn(turnId: string, status: 'cancelled' | 'interrupted', message: string): ApplicationEvent[] {
     const updates: ApplicationEvent[] = [this.activityEvent(turnId, 'recovery', message), ...this.progressEvent(turnId, 'recovery', message), ...this.update({ id: `${turnId}:recovery`, turnId, operationId: 'recovery', category: 'recovery', status, summary: message, details: {} })];
-    for (const item of this.items.values()) if (item.turnId === turnId && ['requested', 'running', 'waiting'].includes(item.status)) updates.push(...this.update({ ...item, status, summary: `${item.summary} (${status})` }));
+    for (const item of this.items.values()) if (item.turnId === turnId && ['requested', 'running', 'waiting'].includes(item.status)) { const elapsedMs = this.elapsed(item.id); updates.push(...this.update({ ...item, status, summary: `${item.summary} (${status})`, ...(elapsedMs === undefined ? {} : { elapsedMs }) })); }
     return updates;
   }
 

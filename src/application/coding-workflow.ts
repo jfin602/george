@@ -7,6 +7,7 @@ import {
   type Session,
   type WorkflowChange,
   type WorkflowCompletion,
+  type WorkflowTiming,
   type WorkflowValidation,
 } from '../core/index.ts';
 import { captureGitWorkingTreeSnapshot, type GitWorkingTreeSnapshot } from '../tools/index.ts';
@@ -42,6 +43,42 @@ export type CodingWorkflowCompletion = WorkflowCompletion & Readonly<{
 
 function bounded(value: string, maximum = 4096): string {
   return Buffer.byteLength(value, 'utf8') <= maximum ? value : `${Buffer.from(value, 'utf8').subarray(0, maximum - 3).toString('utf8')}...`;
+}
+
+/** Attributes sequential lifecycle intervals once; the remainder is explicit harness time. */
+class WorkflowTimer {
+  private readonly clock: () => number;
+  private readonly startedAt: number;
+  private providerStarted: number | undefined;
+  private readonly tools = new Map<string, number>();
+  private readonly approvals = new Map<string, number>();
+  private providerMs = 0;
+  private toolMs = 0;
+  private approvalMs = 0;
+
+  constructor(clock: () => number) { this.clock = clock; this.startedAt = clock(); }
+
+  observe(event: ApplicationEvent): void {
+    const now = this.clock();
+    const close = (started: number | undefined, add: (value: number) => void) => { if (started !== undefined) add(Math.max(0, now - started)); };
+    if (event.type === 'provider.attempt.started') this.providerStarted ??= now;
+    else if (event.type === 'provider.response.completed' || event.type === 'provider.error' || event.type === 'provider.retry.scheduled') { close(this.providerStarted, (value) => { this.providerMs += value; }); this.providerStarted = undefined; }
+    else if (event.type === 'tool.started') this.tools.set(event.callId, now);
+    else if (event.type === 'tool.completed' || event.type === 'tool.failed') { close(this.tools.get(event.callId), (value) => { this.toolMs += value; }); this.tools.delete(event.callId); }
+    else if (event.type === 'approval.requested') this.approvals.set(event.callId, now);
+    else if (event.type === 'approval.allowed' || event.type === 'approval.denied') { close(this.approvals.get(event.callId), (value) => { this.approvalMs += value; }); this.approvals.delete(event.callId); }
+  }
+
+  finish(): WorkflowTiming {
+    const now = this.clock();
+    if (this.providerStarted !== undefined) this.providerMs += Math.max(0, now - this.providerStarted);
+    for (const started of this.tools.values()) this.toolMs += Math.max(0, now - started);
+    for (const started of this.approvals.values()) this.approvalMs += Math.max(0, now - started);
+    this.providerStarted = undefined; this.tools.clear(); this.approvals.clear();
+    const totalMs = Math.max(0, now - this.startedAt);
+    const providerMs = Math.round(this.providerMs); const toolMs = Math.round(this.toolMs); const approvalMs = Math.round(this.approvalMs);
+    return { totalMs: Math.round(totalMs), providerMs, toolMs, approvalMs, otherMs: Math.max(0, Math.round(totalMs) - providerMs - toolMs - approvalMs) };
+  }
 }
 
 function directMutation(event: ApplicationEvent): WorkflowCompletion['directMutations'][number] | undefined {
@@ -99,13 +136,16 @@ function validationFromEvents(request: ValidationRequest, events: readonly Appli
 export class CodingWorkflowApplicationService {
   readonly agent: AgentLoopApplicationService;
   private readonly store: LocalSessionStore | undefined;
+  private readonly clock: () => number;
 
-  constructor(agent: AgentLoopApplicationService, store?: LocalSessionStore) {
+  constructor(agent: AgentLoopApplicationService, store?: LocalSessionStore, clock: () => number = performance.now.bind(performance)) {
     this.agent = agent;
     this.store = store;
+    this.clock = clock;
   }
 
   async run(submission: CodingWorkflowSubmission): Promise<CodingWorkflowCompletion> {
+    const timer = new WorkflowTimer(this.clock);
     const turnId = submission.turnId ?? randomUUID();
     const budget = this.agent.createRunBudget();
     const warnings: string[] = [];
@@ -117,7 +157,7 @@ export class CodingWorkflowApplicationService {
     const events: ApplicationEvent[] = [];
     let persistenceFailure: string | undefined;
     const observe = async (observed: readonly ApplicationEvent[]): Promise<void> => {
-      for (const event of observed) await submission.onEvent?.(event);
+      for (const event of observed) { timer.observe(event); await submission.onEvent?.(event); }
       if (!this.store) return;
       try { await this.store.save(submission.session); }
       catch (error) { persistenceFailure ??= bounded(asGeorgeError(error).message); }
@@ -164,7 +204,7 @@ export class CodingWorkflowApplicationService {
         : terminalEvent?.type === 'turn.failed' || validations.some((validation) => validation.status !== 'passed') ? 'failed' : 'completed';
     const completion: CodingWorkflowCompletion = {
       turnId, baseline, finalState, baselineAvailable: baseline !== undefined, finalStateAvailable: finalState !== undefined,
-      changes: changes(baseline, finalState, directMutations), directMutations, validations, warnings, terminalState,
+      changes: changes(baseline, finalState, directMutations), directMutations, validations, warnings, terminalState, timing: timer.finish(),
       finalAssistantResponse: events.filter((event): event is Extract<ApplicationEvent, { type: 'assistant.response.completed' }> => event.type === 'assistant.response.completed').map((event) => event.text).join(''),
     };
     const { turnId: _turnId, baseline: _baseline, finalState: _finalState, ...durableCompletion } = completion;
@@ -178,5 +218,5 @@ export async function createCodingWorkflowApplicationService(
 ): Promise<CodingWorkflowApplicationService> {
   const instructions = options.georgeInstructions === undefined ? CODING_WORKFLOW_GUIDANCE : `${options.georgeInstructions}\n${CODING_WORKFLOW_GUIDANCE}`;
   const { sessionStore, ...agentOptions } = options;
-  return new CodingWorkflowApplicationService(await createAgentLoopApplicationService({ ...agentOptions, georgeInstructions: instructions }), sessionStore);
+  return new CodingWorkflowApplicationService(await createAgentLoopApplicationService({ ...agentOptions, georgeInstructions: instructions }), sessionStore, options.clock);
 }

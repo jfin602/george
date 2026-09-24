@@ -25,6 +25,27 @@ test('projection is presentation-independent, bounded, and keeps one tool work i
   assert.ok(projection.snapshot().progress.length <= 2);
 });
 
+test('completed, denied, and interrupted work retains monotonic elapsed time', () => {
+  let now = 100;
+  const projection = new WorkProjection({ clock: () => now });
+  projection.observe({ type: 'tool.requested', turnId: 't', callId: 'read', name: 'read_file', arguments: '{"path":"x"}' });
+  projection.observe({ type: 'tool.started', turnId: 't', callId: 'read', name: 'read_file' });
+  now += 650;
+  projection.observe({ type: 'tool.completed', turnId: 't', callId: 'read', name: 'read_file', result: { ok: true, value: { bytes: 1 } } });
+  projection.observe({ type: 'approval.requested', turnId: 't', callId: 'write', request: { id: 'write', toolName: 'write_file', execution: { effect: 'workspace_mutation', replaySafety: 'not_replay_safe', source: { kind: 'builtin' } }, target: { path: 'x', alreadyDirty: false } } });
+  now += 42;
+  projection.observe({ type: 'approval.denied', turnId: 't', callId: 'write', request: { id: 'write', toolName: 'write_file', execution: { effect: 'workspace_mutation', replaySafety: 'not_replay_safe', source: { kind: 'builtin' } }, target: { path: 'x', alreadyDirty: false } } });
+  projection.observe({ type: 'tool.requested', turnId: 't', callId: 'pending', name: 'read_file', arguments: '{"path":"x"}' });
+  projection.observe({ type: 'tool.started', turnId: 't', callId: 'pending', name: 'read_file' });
+  now += 8;
+  projection.observe({ type: 'turn.cancelled', turnId: 't', error: { code: 'cancelled', message: 'stop' } });
+  const work = new Map(projection.snapshot().work.map((item) => [item.operationId, item]));
+  assert.equal(work.get('read')?.elapsedMs, 650);
+  assert.equal(work.get('write')?.elapsedMs, 42);
+  assert.equal(work.get('pending')?.elapsedMs, 8);
+  assert.equal(work.get('pending')?.status, 'cancelled');
+});
+
 test('projection safely summarizes every built-in plus truthful denial, interruption, validation, and completion', () => {
   const projection = new WorkProjection();
   const calls: ApplicationEvent[] = [

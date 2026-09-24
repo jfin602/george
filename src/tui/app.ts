@@ -80,6 +80,13 @@ export type TranscriptWorkEntry = Readonly<{
   item: WorkItem;
 }>;
 
+export function formatElapsedDuration(value: number): string {
+  const ms = Math.max(0, Math.round(value));
+  if (ms < 1_000) return `${ms}ms`;
+  if (ms < 60_000) return `${(ms / 1_000).toFixed(2)}s`;
+  return `${Math.floor(ms / 60_000)}m${((ms % 60_000) / 1_000).toFixed(1)}s`;
+}
+
 function plain(text: string): StyledText['chunks'][number] {
   return { __isChunk: true, text, attributes: 0 };
 }
@@ -122,13 +129,18 @@ export function renderTranscript(
   const renderWork = (item: WorkItem) => {
     const status = `(${item.status})`;
     const primary = workPrimary(item);
-    const lines = wrapTranscriptBody(primary, Math.max(1, bodyWidth - status.length - 1));
+    const elapsed = item.elapsedMs === undefined ? undefined : formatElapsedDuration(item.elapsedMs);
+    const lines = wrapTranscriptBody(primary, Math.max(1, bodyWidth - status.length - (elapsed === undefined ? 1 : elapsed.length + 2)));
     for (const [index, line] of lines.entries()) {
       chunks.push(fg(NEON_THEME.muted)('\n│   '));
       chunks.push(plain(line));
       if (index === lines.length - 1) {
         chunks.push(plain(' '));
         chunks.push(fg(workColor(item.status))(status));
+        if (elapsed !== undefined) {
+          chunks.push(plain(' '));
+          chunks.push(fg(NEON_THEME.muted)(elapsed));
+        }
       }
     }
     for (const line of workDetails(item, bodyWidth)) {
@@ -195,6 +207,7 @@ function workDetails(item: WorkItem, width: number): string[] {
     `Argv: ${bounded(JSON.stringify(details.argv.slice(0, 8).map((argument) => bounded(argument, 48))), 240)}${details.argv.length > 8 ? ` … ${details.argv.length - 8} more` : ''}`,
   ];
   const values = [
+    ...(details.timing === undefined ? [] : ['Time', `Model calls       ${formatElapsedDuration(details.timing.providerMs)}`, `Tool calls        ${formatElapsedDuration(details.timing.toolMs)}`, `Approvals         ${formatElapsedDuration(details.timing.approvalMs)}`, `Other / harness   ${formatElapsedDuration(details.timing.otherMs)}`, `Total             ${formatElapsedDuration(details.timing.totalMs)}`]),
     ...(details.query === undefined ? [] : [`Query: ${bounded(details.query, 160)}`]),
     ...(details.executable === undefined ? [] : [`Executable: ${bounded(details.executable, 160)}`]),
     ...argv,

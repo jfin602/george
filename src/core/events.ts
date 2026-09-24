@@ -67,6 +67,15 @@ export type WorkflowValidation = Readonly<{
   error?: Readonly<{ code: string; message: string }>;
 }>;
 
+/** Monotonic workflow measurements; category totals are non-overlapping wall-clock intervals. */
+export type WorkflowTiming = Readonly<{
+  totalMs: number;
+  providerMs: number;
+  toolMs: number;
+  approvalMs: number;
+  otherMs: number;
+}>;
+
 export type WorkflowCompletion = Readonly<{
   baselineAvailable: boolean;
   finalStateAvailable: boolean;
@@ -76,6 +85,7 @@ export type WorkflowCompletion = Readonly<{
   warnings: readonly string[];
   terminalState: 'completed' | 'failed' | 'cancelled' | 'budget_exhausted';
   finalAssistantResponse: string;
+  timing?: WorkflowTiming;
 }>;
 
 export type WorkStatus = 'requested' | 'running' | 'waiting' | 'succeeded' | 'missing' | 'skipped' | 'failed' | 'denied' | 'cancelled' | 'interrupted';
@@ -100,6 +110,7 @@ export type WorkDetails = Readonly<{
   truncated?: boolean;
   error?: string;
   requestedArguments?: string;
+  timing?: WorkflowTiming;
 }>;
 
 export type WorkItem = Readonly<{
@@ -110,6 +121,8 @@ export type WorkItem = Readonly<{
   status: WorkStatus;
   summary: string;
   details: WorkDetails;
+  /** Monotonic elapsed time, derived solely for presentation/work evidence. */
+  elapsedMs?: number;
 }>;
 
 export type RecoveryIntent =

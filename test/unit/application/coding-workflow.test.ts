@@ -102,6 +102,37 @@ test('workflow completion takes only the final tool-free provider round', async 
   assert.deepEqual((await new LocalSessionStore({ root: state }).open('buffered-workflow', root)).transcript, session.transcript);
 });
 
+test('workflow timing accumulates provider rounds and tools without entering canonical conversation', async (t) => {
+  const root = await fixture();
+  t.after(() => rm(root, { recursive: true, force: true }));
+  let now = 0;
+  const provider: ModelProvider = {
+    calls: 0,
+    async *stream(this: { calls: number }, _request: ProviderRequest): AsyncGenerator<ProviderEvent> {
+      if (this.calls++ === 0) {
+        now = 10; yield { type: 'provider.response.started', responseId: 'first' };
+        now = 20; yield { type: 'provider.tool.call', callId: 'clock-tool', name: 'clock_tool', arguments: '{}' };
+        now = 20; yield { type: 'provider.response.completed' };
+      } else {
+        now = 57; yield { type: 'provider.text.delta', delta: 'done' };
+        now = 57; yield { type: 'provider.response.completed' };
+      }
+    },
+  };
+  const workflow = await createCodingWorkflowApplicationService({
+    provider, workspace: root, clock: () => now,
+    additionalTools: [{ name: 'clock_tool', description: 'Deterministic timing fixture.', inputSchema: { type: 'object', properties: {}, additionalProperties: false }, execution: { effect: 'local_read', replaySafety: 'replay_safe', source: { kind: 'builtin' } }, execute: async () => { now = 27; return {}; } }],
+  });
+  const session = createSession({ workspace: root });
+  const completion = await workflow.run({ session, input: 'time this' });
+  assert.deepEqual(completion.timing, { totalMs: 57, providerMs: 50, toolMs: 7, approvalMs: 0, otherMs: 0 });
+  assert.equal(completion.timing!.providerMs + completion.timing!.toolMs + completion.timing!.approvalMs + completion.timing!.otherMs, completion.timing!.totalMs);
+  assert.equal(session.transcript.at(-1)?.text, 'done');
+  assert.doesNotMatch(JSON.stringify(session.transcript), /providerMs|toolMs|timing/);
+  const work = session.events.filter((event): event is Extract<typeof event, { type: 'work.updated' }> => event.type === 'work.updated');
+  assert.equal(work.find((event) => event.item.operationId === 'clock-tool' && event.item.status === 'succeeded')?.item.elapsedMs, 7);
+});
+
 test('coding workflow captures clean and non-Git baselines without treating either as a mutation', async (t) => {
   const clean = await fixture();
   const nonGit = await fixture(false);
@@ -135,4 +166,6 @@ test('validation outcomes remain explicit through approval, timeout, and cancell
   const cancelledCompletion = await cancelled.run({ session: createSession({ workspace: root }), input: 'Inspect.', signal: controller.signal, validations: [request] });
   assert.equal(cancelledCompletion.validations[0]?.status, 'cancelled');
   assert.equal(cancelledCompletion.terminalState, 'cancelled');
+  assert.ok(cancelledCompletion.timing);
+  assert.ok(cancelledCompletion.timing!.providerMs + cancelledCompletion.timing!.toolMs + cancelledCompletion.timing!.approvalMs + cancelledCompletion.timing!.otherMs <= cancelledCompletion.timing!.totalMs + 2);
 });
