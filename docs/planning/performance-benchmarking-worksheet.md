@@ -280,3 +280,28 @@ Accepted Phase 7 runtime baseline therefore remains:
 - GPU KV cache: on;
 - experts: 8;
 - speculative draft: off.
+
+
+### Rejected experiment 3 — Physical batch size
+
+Decision: **reject `physical_batch_size=1024`; retain `512`**.
+
+Evidence:
+- first run `p7-physical-batch-1024`: 12/12 passed, 44.06 s total, 2.44 s average provider round, with a post-reload startup penalty;
+- warm verification `p7-physical-batch-1024-warm-verify`: 12/12 passed, 33.19 s total, 1.835 s average provider round;
+- accepted 512 warm reference: 12/12 passed, 33.03 s total, 1.83 s average provider round.
+
+Reason:
+- steady-state performance is effectively identical;
+- no correctness or reliability benefit was observed;
+- Phase 7 requires a material measured gain before accepting a new runtime setting.
+
+Accepted Phase 7 runtime baseline remains:
+- context length: 32768;
+- eval batch size: 2048;
+- physical batch size: **512**;
+- max concurrent predictions: 1;
+- Flash Attention: on;
+- GPU KV cache: on;
+- experts: 8;
+- speculative draft: off.
