@@ -1,0 +1,40 @@
+TASK: Phase 8 / P5 — Incremental/provider-native continuation reuse experiment
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Terra High`.
+- Browser required: no.
+
+VERSIONING
+- This prompt's assigned project version is `0.8.5`.
+
+GOAL
+
+Run one bounded provider-native reuse experiment after P4 has an explicit accepted/rejected result.
+
+Inspect the existing `ProviderContinuation`, agent loop, LM Studio Responses adapter, retry/recovery evidence, provider tests, and P3-P4 benchmark evidence first.
+
+Current LM Studio continuation already uses `previous_response_id` plus function-call outputs. Test one hypothesis only: whether unchanged instructions and/or tool definitions can be omitted from valid intra-turn continuation requests without changing behavior and with measurable provider-input/latency benefit.
+
+Do not assume LM Studio retains omitted request fields. Prove request semantics through adapter tests and controlled live evidence.
+
+Requirements:
+- provider-specific behavior stays behind the adapter/application provider boundary;
+- George retains full normalized canonical context/session/tool history;
+- response IDs/cache state never become canonical authority;
+- keep a complete rebuild/fallback path for unavailable/rejected continuation;
+- preserve retry/recovery/no-blind-replay truth;
+- preserve tool schemas, permissions, ordering, and transcript commit semantics;
+- stay intra-turn; do not add cross-turn provider state reuse in this prompt;
+- do not combine with Phase-9 parallelism or model-call batching.
+
+Add exact request-body tests for initial, continuation, fallback/rejection, cancellation, and provider-error paths.
+
+Use controlled live tool-bearing benchmark evidence to compare provider-reported input tokens, first-output latency, provider active time, provider calls, and correctness. Record exact command/artifact/provenance and decision in `docs/tasks/p8/P5-reuse-experiment.md`.
+
+Acceptance rule:
+- keep only if correctness/recovery semantics remain Green and a material benefit is measured;
+- otherwise revert the candidate and retain explicit REJECTED / EVIDENCE GAP evidence.
+
+Set `package.json` to `0.8.5` after final keep/revert state.
+
+Run focused provider/application tests, typecheck, broad tests, runner tests, `git diff --check`, and no `package-lock.json`.
