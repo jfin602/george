@@ -18,6 +18,7 @@ import {
   resolveGeorgeConfig,
   resolveGeorgeUserConfigRoot,
   contextProfileForName,
+  validateContextOperatingMode,
   validateContextProfile,
   validateModelId,
   validateProviderBaseUrl,
@@ -49,6 +50,12 @@ test('configuration resolves the pinned Qwen default while preserving model over
   assert.equal(configured.context.profile.providerInputTokens, 24_576);
   assert.equal(configured.context.profile.softPressureTokens, 20_000);
   assert.equal(configured.context.profile.reservedHeadroomTokens, 8_192);
+  assert.equal(configured.context.mode, 'fixed');
+  assert.equal(resolveGeorgeConfig({ contextMode: 'adaptive' }, '/workspace').context.mode, 'adaptive');
+  assert.equal(validateContextOperatingMode('fixed'), 'fixed');
+  assert.equal(validateContextOperatingMode('adaptive'), 'adaptive');
+  assert.throws(() => validateContextOperatingMode('large' as never), GeorgeError);
+  assert.throws(() => resolveGeorgeConfig({ contextMode: 'adaptive', contextProfile: DEFAULT_CONTEXT_PROFILE }, '/workspace'), GeorgeError);
 });
 
 test('Phase 8 context profiles are validated, stable, and preserve the large default', () => {

@@ -3,6 +3,7 @@ import { open } from 'node:fs/promises';
 import { GeorgeError, resolveWorkspacePath, type Workspace } from '../core/index.ts';
 
 export * from './compaction.ts';
+export * from './profile-selector.ts';
 
 /** A deterministic fallback when an active model tokenizer is unavailable: four UTF-16 code units per token. */
 export const defaultContextTokenEstimator: ContextTokenEstimator = {

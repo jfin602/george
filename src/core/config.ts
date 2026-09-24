@@ -21,11 +21,13 @@ export type ContextProfile = Readonly<{
 }>;
 
 export type ContextProfileName = 'ordinary' | 'medium' | 'large';
+export type ContextOperatingMode = 'adaptive' | 'fixed';
 
 export type GeorgeConfig = Readonly<{
   workspace: string;
   userConfigRoot: string;
-  context: Readonly<{ profile: ContextProfile }>;
+  /** `profile` remains the concrete fixed-profile compatibility value. Adaptive selection ignores it. */
+  context: Readonly<{ mode: ContextOperatingMode; profile: ContextProfile }>;
   runBudget: RunBudgetConfig;
   provider: Readonly<{
     baseUrl: URL;
@@ -40,6 +42,7 @@ export type GeorgeConfigInput = Readonly<{
   model?: string;
   providerTimeoutMs?: number;
   userConfigRoot?: string;
+  contextMode?: ContextOperatingMode;
   contextProfile?: ContextProfile;
   runBudget?: RunBudgetConfig;
 }>;
@@ -140,10 +143,17 @@ export const CONTEXT_PROFILE_REGISTRY: Readonly<Record<ContextProfileName, Conte
   large: LARGE_CONTEXT_PROFILE,
 });
 
+export const CONTEXT_PROFILE_ORDER: readonly ContextProfileName[] = Object.freeze(['ordinary', 'medium', 'large']);
+
 export const DEFAULT_CONTEXT_PROFILE = LARGE_CONTEXT_PROFILE;
 
 export function contextProfileForName(name: string): ContextProfile | undefined {
   return Object.hasOwn(CONTEXT_PROFILE_REGISTRY, name) ? CONTEXT_PROFILE_REGISTRY[name as ContextProfileName] : undefined;
+}
+
+export function validateContextOperatingMode(value: ContextOperatingMode): ContextOperatingMode {
+  if (value !== 'adaptive' && value !== 'fixed') configurationError('Context operating mode must be adaptive or fixed.');
+  return value;
 }
 
 export function resolveGeorgeUserConfigRoot(
@@ -195,12 +205,16 @@ export function resolveGeorgeConfig(
   environment: GeorgeConfigEnvironment = {},
 ): GeorgeConfig {
   const variables = environment.environment ?? process.env;
+  const contextMode = validateContextOperatingMode(input.contextMode ?? 'fixed');
+  if (contextMode === 'adaptive' && input.contextProfile !== undefined) {
+    configurationError('Adaptive context mode cannot include a fixed context profile.');
+  }
   return {
     workspace: validateWorkspace(input.workspace ?? cwd, cwd),
     userConfigRoot: input.userConfigRoot === undefined
       ? resolveGeorgeUserConfigRoot(variables, environment.platform, environment.homeDirectory)
       : validateUserConfigRoot(input.userConfigRoot, cwd),
-    context: { profile: validateContextProfile(input.contextProfile ?? DEFAULT_CONTEXT_PROFILE) },
+    context: { mode: contextMode, profile: validateContextProfile(input.contextProfile ?? DEFAULT_CONTEXT_PROFILE) },
     runBudget: validateRunBudget(input.runBudget ?? DEFAULT_RUN_BUDGET),
     provider: {
       baseUrl: validateProviderBaseUrl(
