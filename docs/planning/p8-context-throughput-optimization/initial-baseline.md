@@ -1,10 +1,12 @@
 # Phase 8 Initial Baseline
 
-Status: ACTIVE BASELINE — CONTEXT THROUGHPUT OPTIMIZATION
+Status: ACTIVE BASELINE — CONTEXT LADDER ACCEPTED; ADAPTIVE PROFILE QUALIFICATION NEXT
 
 Opened: 2026-09-24  
 Phase: 8 — Context Throughput Optimization  
 Package baseline: `0.8.0`
+
+Decision authority: `docs/planning/p8-context-throughput-optimization/decision-record.md`
 
 ## Starting runtime control
 
@@ -20,6 +22,11 @@ Phase 8 inherits the owner-accepted Phase 7 runtime configuration:
 - experts: 8;
 - speculative draft: off;
 - main-model GPU offload: prior stable working position.
+
+Current accepted runtime refinement after Phase 8 recovery/tuning:
+- main-model GPU Offload UI value: **26**;
+- sustained stress: approximately 1.82 s average provider round across 123 provider rounds;
+- duplicate-tool-call stress failures remain separate behavioral Not Green evidence.
 
 Accepted Phase 7 warm control:
 
@@ -77,11 +84,22 @@ Measure at minimum:
 
 Do not stack multiple unmeasured context changes.
 
-## First action
+## Current gate
 
-Before implementing a context optimization, characterize the current provider-facing context cost across representative ordinary, medium, and large-context workloads using the existing benchmark harness.
+Initial runtime recovery and provider-facing context-ladder characterization are complete.
 
-That characterization becomes the Phase 8 comparison baseline for subsequent context changes.
+The next Phase 8 implementation/qualification gate is the adaptive ordinary/medium/large profile contract defined in `decision-record.md`:
+
+- explicit adaptive versus fixed mode;
+- per-user-turn selection before the first provider request;
+- monotonic ordinary -> medium -> large promotion;
+- promotion of required/deliberately selected context rather than silent loss under an undersized profile;
+- ordinary/medium promotion before provider-backed semantic history compaction;
+- preserved Phase 5 large-profile pressure/recovery semantics;
+- bounded observable selection/promotion diagnostics;
+- context-ladder qualification extended to a requested ~24,576 band.
+
+Stable-prefix, incremental-context, and provider-native cache/reuse experiments follow only after this gate is accepted.
 
 
 ## Baseline attempt 1 — Not accepted
