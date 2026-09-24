@@ -51,7 +51,9 @@ import {
   createReadOnlyToolExecutor,
   createWorkspaceMutationToolExecutor,
   createParallelSearchTool,
+  createGitHubTools,
   captureGitWorkingTreeSnapshot,
+  type GitHubOptions,
   type ParallelSearchOptions,
   ToolRegistry,
   type ReadOnlyToolLimits,
@@ -79,6 +81,8 @@ export type OneTurnServiceOptions = Readonly<{
   additionalTools?: readonly ToolDefinition[];
   /** George-owned Parallel configuration; `false` keeps the unavailable adapter out of the provider surface. */
   parallelSearch?: ParallelSearchOptions | false;
+  /** George-owned GitHub configuration; omit or use `false` to keep it out of the provider surface. */
+  github?: GitHubOptions | false;
   maxToolCalls?: number;
   maxToolRounds?: number;
   runBudget?: RunBudgetConfig;
@@ -458,7 +462,12 @@ export class AgentLoopApplicationService {
     const startedAt = call.name === 'run_process' ? this.clock() : undefined;
     const result = await this.registry.dispatch(call, { signal, ...(input === undefined ? {} : { input }) });
     if (result.result.ok) yield* emit({ type: 'tool.completed', turnId, callId: call.callId, name: call.name, result: result.result, execution: validation.definition.execution, ...origin });
-    else yield* emit({ type: 'tool.failed', turnId, callId: call.callId, name: call.name, result: result.result, execution: validation.definition.execution, ...origin });
+    else {
+      yield* emit({ type: 'tool.failed', turnId, callId: call.callId, name: call.name, result: result.result, execution: validation.definition.execution, ...origin });
+      if (validation.definition.execution.effect === 'remote_mutation' && result.result.error.code === 'outcome_unknown') {
+        yield* emit({ type: 'recovery.decision', turnId, callId: call.callId, kind: 'external', name: call.name, outcome: 'outcome_unknown', evidence: 'Remote mutation outcome is unknown and was not replayed.' });
+      }
+    }
     if (budget && startedAt !== undefined) yield* this.consumeBudget(session, turnId, budget, 'processRuntimeMs', Math.max(0, Math.floor(this.clock() - startedAt)), signal);
     if (!hookId && budget) yield* this.invokeHooks(session, { name: 'tool.after', sessionId: session.id, turnId, runId: budget.id, operation: { callId: call.callId, name: call.name } }, budget, signal);
     if (signal?.aborted) throw cancellationError(signal);
@@ -713,6 +722,7 @@ export async function createAgentLoopApplicationService(
     ...process.registry.registrations,
     ...pluginTools,
     ...(options.parallelSearch === false ? [] : [createParallelSearchTool(options.parallelSearch)]),
+    ...(options.github === undefined || options.github === false ? [] : createGitHubTools(options.github)),
     ...(options.additionalTools ?? []),
   ]);
   const hooks = new HookRegistry();

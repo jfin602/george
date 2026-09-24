@@ -2,6 +2,7 @@ export type GeorgeErrorCode =
   | 'budget'
   | 'cancelled'
   | 'configuration'
+  | 'outcome_unknown'
   | 'provider'
   | 'tool'
   | 'validation';
