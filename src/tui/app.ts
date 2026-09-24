@@ -80,11 +80,34 @@ export type TranscriptWorkEntry = Readonly<{
   item: WorkItem;
 }>;
 
-export function formatElapsedDuration(value: number): string {
+function formatElapsedDurationParts(value: number): Readonly<{ milliseconds: string; seconds: string }> {
   const ms = Math.max(0, Math.round(value));
-  if (ms < 1_000) return `${ms}ms`;
-  if (ms < 60_000) return `${(ms / 1_000).toFixed(2)}s`;
-  return `${Math.floor(ms / 60_000)}m${((ms % 60_000) / 1_000).toFixed(1)}s`;
+  return { milliseconds: `${ms}ms`, seconds: `${(ms / 1_000).toFixed(2)}s` };
+}
+
+export function formatElapsedDuration(value: number): string {
+  const { milliseconds, seconds } = formatElapsedDurationParts(value);
+  return `${milliseconds} | ${seconds}`;
+}
+
+/** Presentation-only timing table; all widths come from the formatted values. */
+export function formatWorkflowTiming(timing: NonNullable<WorkItem['details']['timing']>): string[] {
+  const entries = [
+    ['Model calls', timing.providerMs],
+    ['Tool calls', timing.toolMs],
+    ['Approvals', timing.approvalMs],
+    ['Other / harness', timing.otherMs],
+    ['Total', timing.totalMs],
+  ] as const;
+  const values = entries.map(([label, value]) => {
+    return { label, ...formatElapsedDurationParts(value) };
+  });
+  const labelWidth = Math.max(...values.map(({ label }) => label.length));
+  const millisecondsWidth = Math.max(...values.map(({ milliseconds }) => milliseconds.length));
+  const secondsWidth = Math.max(...values.map(({ seconds }) => seconds.length));
+  return ['Time', ...values.map(({ label, milliseconds, seconds }) =>
+    `${label.padEnd(labelWidth)} ${milliseconds.padStart(millisecondsWidth)} | ${seconds.padStart(secondsWidth)}`,
+  )];
 }
 
 function plain(text: string): StyledText['chunks'][number] {
@@ -207,12 +230,12 @@ function workDetails(item: WorkItem, width: number): string[] {
     `Argv: ${bounded(JSON.stringify(details.argv.slice(0, 8).map((argument) => bounded(argument, 48))), 240)}${details.argv.length > 8 ? ` … ${details.argv.length - 8} more` : ''}`,
   ];
   const values = [
-    ...(details.timing === undefined ? [] : ['Time', `Model calls       ${formatElapsedDuration(details.timing.providerMs)}`, `Tool calls        ${formatElapsedDuration(details.timing.toolMs)}`, `Approvals         ${formatElapsedDuration(details.timing.approvalMs)}`, `Other / harness   ${formatElapsedDuration(details.timing.otherMs)}`, `Total             ${formatElapsedDuration(details.timing.totalMs)}`]),
+    ...(details.timing === undefined ? [] : formatWorkflowTiming(details.timing)),
     ...(details.query === undefined ? [] : [`Query: ${bounded(details.query, 160)}`]),
     ...(details.executable === undefined ? [] : [`Executable: ${bounded(details.executable, 160)}`]),
     ...argv,
     ...(details.cwd === undefined ? [] : [`Cwd: ${bounded(details.cwd, 160)}`]),
-    ...(details.timeoutMs === undefined ? [] : [`Timeout: ${details.timeoutMs} ms`]),
+    ...(details.timeoutMs === undefined ? [] : [`Timeout: ${formatElapsedDuration(details.timeoutMs)}`]),
     ...(details.signal === undefined || details.signal === null ? [] : [`Signal: ${bounded(details.signal, 80)}`]),
     ...(details.outcome === undefined ? [] : [`Outcome: ${details.outcome}`]),
     ...(details.truncated ? ['Output truncated'] : []),

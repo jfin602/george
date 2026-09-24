@@ -20,7 +20,7 @@ import {
   type ProviderStreamOptions,
 } from '../../../src/core/index.ts';
 import { createCodingWorkflowApplicationService, createOneTurnApplicationService, WorkProjection, type OneTurnServiceOptions } from '../../../src/application/index.ts';
-import { GeorgeTui, NEON_THEME, formatElapsedDuration, renderTranscript, type GeorgeTuiOptions, type ThinkingClock, type TranscriptWorkEntry } from '../../../src/tui/app.ts';
+import { GeorgeTui, NEON_THEME, formatElapsedDuration, formatWorkflowTiming, renderTranscript, type GeorgeTuiOptions, type ThinkingClock, type TranscriptWorkEntry } from '../../../src/tui/app.ts';
 import type { ToolDefinition } from '../../../src/tools/index.ts';
 
 class ScriptedProvider implements ModelProvider {
@@ -452,16 +452,47 @@ test('groups adjacent work rows, keeps per-row status text and styling, and brea
   assert.deepEqual(transcript.chunks.find((chunk) => chunk.text === '(skipped)')?.fg?.toInts(), RGBA.fromHex(NEON_THEME.muted).toInts());
 });
 
-test('work durations render after status in the muted treatment and workflow time stays presentation-only', () => {
+test('work durations use canonical milliseconds and seconds in the muted presentation treatment', () => {
   const transcript = renderTranscript([], [], 120, [{ afterEntryCount: 0, item: {
-    id: 'timed', turnId: 'turn', operationId: 'timed', category: 'completion', status: 'succeeded', summary: 'Workflow completed', elapsedMs: 1420,
-    details: { timing: { totalMs: 1420, providerMs: 900, toolMs: 400, approvalMs: 20, otherMs: 100 } },
+    id: 'context', turnId: 'turn', operationId: 'workspace:BOOT.md', category: 'context', status: 'succeeded', summary: 'Context source workspace:BOOT.md: loaded', elapsedMs: 4, details: {},
+  } }, { afterEntryCount: 0, item: {
+    id: 'parallel', turnId: 'turn', operationId: 'parallel_search', category: 'inspection', status: 'succeeded', summary: 'Completed parallel_search', elapsedMs: 10_310, details: { timeoutMs: 24_000 },
+  } }, { afterEntryCount: 0, item: {
+    id: 'timed', turnId: 'turn', operationId: 'timed', category: 'completion', status: 'succeeded', summary: 'Workflow completed', elapsedMs: 92_000,
+    details: { timing: { totalMs: 92_000, providerMs: 80_700, toolMs: 3_240, approvalMs: 7_060, otherMs: 1_000 } },
   } }]);
   const visible = transcript.chunks.map((chunk) => chunk.text).join('');
-  assert.match(visible, /Workflow completed \(succeeded\) 1\.42s[\s\S]*Time[\s\S]*Model calls       900ms[\s\S]*Total             1\.42s/);
-  assert.deepEqual(transcript.chunks.find((chunk) => chunk.text === '1.42s')?.fg?.toInts(), RGBA.fromHex(NEON_THEME.muted).toInts());
-  assert.equal(formatElapsedDuration(650), '650ms');
-  assert.equal(formatElapsedDuration(60_250), '1m0.3s');
+  assert.match(visible, /Context source workspace:BOOT\.md: loaded \(succeeded\) 4ms \| 0\.00s/);
+  assert.match(visible, /Completed parallel_search \(succeeded\) 10310ms \| 10\.31s/);
+  assert.match(visible, /Timeout: 24000ms \| 24\.00s/);
+  assert.match(visible, /Workflow completed \(succeeded\) 92000ms \| 92\.00s/);
+  assert.deepEqual(transcript.chunks.find((chunk) => chunk.text === '4ms | 0.00s')?.fg?.toInts(), RGBA.fromHex(NEON_THEME.muted).toInts());
+  assert.equal(formatElapsedDuration(4), '4ms | 0.00s');
+  assert.equal(formatElapsedDuration(135), '135ms | 0.14s');
+  assert.equal(formatElapsedDuration(2_400), '2400ms | 2.40s');
+  assert.equal(formatElapsedDuration(24_000), '24000ms | 24.00s');
+  assert.equal(formatElapsedDuration(10_310), '10310ms | 10.31s');
+});
+
+test('workflow timing columns remain visibly aligned across styled short and long durations', () => {
+  const lines = formatWorkflowTiming({ totalMs: 92_000, providerMs: 80_700, toolMs: 3_240, approvalMs: 7_060, otherMs: 4 });
+  assert.deepEqual(lines, [
+    'Time',
+    'Model calls     80700ms | 80.70s',
+    'Tool calls       3240ms |  3.24s',
+    'Approvals        7060ms |  7.06s',
+    'Other / harness     4ms |  0.00s',
+    'Total           92000ms | 92.00s',
+  ]);
+  const timing = { totalMs: 92_000, providerMs: 80_700, toolMs: 3_240, approvalMs: 7_060, otherMs: 4 };
+  const transcript = renderTranscript([], [], 120, [{ afterEntryCount: 0, item: {
+    id: 'timed', turnId: 'turn', operationId: 'timed', category: 'completion', status: 'succeeded', summary: 'Workflow completed', details: { timing },
+  } }]);
+  const visible = transcript.chunks.map((chunk) => chunk.text).join('');
+  const rows = visible.split('\n').map((line) => line.replace(/^│     /, '')).filter((line) => /ms \| .*s$/.test(line));
+  assert.equal(new Set(rows.map((line) => line.indexOf('ms |'))).size, 1);
+  assert.equal(new Set(rows.map((line) => line.lastIndexOf('s'))).size, 1);
+  assert.equal(visible.includes('\u001b['), false);
 });
 
 test('execution transcript updates one stable work row and renders bounded concrete operations', () => {
