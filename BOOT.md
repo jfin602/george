@@ -63,15 +63,25 @@ Phase 7 baseline transition: package `0.7.0`.
 
 The owner explicitly accepts the recorded Phase 6 live Parallel/GitHub/MCP/Chrome and native-terminal Evidence Gaps for roadmap progression. These remain Evidence Gaps, not Green evidence.
 
-**Phase 7 — Inference Runtime Optimization — is the current planning/measurement gate.**
+Phase 7 — Inference Runtime Optimization — is owner-closed.
 
-Phase 7 starts from the implemented formal benchmark harness and the approved performance worksheet at `docs/planning/performance-benchmarking-worksheet.md`. The first required action is to capture the untouched `0.7.0` full-suite primary-model baseline before any runtime tuning or warm-up change.
+Formal Phase 7 closeout marker: `a7d2e8491bf354a4317c80f06f1796cbee80ee58`.  
+Phase 7 owner closeout: `docs/phase-7-owner-closeout.md`.  
+Phase 8 baseline transition: `66d28597fc6b69f210bcbe4ebf4ae41a9df77375` at package `0.8.0`.
 
-Phase 7 must follow the benchmark-gated optimization loop:
+The owner explicitly accepts the recorded Phase 7 final restored-runtime Not Green verification for roadmap progression. It remains Not Green and is not retroactively treated as Green. The accepted Phase 7 steady-state control is the separately Green `parallel=1` warm verification at approximately 1.83 s average provider round.
 
-`last accepted baseline -> one bounded runtime change -> benchmark -> accept/revise/revert -> new baseline`
+**Phase 8 — Context Throughput Optimization — is the current planning/measurement gate.**
 
-Do not stack multiple unmeasured runtime changes.
+Phase 8 starts from `docs/planning/p8-context-throughput-optimization/initial-baseline.md` and the performance worksheet at `docs/planning/performance-benchmarking-worksheet.md`.
+
+Phase 8 must continue the benchmark-gated optimization loop:
+
+`last accepted baseline -> one bounded context optimization -> benchmark -> accept/revise/revert -> new baseline`
+
+The first Phase 8 action is to characterize current provider-facing context/prefill cost across representative ordinary, medium, and large-context workloads before changing context behavior.
+
+Do not stack multiple unmeasured context changes.
 
 ## Core premise
 
@@ -108,7 +118,8 @@ Read:
 - stability/testing: `docs/stability-contract.md`;
 - roadmap: `docs/roadmap/mvp-roadmap.md`;
 - Living Project Map / Software Graph, when relevant: `docs/planning/living-project-map/decision-record.md` (then its graph, interaction, and qualification companions as needed);
-- Phase 7 performance authority: `docs/planning/performance-benchmarking-worksheet.md` and `docs/roadmap/mvp-roadmap.md`;
+- Phase 8 performance authority: `docs/planning/p8-context-throughput-optimization/initial-baseline.md`, `docs/planning/performance-benchmarking-worksheet.md`, and `docs/roadmap/mvp-roadmap.md`;
+- Phase 7 closeout/history when needed: `docs/phase-7-closeout.md`, `docs/phase-7-owner-closeout.md`, `docs/planning/p7-inference-runtime-optimization/initial-baseline.md`;
 - Phase 6 closeout/history when needed: `docs/phase-6-closeout.md`, `docs/phase-6-owner-closeout.md`, `docs/planning/p6-plugins-external-adapters/decision-record.md`;
 - Phase 5 closeout/history when needed: `docs/phase-5-closeout.md`, `docs/phase-5-owner-closeout.md`, `docs/planning/p5-reliability-long-runs/decision-record.md`;
 - Phase 4 closeout/history when needed: `docs/phase-4-closeout.md`, `docs/phase-4-owner-closeout.md`, `docs/planning/p4-coding-workflow-sessions/decision-record.md`;
