@@ -263,7 +263,7 @@ Non-goals:
 - Tauri desktop UI;
 - multi-agent scheduling/execution.
 
-Long-running in Phase 5 means a bounded attached local George run with durable recovery evidence. Phase 7 remains the boundary for a long-lived local service.
+Long-running in Phase 5 means a bounded attached local George run with durable recovery evidence. A persistent detached local service remains deferred until Phase 13, after the benchmark-driven primary-model optimization campaign, utility-model work, and local-research path.
 
 ## Phase 6 — Plugins + External Adapters
 
@@ -321,9 +321,173 @@ Non-goals:
 
 The exact manifest fields and TypeScript representations should follow this decision record and be finalized through `/prompt-plan` against current source. Phase 6 freezes a safe extension/package/effect contract; it does not make external systems authoritative.
 
-## Phase 7 — Local Daemon
+## Benchmark prerequisite — Formal Performance Harness
 
-Goal: separate the long-lived George service from presentation clients.
+Status: IMPLEMENTED BEFORE PHASE 7
+
+George has a versioned developer benchmark harness callable through `npm run benchmark`. It is infrastructure for the optimization campaign rather than a numbered product phase.
+
+Current benchmark contract:
+- suite/schema version: v1 / schema 1;
+- `npm run benchmark -- --suite quick` for representative optimization-gate runs;
+- `npm run benchmark -- --suite full` for broader baseline/consolidation qualification;
+- optional `--repetitions 1..20`, `--model`, `--base-url`, `--label`, and `--compare <results.json>`;
+- results under `artifacts/benchmarks/<run-id>/results.json` plus `report.md`, with optional `comparison.md`;
+- deterministic case identities spanning short reasoning, controlled long-context retrieval, code understanding, structured tool use, independent multi-tool inspection, bounded edit workflow, extended agent loop, and noisy-evidence compaction;
+- performance and correctness remain separate evidence dimensions.
+
+The benchmark harness is the control instrument for Phases 7-12. It must not itself silently optimize the runtime path it measures.
+
+## Phase 7 — Inference Runtime Optimization
+
+Goal: establish the fastest reliable primary-model runtime configuration for the pinned Qwen3-Coder/LM Studio path without changing George's higher-level context or agent-loop architecture.
+
+Scope:
+- capture/retain the untouched pre-optimization benchmark baseline;
+- systematically characterize LM Studio/runtime variables such as GPU offload, Flash Attention, GPU KV-cache behavior, eval batch size, model residency/persistence, and cold/warm execution;
+- change one bounded runtime variable or controlled configuration at a time;
+- benchmark every change against the last accepted baseline and explicitly keep, revise, or revert it;
+- test startup/model warm-up as a separate experiment after runtime tuning rather than assuming the Phase 5 first-run anomaly has a particular cause;
+- keep LM Studio/Qwen-specific tuning behind provider/runtime boundaries rather than leaking it into the provider-independent core.
+
+Success condition:
+- every accepted runtime change has before/after benchmark evidence with correctness preserved;
+- rejected/no-benefit changes remain recorded rather than disappearing from the evidence trail;
+- the resulting configuration is the measured best-known Phase 7 primary runtime baseline on the qualification machine;
+- startup warm-up is retained only if it produces a net measured user-visible benefit without unacceptable resource cost.
+
+Non-goals:
+- adaptive context policy;
+- provider-context caching architecture;
+- parallel tool execution;
+- model-call batching;
+- speculative decoding;
+- secondary/helper model runtime;
+- daemon or desktop work.
+
+## Phase 8 — Context Throughput Optimization
+
+Goal: reduce provider-facing context/prefill cost while preserving Phase 3 instruction precedence, provenance, smallest-sufficient-working-set behavior, Phase 5 recovery evidence, and provider independence.
+
+Scope:
+- benchmark adaptive operating profiles for ordinary/small, medium repository, and genuinely large-context work instead of treating maximum physical context as the normal target;
+- preserve explicit headroom and fail/defer behavior for critical budget pressure;
+- preserve stable context source identity/order and avoid injecting unchanged/unrelated material merely because capacity exists;
+- investigate stable prompt prefixes, incremental/changed-context submission, and provider-native reuse/caching where supported;
+- keep provider-native cache/continuation state as an optimization only; George's canonical normalized history and context provenance remain authoritative;
+- measure context/input tokens, first-output/response-start timing, correctness, and full workflow latency after each individual context optimization.
+
+Success condition:
+- accepted context changes materially reduce measured cost or latency on representative benchmark cases without retrieval, precedence, recovery, or instruction-following regression;
+- ordinary work uses the smallest sufficient operating profile rather than a larger profile by default;
+- provider-specific reuse remains behind adapter boundaries and never becomes the only copy of context/session state.
+
+Non-goals:
+- helper-model semantic compaction;
+- parallel tool execution;
+- model-call batching;
+- speculative decoding;
+- daemon/desktop work.
+
+## Phase 9 — Agent Loop Throughput
+
+Goal: reduce serialized orchestration latency and unnecessary primary-model invocations while preserving George-owned dependency ordering, permissions, transcript truth, recovery semantics, and deterministic evidence.
+
+Scope:
+- introduce explicit dependency-safe concurrency for independent operations, starting with read-only workspace/tool activity;
+- preserve model-requested ordering semantics whenever calls are dependent or ordering is otherwise significant;
+- keep writes, patches, approvals, arbitrary processes, ambiguous external effects, and other side-effecting operations sequential unless a later explicit safety contract proves concurrency safe;
+- ensure concurrent operations retain stable call/work identities, cancellation, bounded output, failure isolation, and deterministic normalized result ordering before provider continuation;
+- benchmark tool parallelism independently before changing primary-model call behavior;
+- then reduce redundant model turns by batching deterministic orchestration/tool work between provider rounds where the model does not need intermediate reasoning;
+- preserve the provider-round assistant commit rule and canonical event/session evidence;
+- track logical provider rounds separately from retry attempts.
+
+Success condition:
+- independent-tool benchmark cases show measured end-to-end improvement without changing correctness or weakening permissions/evidence;
+- model-call reduction produces fewer logical provider rounds or lower wall time on appropriate workloads without hiding useful reasoning checkpoints or increasing retries/failures;
+- each optimization is benchmarked and accepted/reverted independently.
+
+Non-goals:
+- concurrent ambiguous mutations;
+- multi-agent scheduling;
+- helper-model delegation;
+- daemon/background-job ownership.
+
+## Phase 10 — Final Acceleration + Primary-Model Performance Qualification
+
+Goal: characterize the remaining provider-level acceleration opportunity, then freeze a consolidated optimized single-primary-model baseline.
+
+Scope:
+- evaluate speculative decoding only if a compatible draft model/runtime path is practical;
+- treat speculative decoding as an experiment, not a requirement;
+- retain it only when end-to-end benefit survives memory/resource/quality comparison against the already-optimized Phase 9 baseline;
+- run the full benchmark suite against the final accumulated primary-model configuration;
+- produce a consolidated performance report covering the original baseline, every accepted/rejected optimization, per-stage deltas, cumulative improvement, quality/correctness deltas, provider/model-call counts, tool-call counts, token usage, retries, and resource footprint.
+
+Success condition:
+- George has a reproducible, measured optimized primary-model baseline;
+- no accepted performance change is justified only by intuition or an aggregate that hides correctness failures;
+- the consolidated report makes the cumulative gain and remaining bottlenecks explicit.
+
+Non-goals:
+- introducing the helper/utility model;
+- local web-research replacement;
+- daemon or desktop work.
+
+## Phase 11 — Local Utility Model
+
+Goal: add a secondary local model only after the single-primary-model path is optimized, using it for narrow low-cost context-preparation work where benchmarks demonstrate net benefit.
+
+Scope:
+- define a provider-independent secondary utility-model role separate from the primary coding/reasoning model;
+- evaluate candidate local models against the Phase 10 optimized baseline;
+- candidate duties include context/log compaction, diff summarization, relevance extraction, result/file ranking, bounded classification/routing, structured extraction, and similar context preparation;
+- keep utility output as derived context/evidence rather than authoritative instructions or canonical session truth;
+- the utility model cannot grant permissions, invoke executable tools by its own authority, expand George capabilities, or override user/project/George instruction precedence;
+- measure helper inference, scheduling, memory pressure, routing overhead, quality retention, and primary-model savings as one net system result.
+
+Success condition:
+- at least one bounded helper use case produces demonstrated net benefit versus the optimized Phase 10 primary-only baseline;
+- failure/disable of the utility model degrades explicitly to the primary path or another documented fallback rather than corrupting the run;
+- provider/model implementations remain replaceable.
+
+Non-goals:
+- unrestricted helper-agent autonomy;
+- helper-owned permissions/tools;
+- web search/discovery itself;
+- daemon/background scheduling.
+
+## Phase 12 — Local Web Research
+
+Goal: make ordinary technical/documentation research primarily self-hosted/local where practical, with Parallel Search or another premium provider available as optional escalation rather than a required web brain.
+
+Scope:
+- provider-independent research orchestration over George's canonical tool/network/permission boundaries;
+- local/self-hosted search discovery, with SearXNG as the preferred initial direction while keeping discovery providers replaceable;
+- keep search discovery separate from bounded page retrieval, deterministic extraction, semantic compaction, and final primary-model reasoning;
+- use bounded HTTP fetch first and browser rendering only as a fallback when ordinary retrieval/extraction cannot obtain useful content;
+- use the Phase 11 utility-model role for relevance extraction, page compaction, reranking/evidence shaping where it proves useful;
+- preserve URLs/source identity/titles/dates when available and enough provenance for the primary model to distinguish source evidence from generated summaries;
+- treat fetched content as untrusted data and prevent prompt injection/page text from becoming higher-authority instructions;
+- cap result counts, fetched bytes, render resources, per-source context, utility output, timeouts, retries, and total research budget;
+- compare local versus premium research paths for answer/evidence quality, provenance preservation, latency, context usage, failure rate, and external API cost.
+
+Success condition:
+- representative ordinary technical research can complete without a paid research API when public search/fetch sources are sufficient;
+- premium research remains independently disableable/escalatable;
+- hostile page content cannot register tools, raise permissions, or override instruction precedence;
+- disabling search, browser rendering, utility inference, or premium escalation produces explicit bounded fallback/degradation behavior.
+
+Non-goals:
+- crawling/indexing a private copy of the public web;
+- unrestricted model sockets/network access;
+- utility-model permission/tool authority;
+- requiring Parallel or another paid provider for ordinary research.
+
+## Phase 13 — Local Daemon
+
+Goal: separate the long-lived George service from presentation clients after the core agent path has been benchmarked and optimized.
 
 Scope:
 - localhost-only server;
@@ -335,7 +499,7 @@ Scope:
 
 No LAN/Internet exposure by default.
 
-## Phase 8 — Native Desktop
+## Phase 14 — Native Desktop
 
 Goal: provide a polished native application without rewriting the agent.
 
@@ -347,69 +511,6 @@ Direction:
 - permission prompts;
 - tool/event inspection;
 - model/provider controls.
-
-## Post-MVP — Local Web Research + Utility Model
-
-Goal: give George a primarily self-hosted web-research path that uses local compute for search-result digestion and context compaction while keeping paid research providers optional.
-
-This work intentionally follows the MVP. It should build on the Phase 5 compaction/reliability substrate and the Phase 6 network/browser adapter boundaries rather than introducing a parallel research architecture.
-
-Direction:
-- add a provider-independent web-research orchestration layer over George's canonical tool and permission boundaries;
-- use a locally hosted SearXNG instance as the preferred first search-discovery backend, with search providers remaining replaceable;
-- keep search discovery separate from page retrieval, extraction, semantic compaction, and final reasoning;
-- provide bounded `web_search` and `web_fetch`-style capabilities rather than implicit unrestricted model network access;
-- retrieve ordinary pages through bounded HTTP first, then perform deterministic DOM/article cleanup before model inference;
-- use browser rendering only as a fallback for pages whose useful content cannot be obtained through the normal fetch/extraction path;
-- introduce an optional secondary local utility-model role, separate from George's primary reasoning/coding model, for narrow tasks such as relevance extraction, page compaction, result reranking, long-log compaction, diff summarization, and similar low-cost context preparation;
-- keep utility-model output as derived, bounded context rather than executable authority: the utility model cannot invoke tools, grant permissions, or override George/user/project instructions;
-- preserve source identity, URLs, titles, dates when available, and enough provenance for the primary model to distinguish source evidence from generated summaries;
-- treat all fetched web content as untrusted data and prevent page text or prompt-injection content from becoming higher-authority George instructions;
-- cap search-result counts, fetched bytes, rendered-page resources, per-source context contribution, utility-model output, timeouts, retries, and total research budget;
-- allow iterative search/refinement when local discovery is insufficient;
-- retain Parallel Search or similar services as optional, independently disableable escalation providers for difficult research rather than making a paid API the default web brain;
-- keep search, fetch, browser, extraction, utility inference, and premium-research providers independently replaceable and observable.
-
-Candidate flow:
-
-```text
-primary model / George
-        |
-        +--> search discovery
-        |      +--> local SearXNG (preferred default)
-        |      +--> optional external search providers
-        |
-        +--> bounded page fetch
-        |      +--> HTTP fetch
-        |      +--> deterministic article/DOM extraction
-        |      +--> browser fallback when required
-        |
-        +--> local utility model
-        |      +--> relevance extraction
-        |      +--> semantic compaction
-        |      +--> reranking / evidence shaping
-        |
-        +--> compact source-attributed evidence
-               |
-               +--> primary reasoning/coding model
-
-Optional escalation: Parallel Search or another premium research adapter.
-```
-
-Qualification direction:
-- common technical/documentation research can complete without a paid research API when public search/fetch sources are sufficient;
-- the primary model receives materially less irrelevant page content than raw-fetch ingestion while important facts, numbers, dates, caveats, and source provenance survive compaction;
-- hostile page text cannot register tools, expand permissions, or override instruction precedence;
-- JS-heavy/browser-fallback behavior is bounded and does not become the default fetch path;
-- disabling SearXNG, the utility model, browser rendering, or a premium provider produces explicit degradation/fallback behavior rather than hidden coupling;
-- local-vs-premium research quality, latency, context usage, and external API cost can be measured before choosing defaults.
-
-Non-goals for the initial post-MVP implementation:
-- crawling or indexing a private copy of the public web;
-- giving either the primary or utility model unrestricted sockets/network access;
-- allowing the utility model to execute tools or make permission decisions;
-- replacing deterministic HTML/DOM cleanup with an LLM when normal parsing is sufficient;
-- requiring Parallel or another paid provider for ordinary web research.
 
 ## Post-MVP — Living Project Map / Software Graph
 

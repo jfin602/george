@@ -46,6 +46,14 @@ Keep always-on model instructions compact. User personality, project instruction
 
 Project documentation should be routed or retrieved when relevant instead of being blindly concatenated into every model turn. George should measure prompt/context growth and make instruction/context budgeting explicit before long autonomous workflows depend on it.
 
+### Benchmark-driven local performance
+
+George should optimize the existing local primary-model path before adding secondary-model complexity. Performance changes are accepted through measured before/after evidence over the formal benchmark harness, not intuition alone.
+
+The optimization campaign changes one bounded variable at a time and keeps correctness separate from speed: runtime tuning, startup warm-up, adaptive/context-reuse work, independent-tool concurrency, model-call reduction, and optional speculative decoding are each benchmarked before the next change becomes the baseline. Provider-specific runtime tuning remains behind provider/runtime adapters, and performance work may not weaken instruction precedence, tool permissions, recovery, transcript truth, or canonical evidence.
+
+Only after the optimized single-primary-model baseline is frozen should George add a secondary local utility-model role. That model is context-preparation infrastructure, not another authority: it cannot grant permissions, execute tools by instruction, or override George/user/project guidance.
+
 ### Real developer tools
 
 George's mature tool surface includes file discovery/reading, bounded writes/patching, text search, shell/process execution, Git operations, and validation commands.
@@ -210,3 +218,17 @@ Phase 6 succeeds when George can package and use explicit local extensions plus 
 - deterministic fixture evidence remains separate from live external-service/browser qualification.
 
 Phase 6 does not add a plugin marketplace, arbitrary in-process third-party modules, an OS sandbox, automatic semantic tool selection, the post-MVP local web-research/utility-model stack, detached background service ownership, daemon mode, Tauri, scheduling, or multi-agent execution.
+
+## Phase 7-10 performance campaign success condition
+
+Phases 7-10 succeed when George moves from the untouched benchmark baseline to a reproducible optimized single-primary-model baseline through individually measured runtime, context, orchestration, and final provider-acceleration changes. Every accepted optimization must preserve correctness and existing safety/evidence contracts; every rejected experiment remains visible in the performance record. Phase 10 ends with a full-suite consolidated report showing cumulative benefit and remaining bottlenecks.
+
+## Phase 11 utility-model success condition
+
+Phase 11 succeeds when a secondary local utility model can assume at least one bounded compaction/ranking/extraction/routing task with demonstrated net benefit over the optimized Phase 10 primary-only baseline, while remaining unable to grant permissions, execute tools by its own authority, override instruction precedence, or replace canonical session/evidence state.
+
+## Phase 12 local-research success condition
+
+Phase 12 succeeds when representative ordinary technical/documentation research can use local/self-hosted discovery, bounded fetch/extraction, and optional utility-model compaction without requiring a paid research API, while premium providers such as Parallel remain explicit optional escalation paths and fetched content remains untrusted data.
+
+The persistent local service and Tauri desktop are therefore shifted to Phases 13 and 14 respectively, after the core agent path has been benchmarked and optimized.

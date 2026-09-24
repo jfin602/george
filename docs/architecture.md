@@ -46,7 +46,9 @@ The first autonomous loop follows this lifecycle:
 
 Phase 2 uses a simple configurable hard ceiling on tool rounds/calls to prevent infinite loops. Rich budgets, retries, compaction, and long-run recovery remain later-phase concerns.
 
-Tool execution is sequential in Phase 2. Parallel tool execution is deferred until ordering semantics and real need justify it.
+Tool execution is sequential in the Phase 2 baseline. That historical contract remains true for Phase 2 evidence; Phase 9 is the explicit point where George may introduce dependency-safe concurrency.
+
+Phase 9 concurrency must be application/core-owned rather than a TUI or provider-adapter trick. Independent read-only operations may execute concurrently only when their dependency/ordering semantics are explicit. Side-effecting or ambiguous operations remain sequential by default. Concurrent calls retain distinct call/work identities, normal policy/approval/cancellation/output bounds, and deterministic normalized result ordering before provider continuation. A performance optimization may not weaken ToolRegistry validation, permission policy, retry/recovery rules, transcript truth, or evidence completeness.
 
 ### Provider-round assistant commit semantics
 
@@ -127,6 +129,18 @@ Provider responsibilities include:
 
 Provider-native state such as response identifiers may be retained for efficient continuation, but George's normalized session/tool event history remains authoritative and sufficient to diagnose a run.
 
+### Performance optimization boundaries
+
+George treats local-model performance as a measured systems concern rather than a provider-specific shortcut. The formal benchmark harness is developer tooling over the real application/provider/tool path and is the comparison authority for the Phase 7-12 optimization campaign.
+
+Runtime tuning such as LM Studio GPU offload, Flash Attention, KV-cache placement, eval batch size, model residency, warm-up, or speculative decoding belongs at the provider/runtime boundary. George core must not acquire LM Studio-specific policy simply to gain speed.
+
+Context throughput optimization may use adaptive profiles, stable prefixes, provider-native continuation/cache state, or incremental submission where supported, but George-owned instruction precedence, source provenance, context budgets, and canonical normalized history remain authoritative. Provider cache state is disposable optimization state, never the only copy of safety- or recovery-relevant context.
+
+Agent-loop throughput optimization may reduce serialized waits and logical provider rounds only when deterministic orchestration can safely replace an intermediate model decision. It must preserve provider-round assistant commit semantics, permission boundaries, recoverability, and structured evidence.
+
+The optimization workflow is deliberately incremental: one bounded performance change, benchmark, accept/revise/revert, then establish the next baseline. Multiple unmeasured performance changes should not be stacked into one qualification step.
+
 ## Context layer
 
 Owns George-owned model instructions, user-global instructions and personality, repository instruction discovery, selected file/context material, conversation history, tool schemas/results, token/context budgeting, and later summarization/compaction.
@@ -171,6 +185,8 @@ Human-readable Markdown remains an authoring format, not a requirement that ever
 Phase 5 implements compaction as provider-facing derived context over the authoritative normalized session/event history. Versioned compaction checkpoints retain durable-history provenance and do not delete or become the sole copy of the history they summarize. Critical George/user/project instructions, unresolved validation/failure state, pending approvals, interrupted/ambiguous side effects, and current recovery state must remain available whenever safety or correctness requires them.
 
 Compaction/summarization is exposed behind a provider-independent boundary. Deterministic structural reduction is preferred where inference is unnecessary so a later secondary utility model can assume semantic compaction duties without changing session or context architecture.
+
+Phase 11 may attach a secondary local utility model to that boundary only after the Phase 10 optimized primary-model baseline is frozen. Utility inference is subordinate derived-context work: it has no independent permission authority, cannot register or execute tools by instruction, cannot raise instruction precedence, and cannot replace canonical session/evidence state. Utility-model failure or disablement must have an explicit bounded fallback path.
 
 The current Phase 1 behavior that loads bounded raw root `BOOT.md` and `AGENTS.md` content directly into a turn is a bootstrap implementation, not the intended mature context architecture.
 

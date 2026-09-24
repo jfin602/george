@@ -324,3 +324,57 @@ Do not establish hard performance budgets until baseline measurements exist; onc
 ## Closeout truth
 
 Never report a layer as Green unless it was actually exercised. Owner acceptance of a Not Green or Evidence Gap state is a recorded waiver, not retroactive proof.
+
+
+### Benchmark-driven performance qualification
+
+The formal benchmark harness is qualification evidence for performance changes, not a substitute for focused automated correctness, integration tests, or live evidence required elsewhere in this contract.
+
+The current harness contract is:
+- `npm run benchmark -- --suite quick` for representative optimization-gate runs;
+- `npm run benchmark -- --suite full` for broad baseline/consolidation runs;
+- schema version 1 and suite version `v1`;
+- generated artifacts at `artifacts/benchmarks/<run-id>/results.json` and `report.md`, plus `comparison.md` when `--compare` is used;
+- stable case/version identity, environment/Git fingerprint, process-order cold/warm labeling, provider attempt/round counts, tool calls, retries, timing, token usage where reported, memory observations, and deterministic pass/fail criteria.
+
+For Phases 7-10, performance qualification must follow this cycle:
+
+1. start from the last accepted benchmark baseline;
+2. change one bounded performance variable or optimization;
+3. run the required benchmark selection against the new state;
+4. compare latency/resource/call/token metrics **and** task correctness;
+5. explicitly accept, revise, or revert the change;
+6. record the resulting accepted baseline before the next optimization.
+
+Do not stack multiple unmeasured performance changes into one qualification result.
+
+A faster result is not Green performance evidence when correctness regresses, a deterministic case fails, tool/schema behavior becomes invalid, retries materially increase without justification, budget/recovery guarantees weaken, or the comparison is against a materially different unrecorded environment.
+
+Repeated-run aggregates must not hide individual failures. The benchmark's `first-run-in-benchmark-process` and `warm-repeat` labels describe process order only; they are not proof that LM Studio model residency/cache state was cold or warm.
+
+Phase 7 runtime qualification must separately characterize accepted LM Studio/runtime settings and any startup warm-up behavior without leaking provider-specific tuning into core policy.
+
+Phase 8 context qualification must additionally prove:
+- adaptive/smaller context profiles preserve required instruction hierarchy, routed knowledge, headroom, and retrieval correctness;
+- stable/incremental/provider-cached context paths never make provider-native cache state the sole copy of canonical or safety-relevant state;
+- a context speedup does not silently omit critical sources or change logical precedence.
+
+Phase 9 tool-concurrency qualification must additionally prove:
+- only explicitly dependency-safe operations are concurrent;
+- side-effecting/ambiguous operations remain sequential unless separately authorized by a later contract;
+- concurrent calls retain unique lifecycle identities and normal permission/cancellation/output bounds;
+- failure/cancellation of one call does not fabricate success for peers;
+- normalized result ordering supplied to the provider is deterministic;
+- integrated permission, recovery, work-log, and transcript evidence remains complete.
+
+Phase 9 model-call reduction qualification must distinguish logical provider rounds from retry attempts and prove that removed model turns were unnecessary orchestration boundaries rather than lost reasoning/approval/recovery decisions.
+
+Phase 10 closes the primary-model optimization campaign only after a full-suite consolidated run records the original baseline, accepted/rejected experiments, cumulative deltas, correctness state, call counts, token usage where available, and resource footprint. Speculative decoding is retained only if the end-to-end evidence justifies its memory/runtime complexity.
+
+Phase 11 utility-model qualification must prove:
+- utility output is bounded derived context/evidence, not authoritative instructions or canonical session truth;
+- utility inference cannot grant permissions, invoke tools by its own authority, or expand George's capability ceiling;
+- helper routing has net measured benefit against the optimized Phase 10 primary-only baseline after accounting for helper latency, memory pressure, scheduling, and quality;
+- helper failure/disablement degrades explicitly through a documented fallback.
+
+Phase 12 local-research qualification must keep search discovery, fetch, deterministic extraction, browser fallback, utility inference, and premium escalation independently observable/disableable, while preserving source provenance and treating fetched content as untrusted data.

@@ -69,6 +69,22 @@ Return `Planning needed` only when the approved plan no longer safely fits curre
 
 Routine cleanup and bounded repository hygiene should normally be repaired and validated rather than turned into manual gates.
 
+## Benchmark-gated optimization work
+
+The Phase 7-12 performance campaign uses the formal npm benchmark harness as a control instrument over the real George application/provider/tool path.
+
+Canonical optimization loop:
+
+`last accepted baseline -> one bounded optimization -> benchmark -> accept/revise/revert -> record new baseline -> next optimization`
+
+Use:
+- `npm run benchmark -- --suite quick` for representative per-change gates;
+- `npm run benchmark -- --suite full` for initial/final broad qualification or whenever the affected behavior warrants it;
+- `--compare <results.json>` when comparing against a recorded baseline;
+- generated `artifacts/benchmarks/<run-id>/results.json`, `report.md`, and optional `comparison.md` as performance evidence.
+
+Benchmark evidence complements tests and phase qualification; it does not replace them. Do not accept a speed change that regresses deterministic correctness, permission/recovery guarantees, or required evidence semantics. Do not combine multiple unmeasured performance changes into one acceptance gate.
+
 ## Stability questions
 
 Every substantial task should answer:
@@ -86,7 +102,7 @@ Every correction stack must repair the defect, add a permanent executable regres
 
 ## Phase folders
 
-Use `docs/tasks/p1`, `docs/tasks/p2`, etc. Planning records live under `docs/planning/p1-<slug>/`.
+Use `docs/tasks/p1`, `docs/tasks/p2`, etc. Planning records live under `docs/planning/p1-<slug>/`. Multi-digit phase folders such as `p10`, `p11`, and later are supported by the phase runner; phase-derived versions such as `0.10.<prompt>` are valid semantic versions under the runner contract.
 
 Early package versions follow `0.<phase>.<prompt>` for runner compatibility and may be revisited before public release.
 
