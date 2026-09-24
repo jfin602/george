@@ -452,3 +452,10 @@ Accepted Phase 7 runtime baseline remains:
 - GPU KV cache: on;
 - experts: **8**;
 - speculative draft: off.
+
+
+## Expert-count tuning stop decision
+
+The owner elected not to test `num_experts=7` after the `num_experts=6` correctness regression.
+
+Expert-count tuning is closed for Phase 7 with `num_experts=8` retained. The remaining runtime work should target only settings with plausible material latency upside; otherwise Phase 7 should close at the accepted steady-state runtime and move to higher-leverage context/model-call optimization.
