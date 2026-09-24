@@ -272,3 +272,43 @@ Decision:
 - the important result is restoration of the Phase 7 steady-state performance envelope with 12/12 correctness;
 - the earlier severe slowdown is now attributed to the owner-confirmed GPU Offload 0 state rather than the accepted Phase 7 runtime settings;
 - Phase 8 context/prefill characterization may now proceed from this recovered runtime control.
+
+
+## GPU offload experiment — 28
+
+Status: REJECTED — CORRECTNESS / AGENT-LOOP FAILURE
+
+Owner-confirmed main-model GPU Offload UI value: **28**.
+
+Artifact:
+
+`/home/jfin/dev/george/artifacts/benchmarks/2026-09-24T19-33-46-019Z-75928`
+
+Result:
+- 15 / 16 passed;
+- elapsed: 150.42 s;
+- provider/model time: 150.12 s;
+- provider rounds: 55;
+- aggregate average provider round: 2.73 s;
+- retries: 0.
+
+Warm performance when behavior remained normal was faster than the accepted GPU Offload 24 control:
+- repetition 2 provider active time: ~9.71 s over 6 rounds = ~1.62 s/round;
+- repetition 4 provider active time: ~10.11 s over 6 rounds = ~1.69 s/round;
+- representative successful warm cases:
+  - short reasoning: ~0.17-0.18 s;
+  - ~2k context: ~0.81-0.88 s;
+  - structured tool: ~2.85-2.89 s;
+  - independent multi-tool: ~5.86-6.22 s.
+
+However, repetition 3 of `structured-tool-use-001` failed catastrophically:
+- `Tool round limit of 32 exhausted`;
+- ~100.26 s elapsed;
+- the model entered an abnormal repeated-tool loop.
+
+Decision:
+- reject GPU Offload 28 despite its apparent latency improvement when stable;
+- correctness and bounded-agent-loop reliability take precedence over speed;
+- retain GPU Offload 24 as the accepted stable control;
+- bracket the likely performance/stability boundary between 24 and 28;
+- test GPU Offload 26 next as the midpoint before considering 25 or 27.
