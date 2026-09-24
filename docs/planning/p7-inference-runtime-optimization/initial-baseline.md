@@ -487,3 +487,37 @@ Reason:
 - an optimization that cannot load cleanly and preserve normal workstation usability is not an acceptable George runtime configuration.
 
 Phase 7 runtime tuning should stop here unless a later experiment has clearly higher expected upside. The accepted steady-state quick-suite reference remains 12/12 with approximately 1.83 s average provider round.
+
+
+## Final accepted-runtime verification — inconclusive / Not Green
+
+Label: `p7-final-runtime-verify`
+
+Artifact:
+
+`/home/jfin/dev/george/artifacts/benchmarks/2026-09-24T05-42-12-722Z-151109`
+
+The LM Studio pre-run configuration snapshot confirmed restoration of the accepted runtime settings:
+- context length: 32768;
+- eval batch size: 2048;
+- physical batch size: 512;
+- parallel: 1;
+- Flash Attention: on;
+- GPU KV-cache offload: on;
+- experts: 8.
+
+Result:
+- 11 / 12 passed;
+- elapsed: 49.49 s;
+- provider/model time: 49.30 s (99.9%);
+- provider rounds: 19;
+- average provider round: 2.60 s;
+- one `structured-tool-use-001` repetition duplicated the read and made 2 tool calls instead of the required 1.
+
+The first repetition again carried a post-reload/cold-start penalty. Warm latency remained consistent with the accepted runtime neighborhood, but the run is not Green because of the duplicated tool call.
+
+Interpretation:
+- do not treat this as evidence that the restored runtime configuration is slower or incorrect;
+- the same duplicate-tool behavior has appeared in other experiments and may reflect model/run variance rather than the runtime knob under test;
+- do not close Phase 7 from this result alone;
+- perform one final warm confirmation with no reload or setting change.
