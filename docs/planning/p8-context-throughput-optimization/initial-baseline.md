@@ -214,3 +214,16 @@ Decision:
 - keep GPU Offload at 20 for one clean, already-loaded warm confirmation;
 - do not begin Phase 8 context optimization until that confirmation establishes whether the Phase 7 performance envelope is reproducible.
 
+
+
+## GPU offload provenance correction
+
+Owner clarification:
+- the severe runtime slowdown/lag state occurred with the main-model GPU Offload UI value at **0**;
+- the later fast warm-state observation was not evidence that offload 20 caused recovery;
+- the owner has now explicitly set GPU Offload to **24** for the next controlled runtime check.
+
+Interpretation:
+- GPU-offload position is now the leading explanation for the earlier large latency regression;
+- the next benchmark should be treated as the first actual GPU Offload 24 experiment;
+- no Phase 8 context optimization should begin until that run confirms a stable runtime envelope.
