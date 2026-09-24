@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import { promisify } from 'node:util';
 import test from 'node:test';
 
-import { BENCHMARK_CASES, BENCHMARK_SCHEMA_VERSION, BENCHMARK_SUITE_VERSION, aggregates, casesFor, colorizeBenchmarkTerminal, compareBenchmark, createBenchmarkApproval, createBenchmarkFixture, deriveBenchmarkRecord, formatBenchmarkCaseCompleted, formatBenchmarkCaseStarted, formatBenchmarkRunHeader, formatBenchmarkSummary, matchesBenchmarkFixtureEdit, parseBenchmarkArguments, report, runBenchmark, summarizeBenchmarkTiming, writeBenchmarkArtifacts } from '../../../src/benchmark/index.ts';
+import { BENCHMARK_CASES, BENCHMARK_SCHEMA_VERSION, BENCHMARK_SUITE_VERSION, DEFAULT_CONTEXT_BANDS, aggregates, casesFor, colorizeBenchmarkTerminal, compareBenchmark, contextLadderCases, createBenchmarkApproval, createBenchmarkFixture, deriveBenchmarkRecord, formatBenchmarkCaseCompleted, formatBenchmarkCaseStarted, formatBenchmarkRunHeader, formatBenchmarkSummary, formatContextLadderSummary, matchesBenchmarkFixtureEdit, parseBenchmarkArguments, report, runBenchmark, summarizeBenchmarkTiming, writeBenchmarkArtifacts } from '../../../src/benchmark/index.ts';
 import type { ApplicationEvent, ApprovalRequest } from '../../../src/core/index.ts';
 
 const execFileAsync = promisify(execFile);
@@ -14,9 +14,36 @@ const execFileAsync = promisify(execFile);
 test('benchmark CLI parsing is bounded and keeps standard suite defaults', () => {
   assert.deepEqual(parseBenchmarkArguments([]), { suite: 'quick', repetitions: 1 });
   assert.deepEqual(parseBenchmarkArguments(['--suite', 'full', '--repetitions', '3', '--model', 'model']), { suite: 'full', repetitions: 3, model: 'model' });
-  assert.throws(() => parseBenchmarkArguments(['--suite', 'slow']), /quick or full/);
+  assert.throws(() => parseBenchmarkArguments(['--suite', 'slow']), /quick, full, or context/);
   assert.throws(() => parseBenchmarkArguments(['--repetitions', '0']), /1 to 20/);
   assert.throws(() => parseBenchmarkArguments(['--unknown', 'x']), /Unknown benchmark flag/);
+});
+
+test('context suite parses default and custom deterministic ladder bands', () => {
+  assert.deepEqual(DEFAULT_CONTEXT_BANDS, [2048, 4096, 8192, 16384]);
+  assert.deepEqual(casesFor('context').map((item) => item.band), DEFAULT_CONTEXT_BANDS);
+  assert.deepEqual(parseBenchmarkArguments(['--suite', 'context']), { suite: 'context', repetitions: 1 });
+  assert.deepEqual(parseBenchmarkArguments(['--suite', 'context', '--context-bands', '8192,2048,4096']), { suite: 'context', repetitions: 1, contextBands: [2048, 4096, 8192] });
+  assert.throws(() => parseBenchmarkArguments(['--suite', 'context', '--context-bands', '2048,,4096']), /comma-separated/);
+  assert.throws(() => parseBenchmarkArguments(['--suite', 'context', '--context-bands', '2048,2048']), /duplicates/);
+  assert.throws(() => parseBenchmarkArguments(['--suite', 'context', '--context-bands', '0']), /1 to 16384/);
+  assert.throws(() => parseBenchmarkArguments(['--suite', 'quick', '--context-bands', '2048']), /require --suite context/);
+});
+
+test('generated context ladder cases retain identity, order, exact sentinels, and no tools', () => {
+  const cases = contextLadderCases([8192, 2048, 4096]);
+  assert.deepEqual(cases.map((item) => ({ id: item.id, band: item.band })), [
+    { id: 'long-context-2048-001', band: 2048 }, { id: 'long-context-4096-001', band: 4096 }, { id: 'long-context-8192-001', band: 8192 },
+  ]);
+  for (const case_ of cases) {
+    assert.equal(case_.fixture, 'none');
+    assert.equal(case_.expected.answer, `SENTINEL_${case_.band}_ORCHID`);
+    assert.match(case_.input(), new RegExp(`FACT_B=SENTINEL_${case_.band}_ORCHID`));
+    assert.match(case_.input(), /noise evidence remains irrelevant/);
+    assert.equal(case_.expected.tools, undefined);
+  }
+  assert.deepEqual(casesFor('quick').map((item) => item.id), BENCHMARK_CASES.filter((item) => item.suites.includes('quick')).map((item) => item.id));
+  assert.deepEqual(casesFor('full').map((item) => item.id), BENCHMARK_CASES.filter((item) => item.suites.includes('full')).map((item) => item.id));
 });
 
 test('the versioned v2 registry covers each category and quick is a selection of it', () => {
@@ -148,6 +175,22 @@ test('benchmark progress and result formatting is readable without terminal cont
   assert.match(formatBenchmarkSummary({ ...({ schemaVersion: BENCHMARK_SCHEMA_VERSION, suiteVersion: BENCHMARK_SUITE_VERSION, run: { id: 'timing', startedAt: '', suite: 'quick' as const, repetitions: 1, gitCommit: 'abc', dirty: false, node: 'v26', platform: 'linux', architecture: 'x64', cpu: 'fixture', cpuCount: 1, memoryBytes: 1, provider: { type: 'lm-studio-responses' as const, origin: 'http://127.0.0.1:1234', model: 'model' } }, records: [pass], aggregates: aggregates([pass]) }) }, 12_430, 'artifacts'), /Provider\/model: 500ms \| 0\.50s \(4\.0%\)/);
   assert.equal(completed.includes('\u001b['), false);
   assert.match(formatBenchmarkRunHeader({ suite: 'quick', suiteVersion: BENCHMARK_SUITE_VERSION, repetitions: 1, caseCount: 4, totalExecutions: 4, gitCommit: 'abc', dirty: false, provider: { type: 'lm-studio-responses', origin: 'http://127.0.0.1:1234', model: 'model' } }), /George: abc \(clean\)/);
+});
+
+test('context ladder summary reports one deterministic row per band', () => {
+  const [small, large] = contextLadderCases([2048, 4096]);
+  const record = (case_: NonNullable<typeof small>, input: number, elapsed: number, active: number, firstOutput: number, passed = true) => ({
+    ...deriveBenchmarkRecord(case_, [{ type: 'turn.completed', turnId: 't' }], elapsed, 1, 'warm-repeat', 'model', 'http://127.0.0.1:1234'),
+    actualInputTokens: input, elapsedMs: elapsed, providerActiveMs: active, firstOutputLatencyMs: firstOutput, passed,
+  });
+  const records = [record(small!, 2_100, 100, 80, 20), record(small!, 2_200, 120, 90, 30), record(large!, 4_100, 200, 170, 60, false)];
+  const rendered = formatContextLadderSummary(records);
+  assert.match(rendered, /Band \| Provider input tokens \| First output \| Provider\/model \| Elapsed \| Result/);
+  assert.match(rendered, /2048 \| 2,200 \| 30ms \| 90ms \| 120ms \| PASS \(2\/2\)/);
+  assert.match(rendered, /4096 \| 4,100 \| 60ms \| 170ms \| 200ms \| FAIL \(0\/1\)/);
+  const results = { schemaVersion: BENCHMARK_SCHEMA_VERSION, suiteVersion: BENCHMARK_SUITE_VERSION, run: { id: 'context', startedAt: '', suite: 'context' as const, repetitions: 1, gitCommit: 'abc', dirty: false, node: 'v26', platform: 'linux', architecture: 'x64', cpu: 'fixture', cpuCount: 1, memoryBytes: 1, provider: { type: 'lm-studio-responses' as const, origin: 'http://127.0.0.1:1234', model: 'model' } }, records, aggregates: aggregates(records) };
+  assert.match(formatBenchmarkSummary(results, 200, 'artifacts'), /Context ladder/);
+  assert.match(report(results), /## Context ladder/);
 });
 
 test('benchmark failure formatting keeps the deterministic reason visible', () => {
