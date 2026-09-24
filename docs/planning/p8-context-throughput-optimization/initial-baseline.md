@@ -227,3 +227,48 @@ Interpretation:
 - GPU-offload position is now the leading explanation for the earlier large latency regression;
 - the next benchmark should be treated as the first actual GPU Offload 24 experiment;
 - no Phase 8 context optimization should begin until that run confirms a stable runtime envelope.
+
+
+## Runtime recovery accepted — main GPU Offload 24
+
+Status: ACCEPTED AS PHASE 8 STARTING RUNTIME CONTROL
+
+Owner-confirmed experiment state:
+- main-model GPU Offload UI value: **24**;
+- the benchmark label still said `p8-runtime-warm-confirm-offload-20`, but the owner clarified immediately before the run that the actual UI value had been changed to 24;
+- REST-visible runtime settings remained at the accepted Phase 7 values.
+
+Artifact:
+
+`/home/jfin/dev/george/artifacts/benchmarks/2026-09-24T19-26-33-619Z-74834`
+
+Result:
+- 12 / 12 passed;
+- elapsed: 47.68 s;
+- provider/model time: 47.44 s (99.9%);
+- provider rounds: 18;
+- aggregate average provider round: 2.63 s;
+- retries: 0.
+
+The first repetition still carried a large post-load/warm-up penalty.
+
+Warm repetitions 2-3:
+- short reasoning: ~0.18 s;
+- ~2k context: ~0.84-0.89 s;
+- structured tool workflow: ~3.09-3.26 s;
+- independent multi-tool workflow: ~6.44-6.61 s.
+
+Warm provider-round calculation:
+- repetition 2: ~10.76 s provider active time over 6 rounds = ~1.79 s/round;
+- repetition 3: ~10.71 s provider active time over 6 rounds = ~1.78 s/round;
+- combined warm average: approximately **1.79 s/provider round**.
+
+Comparison:
+- accepted Phase 7 warm control: approximately 1.83 s/provider round.
+
+Decision:
+- accept GPU Offload 24 as the stable Phase 8 starting runtime control;
+- do not claim a material speed improvement over the 1.83 s Phase 7 control because the difference is small and within plausible run variance;
+- the important result is restoration of the Phase 7 steady-state performance envelope with 12/12 correctness;
+- the earlier severe slowdown is now attributed to the owner-confirmed GPU Offload 0 state rather than the accepted Phase 7 runtime settings;
+- Phase 8 context/prefill characterization may now proceed from this recovered runtime control.
