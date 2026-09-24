@@ -459,3 +459,31 @@ Accepted Phase 7 runtime baseline remains:
 The owner elected not to test `num_experts=7` after the `num_experts=6` correctness regression.
 
 Expert-count tuning is closed for Phase 7 with `num_experts=8` retained. The remaining runtime work should target only settings with plausible material latency upside; otherwise Phase 7 should close at the accepted steady-state runtime and move to higher-leverage context/model-call optimization.
+
+
+## Aborted runtime experiment 7 — Main model GPU offload to maximum
+
+Status: ABORTED / REJECTED BEFORE BENCHMARK
+
+Experiment intent:
+- increase the main model GPU-offload slider to its maximum;
+- keep the previously accepted Phase 7 runtime settings unchanged otherwise.
+
+Observed before the model finished loading:
+- model load became materially slower;
+- the machine began to lag;
+- LM Studio's debug console showed errors;
+- the model had still not completed loading.
+
+No benchmark was run because the experiment failed the Phase 7 usability/stability gate before inference measurement.
+
+### Decision
+
+Reject the maximum-GPU-offload experiment for this machine/configuration and restore the last accepted runtime state.
+
+Reason:
+- the configuration introduced immediate system pressure and degraded desktop responsiveness;
+- LM Studio reported load-time errors;
+- an optimization that cannot load cleanly and preserve normal workstation usability is not an acceptable George runtime configuration.
+
+Phase 7 runtime tuning should stop here unless a later experiment has clearly higher expected upside. The accepted steady-state quick-suite reference remains 12/12 with approximately 1.83 s average provider round.
