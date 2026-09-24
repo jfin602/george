@@ -1,6 +1,6 @@
 # George MVP Roadmap
 
-Status: CURRENT ROADMAP — PHASE 6 OWNER-CLOSED; PHASE 7 INITIAL BASELINE
+Status: CURRENT ROADMAP — PHASE 7 OWNER-CLOSED; PHASE 8 ACTIVE
 
 The roadmap deliberately proves the provider, read-only tool foundation, real interactive terminal surface, and safe autonomous tool execution before broader coding workflow, networking, or a desktop GUI.
 
@@ -340,7 +340,7 @@ The benchmark harness is the control instrument for Phases 7-12. It must not its
 
 ## Phase 7 — Inference Runtime Optimization
 
-Status: CURRENT PHASE — baseline package `0.7.0`; initial benchmark accepted; runtime experiments active
+Status: OWNER-CLOSED — accepted steady-state runtime control retained; final restored-runtime verification remains Not Green
 
 Goal: establish the fastest reliable primary-model runtime configuration for the pinned Qwen3-Coder/LM Studio path without changing George's higher-level context or agent-loop architecture.
 
@@ -367,7 +367,19 @@ Non-goals:
 - secondary/helper model runtime;
 - daemon or desktop work.
 
+Closeout:
+- formal closeout: `docs/phase-7-closeout.md`;
+- owner closeout: `docs/phase-7-owner-closeout.md`;
+- accepted runtime change: `parallel=1`;
+- accepted warm quick-suite reference: 12/12, 33.03 s total, approximately 1.83 s average provider round;
+- rejected/no-benefit/unstable experiments remain recorded rather than being erased;
+- the final restored-runtime verification remains Not Green because one structured-tool case duplicated a read, and owner acceptance does not relabel that evidence Green.
+
 ## Phase 8 — Context Throughput Optimization
+
+Status: CURRENT PHASE — baseline package `0.8.0`; context characterization and throughput optimization active
+
+Decision/baseline authority: `docs/planning/p8-context-throughput-optimization/initial-baseline.md`.
 
 Goal: reduce provider-facing context/prefill cost while preserving Phase 3 instruction precedence, provenance, smallest-sufficient-working-set behavior, Phase 5 recovery evidence, and provider independence.
 
