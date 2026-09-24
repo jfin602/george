@@ -68,6 +68,8 @@ test('fixture repository completes read tool -> result -> final answer with orig
   assert.deepEqual(provider.calls[0]?.request.tools?.map((tool) => tool.name), ['read_file', 'list_directory', 'search_text', 'git_status', 'git_diff', 'write_file', 'apply_patch', 'run_process', 'parallel_search']);
   assert.deepEqual(provider.calls[1]?.request.continuation?.toolResults[0]?.callId, 'call-read');
   assert.equal(provider.calls[1]?.request.continuation?.toolResults[0]?.result.ok, true);
+  assert.equal(provider.calls[1]?.request.instructions, provider.calls[0]?.request.instructions);
+  assert.deepEqual(provider.calls[1]?.request.tools, provider.calls[0]?.request.tools);
   assert.deepEqual(events.filter((event) => event.type.startsWith('tool.')).map((event) => event.type), ['tool.requested', 'tool.started', 'tool.completed']);
   assert.deepEqual(session.events, events);
   assert.deepEqual(session.transcript, [{ role: 'user', text: 'Read the boot.' }, { role: 'assistant', text: 'The fixture boot was read.' }]);

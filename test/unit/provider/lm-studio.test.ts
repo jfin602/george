@@ -244,6 +244,65 @@ test('LM Studio provider serializes multiple custom tools and structured tool-re
   ]);
 });
 
+test('LM Studio reports a rejected continuation without blind fallback or replay', async (t) => {
+  const requests: unknown[] = [];
+  const { server, baseUrl } = await fixture((request, response) => {
+    let body = '';
+    request.setEncoding('utf8');
+    request.on('data', (chunk: string) => { body += chunk; });
+    request.on('end', () => {
+      requests.push(JSON.parse(body));
+      response.writeHead(422); response.end();
+    });
+  });
+  t.after(() => close(server));
+
+  const request = {
+    instructions: 'Use the registered tools.', input: 'Read.',
+    tools: [{ name: 'read_file', description: 'Read a file.', inputSchema: { type: 'object', properties: {}, additionalProperties: false } }],
+    continuation: { responseId: 'response-1', toolResults: [{ callId: 'call-1', name: 'read_file', result: { ok: true as const, value: 'ok' } }] },
+  };
+  const events: unknown[] = [];
+  await assert.rejects(async () => { for await (const event of new LmStudioResponsesProvider({ baseUrl, model: 'local-model' }).stream(request)) events.push(event); }, (error: unknown) => error instanceof GeorgeError && error.code === 'provider');
+  assert.equal((events.at(-1) as { type: string }).type, 'provider.error');
+  assert.deepEqual(requests, [{ model: 'local-model', instructions: 'Use the registered tools.', previous_response_id: 'response-1', input: [{ type: 'function_call_output', call_id: 'call-1', output: '{"ok":true,"value":"ok"}' }], tools: [{ type: 'function', name: 'read_file', description: 'Read a file.', parameters: request.tools[0].inputSchema }], stream: true }]);
+});
+
+test('LM Studio continuation cancellation and provider errors do not fall back or replay', async (t) => {
+  await t.test('cancellation', async (subtest) => {
+    let requestBody = '';
+    const { server, baseUrl } = await fixture((request, response) => {
+      request.setEncoding('utf8');
+      request.on('data', (chunk: string) => { requestBody += chunk; });
+      request.on('end', () => { response.writeHead(200, { 'content-type': 'text/event-stream' }); response.write('data: {"type":"response.created","response":{"id":"r-1"}}\n\n'); });
+    });
+    subtest.after(() => close(server));
+    const controller = new AbortController();
+    const iterator = new LmStudioResponsesProvider({ baseUrl, model: 'local-model' }).stream({ instructions: 'Keep context.', input: 'ignored', tools: [{ name: 'read_file', description: 'Read.', inputSchema: { type: 'object', properties: {} } }], continuation: { responseId: 'r-0', toolResults: [] } }, { signal: controller.signal })[Symbol.asyncIterator]();
+    assert.equal((await iterator.next()).value?.type, 'provider.response.started');
+    controller.abort();
+    const events: unknown[] = [];
+    await assert.rejects(async () => { for (;;) { const next = await iterator.next(); if (next.done) return; events.push(next.value); } }, (error: unknown) => error instanceof GeorgeError && error.code === 'cancelled');
+    assert.equal((events.at(-1) as { type: string }).type, 'provider.error');
+    assert.deepEqual(JSON.parse(requestBody), { model: 'local-model', instructions: 'Keep context.', previous_response_id: 'r-0', input: [], tools: [{ type: 'function', name: 'read_file', description: 'Read.', parameters: { type: 'object', properties: {} } }], stream: true });
+  });
+
+  await t.test('provider error', async (subtest) => {
+    const requests: unknown[] = [];
+    const { server, baseUrl } = await fixture((request, response) => {
+      let body = '';
+      request.setEncoding('utf8');
+      request.on('data', (chunk: string) => { body += chunk; });
+      request.on('end', () => { requests.push(JSON.parse(body)); response.writeHead(500); response.end(); });
+    });
+    subtest.after(() => close(server));
+    const events: unknown[] = [];
+    await assert.rejects(async () => { for await (const event of new LmStudioResponsesProvider({ baseUrl, model: 'local-model' }).stream({ instructions: 'Keep context.', input: 'ignored', tools: [{ name: 'read_file', description: 'Read.', inputSchema: { type: 'object', properties: {} } }], continuation: { responseId: 'r-0', toolResults: [] } })) events.push(event); }, (error: unknown) => error instanceof GeorgeError && error.code === 'provider');
+    assert.equal((events.at(-1) as { type: string }).type, 'provider.error');
+    assert.deepEqual(requests, [{ model: 'local-model', instructions: 'Keep context.', previous_response_id: 'r-0', input: [], tools: [{ type: 'function', name: 'read_file', description: 'Read.', parameters: { type: 'object', properties: {} } }], stream: true }]);
+  });
+});
+
 test('LM Studio provider requires an explicit model and retains the loopback boundary', async () => {
   const provider = new LmStudioResponsesProvider({ baseUrl: 'http://127.0.0.1:1234' });
   const seen: unknown[] = [];
