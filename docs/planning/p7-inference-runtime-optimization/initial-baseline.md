@@ -143,3 +143,71 @@ Rationale:
 The first-request/reload penalty remains a later startup warm-up experiment and must not be conflated with steady-state throughput.
 
 Future Phase 7 experiments should keep `parallel=1` unless explicitly testing or reverting this decision, and should change only one additional runtime variable at a time.
+
+
+## Rejected runtime experiment 2 — Eval batch size 2048 → 1024
+
+Status: REJECTED
+
+Starting accepted state:
+- `parallel=1`;
+- `eval_batch_size=2048`;
+- `physical_batch_size=512`;
+- Flash Attention enabled;
+- GPU KV-cache offload enabled.
+
+Experiment change:
+
+`eval_batch_size: 2048 -> 1024`
+
+No other runtime/model/context/George setting was intentionally changed.
+
+### First run
+
+Label: `p7-eval-batch-1024`
+
+Artifact:
+
+`/home/jfin/dev/george/artifacts/benchmarks/2026-09-24T05-16-30-644Z-137378`
+
+Result:
+- 12 / 12 passed;
+- elapsed: 58.82 s;
+- provider/model time: 58.57 s (99.9%);
+- average provider round: 3.25 s;
+- the first post-reload requests again showed a large startup penalty.
+
+### Warm verification
+
+Label: `p7-eval-batch-1024-warm-verify`
+
+Artifact:
+
+`/home/jfin/dev/george/artifacts/benchmarks/2026-09-24T05-17-52-280Z-140045`
+
+Result:
+- 11 / 12 passed;
+- elapsed: 35.25 s;
+- provider/model time: 35.08 s (99.9%);
+- provider rounds: 19;
+- average provider round: 1.85 s;
+- one `structured-tool-use-001` repetition failed because the model made 2 tool calls where the case requires exactly 1.
+
+Accepted `eval_batch_size=2048` warm reference:
+- 12 / 12 passed;
+- elapsed: 33.03 s;
+- average provider round: 1.83 s.
+
+### Decision
+
+Reject `eval_batch_size=1024`.
+
+Reason:
+- no convincing latency improvement over the accepted 2048 setting;
+- total warm quick-suite time was slightly worse;
+- average provider-round time was effectively unchanged/slightly worse;
+- correctness regressed from 12/12 to 11/12.
+
+Restore and retain `eval_batch_size=2048` as the accepted Phase 7 runtime baseline.
+
+The first-request/reload penalty remains a separate startup warm-up question.
