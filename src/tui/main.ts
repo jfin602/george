@@ -29,6 +29,7 @@ async function main(): Promise<void> {
     provider: new LmStudioResponsesProvider(config.provider),
     workspace: config.workspace,
     approvalPort: approvals,
+    contextMode: config.context.mode,
     contextProfile: config.context.profile,
     runBudget: config.runBudget,
     userConfigRoot: config.userConfigRoot,

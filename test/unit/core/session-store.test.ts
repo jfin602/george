@@ -90,6 +90,23 @@ test('opening rejects malformed, unsupported, oversized, and invalid normalized 
   await assert.rejects(store.open('session-1', workspace), /byte bound/);
 });
 
+test('pre-adaptive context diagnostics reopen as fixed derived evidence', async () => {
+  const { workspace, state } = await fixture();
+  const store = new LocalSessionStore({ root: state });
+  await mkdir(state);
+  const profile = { id: 'legacy', physicalContextTokens: 10, preferredWorkingSetTokens: { min: 1, max: 9 }, softPressureTokens: 8, providerInputTokens: 9, reservedHeadroomTokens: 1, alwaysOnInstructionTokens: 1 };
+  await writeFile(join(state, 'legacy.json'), JSON.stringify({
+    schemaVersion: DURABLE_SESSION_SCHEMA_VERSION, id: 'legacy', workspace, transcript: [], events: [{
+      type: 'context.assembled', turnId: 'turn-1', diagnostics: { profileId: 'legacy', profile, estimatedTokens: 5, estimator: 'legacy', providerInputBudget: 9, remainingHeadroom: 4, softPressure: false, reservedHeadroom: 1, categoryTokens: { core: 1, project: 0, tools: 0, task: 1, skills: 0, routed: 0, conversation: 3, toolResults: 0 }, activeSourceIds: [], evidence: [] },
+    }],
+  }));
+  const event = (await store.open('legacy', workspace)).events[0];
+  if (event?.type !== 'context.assembled') throw new Error('Expected context diagnostics.');
+  assert.equal(event.diagnostics.mode, 'fixed');
+  assert.deepEqual(event.diagnostics.attemptedProfileIds, []);
+  assert.deepEqual(event.diagnostics.promotionReasons, []);
+});
+
 test('failed persistence preserves the previous complete file', async () => {
   const { workspace, state } = await fixture();
   const store = new LocalSessionStore({ root: state });

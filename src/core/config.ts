@@ -205,7 +205,8 @@ export function resolveGeorgeConfig(
   environment: GeorgeConfigEnvironment = {},
 ): GeorgeConfig {
   const variables = environment.environment ?? process.env;
-  const contextMode = validateContextOperatingMode(input.contextMode ?? 'fixed');
+  // A concrete profile is an explicit compatibility override; otherwise normal operation adapts per turn.
+  const contextMode = validateContextOperatingMode(input.contextMode ?? (input.contextProfile === undefined ? 'adaptive' : 'fixed'));
   if (contextMode === 'adaptive' && input.contextProfile !== undefined) {
     configurationError('Adaptive context mode cannot include a fixed context profile.');
   }

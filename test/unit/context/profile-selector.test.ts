@@ -52,6 +52,15 @@ test('adaptive selection is deterministic and promotes required-source assembly 
   assert.deepEqual(large.promotionReasons, ['required-source-failure']);
 });
 
+test('adaptive soft pressure promotes before a provider-backed compaction decision', async () => {
+  const selected = await adaptive((profile) => assembleContext({
+    invariants: 'invariant', userInput: 'x'.repeat(30_000), maxTokens: profile.providerInputTokens, optionalMaxTokens: profile.softPressureTokens,
+  }));
+  assert.equal(selected.profile.id, MEDIUM_CONTEXT_PROFILE.id);
+  assert.deepEqual(selected.attemptedProfileIds, [ORDINARY_CONTEXT_PROFILE.id, MEDIUM_CONTEXT_PROFILE.id]);
+  assert.deepEqual(selected.promotionReasons, ['soft-pressure']);
+});
+
 test('selected project, routed-document, and activated-skill pressure promote, while low-value defaults may omit', async (t) => {
   const root = await fixture();
   t.after(() => rm(root, { recursive: true, force: true }));

@@ -11,6 +11,7 @@ import { ContextAssemblyError, type AssembledContext, type ContextSource } from 
 
 export type ContextPromotionReason =
   | 'required-source-failure'
+  | 'soft-pressure'
   | 'selected-project-instructions'
   | 'routed-document'
   | 'activated-skill';
@@ -54,6 +55,10 @@ function hasSelectedSourcePressure(probe: Probe): boolean {
   return probe.context?.sources.some((source) => promotionReason(source) !== undefined && (source.disposition === 'omitted' || source.disposition === 'deferred')) ?? false;
 }
 
+function hasSoftPressure(probe: Probe): boolean {
+  return probe.context !== undefined && probe.context.estimatedTokens >= probe.profile.softPressureTokens;
+}
+
 /**
  * Selects an operating profile from real assembly outcomes. Probe outputs are deliberately discarded;
  * callers assemble once more with canonical observations after selection.
@@ -87,6 +92,10 @@ export async function selectContextProfile(options: ContextProfileSelectorOption
     if (current.error) {
       if (index === CONTEXT_PROFILE_ORDER.length - 1) throw current.error;
       promotionReasons.add('required-source-failure');
+      continue;
+    }
+    if (hasSoftPressure(current) && index !== CONTEXT_PROFILE_ORDER.length - 1) {
+      promotionReasons.add('soft-pressure');
       continue;
     }
     if (!hasSelectedSourcePressure(current) || index === CONTEXT_PROFILE_ORDER.length - 1) return {

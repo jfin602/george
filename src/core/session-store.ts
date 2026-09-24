@@ -399,11 +399,18 @@ function safeProfile(value: unknown): ContextProfile {
 
 function safeDiagnostics(value: ContextDiagnostics): ContextDiagnostics {
   const diagnostics = record(value, 'context diagnostics');
-  exactKeys(diagnostics, ['profileId', 'profile', 'estimatedTokens', 'estimator', 'providerInputBudget', 'remainingHeadroom', 'softPressure', 'reservedHeadroom', 'categoryTokens', 'activeSourceIds', 'evidence'], 'context diagnostics');
+  const diagnosticKeys = ['mode', 'profileId', 'profile', 'attemptedProfileIds', 'promotionReasons', 'estimatedTokens', 'estimator', 'providerInputBudget', 'remainingHeadroom', 'softPressure', 'reservedHeadroom', 'categoryTokens', 'activeSourceIds', 'evidence'];
+  if (Object.keys(diagnostics).some((key) => !diagnosticKeys.includes(key))) invalid('context diagnostics has an invalid shape.');
   const categories = record(diagnostics.categoryTokens, 'context categories');
   const categoryKeys = ['core', 'project', 'tools', 'task', 'skills', 'routed', 'conversation', 'toolResults'] as const;
   exactKeys(categories, categoryKeys, 'context categories');
   const activeSourceIds = boundedArray(diagnostics.activeSourceIds, 'context source IDs', 32).map((id) => string(id, 'context source ID', 1024));
+  const attemptedProfileIds = diagnostics.attemptedProfileIds === undefined ? [] : boundedArray(diagnostics.attemptedProfileIds, 'attempted context profiles', 3).map((id) => string(id, 'attempted context profile ID', 256));
+  const promotionReasons = (diagnostics.promotionReasons === undefined ? [] : boundedArray(diagnostics.promotionReasons, 'context promotion reasons', 5)).map((reason) => {
+    const value = string(reason, 'context promotion reason', 64);
+    if (!['required-source-failure', 'soft-pressure', 'selected-project-instructions', 'routed-document', 'activated-skill'].includes(value)) invalid('context promotion reason is invalid.');
+    return value as ContextDiagnostics['promotionReasons'][number];
+  });
   const evidence = boundedArray(diagnostics.evidence, 'context evidence', 32).map((value) => {
     const item = record(value, 'context evidence item');
     const keys = Object.keys(item);
@@ -417,7 +424,9 @@ function safeDiagnostics(value: ContextDiagnostics): ContextDiagnostics {
     };
   });
   return {
-    profileId: string(diagnostics.profileId, 'context profile ID', 256), profile: safeProfile(diagnostics.profile),
+    // Phase-8 fields are derived only; pre-adaptive durable diagnostics were fixed large-profile observations.
+    mode: diagnostics.mode === undefined || diagnostics.mode === 'fixed' ? 'fixed' : diagnostics.mode === 'adaptive' ? 'adaptive' : invalid('context mode is invalid.'),
+    profileId: string(diagnostics.profileId, 'context profile ID', 256), profile: safeProfile(diagnostics.profile), attemptedProfileIds, promotionReasons,
     estimatedTokens: boundedInteger(diagnostics.estimatedTokens, 'estimated context tokens'), estimator: string(diagnostics.estimator, 'context estimator', 256),
     providerInputBudget: boundedInteger(diagnostics.providerInputBudget, 'provider input budget'), remainingHeadroom: boundedInteger(diagnostics.remainingHeadroom, 'remaining context headroom'),
     softPressure: typeof diagnostics.softPressure === 'boolean' ? diagnostics.softPressure : invalid('context soft pressure is invalid.'),

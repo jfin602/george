@@ -21,11 +21,13 @@ import {
   type RunBudgetConfig,
   type RunBudgetDimension,
   validateContextProfile,
+  validateContextOperatingMode,
   validateRunBudget,
   type ApprovalPort,
   type ApprovalRequest,
   type ApplicationEvent,
   type ContextDiagnostics,
+  type ContextOperatingMode,
   type ContextProfile,
   type DiagnosticObserver,
   type GeorgeErrorShape,
@@ -36,8 +38,8 @@ import {
   type Workspace,
 } from '../core/index.ts';
 import {
-  assembleContext, checkpointFor, digest, ContextAssemblyError, ProviderContextCompactor,
-  type AssembledContext, type ContextCheckpoint, type ContextCompactor, type ContextHistorySource,
+  assembleContext, checkpointFor, digest, ContextAssemblyError, ProviderContextCompactor, selectContextProfile,
+  type AssembledContext, type ContextCheckpoint, type ContextCompactor, type ContextHistorySource, type ContextProfileSelection,
 } from '../context/index.ts';
 import { join } from 'node:path';
 import { WorkProjection } from './progress.ts';
@@ -72,6 +74,8 @@ export type OneTurnServiceOptions = Readonly<{
   provider: ModelProvider;
   workspace: string;
   georgeInstructions?: string;
+  /** Omit with no concrete profile for normal adaptive operation. */
+  contextMode?: ContextOperatingMode;
   contextProfile?: ContextProfile;
   userConfigRoot?: string;
   skillRoots?: Partial<SkillRoots>;
@@ -171,7 +175,8 @@ function historyText(entries: readonly TranscriptEntry[]): string {
   return conversation(entries);
 }
 
-function contextDiagnostics(context: Pick<AssembledContext, 'sources' | 'estimatedTokens' | 'estimator'>, profile: ContextProfile): ContextDiagnostics {
+function contextDiagnostics(context: Pick<AssembledContext, 'sources' | 'estimatedTokens' | 'estimator'>, selection: ContextProfileSelection): ContextDiagnostics {
+  const profile = selection.profile;
   const categoryTokens = { core: 0, project: 0, tools: 0, task: 0, skills: 0, routed: 0, conversation: 0, toolResults: 0 };
   for (const source of context.sources) {
     const tokens = source.estimatedTokens ?? 0;
@@ -184,7 +189,8 @@ function contextDiagnostics(context: Pick<AssembledContext, 'sources' | 'estimat
     else categoryTokens.project += tokens;
   }
   return {
-    profileId: profile.id, profile, estimatedTokens: context.estimatedTokens, estimator: context.estimator.kind,
+    mode: selection.mode, profileId: profile.id, profile, attemptedProfileIds: selection.attemptedProfileIds, promotionReasons: selection.promotionReasons,
+    estimatedTokens: context.estimatedTokens, estimator: context.estimator.kind,
     providerInputBudget: profile.providerInputTokens, remainingHeadroom: Math.max(0, profile.providerInputTokens - context.estimatedTokens),
     softPressure: context.estimatedTokens >= profile.softPressureTokens || context.sources.some((source) => source.reason === `would exceed the ${profile.softPressureTokens} token optional budget`), reservedHeadroom: profile.reservedHeadroomTokens,
     categoryTokens, activeSourceIds: context.sources.filter((source) => source.disposition === 'active').slice(0, 32).map((source) => source.id),
@@ -196,6 +202,7 @@ function contextDiagnostics(context: Pick<AssembledContext, 'sources' | 'estimat
 export class AgentLoopApplicationService {
   private readonly provider: ModelProvider;
   private readonly georgeInstructions: string;
+  private readonly contextMode: ContextOperatingMode;
   private readonly profile: ContextProfile;
   private readonly userConfigRoot: string | undefined;
   private readonly maxContextSourceBytes: number | undefined;
@@ -222,6 +229,7 @@ export class AgentLoopApplicationService {
     provider: ModelProvider,
     workspace: Workspace,
     georgeInstructions: string,
+    contextMode: ContextOperatingMode,
     profile: ContextProfile,
     userConfigRoot: string | undefined,
     maxContextSourceBytes: number | undefined,
@@ -243,6 +251,7 @@ export class AgentLoopApplicationService {
     this.provider = provider;
     this.workspace = workspace;
     this.georgeInstructions = georgeInstructions;
+    this.contextMode = contextMode;
     this.profile = profile;
     this.userConfigRoot = userConfigRoot;
     this.maxContextSourceBytes = maxContextSourceBytes;
@@ -519,6 +528,7 @@ export class AgentLoopApplicationService {
     try {
       if (submission.signal?.aborted) throw cancellationError(submission.signal);
       let context: AssembledContext | undefined;
+      let selection: ContextProfileSelection = { mode: this.contextMode, profile: this.profile, attemptedProfileIds: [], promotionReasons: [] };
       try {
         const activatedSkills = submission.activatedSkills === undefined ? undefined : await this.skills.activate(submission.activatedSkills);
         const unresolvedState = safetyState(submission.session);
@@ -528,22 +538,26 @@ export class AgentLoopApplicationService {
             ...(priorTranscript.length === 0 ? [] : [{ id: 'conversation:history', kind: 'conversation' as const, origin: 'user' as const, trust: 'user-intent' as const, text: historyText(priorTranscript) }]),
             { id: 'state:unresolved', kind: 'authoritative-state' as const, origin: 'tooling' as const, trust: 'tooling' as const, text: unresolvedState },
           ];
+        const contextInput = (profile: ContextProfile, history: readonly ContextHistorySource[] | undefined = initialHistory) => ({
+          invariants: this.georgeInstructions, userInput: submission.input,
+          ...(history === undefined
+            ? (priorTranscript.length === 0 ? {} : { conversation: historyText(priorTranscript) })
+            : { historySources: history }),
+          workspace: this.workspace,
+          ...(this.userConfigRoot === undefined ? {} : { userGlobalInstructionsPath: join(this.userConfigRoot, 'instructions.md'), personalityPath: join(this.userConfigRoot, 'personality.md') }),
+          ...(submission.routedDocuments === undefined ? {} : { routedDocuments: submission.routedDocuments }),
+          ...(activatedSkills === undefined ? {} : { activatedSkills }),
+          normalizedToolDefinitions: JSON.stringify(this.registry.definitions), maxTokens: profile.providerInputTokens, optionalMaxTokens: profile.softPressureTokens,
+          ...(this.maxContextSourceBytes === undefined ? {} : { maxSourceBytes: this.maxContextSourceBytes }),
+        });
+        selection = await selectContextProfile({ mode: this.contextMode, profile: this.profile, assemble: (profile) => assembleContext(contextInput(profile)) });
         const observations: Array<Extract<ApplicationEvent, { type: 'context.source' }>> = [];
         let wake: (() => void) | undefined;
         let finished = false;
         let assembled: AssembledContext | undefined;
         let assemblyError: unknown;
         const assembly = assembleContext({
-          invariants: this.georgeInstructions, userInput: submission.input,
-          ...(initialHistory === undefined
-            ? (priorTranscript.length === 0 ? {} : { conversation: historyText(priorTranscript) })
-            : { historySources: initialHistory }),
-          workspace: this.workspace,
-          ...(this.userConfigRoot === undefined ? {} : { userGlobalInstructionsPath: join(this.userConfigRoot, 'instructions.md'), personalityPath: join(this.userConfigRoot, 'personality.md') }),
-          ...(submission.routedDocuments === undefined ? {} : { routedDocuments: submission.routedDocuments }),
-          ...(activatedSkills === undefined ? {} : { activatedSkills }),
-          normalizedToolDefinitions: JSON.stringify(this.registry.definitions), maxTokens: this.profile.providerInputTokens, optionalMaxTokens: this.profile.softPressureTokens,
-          ...(this.maxContextSourceBytes === undefined ? {} : { maxSourceBytes: this.maxContextSourceBytes }),
+          ...contextInput(selection.profile),
           onSource: (source) => {
             observations.push({ type: 'context.source', turnId, sourceId: source.id, kind: source.kind, status: source.status, ...(source.bytes === undefined ? {} : { bytes: source.bytes }) });
             wake?.();
@@ -563,37 +577,26 @@ export class AgentLoopApplicationService {
         }
         await assembly;
         if (assemblyError) {
-          if (!(assemblyError instanceof ContextAssemblyError) || priorTranscript.length <= RECENT_HISTORY_ENTRIES) throw assemblyError;
+          if (!(assemblyError instanceof ContextAssemblyError) || priorTranscript.length <= RECENT_HISTORY_ENTRIES || (selection.mode === 'adaptive' && selection.profile.id !== DEFAULT_CONTEXT_PROFILE.id)) throw assemblyError;
           const compacted = yield* this.compactHistory(submission.session, turnId, budget, priorTranscript, 'hard-pressure', submission.signal, submission.timeoutMs);
           if (!compacted) throw assemblyError;
-          context = await assembleContext({
-            invariants: this.georgeInstructions, userInput: submission.input, historySources: [...compacted, ...(unresolvedState === undefined ? [] : [{ id: 'state:unresolved', kind: 'authoritative-state' as const, origin: 'tooling' as const, trust: 'tooling' as const, text: unresolvedState }])], workspace: this.workspace,
-            ...(this.userConfigRoot === undefined ? {} : { userGlobalInstructionsPath: join(this.userConfigRoot, 'instructions.md'), personalityPath: join(this.userConfigRoot, 'personality.md') }),
-            ...(submission.routedDocuments === undefined ? {} : { routedDocuments: submission.routedDocuments }), ...(activatedSkills === undefined ? {} : { activatedSkills }),
-            normalizedToolDefinitions: JSON.stringify(this.registry.definitions), maxTokens: this.profile.providerInputTokens, optionalMaxTokens: this.profile.softPressureTokens,
-            ...(this.maxContextSourceBytes === undefined ? {} : { maxSourceBytes: this.maxContextSourceBytes }),
-          });
+          const compactedHistory = [...compacted, ...(unresolvedState === undefined ? [] : [{ id: 'state:unresolved', kind: 'authoritative-state' as const, origin: 'tooling' as const, trust: 'tooling' as const, text: unresolvedState }])];
+          context = await assembleContext(contextInput(selection.profile, compactedHistory));
           assemblyError = undefined;
         }
         if (!assembled && !context) throw new GeorgeError('validation', 'Context assembly ended without a result.');
         context ??= assembled!;
-        if (contextDiagnostics(context, this.profile).softPressure && priorTranscript.length > RECENT_HISTORY_ENTRIES) {
+        if ((selection.mode === 'fixed' || selection.profile.id === DEFAULT_CONTEXT_PROFILE.id) && contextDiagnostics(context, selection).softPressure && priorTranscript.length > RECENT_HISTORY_ENTRIES) {
           const compacted = yield* this.compactHistory(submission.session, turnId, budget, priorTranscript, 'soft-pressure', submission.signal, submission.timeoutMs);
-          if (compacted) context = await assembleContext({
-            invariants: this.georgeInstructions, userInput: submission.input, historySources: [...compacted, ...(unresolvedState === undefined ? [] : [{ id: 'state:unresolved', kind: 'authoritative-state' as const, origin: 'tooling' as const, trust: 'tooling' as const, text: unresolvedState }])], workspace: this.workspace,
-            ...(this.userConfigRoot === undefined ? {} : { userGlobalInstructionsPath: join(this.userConfigRoot, 'instructions.md'), personalityPath: join(this.userConfigRoot, 'personality.md') }),
-            ...(submission.routedDocuments === undefined ? {} : { routedDocuments: submission.routedDocuments }), ...(activatedSkills === undefined ? {} : { activatedSkills }),
-            normalizedToolDefinitions: JSON.stringify(this.registry.definitions), maxTokens: this.profile.providerInputTokens, optionalMaxTokens: this.profile.softPressureTokens,
-            ...(this.maxContextSourceBytes === undefined ? {} : { maxSourceBytes: this.maxContextSourceBytes }),
-          });
+          if (compacted) context = await assembleContext(contextInput(selection.profile, [...compacted, ...(unresolvedState === undefined ? [] : [{ id: 'state:unresolved', kind: 'authoritative-state' as const, origin: 'tooling' as const, trust: 'tooling' as const, text: unresolvedState }])]));
         }
       } catch (error) {
-        if (error instanceof ContextAssemblyError) yield* emit({ type: 'context.assembled', turnId, diagnostics: contextDiagnostics(error, this.profile) });
+        if (error instanceof ContextAssemblyError) yield* emit({ type: 'context.assembled', turnId, diagnostics: contextDiagnostics(error, selection) });
         throw error;
       }
       if (!context) throw new GeorgeError('validation', 'Context assembly ended without a result.');
       if (submission.signal?.aborted) throw cancellationError(submission.signal);
-      yield* emit({ type: 'context.assembled', turnId, diagnostics: contextDiagnostics(context, this.profile) });
+      yield* emit({ type: 'context.assembled', turnId, diagnostics: contextDiagnostics(context, selection) });
       yield* this.invokeHooks(submission.session, { name: 'context.assembled', sessionId: submission.session.id, turnId, runId: budget.id }, budget, submission.signal);
       if (submission.signal?.aborted) throw cancellationError(submission.signal);
       yield* this.consumeBudget(submission.session, turnId, budget, 'contextTokens', context.estimatedTokens, submission.signal);
@@ -758,12 +761,14 @@ export async function createAgentLoopApplicationService(
   for (const hook of options.hooks ?? []) hooks.register(hook);
   for (const plugin of enabled.plugins) for (const hook of plugin.manifest.hooks) hooks.register({ id: `plugin:${plugin.manifest.id}:${hook.id}`, event: hook.event, kind: 'process', executable: join(plugin.root, hook.path), arguments: hook.arguments, ...(hook.priority === undefined ? {} : { priority: hook.priority }), ...(hook.timeoutMs === undefined ? {} : { timeoutMs: hook.timeoutMs }), ...(hook.configuration === undefined ? {} : { configuration: hook.configuration }) });
   const commands = new PluginCommandRegistry(enabled.plugins);
+  const contextMode = validateContextOperatingMode(options.contextMode ?? (options.contextProfile === undefined ? 'adaptive' : 'fixed'));
   let service!: AgentLoopApplicationService;
   const plugins = new PluginApplicationService(manager, commands, { skillTurn: (...args) => service.skillTurn(...args) });
   service = new AgentLoopApplicationService(
     options.provider,
     workspace,
     options.georgeInstructions ?? GEORGE_OWNED_INSTRUCTIONS,
+    contextMode,
     validateContextProfile(options.contextProfile ?? DEFAULT_CONTEXT_PROFILE),
     options.userConfigRoot,
     options.maxContextSourceBytes,

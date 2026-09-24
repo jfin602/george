@@ -1,6 +1,6 @@
 import type { GeorgeErrorShape } from './errors.ts';
 import type { ApprovalRequest } from './approval.ts';
-import type { ContextProfile } from './config.ts';
+import type { ContextOperatingMode, ContextProfile } from './config.ts';
 import type { RunBudgetDimension, RunBudgetSnapshot } from './run-budget.ts';
 import type { ToolExecutionMetadata } from './execution.ts';
 
@@ -30,8 +30,11 @@ export type ContextDiagnosticEvidence = Readonly<{
 }>;
 
 export type ContextDiagnostics = Readonly<{
+  mode: ContextOperatingMode;
   profileId: string;
   profile: ContextProfile;
+  attemptedProfileIds: readonly string[];
+  promotionReasons: readonly ('required-source-failure' | 'soft-pressure' | 'selected-project-instructions' | 'routed-document' | 'activated-skill')[];
   estimatedTokens: number;
   estimator: string;
   providerInputBudget: number;
