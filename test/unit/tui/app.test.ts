@@ -20,7 +20,7 @@ import {
   type ProviderStreamOptions,
 } from '../../../src/core/index.ts';
 import { createCodingWorkflowApplicationService, createOneTurnApplicationService, WorkProjection, type OneTurnServiceOptions } from '../../../src/application/index.ts';
-import { GeorgeTui, NEON_THEME, formatElapsedDuration, formatWorkflowTiming, renderTranscript, type GeorgeTuiOptions, type ThinkingClock, type TranscriptWorkEntry } from '../../../src/tui/app.ts';
+import { GeorgeTui, NEON_THEME, formatElapsedDuration, formatThinkingElapsed, formatWorkflowTiming, renderTranscript, type GeorgeTuiOptions, type ThinkingClock, type TranscriptWorkEntry } from '../../../src/tui/app.ts';
 import type { ToolDefinition } from '../../../src/tools/index.ts';
 
 class ScriptedProvider implements ModelProvider {
@@ -221,11 +221,11 @@ test('provider thinking animates deterministically without creating transcript, 
   await provider.started.promise;
   await item.setup.flush();
   assert.equal(clock.size, 1);
-  assert.match(item.setup.captureCharFrame(), /Thinking/);
+  assert.match(item.setup.captureCharFrame(), /Thinking\s+00:00/);
   const eventCount = item.app.session.events.length;
   const activityCount = item.app.session.events.filter((event) => event.type === 'activity.updated').length;
   const work = JSON.stringify(item.app.work);
-  for (const label of ['Thinking.', 'Thinking..', 'Thinking...', 'Thinking']) {
+  for (const label of ['Thinking.   00:00', 'Thinking..  00:00', 'Thinking... 00:00', 'Thinking    00:00']) {
     clock.tick();
     await item.setup.flush();
     assert.equal(item.setup.captureCharFrame().split('\n').find((line) => line.includes('Thinking'))?.trim(), label);
@@ -241,6 +241,11 @@ test('provider thinking animates deterministically without creating transcript, 
   provider.release.resolve();
   await item.app.waitForIdle();
   assert.equal(clock.size, 0);
+});
+
+test('thinking elapsed time renders minutes and seconds', () => {
+  assert.equal(formatThinkingElapsed(0), '00:00');
+  assert.equal(formatThinkingElapsed(61_999), '01:01');
 });
 
 test('tool activity, provider failure, cancellation, and teardown clear the thinking timer', async (t) => {

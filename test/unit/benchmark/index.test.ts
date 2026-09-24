@@ -1,10 +1,10 @@
 import assert from 'node:assert/strict';
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 
-import { BENCHMARK_CASES, BENCHMARK_SCHEMA_VERSION, BENCHMARK_SUITE_VERSION, aggregates, casesFor, compareBenchmark, deriveBenchmarkRecord, parseBenchmarkArguments, report, runBenchmark, writeBenchmarkArtifacts } from '../../../src/benchmark/index.ts';
+import { BENCHMARK_CASES, BENCHMARK_SCHEMA_VERSION, BENCHMARK_SUITE_VERSION, aggregates, casesFor, colorizeBenchmarkTerminal, compareBenchmark, deriveBenchmarkRecord, formatBenchmarkCaseCompleted, formatBenchmarkCaseStarted, formatBenchmarkRunHeader, formatBenchmarkSummary, parseBenchmarkArguments, report, runBenchmark, summarizeBenchmarkTiming, writeBenchmarkArtifacts } from '../../../src/benchmark/index.ts';
 import type { ApplicationEvent } from '../../../src/core/index.ts';
 
 test('benchmark CLI parsing is bounded and keeps standard suite defaults', () => {
@@ -15,8 +15,8 @@ test('benchmark CLI parsing is bounded and keeps standard suite defaults', () =>
   assert.throws(() => parseBenchmarkArguments(['--unknown', 'x']), /Unknown benchmark flag/);
 });
 
-test('the versioned registry covers each v1 category and quick is a selection of it', () => {
-  assert.deepEqual([...new Set(BENCHMARK_CASES.map((item) => item.category))].length, 8);
+test('the versioned v2 registry covers each category and quick is a selection of it', () => {
+  assert.deepEqual([...new Set(BENCHMARK_CASES.map((item) => item.category))].length, 10);
   assert.ok(casesFor('quick').every((item) => BENCHMARK_CASES.includes(item)));
   assert.ok(casesFor('full').length > casesFor('quick').length);
   assert.equal(new Set(BENCHMARK_CASES.map((item) => item.id)).size, BENCHMARK_CASES.length);
@@ -40,15 +40,62 @@ test('event-derived records retain correctness separately from timing and failed
   assert.equal(record.actualInputTokens, 12);
   const failed = deriveBenchmarkRecord(case_, pass.slice(0, -1), 25, 1, 'warm-repeat', 'model', 'http://127.0.0.1:1234');
   assert.equal(failed.passed, false);
-  const code = BENCHMARK_CASES.find((item) => item.id === 'code-understanding-001')!;
-  const explanation = deriveBenchmarkRecord(code, [
-    { type: 'tool.requested', turnId: 't', callId: 'read', name: 'read_file', arguments: '{"path":"architecture.ts"}' },
-    { type: 'assistant.response.completed', turnId: 't', text: 'The dependency is adapter-to-core.' },
-    { type: 'turn.completed', turnId: 't' },
-  ], 1, 1, 'warm-repeat', 'model', 'http://127.0.0.1:1234');
-  assert.equal(explanation.passed, true, 'objective fact checks allow an explanation without LLM grading');
   const tooManyTools = deriveBenchmarkRecord(BENCHMARK_CASES.find((item) => item.id === 'structured-tool-use-001')!, [...pass.slice(0, -1), { type: 'tool.requested', turnId: 't', callId: 'extra', name: 'read_file', arguments: '{"path":"answer.txt"}' }, { type: 'turn.completed', turnId: 't' }], 1, 1, 'warm-repeat', 'model', 'http://127.0.0.1:1234');
   assert.equal(tooManyTools.passed, false);
+});
+
+test('code-understanding requires one read and its exact deterministic answer', () => {
+  const case_ = BENCHMARK_CASES.find((item) => item.id === 'code-understanding-001')!;
+  assert.equal(case_.version, 3);
+  assert.match(case_.input(), /Use read_file exactly once to inspect architecture\.ts\. Then return exactly adapter-to-core\./);
+  assert.deepEqual(case_.expected, { answer: 'adapter-to-core', tools: ['read_file'], toolCallRange: [1, 1] });
+  const events: ApplicationEvent[] = [
+    { type: 'tool.requested', turnId: 't', callId: 'read', name: 'read_file', arguments: '{"path":"architecture.ts"}' },
+    { type: 'assistant.response.completed', turnId: 't', text: 'adapter-to-core' },
+    { type: 'turn.completed', turnId: 't' },
+  ];
+  assert.equal(deriveBenchmarkRecord(case_, events, 1, 1, 'warm-repeat', 'model', 'http://127.0.0.1:1234').passed, true);
+  assert.equal(deriveBenchmarkRecord(case_, events.map((event) => event.type === 'assistant.response.completed' ? { ...event, text: 'The dependency is adapter-to-core.' } : event), 1, 1, 'warm-repeat', 'model', 'http://127.0.0.1:1234').passed, false);
+  assert.equal(deriveBenchmarkRecord(case_, events.filter((event) => event.type !== 'tool.requested'), 1, 1, 'warm-repeat', 'model', 'http://127.0.0.1:1234').passed, false);
+});
+
+test('multi-round fixtures require chained tool evidence and deterministic results', () => {
+  const investigation = BENCHMARK_CASES.find((item) => item.id === 'multi-round-repository-001')!;
+  assert.match(investigation.input(), /Start with investigation\/entry\.txt/);
+  assert.deepEqual(investigation.expected, { answer: 'REPOSITORY_TRACE_CONFIRMED', tools: ['read_file'], toolCallRange: [4, 4] });
+  const investigationEvents: ApplicationEvent[] = [
+    ...Array.from({ length: 4 }, (_, index) => ({ type: 'tool.requested' as const, turnId: 't', callId: `read-${index}`, name: 'read_file', arguments: '{}' })),
+    { type: 'assistant.response.completed', turnId: 't', text: 'REPOSITORY_TRACE_CONFIRMED' }, { type: 'turn.completed', turnId: 't' },
+  ];
+  assert.equal(deriveBenchmarkRecord(investigation, investigationEvents, 1, 1, 'warm-repeat', 'model', 'http://127.0.0.1:1234').passed, true);
+  const workflow = BENCHMARK_CASES.find((item) => item.id === 'multi-round-coding-workflow-001')!;
+  assert.match(workflow.input(), /node --test test\/contract\.test\.js/);
+  assert.deepEqual(workflow.expected.validation, { executable: 'node', arguments: ['--test', 'test/contract.test.js'] });
+  const workflowEvents: ApplicationEvent[] = [
+    ...Array.from({ length: 5 }, (_, index) => ({ type: 'tool.requested' as const, turnId: 't', callId: `read-${index}`, name: 'read_file', arguments: '{}' })),
+    { type: 'tool.requested', turnId: 't', callId: 'write', name: 'write_file', arguments: '{}' }, { type: 'tool.requested', turnId: 't', callId: 'test', name: 'run_process', arguments: '{}' },
+    { type: 'assistant.response.completed', turnId: 't', text: 'REPAIR_VERIFIED' }, { type: 'turn.completed', turnId: 't' },
+  ];
+  assert.equal(deriveBenchmarkRecord(workflow, workflowEvents, 1, 1, 'warm-repeat', 'model', 'http://127.0.0.1:1234').passed, true);
+  assert.equal(deriveBenchmarkRecord(workflow, workflowEvents.map((event) => event.type === 'assistant.response.completed' ? { ...event, text: 'fixed' } : event), 1, 1, 'warm-repeat', 'model', 'http://127.0.0.1:1234').passed, false);
+});
+
+test('event timing attributes provider, tools, approval, and non-overlapping residual time', () => {
+  const events: ApplicationEvent[] = [
+    { type: 'provider.attempt.started', turnId: 't', runId: 'r', attemptId: 'one' }, { type: 'provider.response.completed' },
+    { type: 'tool.started', turnId: 't', callId: 'one', name: 'read_file' }, { type: 'tool.started', turnId: 't', callId: 'two', name: 'read_file' },
+    { type: 'tool.completed', turnId: 't', callId: 'one', name: 'read_file', result: { ok: true, value: null } }, { type: 'tool.completed', turnId: 't', callId: 'two', name: 'read_file', result: { ok: true, value: null } },
+    { type: 'approval.requested', turnId: 't', callId: 'write', request: {} as never }, { type: 'approval.allowed', turnId: 't', callId: 'write', request: {} as never },
+    { type: 'provider.attempt.started', turnId: 't', runId: 'r', attemptId: 'two' }, { type: 'provider.response.completed' },
+    { type: 'assistant.response.completed', turnId: 't', text: '42' }, { type: 'turn.completed', turnId: 't' },
+  ];
+  const record = deriveBenchmarkRecord(BENCHMARK_CASES[0]!, events, 60, 1, 'first-run-in-benchmark-process', 'model', 'http://127.0.0.1:1234', undefined, [0, 10, 12, 14, 25, 26, 27, 31, 32, 52, 53, 60]);
+  assert.deepEqual({ provider: record.providerActiveMs, round: record.providerRoundActiveMs, average: record.averageProviderRoundMs, tools: record.toolExecutionMs, approval: record.approvalWaitMs, other: record.otherMs, rounds: record.providerRounds }, { provider: 30, round: 30, average: 15, tools: 14, approval: 4, other: 12, rounds: 2 });
+  assert.equal(record.providerActivePercent, 50);
+  const timing = summarizeBenchmarkTiming([record]);
+  assert.deepEqual({ provider: timing.providerActiveMs, tools: timing.toolExecutionMs, other: timing.otherMs, rounds: timing.providerRounds, average: timing.averageProviderRoundMs }, { provider: 30, tools: 14, other: 12, rounds: 2, average: 15 });
+  const aggregate = summarizeBenchmarkTiming([record, record]);
+  assert.deepEqual({ provider: aggregate.providerActiveMs, tools: aggregate.toolExecutionMs, other: aggregate.otherMs, rounds: aggregate.providerRounds, average: aggregate.averageProviderRoundMs }, { provider: 60, tools: 28, other: 24, rounds: 4, average: 15 });
 });
 
 test('JSON artifacts, report, aggregates, and comparison remain stable', async (t) => {
@@ -57,14 +104,56 @@ test('JSON artifacts, report, aggregates, and comparison remain stable', async (
   const record = deriveBenchmarkRecord(BENCHMARK_CASES[0]!, [{ type: 'turn.completed', turnId: 't' }], 10, 1, 'first-run-in-benchmark-process', 'model', 'http://127.0.0.1:1234');
   const results = { schemaVersion: BENCHMARK_SCHEMA_VERSION, suiteVersion: BENCHMARK_SUITE_VERSION, run: { id: 'fixture-run', startedAt: '2026-01-01T00:00:00.000Z', suite: 'quick' as const, repetitions: 1, gitCommit: 'abc', dirty: false, node: 'v26', platform: 'linux', architecture: 'x64', cpu: 'fixture', cpuCount: 1, memoryBytes: 1, provider: { type: 'lm-studio-responses' as const, origin: 'http://127.0.0.1:1234', model: 'model' } }, records: [record], aggregates: aggregates([record]) };
   const directory = await writeBenchmarkArtifacts(results, root);
-  assert.match(await readFile(join(directory, 'results.json'), 'utf8'), /"schemaVersion": 1/);
+  assert.match(await readFile(join(directory, 'results.json'), 'utf8'), /"schemaVersion": 2/);
   assert.match(await readFile(join(directory, 'report.md'), 'utf8'), /short-reasoning-001/);
-  assert.match(report(results), /Response-start/);
-  assert.match(await compareBenchmark(join(directory, 'results.json'), results), /elapsed ms delta/);
+  assert.match(report(results), /Provider-active ms/);
+  assert.doesNotMatch(report(results), /\u001b\[/);
+  assert.match(await compareBenchmark(join(directory, 'results.json'), results), /provider-active ms delta/);
+  await writeFile(join(root, 'v1.json'), JSON.stringify({ ...results, schemaVersion: 1, suiteVersion: 'v1' }));
+  await assert.rejects(compareBenchmark(join(root, 'v1.json'), results), /Cannot compare benchmark schema\/suite/);
+});
+
+test('benchmark progress and result formatting is readable without terminal control sequences', () => {
+  const pass = deriveBenchmarkRecord(BENCHMARK_CASES[0]!, [{ type: 'provider.attempt.started', turnId: 't', runId: 'r', attemptId: 'a' }, { type: 'provider.text.delta', delta: '42' }, { type: 'provider.response.completed', usage: { inputTokens: 1_284, outputTokens: 3 } }, { type: 'assistant.response.completed', turnId: 't', text: '42' }, { type: 'turn.completed', turnId: 't' }], 12_430, 1, 'first-run-in-benchmark-process', 'model', 'http://127.0.0.1:1234', undefined, [0, 410, 500, 510, 12_430]);
+  const started = formatBenchmarkCaseStarted({ current: 1, total: 36, case_: BENCHMARK_CASES[0]!, repetition: 1, repetitions: 3 });
+  const completed = formatBenchmarkCaseCompleted({ current: 1, total: 36, case_: BENCHMARK_CASES[0]!, repetition: 1, repetitions: 3, record: pass });
+  assert.match(started, /^\[ 1\/36\] RUN  short-reasoning-001/);
+  assert.match(completed, /PASS short-reasoning-001.*12430ms \| 12\.43s/);
+  assert.match(completed, /first output 410ms \| 0\.41s \| input 1,284 \| output 3/);
+  assert.match(completed, /provider 1 attempt \/ 1 round \| active 500ms \| 0\.50s \(4\.0%\) \| tools 0 \| retries 0/);
+  assert.match(formatBenchmarkSummary({ ...({ schemaVersion: BENCHMARK_SCHEMA_VERSION, suiteVersion: BENCHMARK_SUITE_VERSION, run: { id: 'timing', startedAt: '', suite: 'quick' as const, repetitions: 1, gitCommit: 'abc', dirty: false, node: 'v26', platform: 'linux', architecture: 'x64', cpu: 'fixture', cpuCount: 1, memoryBytes: 1, provider: { type: 'lm-studio-responses' as const, origin: 'http://127.0.0.1:1234', model: 'model' } }, records: [pass], aggregates: aggregates([pass]) }) }, 12_430, 'artifacts'), /Provider\/model: 500ms \| 0\.50s \(4\.0%\)/);
+  assert.equal(completed.includes('\u001b['), false);
+  assert.match(formatBenchmarkRunHeader({ suite: 'quick', suiteVersion: BENCHMARK_SUITE_VERSION, repetitions: 1, caseCount: 4, totalExecutions: 4, gitCommit: 'abc', dirty: false, provider: { type: 'lm-studio-responses', origin: 'http://127.0.0.1:1234', model: 'model' } }), /George: abc \(clean\)/);
+});
+
+test('benchmark failure formatting keeps the deterministic reason visible', () => {
+  const case_ = BENCHMARK_CASES.find((item) => item.id === 'structured-tool-use-001')!;
+  const failed = deriveBenchmarkRecord(case_, [{ type: 'tool.requested', turnId: 't', callId: 'one', name: 'read_file', arguments: '{}' }, { type: 'tool.requested', turnId: 't', callId: 'two', name: 'read_file', arguments: '{}' }, { type: 'turn.completed', turnId: 't' }], 21_400, 1, 'warm-repeat', 'model', 'http://127.0.0.1:1234');
+  const rendered = formatBenchmarkCaseCompleted({ current: 12, total: 36, case_, repetition: 1, repetitions: 3, record: failed });
+  assert.match(rendered, /^\[12\/36\] FAIL structured-tool-use-001/);
+  assert.match(rendered, /Expected 1-1 tool calls; observed 2\./);
+  const results = { schemaVersion: BENCHMARK_SCHEMA_VERSION, suiteVersion: BENCHMARK_SUITE_VERSION, run: { id: 'fixture-run', startedAt: '2026-01-01T00:00:00.000Z', suite: 'quick' as const, repetitions: 1, gitCommit: 'abc', dirty: false, node: 'v26', platform: 'linux', architecture: 'x64', cpu: 'fixture', cpuCount: 1, memoryBytes: 1, provider: { type: 'lm-studio-responses' as const, origin: 'http://127.0.0.1:1234', model: 'model' } }, records: [failed], aggregates: aggregates([failed]) };
+  assert.match(formatBenchmarkSummary(results, 272_000, 'artifacts/benchmarks/fixture-run'), /Elapsed:\s+272000ms \| 272\.00s/);
+});
+
+test('benchmark terminal color is semantic and opt-in', () => {
+  const plain = 'Benchmark complete\n[ 3/33] RUN  case\n[ 3/33] PASS case 12ms | 0.01s\n[ 3/33] FAIL case 12ms | 0.01s\nArtifacts:     artifacts/benchmarks/run\nInput tokens:  -';
+  const colored = colorizeBenchmarkTerminal(plain, true);
+  assert.equal(colorizeBenchmarkTerminal(plain, false), plain);
+  assert.equal(colored.replace(/\u001b\[[0-9;]*m/g, ''), plain);
+  assert.match(colored, /\u001b\[1mBenchmark complete/);
+  assert.match(colored, /\u001b\[36mRUN/);
+  assert.match(colored, /\u001b\[32mPASS/);
+  assert.match(colored, /\u001b\[31mFAIL/);
+  assert.match(colored, /\u001b\[33m12ms \| 0\.01s/);
+  assert.match(colored, /\u001b\[36martifacts\/benchmarks\/run/);
 });
 
 test('an unavailable loopback provider produces failed records instead of benchmark passes', async () => {
-  const results = await runBenchmark({ suite: 'quick', repetitions: 1, baseUrl: 'http://127.0.0.1:1' });
+  const progress: string[] = [];
+  const results = await runBenchmark({ suite: 'quick', repetitions: 1, baseUrl: 'http://127.0.0.1:1' }, { onRunStarted: () => progress.push('header'), onCaseStarted: ({ current }) => progress.push(`start-${current}`), onCaseCompleted: ({ current }) => progress.push(`complete-${current}`) });
   assert.equal(results.records.length, casesFor('quick').length);
   assert.ok(results.records.every((record) => !record.passed));
+  assert.ok(results.records.every((record) => record.failureReason !== undefined));
+  assert.deepEqual(progress, ['header', ...results.records.flatMap((_, index) => [`start-${index + 1}`, `complete-${index + 1}`])]);
 });

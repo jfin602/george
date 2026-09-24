@@ -90,6 +90,11 @@ export function formatElapsedDuration(value: number): string {
   return `${milliseconds} | ${seconds}`;
 }
 
+export function formatThinkingElapsed(value: number): string {
+  const seconds = Math.floor(Math.max(0, value) / 1_000);
+  return `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`;
+}
+
 /** Presentation-only timing table; all widths come from the formatted values. */
 export function formatWorkflowTiming(timing: NonNullable<WorkItem['details']['timing']>): string[] {
   const entries = [
@@ -335,6 +340,7 @@ export class GeorgeTui {
   private presentationOrder = 0;
   private revealedAssistant: Readonly<{ index: number; text: string }> | undefined;
   private thinkingTimer: ThinkingTimer | undefined;
+  private thinkingStartedAt: number | undefined;
   private thinkingDots = 0;
   private closed = false;
 
@@ -625,7 +631,7 @@ export class GeorgeTui {
     if (event.type === 'provider.response.started') this.startThinking();
     else if (this.thinkingTimer !== undefined && !this.thinkingContinues(event)) this.stopThinking();
     const activity = activityFor(event);
-    if (activity && !(event.type === 'activity.updated' && event.message === 'Thinking...' && this.thinkingTimer !== undefined)) this.activityView.content = activity;
+    if (activity && event.type !== 'provider.response.started' && !(event.type === 'activity.updated' && event.message === 'Thinking...' && this.thinkingTimer !== undefined)) this.activityView.content = activity;
     this.renderer.requestRender();
     if (event.type === 'assistant.response.completed') await this.revealAssistant(event.text);
   }
@@ -636,11 +642,12 @@ export class GeorgeTui {
 
   private startThinking(): void {
     this.stopThinking();
+    this.thinkingStartedAt = Date.now();
     this.thinkingDots = 0;
-    this.activityView.content = 'Thinking';
+    this.activityView.content = this.thinkingActivity();
     this.thinkingTimer = this.thinkingClock.setInterval(() => {
       this.thinkingDots = (this.thinkingDots + 1) % 4;
-      this.activityView.content = `Thinking${'.'.repeat(this.thinkingDots)}`;
+      this.activityView.content = this.thinkingActivity();
       this.activityView.requestRender();
     }, 333);
     (this.thinkingTimer as { unref?: () => void }).unref?.();
@@ -649,8 +656,11 @@ export class GeorgeTui {
   private stopThinking(): void {
     if (this.thinkingTimer !== undefined) this.thinkingClock.clearInterval(this.thinkingTimer);
     this.thinkingTimer = undefined;
+    this.thinkingStartedAt = undefined;
     this.thinkingDots = 0;
   }
+
+  private thinkingActivity(): string { return `Thinking${'.'.repeat(this.thinkingDots).padEnd(3, ' ')} ${formatThinkingElapsed(Date.now() - (this.thinkingStartedAt ?? Date.now()))}`; }
 
   private refreshTranscript(): void {
     const bodyWidth = this.transcriptView.width - 4;
