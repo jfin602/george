@@ -120,15 +120,21 @@ If a GUI becomes justified, Tauri is the preferred direction: a lightweight nati
 
 Post-MVP, George should help developers understand not only which files changed, but how those changes alter the software system in the target project being worked on.
 
-The long-term project-map capability should maintain a presentation-independent software graph for the active target repository. It should combine deterministic structural evidence from code and configuration with a higher-level semantic architecture model and task/runtime evidence where available.
+The Living Project Map is a presentation-independent software graph plus separate developer-owned view/layout state. It combines deterministic structural evidence from code/configuration, higher-level semantic architecture, and task/runtime evidence without flattening those evidence classes into one source of truth.
 
-The project map is not a diagram of George itself. It describes the target software George is inspecting and modifying.
+The target experience is a living spatial model rather than a giant dependency graph: an architecture-level default view, semantic zoom toward subsystem/module/file/symbol detail, local-graph exploration around the current entity, multiple projections such as dependencies/data flow/tests/current task, and persistent user arrangement that survives compatible graph refreshes.
 
-The map must not degrade into a giant file/dependency graph or a fresh LLM-generated diagram treated as truth on every turn. Deterministic relationships such as files, imports, exports, symbols, routes, schemas, and other statically recoverable structure remain distinct from higher-level semantic interpretations such as "simulation engine", "renderer", "authentication", or "persistence". Model-derived semantic relationships must remain attributable and distinguishable from deterministic evidence.
+Coding work should project expected impact, inspected areas, observed edits, validation, and runtime observations onto the same graph while keeping expected, observed, and validated states distinct. A developer should be able to follow where George is working without presentation state contaminating canonical repository/session evidence.
 
-Coding work should eventually be able to project task impact onto this model so a developer can see expected, current, and validated architectural changes rather than only a flat changed-file list. The underlying graph must remain reusable by terminal, daemon, desktop, or browser presentation adapters.
+Graph truth and canvas layout are separate contracts. Dragging, pinning, grouping, filtering, zooming, or changing projections never changes George's structural understanding of the repository.
 
-Derived project-map state should live in George's own workspace-scoped state by default rather than silently writing metadata into the target repository. A project-owned committed architecture description may be supported later only through an explicit workflow.
+The graph must remain useful with model inference unavailable. Deterministic indexing provides the structural substrate; semantic/model assistance is optional derived enhancement and must not create a primary-model call on every edit.
+
+Derived project-map state lives in George's own workspace-scoped state by default rather than silently writing metadata into the target repository. A project-owned committed architecture description remains a future explicit opt-in workflow.
+
+JSON Canvas is a useful interoperability/export target, not George's internal graph schema. Initial support should be export-only so edits in Obsidian or another canvas application cannot be mistaken for code/architecture evidence.
+
+Detailed design authority: `docs/planning/living-project-map/decision-record.md`.
 
 ## Phase 1 success condition
 

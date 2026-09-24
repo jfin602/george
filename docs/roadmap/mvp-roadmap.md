@@ -516,72 +516,61 @@ Direction:
 
 ## Post-MVP — Living Project Map / Software Graph
 
-Goal: let George maintain a continuously updated, human-readable model of the target software project so developers can see what the system is, how a coding task affects it, and how the architecture changes as work is implemented and validated.
+Goal: let George maintain a continuously updated, human-readable model of the target software project so developers can understand the system, navigate relevant relationships, follow the current coding task, and see how architecture changes as work is implemented and validated.
 
-This capability describes the repository George is working on, not George's own internal architecture. It intentionally follows the MVP and should build on the existing workspace identity, changed-file evidence, session/event stream, reliability, daemon, and presentation boundaries rather than expanding Phase 4.
+Status: designed, not yet assigned a numbered implementation phase.
+
+Decision authority: `docs/planning/living-project-map/decision-record.md`.  
+Graph contract: `docs/planning/living-project-map/graph-contract.md`.  
+Interaction model: `docs/planning/living-project-map/interaction-model.md`.  
+Qualification direction: `docs/planning/living-project-map/qualification-plan.md`.
+
+This capability describes the repository George is working on, not George's own internal architecture. It should build on canonical workspace identity, durable session/change/validation evidence, the utility-model boundary, daemon/service interfaces, and future desktop presentation rather than expanding earlier closed phases.
 
 Direction:
-- build a deterministic repository index for statically recoverable structure such as files, modules, packages, imports/exports, symbols, routes, schemas, and similar relationships appropriate to the target language/framework;
-- maintain a presentation-independent software graph above that index;
-- layer a higher-level semantic architecture model over deterministic evidence without treating model interpretation as structural truth;
-- preserve explicit evidence classes for deterministic structure, semantic interpretation, and task/runtime observations;
-- update the graph incrementally as code/configuration changes, with rebuild/validation paths that detect stale derived state;
-- project coding-task impact onto the graph so expected, currently modified, removed, added, affected, and validated components can be distinguished;
-- distinguish expected blast radius from the actual observed change/validation footprint;
-- favor conceptual architecture plus drill-down over an unreadable all-files dependency graph;
-- support multiple projections over the same graph, including architecture, module/dependency structure, data flow, control/runtime flow where evidence exists, API/network boundaries, database/persistence, tests/validation, and current-task impact;
-- allow runtime/session evidence to augment the project model without converting one observed execution into an unsupported static claim;
-- keep graph construction and state independent from OpenTUI, Tauri, browser, and future network-client presentation choices;
-- store derived index/graph state in George's own workspace-scoped state keyed to canonical workspace identity by default;
-- do not silently write `.george/project-map.json` or equivalent generated metadata into target repositories;
-- permit an explicit future project-owned/committed architecture description only as a separate opt-in workflow.
-
-Candidate evidence model:
-
-```text
-target repository
-       |
-       v
-deterministic structural evidence
-files / imports / symbols / routes / schemas
-       |
-       v
-semantic project model
-components / responsibilities / architecture
-       |
-       v
-task + runtime evidence
-inspected / changed / validated / observed
-       |
-       v
-project-map projections
-architecture / data flow / dependencies / current task
-```
+- deterministic repository indexing for files/modules/packages/imports/exports/symbols/routes/schemas/tests and other statically recoverable structure;
+- one presentation-independent ProjectGraph with explicit deterministic, semantic, and task/runtime evidence classes;
+- separate persistent view/layout state so canvas organization never becomes graph truth;
+- incremental updates that converge to the same deterministic result as a clean rebuild;
+- architecture-first default projection with semantic zoom toward subsystem/module/file/symbol detail;
+- Local Graph traversal around a selected/current entity with depth, direction, and relationship filters;
+- task overlays that keep expected impact, inspected/changed state, runtime observations, and validation evidence distinct;
+- optional Follow George behavior that surfaces current work without continuously stealing manual viewport control;
+- persistent user positioning/pinning/groups with reconciliation across compatible graph refreshes;
+- multiple projections over the same graph: architecture, dependencies, data flow, runtime/control flow, API/network, persistence, tests/validation, current task, and local graph;
+- bounded conceptual projections, aggregation, filtering, and lazy expansion for large repositories rather than rendering every graph node;
+- semantic/model augmentation as optional derived evidence; no primary-model call required on ordinary deterministic refresh/edit paths;
+- workspace-scoped schema-versioned derived state outside the target repository by default;
+- lightweight OpenTUI/text projections independent from a rich GUI;
+- rich Tauri canvas when desktop presentation is available;
+- JSON Canvas 1.0 export as an interoperability adapter, initially export-only and never the canonical George graph format.
 
 Candidate task-delta semantics:
 
 ```text
-baseline -> expected impact -> current edits -> validated state
+baseline -> expected impact -> current edits / observed impact -> validated state
 ```
 
-Qualification direction:
-- deterministic graph construction is stable for the same repository state;
-- incremental updates converge to the same structural graph as a clean rebuild;
-- moves, renames, deletes, and relationship changes do not leave stale edges;
-- deterministic relationships are never fabricated to make a diagram look complete;
-- semantic/model-derived relationships are visibly distinguishable from deterministic evidence;
-- task-delta views accurately reflect observed repository and validation evidence without overstating process causality;
-- stale/incompatible cached graph state fails visibly or rebuilds safely;
-- derived state remains workspace-bound and does not mutate the target repository by default;
-- large-repository indexing, update latency, memory usage, and projection size are characterized before defaults are frozen.
+Candidate implementation slices:
+1. graph foundation and deterministic TypeScript/JavaScript indexing;
+2. incremental/task-aware graph plus Local Graph traversal;
+3. interactive visual map and persistent layout;
+4. semantic architecture augmentation;
+5. JSON Canvas and other justified interoperability adapters.
+
+Qualification must prove deterministic stability, incremental/clean convergence, rename/move/delete correctness, evidence-class separation, task-overlay truth, layout reconciliation, bounded projections, repository non-mutation, model-optional structural operation, performance characteristics, and valid JSON Canvas export/interoperability.
 
 Non-goals for the initial implementation:
-- generating a fresh Mermaid diagram from the model on every turn and treating it as authoritative;
-- visualizing George's own architecture instead of the active target project;
-- rendering every file/symbol at once as the default experience;
-- requiring a browser UI for the graph core;
-- making the software graph part of Phase 4 completion criteria;
-- silently committing generated project-map metadata into user repositories.
+- fresh LLM-generated diagrams treated as authoritative structure;
+- rendering every file/symbol at once by default;
+- primary-model inference after every edit;
+- silently storing graph metadata in the target repository;
+- view/canvas layout becoming architecture truth;
+- Obsidian as a runtime dependency;
+- JSON Canvas as George's internal graph schema;
+- automatic import of third-party canvas edges as code relationships;
+- full historical graph replay;
+- requiring Tauri/browser UI for graph-core use.
 
 ## Later
 
