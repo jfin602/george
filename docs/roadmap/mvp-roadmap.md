@@ -377,23 +377,50 @@ Closeout:
 
 ## Phase 8 — Context Throughput Optimization
 
-Status: CURRENT PHASE — baseline package `0.8.0`; context characterization and throughput optimization active
+Status: CURRENT PHASE — baseline package `0.8.0`; runtime/context measurement complete; adaptive-profile implementation/qualification active
 
-Decision/baseline authority: `docs/planning/p8-context-throughput-optimization/initial-baseline.md`.
+Decision authority: `docs/planning/p8-context-throughput-optimization/decision-record.md`.  
+Measurement/evidence authority: `docs/planning/p8-context-throughput-optimization/initial-baseline.md`.
 
 Goal: reduce provider-facing context/prefill cost while preserving Phase 3 instruction precedence, provenance, smallest-sufficient-working-set behavior, Phase 5 recovery evidence, and provider independence.
 
+Measured control:
+- Qwen3-Coder 30B A3B Q4_K_M through LM Studio;
+- accepted main-model GPU Offload: 26;
+- sustained runtime control: ~1.82 s average provider round over 123 provider rounds;
+- accepted context-ladder baseline at requested 2k/4k/8k/16k bands;
+- cold/first-shape context cost is tracked separately from warm-state prefill cost.
+
+Adaptive profile direction:
+- ordinary: preferred 4,096-6,144; soft pressure 7,168; provider-input ceiling 8,192;
+- medium: preferred 8,192-12,288; soft pressure 14,336; provider-input ceiling 16,384;
+- large: preferred 12,000-18,000; soft pressure 20,000; provider-input ceiling 24,576;
+- all three retain 32,768 physical context, at least 8,192 reserved headroom, and a 2,560 always-on instruction target;
+- the large profile remains value-for-value compatible with the Phase 3 default/fixed profile.
+
 Scope:
-- benchmark adaptive operating profiles for ordinary/small, medium repository, and genuinely large-context work instead of treating maximum physical context as the normal target;
-- preserve explicit headroom and fail/defer behavior for critical budget pressure;
-- preserve stable context source identity/order and avoid injecting unchanged/unrelated material merely because capacity exists;
-- investigate stable prompt prefixes, incremental/changed-context submission, and provider-native reuse/caching where supported;
+- implement explicit adaptive-versus-fixed context mode;
+- select one adaptive profile per user turn before the first provider request;
+- probe/promotion order is ordinary -> medium -> large, with no within-turn oscillation;
+- promote when required/current-task or deliberately selected project/skill/routed context cannot safely fit the smaller profile;
+- preserve omission/defer behavior for genuinely lower-value optional context instead of filling larger profiles merely because capacity exists;
+- treat undersized-profile required-source failure as a promotion signal, not a final failure;
+- keep discarded profile probes deterministic, local, provider-free, tool-free, session-nonmutating, and non-canonical;
+- promote ordinary/medium before invoking provider-backed semantic history compaction;
+- retain Phase 5 compaction/recovery behavior at large-profile pressure;
+- expose selected profile, mode, budgets/headroom, and bounded promotion evidence in context diagnostics;
+- extend context-ladder qualification to include a ~24,576 requested band so all operating regions are exercised;
+- after adaptive profiles qualify, separately investigate stable prompt prefixes, incremental/changed-context submission, and provider-native reuse/caching where supported;
 - keep provider-native cache/continuation state as an optimization only; George's canonical normalized history and context provenance remain authoritative;
 - measure context/input tokens, first-output/response-start timing, correctness, and full workflow latency after each individual context optimization.
 
 Success condition:
-- accepted context changes materially reduce measured cost or latency on representative benchmark cases without retrieval, precedence, recovery, or instruction-following regression;
-- ordinary work uses the smallest sufficient operating profile rather than a larger profile by default;
+- adaptive selection is deterministic and preserves precedence, routing, required context, recovery, and instruction-following behavior;
+- ordinary work uses the smallest sufficient profile rather than the large profile by default;
+- medium/large work promotes rather than silently losing deliberately selected context;
+- profile selection adds no provider call merely to stay within ordinary/medium;
+- accepted profile/context changes materially reduce measured context exposure or latency on representative workloads;
+- fixed-profile override behavior remains stable;
 - provider-specific reuse remains behind adapter boundaries and never becomes the only copy of context/session state.
 
 Non-goals:
@@ -401,7 +428,9 @@ Non-goals:
 - parallel tool execution;
 - model-call batching;
 - speculative decoding;
-- daemon/desktop work.
+- daemon/desktop work;
+- making LM Studio/provider cache state canonical;
+- rewriting Phase 3 or Phase 5 historical evidence.
 
 ## Phase 9 — Agent Loop Throughput
 
