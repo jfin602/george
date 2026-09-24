@@ -136,7 +136,11 @@ Separate **speed** from **quality**. A faster result is not an improvement if it
 
 ## Helper / utility model direction
 
-After the benchmark system exists, the next major direction should be a secondary local helper model.
+The helper model is deliberately **after the primary-model optimization campaign**, not immediately after the benchmark harness.
+
+First, use the benchmark system to optimize George's existing primary-model path one change at a time. Each speed change must be followed by a benchmark run against the same versioned suite before the next optimization is attempted. This leaves George with a measured, highly optimized primary-model baseline before a second model introduces new scheduling, memory, routing, and quality variables.
+
+Only after that campaign is complete should the next major direction become a secondary local helper model.
 
 Candidate responsibilities:
 
@@ -181,11 +185,22 @@ The benchmark system should eventually compare local research against premium re
 - failure rate;
 - hostile/prompt-injection content handling.
 
-Do not build this local replacement before the benchmark harness exists; otherwise there is no stable way to prove whether it is actually better, cheaper, or fast enough.
+Do not build this local replacement until the benchmark harness exists **and the primary-model speed campaign is complete**. Otherwise helper-model gains can become mixed together with unresolved primary-model inefficiencies and there is no clean baseline for deciding whether the extra model is actually worthwhile.
 
-## Additional speed directions
+## Primary-model optimization campaign
 
-These remain important, but should follow the benchmark/helper-model work so their effects can be measured.
+The speed directions below should be executed as a controlled sequence.
+
+For every optimization:
+
+1. start from the last accepted benchmark baseline;
+2. implement or configure **one** bounded speed change;
+3. run the same required benchmark suite;
+4. compare latency, quality, tool/model-call counts, tokens, retries, and resource use against the previous accepted baseline;
+5. keep, revise, or revert the change based on evidence;
+6. record the new accepted baseline before moving to the next optimization.
+
+Avoid stacking multiple unmeasured performance changes together. The goal is to know which changes actually help George and by how much.
 
 ### Adaptive context sizing
 
@@ -276,18 +291,59 @@ Only evaluate it once the benchmark harness can show whether draft-model memory 
 
 ## Proposed planning order
 
-1. **Benchmark harness + standardized/versioned stress suite**
-2. **Baseline current Qwen3-Coder Q4_K_M + LM Studio configuration**
-3. **Helper / utility model evaluation**
-4. **Local research/page compaction path as an alternative to routine Parallel dependence**
-5. **Parallel independent tool execution**
-6. **Primary-model call reduction / deterministic batching**
-7. **Adaptive context/runtime profiles**
-8. **Stable/incremental context and caching experiments**
-9. **Cold-start warm-up and LM Studio tuning experiments**
-10. **Speculative decoding only if benchmark evidence justifies it**
+### Stage 1 — Benchmark tooling
 
-This ordering is intentionally provisional. Benchmark evidence should be allowed to change priorities.
+1. **Build the benchmark harness + standardized/versioned stress suite.**
+2. **Capture the untouched current Qwen3-Coder Q4_K_M + LM Studio baseline.**
+   - The baseline run is part of benchmark-tooling acceptance so every later change has a control.
+
+### Stage 2 — Optimize the existing primary-model path
+
+Apply one speed change at a time. Re-run the same required suite after every change and make the accepted result the next baseline.
+
+3. **Runtime / LM Studio tuning**
+   - benchmark GPU offload, Flash Attention, GPU KV cache, eval batch size, loaded-model persistence, and cold/warm behavior;
+   - keep provider-specific tuning behind the provider/runtime boundary.
+4. **Benchmark and record accepted runtime-tuning baseline.**
+
+5. **Startup warm-up**
+   - test whether a tiny bounded readiness/warm-up request removes the observed first-run penalty.
+6. **Benchmark and keep/revert warm-up based on measured end-to-end value.**
+
+7. **Adaptive context/runtime profiles**
+   - use the smallest sufficient operating band for ordinary, medium, and genuinely large-context work.
+8. **Benchmark context-profile changes for both speed and task quality.**
+
+9. **Stable / incremental context assembly and provider caching experiments**
+   - reduce unnecessary repeated prompt/context processing without weakening precedence, provenance, budgets, or recovery.
+10. **Benchmark and record the accepted context-processing baseline.**
+
+11. **Parallelize independent tools**
+   - begin with dependency-safe read-only operations and preserve deterministic evidence semantics.
+12. **Benchmark end-to-end workflow improvement and concurrency overhead.**
+
+13. **Reduce primary-model call count / deterministic batching**
+   - batch safe deterministic work between inference turns instead of reflexively returning to the model after every operation.
+14. **Benchmark total wall time, model-call count, correctness, and recovery behavior.**
+
+15. **Speculative decoding experiment**
+   - only at this late point, and only if a compatible draft model/runtime configuration is practical.
+16. **Benchmark and retain it only if net end-to-end gains justify memory/complexity cost.**
+
+### Stage 3 — Consolidated optimized baseline
+
+17. **Run the complete benchmark suite against the final accumulated primary-model configuration.**
+18. **Record a consolidated performance report** showing the original baseline, each accepted/rejected optimization, cumulative improvement, quality deltas, and final resource footprint.
+
+The desired outcome is a highly optimized **primary-model + George harness path** whose performance characteristics are understood before adding another model.
+
+### Stage 4 — Helper / utility model
+
+19. **Evaluate a secondary local helper model** against the already-optimized primary baseline for compaction, ranking, extraction, routing, logs, diffs, and similar low-cost work.
+20. **Benchmark helper-model routing itself** so gains are net of its scheduling, memory, inference, and quality costs.
+21. **Then pursue the local research/page-compaction path** as an alternative to routine Parallel dependence, keeping Parallel as an optional escalation provider.
+
+This ordering is intentional: benchmark first, change one variable, benchmark again, and repeat until the existing primary path has been optimized. Only then add the helper model.
 
 ## Questions for the benchmark-design pass
 
@@ -300,6 +356,8 @@ This ordering is intentionally provisional. Benchmark evidence should be allowed
 - How should fixture repositories be versioned and reset between runs?
 - Should tool-use benchmarks include both sequential and future parallel-capable variants?
 - How should model-call and tool-call counts be captured from canonical session evidence?
+- What acceptance threshold should determine whether each speed optimization is kept versus reverted?
+- Which benchmark subset should run after every optimization, and which cases belong only in the full-suite consolidation run?
 - What minimum quality threshold must a smaller helper model meet before it is allowed to compact context for the primary model?
 
 ## Non-decisions
