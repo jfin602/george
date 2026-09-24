@@ -343,3 +343,57 @@ Accepted Phase 7 runtime baseline remains:
 - GPU KV cache: **on**;
 - experts: 8;
 - speculative draft: off.
+
+
+## Rejected runtime experiment 5 — Flash Attention ON → OFF
+
+Status: REJECTED
+
+Starting accepted state:
+- context length: 32768;
+- eval batch size: 2048;
+- physical batch size: 512;
+- parallel: 1;
+- Flash Attention: on;
+- GPU KV-cache offload: on;
+- experts: 8;
+- speculative draft: off.
+
+Experiment change:
+
+`flash_attention: true -> false`
+
+LM Studio configuration was independently confirmed through `/api/v1/models` immediately before the benchmark.
+
+Artifact:
+
+`/home/jfin/dev/george/artifacts/benchmarks/2026-09-24T05-30-41-897Z-144436`
+
+Result:
+- 12 / 12 passed;
+- elapsed: 58.57 s;
+- provider/model time: 58.36 s (99.9%);
+- provider rounds: 18;
+- average provider round: 3.24 s;
+- retries: 0.
+
+The first repetition included the expected post-reload penalty. Warm repetitions were still materially slower than the accepted Flash-Attention-on baseline on the short/context/tool cases.
+
+### Decision
+
+Reject Flash Attention OFF and restore `flash_attention=true`.
+
+Reason:
+- no latency benefit;
+- warm steady-state short/context/tool cases regressed materially;
+- no correctness or reliability advantage was observed.
+
+Accepted Phase 7 runtime baseline remains:
+- context length: 32768;
+- eval batch size: 2048;
+- physical batch size: 512;
+- parallel: 1;
+- Flash Attention: **on**;
+- GPU KV cache: on;
+- experts: 8;
+- speculative draft: off.
