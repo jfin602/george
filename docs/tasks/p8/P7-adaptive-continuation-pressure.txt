@@ -1,0 +1,75 @@
+TASK: Phase 8 / P7 — Adaptive continuation-pressure hardening
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Terra High`.
+- Browser required: no.
+
+VERSIONING
+- This prompt's assigned project version is `0.8.7`.
+
+GOAL
+
+Qualify and, only if evidence requires it, narrowly harden the accepted Phase-8 adaptive context candidate against within-turn context growth after ordinary or medium has already been selected and frozen.
+
+Read `BOOT.md`, `AGENTS.md`, current product/architecture/workflow/stability/roadmap contracts, the Phase-8 decision/assessment/plan, exact current source/tests, `docs/tasks/p8/P6-qualification-evidence.md`, and accepted P4/P5 experiment records before editing.
+
+This is a post-P6 hardening gate, not a new optimization experiment.
+
+PRIMARY RISK TO PROVE
+
+A turn may legitimately select ordinary or medium from its initial assembled working set, then accumulate substantial file/search/tool-result material over multiple continuation rounds. Because the selected profile is immutable for that turn, George must never respond to later pressure by silently dropping required/current task evidence, selected routed/project guidance, activated skill context, authoritative unresolved state, or other correctness-critical material.
+
+Build deterministic/integrated coverage that exercises at minimum:
+- an initially ordinary-selected turn that performs multiple substantial tool/file-result rounds;
+- a medium-selected turn with the same class of growth where useful to cover the next envelope;
+- provider continuation/reuse in the exact accepted P5 state, including fallback behavior;
+- context/token growth near the selected profile's effective provider-input boundary;
+- preservation of current user intent, George invariants, required tool context, applicable selected project guidance, explicitly routed documents, activated skills, and authoritative unresolved/recovery state;
+- bounded truthful behavior when the frozen envelope can no longer safely represent the turn.
+
+Acceptance behavior:
+- no silent truncation or disappearance of correctness-critical context;
+- no hidden semantic summarization merely to remain inside ordinary/medium;
+- no extra model call introduced solely as an adaptive-profile workaround;
+- no mid-turn profile downgrade or oscillation;
+- preserve the approved per-turn profile-immutability contract unless current source proves that contract cannot be made safe without a material architecture change;
+- if the selected envelope cannot continue safely, George must degrade/fail explicitly under the existing context/run-budget contract rather than silently discard critical evidence.
+
+First test the current candidate before changing implementation. If current behavior is already safe, add the permanent regression coverage and evidence only.
+
+If a defect is confirmed, implement the smallest correction that preserves current architecture. Prefer, in order:
+1. conservative deterministic turn-growth reserve/selection pressure where justified by already-known turn inputs;
+2. explicit continuation/context-budget enforcement before unsafe loss;
+3. explicit bounded failure/degradation with truthful diagnostics.
+
+Do not introduce helper-model summarization, new semantic relevance classification, mid-turn adaptive resizing, Phase-9 parallelism, new provider-cache authority, or unrelated performance changes inside this prompt. If safe repair would require changing the approved per-turn immutability architecture, stop with `Planning needed` and record the exact failing evidence rather than improvising a redesign.
+
+Diagnostics/evidence must make the pressure outcome observable without raw source bodies or hidden reasoning.
+
+Create `docs/tasks/p8/P7-continuation-pressure-evidence.md` containing:
+- exact candidate SHA/version;
+- fixture shapes and selected profiles;
+- observed provider/context growth;
+- whether current behavior was already safe or required correction;
+- exact permanent regression guards added;
+- focused and broad affected validation;
+- Green / Not Green / Evidence Gap truth.
+
+Set `package.json` to `0.8.7`.
+
+Required proof:
+- focused continuation-pressure regression tests;
+- affected context/application/provider/compaction tests;
+- multi-round tool continuation retains the frozen selected profile;
+- correctness-critical context is not silently lost under growth;
+- ordinary/medium do not invoke provider-backed semantic compaction as a squeeze mechanism;
+- accepted P5 continuation/reuse semantics and fallback remain intact;
+- no permission/session/recovery authority regression;
+- `npm run typecheck`;
+- `npm test`;
+- `npm run test:runner`;
+- appropriate quick/integration benchmark evidence if the changed boundary affects provider-facing performance;
+- `git diff --check`;
+- explicit no-`package-lock.json`.
+
+Do not owner-close Phase 8 or advance Phase 9.
