@@ -1,0 +1,76 @@
+TASK: Phase 8 / P3 — Adaptive profile qualification and 24k ladder
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Terra High`.
+- Browser required: no.
+
+VERSIONING
+- This prompt's assigned project version is `0.8.3`.
+
+GOAL
+
+Qualify the exact P1-P2 adaptive-profile candidate and extend only the benchmark requested-band tooling needed for the approved large-region live test.
+
+Read BOOT/current contracts, Phase-8 decision/plan, exact P1-P2 source/tests, and accepted Phase-8 baseline evidence.
+
+Raise the context benchmark requested-band safety ceiling only enough to accept `24576`. Do not change runtime context ceilings, profile values, or normal context policy.
+
+Add deterministic qualification proving:
+- ordinary fixture selects ordinary;
+- medium fixture promotes/selects medium;
+- large fixture promotes/selects large;
+- identical source/session state gives identical result/evidence;
+- fixed ordinary/medium/large never auto-promote;
+- required-source failure under ordinary/medium promotes;
+- applicable selected project instructions, explicitly routed docs, and activated skills promote when needed;
+- genuinely lower-value optional context may still omit/defer;
+- probes make no provider/tool/hook/session/permission side effects and do not duplicate canonical source evidence;
+- source precedence/order remains stable;
+- selected profile remains fixed through tool continuation;
+- ordinary/medium cause zero provider-backed compaction calls;
+- large preserves Phase-5 soft/hard compaction/checkpoint/recovery behavior;
+- diagnostics expose bounded mode/attempt/promotion evidence.
+
+When the accepted local LM Studio runtime is available, run this exact controlled command:
+
+```bash
+echo "MANUAL CHECK: LM Studio GPU Offload must show 26" && \
+curl -fsS http://127.0.0.1:1234/api/v1/models | jq '
+.models[]
+| select(.key == "qwen3-coder-30b-a3b-instruct@q4_k_m")
+| {
+    key,
+    loaded_instances: [
+      .loaded_instances[]
+      | {
+          id,
+          context_length: .config.context_length,
+          eval_batch_size: .config.eval_batch_size,
+          physical_batch_size: .config.physical_batch_size,
+          parallel: .config.parallel,
+          flash_attention: .config.flash_attention,
+          offload_kv_cache_to_gpu: .config.offload_kv_cache_to_gpu,
+          num_experts: .config.num_experts
+        }
+    ]
+  }
+' && \
+npm run benchmark -- \
+  --suite context \
+  --context-bands 2048,4096,8192,16384,24576 \
+  --repetitions 3 \
+  --label p8-adaptive-profile-qualification \
+  --compare /home/jfin/dev/george/artifacts/benchmarks/2026-09-24T20-03-38-980Z-90704/results.json
+```
+
+Do not claim controlled live evidence unless the REST-visible settings match the accepted control and GPU Offload 26 is independently confirmed in LM Studio. Missing live runtime is Evidence Gap.
+
+Record cold/first-shape separately from warm-state timing and keep correctness separate from speed.
+
+Create `docs/tasks/p8/P3-adaptive-qualification-evidence.md` with exact candidate SHA/runtime provenance, deterministic results, live artifact if available, and Green / Not Green / Evidence Gap truth.
+
+Set `package.json` to `0.8.3`.
+
+Run focused tests, typecheck, broad tests, runner tests, `git diff --check`, and no `package-lock.json`. Preserve the known pre-existing TUI Not Green failures if they still reproduce; do not hide or relabel them.
+
+P3 is a hard gate. Do not begin prefix/provider-reuse optimization inside this prompt.
