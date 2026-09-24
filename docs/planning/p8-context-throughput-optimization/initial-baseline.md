@@ -401,3 +401,69 @@ Decision:
 - preserve the 77/80 behavioral result as Not Green rather than rewriting it as a pass;
 - treat duplicate-tool-call robustness as a separate model/agent-loop concern rather than continuing GPU-offload micro-tuning;
 - proceed with Phase 8 context/prefill work from GPU Offload 26.
+
+
+## Accepted Phase 8 context ladder baseline
+
+Status: ACCEPTED BASELINE — CONTEXT LADDER TOOLING ACTIVE
+
+Benchmark:
+`npm run benchmark -- --suite context --context-bands 2048,4096,8192,16384 --repetitions 3 --label p8-context-ladder-baseline`
+
+Artifact:
+
+`/home/jfin/dev/george/artifacts/benchmarks/2026-09-24T20-03-38-980Z-90704`
+
+Benchmark provenance:
+- package: `0.8.0`;
+- George commit: `ad33f2da1af22cf259b465cf8f5a06bf82f07941` clean;
+- model: `qwen3-coder-30b-a3b-instruct@q4_k_m`;
+- runtime control: GPU Offload 26 plus the accepted Phase 7/8 settings;
+- suite: `context v2`;
+- 4 bands × 3 repetitions = 12 executions.
+
+Result:
+- 12 / 12 passed;
+- retries: 0;
+- tool calls: 0;
+- total provider input tokens: 59,838;
+- total output tokens: 135.
+
+Reported context-ladder medians:
+
+| Requested band | Actual provider input | First output | Provider/model | Elapsed | Result |
+| ---: | ---: | ---: | ---: | ---: | --- |
+| 2,048 | 1,466 | 355 ms | 1,140 ms | 1,142 ms | 3/3 PASS |
+| 4,096 | 2,746 | 192 ms | 1,092 ms | 1,094 ms | 3/3 PASS |
+| 8,192 | 5,306 | 262 ms | 1,499 ms | 1,502 ms | 3/3 PASS |
+| 16,384 | 10,428 | 421 ms | 2,266 ms | 2,267 ms | 3/3 PASS |
+
+### Cold/shape-warm-up observation
+
+The first pass through the larger context shapes was dramatically slower than later repetitions:
+- 4k rep 1: ~11.53 s provider/model;
+- 8k rep 1: ~24.93 s;
+- 16k rep 1: ~63.87 s.
+
+Repetitions 2-3 were much faster and stable:
+- 2k warm average: ~1.15 s provider/model;
+- 4k warm average: ~1.06 s;
+- 8k warm average: ~1.46 s;
+- 16k warm average: ~2.24 s.
+
+Approximate warm first-output averages:
+- 2k: ~357 ms;
+- 4k: ~180 ms;
+- 8k: ~252 ms;
+- 16k: ~418 ms.
+
+Interpretation:
+- Phase 8 must distinguish cold/first-shape cost from steady-state context/prefill cost;
+- the steady-state cost curve is relatively shallow through ~8k and becomes more material by ~16k;
+- the 4k result being slightly faster than 2k is within run variance/cache effects and should not be treated as a monotonic speed law;
+- no context-policy change has been made yet.
+
+Decision:
+- accept this run as the first Phase 8 context/prefill comparison baseline;
+- use this context suite for subsequent one-change-at-a-time Phase 8 experiments;
+- next design work should define adaptive operating profiles/headroom from these measured bands before modifying context assembly.
