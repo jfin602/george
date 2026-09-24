@@ -1,0 +1,40 @@
+TASK: Phase 8 / P4 — Stable provider-facing prefix experiment
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Terra High`.
+- Browser required: no.
+
+VERSIONING
+- This prompt's assigned project version is `0.8.4`.
+
+GOAL
+
+Run one bounded stable-prefix/context-identity optimization experiment from the accepted P3 adaptive baseline.
+
+Read P3 evidence and inspect exact context rendering and provider request construction before editing. The assembler already has deterministic source identity/order; do not manufacture a rewrite if no safe opportunity exists.
+
+Candidate scope is limited to semantically neutral stability of repeated provider-facing material, such as deterministic serialization of unchanged guidance/tool definitions or removal of volatile non-semantic formatting from a repeated prefix.
+
+Must preserve:
+- logical trust/precedence;
+- message roles/channels;
+- selected source set/dispositions;
+- adaptive thresholds/selection;
+- current user/task state;
+- tool schemas/permissions;
+- canonical session/context truth.
+
+Do not add provider-native cache authority or continuation changes in P4.
+
+Add deterministic tests proving byte-stable repeated portions for identical logical context and no logical precedence/source-set change.
+
+Benchmark exactly one candidate against the accepted P3 baseline using the formal harness and controlled LM Studio runtime. Record exact command/artifact/provenance in `docs/tasks/p8/P4-prefix-experiment.md`.
+
+Acceptance rule:
+- keep only if deterministic correctness remains Green and measured latency/context behavior materially improves or concrete stable-prefix reuse evidence justifies retention;
+- otherwise revert the candidate implementation and record REJECTED / NO MATERIAL BENEFIT truth.
+- do not try a second prefix optimization in the same prompt.
+
+Set `package.json` to `0.8.4` after the final keep/revert decision.
+
+Run focused tests, typecheck, broad tests, runner tests, `git diff --check`, and no `package-lock.json`. Preserve pre-existing unrelated Not Green evidence explicitly.
