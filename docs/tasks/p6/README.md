@@ -1,11 +1,15 @@
 # Phase 6 Task Stack
 
-Status: READY TO EXECUTE
+Status: FORMAL CLOSEOUT EVIDENCE RECORDED — OWNER DECISION PENDING
 
 Phase: 6 — Plugins + External Adapters  
 Execution folder: `p6`  
 Baseline package: `0.6.0`  
 Baseline main: `2ccf0ceff2908e334062e851ac4c181989dd5d0f`
+
+Formal Phase 6 evidence closeout: `docs/phase-6-closeout.md` (P9 / `0.6.9`).
+This records the P8 candidate's qualification truth only; it is not an owner
+closeout or a Phase 7 transition.
 
 Current authority:
 - `BOOT.md`;
