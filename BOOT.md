@@ -74,13 +74,18 @@ The owner explicitly accepts the recorded Phase 7 final restored-runtime Not Gre
 
 **Phase 8 — Context Throughput Optimization — is the current planning/measurement gate.**
 
-Phase 8 starts from `docs/planning/p8-context-throughput-optimization/initial-baseline.md` and the performance worksheet at `docs/planning/performance-benchmarking-worksheet.md`.
+Phase 8 authority:
+- decision record: `docs/planning/p8-context-throughput-optimization/decision-record.md`;
+- measurement/evidence baseline: `docs/planning/p8-context-throughput-optimization/initial-baseline.md`;
+- performance campaign worksheet: `docs/planning/performance-benchmarking-worksheet.md`.
+
+Phase 8 has completed its initial runtime recovery/context-ladder characterization. The current gate is **adaptive ordinary/medium/large context-profile implementation and qualification**.
 
 Phase 8 must continue the benchmark-gated optimization loop:
 
 `last accepted baseline -> one bounded context optimization -> benchmark -> accept/revise/revert -> new baseline`
 
-The first Phase 8 action is to characterize current provider-facing context/prefill cost across representative ordinary, medium, and large-context workloads before changing context behavior.
+Adaptive profile selection must preserve Phase 3 precedence/routing/smallest-sufficient-working-set laws and Phase 5 recovery/compaction semantics. Ordinary/medium profile pressure promotes before provider-backed semantic compaction; fixed-profile overrides remain fixed; selection is finalized per user turn before the first provider request.
 
 Do not stack multiple unmeasured context changes.
 
@@ -119,7 +124,7 @@ Read:
 - stability/testing: `docs/stability-contract.md`;
 - roadmap: `docs/roadmap/mvp-roadmap.md`;
 - Living Project Map / Software Graph, when relevant: `docs/planning/living-project-map/decision-record.md` (then its graph, interaction, and qualification companions as needed);
-- Phase 8 performance authority: `docs/planning/p8-context-throughput-optimization/initial-baseline.md`, `docs/planning/performance-benchmarking-worksheet.md`, and `docs/roadmap/mvp-roadmap.md`;
+- Phase 8 authority: `docs/planning/p8-context-throughput-optimization/decision-record.md`, `docs/planning/p8-context-throughput-optimization/initial-baseline.md`, `docs/planning/performance-benchmarking-worksheet.md`, and `docs/roadmap/mvp-roadmap.md`;
 - Phase 7 closeout/history when needed: `docs/phase-7-closeout.md`, `docs/phase-7-owner-closeout.md`, `docs/planning/p7-inference-runtime-optimization/initial-baseline.md`;
 - Phase 6 closeout/history when needed: `docs/phase-6-closeout.md`, `docs/phase-6-owner-closeout.md`, `docs/planning/p6-plugins-external-adapters/decision-record.md`;
 - Phase 5 closeout/history when needed: `docs/phase-5-closeout.md`, `docs/phase-5-owner-closeout.md`, `docs/planning/p5-reliability-long-runs/decision-record.md`;
