@@ -128,3 +128,41 @@ Decision:
 - explicitly load the model with the accepted Phase 7 runtime configuration;
 - confirm a non-empty LM Studio `loaded_instances` snapshot before rerunning;
 - rerun the unchanged full benchmark after provenance is correct.
+
+
+## Runtime control check — Not Green
+
+Label: `p8-runtime-control-check`
+
+Artifact:
+
+`/home/jfin/dev/george/artifacts/benchmarks/2026-09-24T19-10-38-490Z-70898`
+
+Pre-run LM Studio configuration was independently confirmed as:
+- context length: 32768;
+- eval batch size: 2048;
+- physical batch size: 512;
+- parallel: 1;
+- Flash Attention: on;
+- GPU KV-cache offload: on;
+- experts: 8.
+
+Benchmark provenance:
+- package: `0.8.0`;
+- George commit: `91c9f79a59643f1253158feba9145e583383790f` clean.
+
+Result:
+- 11 / 12 passed;
+- elapsed: 74.00 s;
+- provider/model time: 73.67 s (99.9%);
+- provider rounds: 16;
+- average provider round: 4.59 s;
+- one `structured-tool-use-001` repetition failed with `Engine protocol predict request failed: fetch failed`.
+
+Comparison control:
+- accepted Phase 7 warm quick-suite reference: 12 / 12, 33.03 s total, 18 provider rounds, approximately 1.83 s average provider round.
+
+Decision:
+- Phase 8 context optimization is paused until the Phase 7 runtime performance envelope is restored or the source of the regression is explained;
+- do not treat the current 4.59 s/round quick run as the Phase 8 context baseline;
+- visible LM Studio settings match the accepted control, so investigate runtime state not exposed by the current model-list snapshot (especially main model GPU-offload position), system/resource contention, and provider/runtime instability before changing context policy.
