@@ -67,7 +67,8 @@ Phase 7 — Inference Runtime Optimization — is owner-closed.
 
 Formal Phase 7 closeout marker: `a7d2e8491bf354a4317c80f06f1796cbee80ee58`.  
 Phase 7 owner closeout: `docs/phase-7-owner-closeout.md`.  
-Phase 8 baseline transition: `66d28597fc6b69f210bcbe4ebf4ae41a9df77375` at package `0.8.0`.
+Phase 8 planning baseline: `66d28597fc6b69f210bcbe4ebf4ae41a9df77375`.  
+Phase 8 package transition: `cc7fd7a16d95e3057598c8fd8152979e8a25d79c` at package `0.8.0`.
 
 The owner explicitly accepts the recorded Phase 7 final restored-runtime Not Green verification for roadmap progression. It remains Not Green and is not retroactively treated as Green. The accepted Phase 7 steady-state control is the separately Green `parallel=1` warm verification at approximately 1.83 s average provider round.
 
