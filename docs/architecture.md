@@ -467,6 +467,8 @@ Workspace/repository configuration is untrusted relative to George's permission 
 
 Post-MVP, George may maintain a presentation-independent software graph for the target repository being worked on.
 
+Detailed design authority: `docs/planning/living-project-map/decision-record.md`.
+
 The intended boundary is:
 
 ```text
@@ -476,7 +478,7 @@ target repository
 deterministic code/config index
        |
        v
-software graph
+ProjectGraph
    +---+------------------+
    |                      |
 semantic architecture   task/runtime evidence
@@ -484,25 +486,79 @@ semantic architecture   task/runtime evidence
    +----------+-----------+
               |
               v
-presentation adapters
-OpenTUI / Tauri / browser / network client
+projection service
+              |
+        +-----+------+
+        |            |
+        v            v
+graph views      view/layout state
+        |            |
+        +-----+------+
+              |
+              v
+presentation/export adapters
+OpenTUI / Tauri / browser / network client / JSON Canvas
 ```
 
-The graph service belongs below presentation adapters and must not be owned by OpenTUI, Tauri, or a browser renderer. Presentation clients choose layout and interaction; they do not become the authority for project structure.
+The graph service belongs below presentation adapters and must not be owned by OpenTUI, Tauri, a browser renderer, or an export format. Presentation clients choose layout and interaction; they do not become the authority for project structure.
 
-The graph should preserve evidence layers rather than flattening all relationships into equal-confidence edges:
+### Evidence layers
 
-1. **Deterministic structural evidence** — files, modules, imports/exports, symbols, packages, schemas, routes, and other relationships George can recover directly from repository contents.
-2. **Semantic project model** — higher-level components and responsibilities such as renderer, simulation, API, authentication, persistence, or tool system. These may be derived from code, project documentation, and bounded model assistance, but must remain distinguishable from deterministic facts.
-3. **Task/runtime evidence** — what George inspected, changed, validated, or actually observed during execution. Runtime evidence augments static structure but does not rewrite deterministic source relationships.
+The ProjectGraph preserves evidence classes rather than flattening all relationships into equal-confidence edges:
 
-Incremental graph updates should eventually consume authoritative repository/change/session evidence so a coding run can show added, modified, removed, affected, and validated components. Expected task impact and observed impact must remain distinguishable.
+1. **Deterministic structural evidence** — files, modules, imports/exports, symbols, packages, schemas, routes, tests, and other relationships George can recover directly from repository contents.
+2. **Semantic project model** — higher-level components and responsibilities such as renderer, simulation, API, authentication, persistence, or tool system. These may be derived from code, project documentation, explicit metadata, or bounded model assistance, but remain distinguishable from deterministic facts.
+3. **Task/runtime evidence** — expected impact plus what George inspected, changed, validated, or actually observed during execution. Expected, observed, and validated state remain separate.
 
-The software graph should support multiple projections over the same underlying model, including architecture, modules/dependencies, data flow, control/runtime flow where evidence exists, API/network boundaries, persistence/database structure, tests/validation, and current-task impact. The default experience should favor useful conceptual structure and drill-down rather than rendering every file and symbol at once.
+Runtime evidence augments static structure but does not rewrite deterministic source relationships.
 
-Derived graph/index state should be stored in George's own state area keyed to canonical workspace identity by default. George must not silently add `.george/project-map.json` or equivalent metadata to user repositories merely to support this feature. Explicit project-owned/committed architecture metadata may be added later as a separate opt-in contract.
+### Graph truth versus view state
 
-No Phase 4 behavior depends on this future boundary.
+ProjectGraph and visual/canvas state are separate persistent contracts.
+
+ProjectGraph owns evidence and relationships. View state owns node positions, pins, groups, expansion, viewport, zoom, filters, local-graph settings, and similar developer presentation choices.
+
+Changing view state cannot alter ProjectGraph evidence. User-created visual groups are not automatically semantic architecture.
+
+Stable graph identity/reconciliation should preserve compatible view state across ordinary edits, moves, and renames without attaching stale state to unrelated entities.
+
+### Incremental indexing
+
+Incremental graph updates should consume authoritative repository/change/session evidence so coding runs can show added, modified, removed, affected, and validated components.
+
+A clean deterministic rebuild is the correctness oracle. Incremental deterministic updates must converge to the same structural graph as a clean rebuild for the same repository state.
+
+Stale or incompatible derived state rebuilds or fails visibly rather than remaining silently trusted.
+
+### Projections and scale
+
+The software graph supports multiple projections over one underlying model, including architecture, modules/dependencies, data flow, control/runtime flow where evidence exists, API/network boundaries, persistence/database structure, tests/validation, current task, and local graph.
+
+The default experience favors conceptual architecture plus drill-down. Large repositories are handled through projection, aggregation, semantic zoom, local neighborhoods, filtering, and lazy expansion rather than rendering every file/symbol at once.
+
+### Semantic assistance
+
+Deterministic indexing must work without model inference.
+
+Semantic architecture inference is optional derived computation. When available, a bounded utility-model role is preferred for routine classification/clustering/summarization if qualification proves it useful. Routine repository edits must not trigger hidden primary-model calls merely to redraw the map.
+
+Provider/model-specific implementation remains behind existing provider/runtime boundaries.
+
+### Storage
+
+Derived index/graph/semantic/view state is stored in George's own state area keyed to canonical workspace identity by default and schema-versioned.
+
+George must not silently add `.george/project-map.json` or equivalent generated metadata to user repositories merely to support this feature. Explicit project-owned/committed architecture metadata may be added later only through a separate opt-in contract.
+
+### Interoperability
+
+JSON Canvas is an export adapter, not the ProjectGraph representation.
+
+Initial support is export-only. George may project graph/layout information into a standards-compliant `.canvas` snapshot, but visual edits in third-party canvas applications are not automatically imported as structural or semantic project truth.
+
+Writing an export inside the target repository remains an explicit user-selected write through normal George policy.
+
+No current MVP/Phase 7 behavior depends on this future boundary.
 
 ## Phase 6 plugin and external-adapter architecture
 

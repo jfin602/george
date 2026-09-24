@@ -300,20 +300,37 @@ Tests should use fixture repositories with known dirty files and verify George n
 
 ## Future project-graph qualification
 
-When the post-MVP living project map/software graph is implemented, qualification must prove the graph is useful evidence rather than decorative generated prose.
+When the post-MVP Living Project Map / Software Graph is implemented, qualification must prove the graph is useful, truthful development evidence rather than decorative generated prose.
+
+Detailed qualification authority: `docs/planning/living-project-map/qualification-plan.md`.
 
 At minimum, deterministic and integrated coverage should include:
 - identical repository states producing stable deterministic structural graphs;
-- incremental updates converging to the same structural result as a clean rebuild;
+- repeated clean rebuilds remaining stable;
+- incremental updates converging to the same deterministic structural result as a clean rebuild;
 - file/symbol add, delete, move, and rename handling without stale relationships;
-- statically recoverable imports, exports, routes, schemas, or equivalent relationships not being invented or silently dropped;
-- semantic/model-derived architecture relationships remaining distinguishable from deterministic source evidence;
-- expected task impact remaining distinguishable from observed changed/validated impact;
-- runtime observations being labeled as observed runtime evidence rather than generalized into unsupported static claims;
+- statically recoverable imports, exports, routes, schemas, tests, or equivalent relationships not being invented or silently dropped;
+- unsupported analysis degrading explicitly rather than manufacturing structure;
+- semantic/model-derived architecture remaining distinguishable from deterministic source evidence across persistence/reopen;
+- expected task impact remaining distinguishable from observed changed/affected impact and validation evidence;
+- runtime observations remaining labeled/scoped as observed runtime evidence rather than generalized into unsupported static claims;
+- failed/cancelled/timed-out validation never being rendered as validated;
 - stale or incompatible cached graph state being detected and rebuilt or failed visibly rather than silently trusted;
-- derived graph state remaining workspace-bound and not mutating the target repository unless an explicit project-owned workflow authorizes it;
-- presentation adapters producing views from the same graph contract without becoming graph authority;
-- large-repository indexing/update cost, memory growth, and visualization payload size being measured before hard limits are adopted.
+- graph/index/semantic/view state remaining workspace-bound and not mutating the target repository unless an explicit export/project-owned workflow authorizes a write;
+- view/layout mutations being unable to change ProjectGraph evidence;
+- unchanged and reconciled moved/renamed entities preserving compatible saved layout while ambiguous identity does not inherit unrelated layout;
+- Local Graph depth/direction/filter traversal remaining correct and bounded across cycles/high-degree nodes;
+- semantic zoom/projection behavior providing bounded progressive disclosure instead of shipping an unbounded all-nodes payload;
+- presentation adapters consuming the same graph/projection contracts without becoming graph authority;
+- deterministic indexing and structural refresh remaining functional with model inference disabled;
+- ordinary deterministic refresh/edit paths not hiding a required primary-model call;
+- JSON Canvas export satisfying the supported JSON Canvas contract with valid IDs, geometry, endpoints, groups, labels/direction where represented, and no dangling edges;
+- representative exported Canvas files opening successfully in Obsidian when live interoperability qualification is available;
+- large-repository cold indexing, warm reopen, incremental update latency, memory growth, derived-state size, projection construction, local traversal, layout cost, and visualization payload size being measured before hard limits are adopted.
+
+Accessibility/client qualification should additionally prove task/evidence states are not communicated by color alone and that rich-client interaction follows applicable reduced-motion/keyboard/readability expectations.
+
+A live Obsidian/Tauri/model-assisted demonstration supplements deterministic evidence; it does not replace executable graph/index/projection/export tests.
 
 ## Performance
 
