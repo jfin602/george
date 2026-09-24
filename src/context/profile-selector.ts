@@ -90,7 +90,9 @@ export async function selectContextProfile(options: ContextProfileSelectorOption
     if (probes.length === index) await probe(CONTEXT_PROFILE_ORDER[index]!);
     const current = probes[index]!;
     if (current.error) {
-      if (index === CONTEXT_PROFILE_ORDER.length - 1) throw current.error;
+      if (index === CONTEXT_PROFILE_ORDER.length - 1) return {
+        mode: 'adaptive', profile: current.profile, attemptedProfileIds: probes.map((item) => item.profile.id), promotionReasons: [...new Set<ContextPromotionReason>([...promotionReasons, 'required-source-failure'])],
+      };
       promotionReasons.add('required-source-failure');
       continue;
     }

@@ -97,15 +97,29 @@ test('normal turns select ordinary, medium, or large before one provider request
     assert.equal(diagnostic.diagnostics.profileId, profile.id);
     assert.equal(provider.calls.length, 1);
   }
-  const provider = new ScriptedProvider([{ type: 'provider.response.completed' }]);
-  const fixed = await createOneTurnApplicationService({ provider, workspace: root, contextProfile: ORDINARY_CONTEXT_PROFILE });
-  const events = await collect(fixed.run({ session: createSession({ workspace: root }), input: 'x'.repeat(36_000) }));
-  const diagnostic = events.find((event) => event.type === 'context.assembled');
-  if (diagnostic?.type !== 'context.assembled') throw new Error('Expected context diagnostics.');
-  assert.equal(diagnostic.diagnostics.mode, 'fixed');
-  assert.equal(diagnostic.diagnostics.profileId, ORDINARY_CONTEXT_PROFILE.id);
-  assert.deepEqual(diagnostic.diagnostics.attemptedProfileIds, []);
-  assert.equal(provider.calls.length, 0);
+  for (const profile of [ORDINARY_CONTEXT_PROFILE, MEDIUM_CONTEXT_PROFILE, LARGE_CONTEXT_PROFILE]) {
+    const provider = new ScriptedProvider([{ type: 'provider.response.completed' }]);
+    const fixed = await createOneTurnApplicationService({ provider, workspace: root, contextProfile: profile });
+    const events = await collect(fixed.run({ session: createSession({ workspace: root }), input: 'x'.repeat(36_000) }));
+    const diagnostic = events.find((event) => event.type === 'context.assembled');
+    if (diagnostic?.type !== 'context.assembled') throw new Error('Expected context diagnostics.');
+    assert.equal(diagnostic.diagnostics.mode, 'fixed');
+    assert.equal(diagnostic.diagnostics.profileId, profile.id);
+    assert.deepEqual(diagnostic.diagnostics.attemptedProfileIds, []);
+    assert.equal(provider.calls.length, profile === ORDINARY_CONTEXT_PROFILE ? 0 : 1);
+  }
+});
+
+test('identical session state yields identical selected-context diagnostics and source evidence', async (t) => {
+  const root = await workspace();
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const run = async () => {
+    const provider = new ScriptedProvider([{ type: 'provider.response.completed' }]);
+    const service = await createOneTurnApplicationService({ provider, workspace: root });
+    const events = await collect(service.run({ session: createSession({ workspace: root }), input: 'x'.repeat(36_000), turnId: 'deterministic' }));
+    return events.filter((event) => event.type === 'context.assembled' || event.type === 'context.source');
+  };
+  assert.deepEqual(await run(), await run());
 });
 
 test('adaptive selection is canonical once per turn and keeps its profile through tool continuation', async (t) => {
@@ -168,12 +182,35 @@ test('adaptive medium pressure promotes instead of compacting; large retains com
     if (diagnostic?.type !== 'context.assembled') throw new Error('Expected context diagnostics.');
     return { profile: diagnostic.diagnostics.profileId, compactions };
   };
+  const ordinary = await run(1_000);
+  assert.equal(ordinary.profile, ORDINARY_CONTEXT_PROFILE.id);
+  assert.equal(ordinary.compactions, 0);
   const medium = await run(7_000);
   assert.equal(medium.profile, MEDIUM_CONTEXT_PROFILE.id);
   assert.equal(medium.compactions, 0);
   const large = await run(13_000);
   assert.equal(large.profile, LARGE_CONTEXT_PROFILE.id);
   assert.equal(large.compactions, 1);
+});
+
+test('adaptive large retains hard-pressure compaction and checkpoint evidence', async (t) => {
+  const root = await workspace();
+  t.after(() => rm(root, { recursive: true, force: true }));
+  let compactions = 0;
+  const service = await createOneTurnApplicationService({
+    provider: new ScriptedProvider([{ type: 'provider.response.completed' }]), workspace: root,
+    compactor: { compact: async () => { compactions += 1; return 'summary'; } },
+  });
+  const session = createSession({ workspace: root });
+  for (let index = 0; index < 3; index += 1) session.transcript.push({ role: 'user', text: 'u'.repeat(20_000) }, { role: 'assistant', text: 'a'.repeat(20_000) });
+  const events = await collect(service.run({ session, input: 'next' }));
+  const diagnostic = events.find((event) => event.type === 'context.assembled');
+  if (diagnostic?.type !== 'context.assembled') throw new Error('Expected context diagnostics.');
+  assert.equal(diagnostic.diagnostics.profileId, LARGE_CONTEXT_PROFILE.id);
+  assert.deepEqual(diagnostic.diagnostics.promotionReasons, ['required-source-failure']);
+  assert.equal(compactions, 1);
+  assert.equal(events.find((event) => event.type === 'context.compaction.started')?.type, 'context.compaction.started');
+  assert.equal(events.find((event) => event.type === 'context.compaction.completed')?.type, 'context.compaction.completed');
 });
 
 test('process hooks use the normal approval boundary and remain non-authoritative', async (t) => {

@@ -30,9 +30,9 @@ export type BenchmarkCaseProgress = Readonly<{ current: number; total: number; c
 export type BenchmarkProgressObserver = Readonly<{ onRunStarted?: (run: BenchmarkRunProgress) => void; onCaseStarted?: (progress: BenchmarkCaseProgress) => void; onCaseCompleted?: (progress: BenchmarkCaseProgress & Readonly<{ record: BenchmarkRecord }>) => void }>;
 
 const repeat = (value: string, count: number): string => Array.from({ length: count }, () => value).join('');
-const longInput = (band: number, token: string): string => `Return exactly ${token}. Do not use tools.\n\n${repeat('noise evidence remains irrelevant. ', Math.max(1, Math.floor((band * 4) / 32)))}\nFACT_A=amber\n${repeat('more ordinary project-like material. ', 8)}\nFACT_B=${token}\n${repeat('trailing material. ', 8)}`;
+const longInput = (band: number, token: string): string => `Return exactly ${token}. Do not use tools.\n\n${repeat('noise evidence remains irrelevant. ', Math.max(1, Math.floor((band * 4) / (band > 16_384 ? 36 : 32))))}\nFACT_A=amber\n${repeat('more ordinary project-like material. ', 8)}\nFACT_B=${token}\n${repeat('trailing material. ', 8)}`;
 export const DEFAULT_CONTEXT_BANDS = [2048, 4096, 8192, 16384] as const;
-const MAX_CONTEXT_BAND = 16384;
+const MAX_CONTEXT_BAND = 24_576;
 const contextSentinel = (band: number): string => `SENTINEL_${band}_ORCHID`;
 const longContextCase = (band: number, suites: readonly BenchmarkSuiteName[], contextProfileId?: string): BenchmarkCase => ({ id: `long-context-${band}-001`, version: 1, category: 'long-context-retrieval', suites, fixture: 'none', band, ...(contextProfileId === undefined ? {} : { contextProfileId }), input: () => longInput(band, contextSentinel(band)), expected: { answer: contextSentinel(band) } });
 
@@ -82,7 +82,7 @@ export function parseBenchmarkArguments(argv: readonly string[]): BenchmarkOptio
   return result;
 }
 
-export function benchmarkUsage(): string { return 'Usage: npm run benchmark -- [--suite quick|full|context] [--context-bands 2048,4096,8192,16384] [--model ID] [--base-url LOOPBACK_URL] [--repetitions 1..20] [--label NAME] [--compare results.json]'; }
+export function benchmarkUsage(): string { return 'Usage: npm run benchmark -- [--suite quick|full|context] [--context-bands 2048,4096,8192,16384,24576] [--model ID] [--base-url LOOPBACK_URL] [--repetitions 1..20] [--label NAME] [--compare results.json]'; }
 export function casesFor(suite: BenchmarkSuiteName, contextBands?: readonly number[]): readonly BenchmarkCase[] { return suite === 'context' ? contextLadderCases(contextBands) : BENCHMARK_CASES.filter((item) => item.suites.includes(suite)); }
 
 export async function createBenchmarkFixture(kind: BenchmarkCase['fixture']): Promise<string> {

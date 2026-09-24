@@ -8,6 +8,7 @@ import test from 'node:test';
 
 import { BENCHMARK_CASES, BENCHMARK_SCHEMA_VERSION, BENCHMARK_SUITE_VERSION, DEFAULT_CONTEXT_BANDS, aggregates, casesFor, colorizeBenchmarkTerminal, compareBenchmark, contextLadderCases, createBenchmarkApproval, createBenchmarkFixture, deriveBenchmarkRecord, formatBenchmarkCaseCompleted, formatBenchmarkCaseStarted, formatBenchmarkRunHeader, formatBenchmarkSummary, formatContextLadderSummary, matchesBenchmarkFixtureEdit, parseBenchmarkArguments, report, runBenchmark, summarizeBenchmarkTiming, writeBenchmarkArtifacts } from '../../../src/benchmark/index.ts';
 import type { ApplicationEvent, ApprovalRequest } from '../../../src/core/index.ts';
+import { assembleContext } from '../../../src/context/index.ts';
 
 const execFileAsync = promisify(execFile);
 
@@ -23,14 +24,15 @@ test('context suite parses default and custom deterministic ladder bands', () =>
   assert.deepEqual(DEFAULT_CONTEXT_BANDS, [2048, 4096, 8192, 16384]);
   assert.deepEqual(casesFor('context').map((item) => item.band), DEFAULT_CONTEXT_BANDS);
   assert.deepEqual(parseBenchmarkArguments(['--suite', 'context']), { suite: 'context', repetitions: 1 });
-  assert.deepEqual(parseBenchmarkArguments(['--suite', 'context', '--context-bands', '8192,2048,4096']), { suite: 'context', repetitions: 1, contextBands: [2048, 4096, 8192] });
+  assert.deepEqual(parseBenchmarkArguments(['--suite', 'context', '--context-bands', '24576,8192,2048,4096']), { suite: 'context', repetitions: 1, contextBands: [2048, 4096, 8192, 24576] });
   assert.throws(() => parseBenchmarkArguments(['--suite', 'context', '--context-bands', '2048,,4096']), /comma-separated/);
   assert.throws(() => parseBenchmarkArguments(['--suite', 'context', '--context-bands', '2048,2048']), /duplicates/);
-  assert.throws(() => parseBenchmarkArguments(['--suite', 'context', '--context-bands', '0']), /1 to 16384/);
+  assert.throws(() => parseBenchmarkArguments(['--suite', 'context', '--context-bands', '0']), /1 to 24576/);
+  assert.throws(() => parseBenchmarkArguments(['--suite', 'context', '--context-bands', '24577']), /1 to 24576/);
   assert.throws(() => parseBenchmarkArguments(['--suite', 'quick', '--context-bands', '2048']), /require --suite context/);
 });
 
-test('generated context ladder cases retain identity, order, exact sentinels, and no tools', () => {
+test('generated context ladder cases retain identity, order, exact sentinels, and no tools', async () => {
   const cases = contextLadderCases([8192, 2048, 4096]);
   assert.deepEqual(cases.map((item) => ({ id: item.id, band: item.band })), [
     { id: 'long-context-2048-001', band: 2048 }, { id: 'long-context-4096-001', band: 4096 }, { id: 'long-context-8192-001', band: 8192 },
@@ -42,6 +44,9 @@ test('generated context ladder cases retain identity, order, exact sentinels, an
     assert.match(case_.input(), /noise evidence remains irrelevant/);
     assert.equal(case_.expected.tools, undefined);
   }
+  const large = contextLadderCases([24_576])[0]!;
+  const assembled = await assembleContext({ invariants: 'invariant', userInput: large.input(), maxTokens: 24_576, optionalMaxTokens: 20_000 });
+  assert.ok(assembled.estimatedTokens <= 24_576);
   assert.deepEqual(casesFor('quick').map((item) => item.id), BENCHMARK_CASES.filter((item) => item.suites.includes('quick')).map((item) => item.id));
   assert.deepEqual(casesFor('full').map((item) => item.id), BENCHMARK_CASES.filter((item) => item.suites.includes('full')).map((item) => item.id));
 });
