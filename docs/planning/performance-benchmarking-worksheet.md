@@ -109,18 +109,46 @@ Keep provider-specific tuning behind the provider/runtime boundary.
 
 ### Phase 8 — Context Throughput Optimization
 
-First benchmark adaptive context/runtime profiles:
-- ordinary/small work;
-- medium repository work;
-- genuinely large-context work.
+Phase 8 now has an accepted runtime/context measurement control and a locked adaptive-profile design.
 
-Then separately benchmark:
+Runtime control:
+- main-model GPU Offload 26;
+- accepted sustained runtime: approximately 1.82 s average provider round over 123 provider rounds;
+- duplicate-tool-call stress failures remain separate behavioral Not Green evidence and are not relabeled as runtime/context Green.
+
+Accepted context-ladder baseline:
+- requested 2,048 -> actual provider input 1,466;
+- requested 4,096 -> actual provider input 2,746;
+- requested 8,192 -> actual provider input 5,306;
+- requested 16,384 -> actual provider input 10,428;
+- warm provider/model observations were approximately 1.15 s / 1.06 s / 1.46 s / 2.24 s respectively;
+- first-pass context-shape cost is tracked separately from warm-state context/prefill cost.
+
+Adaptive profile policy:
+- ordinary: preferred 4,096-6,144; soft 7,168; provider-input ceiling 8,192;
+- medium: preferred 8,192-12,288; soft 14,336; provider-input ceiling 16,384;
+- large: preferred 12,000-18,000; soft 20,000; provider-input ceiling 24,576;
+- all three retain 32,768 physical context, at least 8,192 reserved headroom, and the 2,560 always-on instruction target;
+- large remains the Phase 3 backward-compatible fixed profile.
+
+Current measured gate:
+- implement deterministic adaptive-versus-fixed selection;
+- select once per user turn before the first provider request;
+- promote monotonically ordinary -> medium -> large;
+- preserve required/deliberately selected context through promotion rather than silently dropping it because a smaller profile was tried;
+- promote ordinary/medium before provider-backed semantic history compaction;
+- preserve Phase 5 large-profile pressure/compaction/recovery semantics;
+- expose bounded selection/promotion diagnostics;
+- extend the context ladder to a requested ~24,576 band for qualification;
+- benchmark against the accepted context-ladder baseline.
+
+Only after adaptive profiles qualify, separately benchmark:
 - stable prompt/context identities;
 - stable prefixes;
 - incremental/changed-context submission;
 - provider-native continuation/cache reuse where supported.
 
-Preserve Phase 3 smallest-sufficient-working-set, precedence, provenance, hard budgets, and Phase 5 recovery semantics.
+Preserve Phase 3 smallest-sufficient-working-set, precedence, provenance, whole-source budgeting, and Phase 5 recovery semantics.
 
 ### Phase 9 — Agent Loop Throughput
 
@@ -207,7 +235,6 @@ Use `--compare <prior results.json>` when possible so the recorded deltas are ti
 These should be resolved during the relevant phase rather than prematurely:
 
 - whether startup warm-up should be revisited later given the repeatedly observed post-reload penalty;
-- exact adaptive profile thresholds in Phase 8;
 - which provider-native caching/continuation mechanism is safe and useful;
 - the dependency representation used by Phase 9 concurrency;
 - the minimum model-call reduction worth retaining;
@@ -450,7 +477,50 @@ Accepted runtime state carried into Phase 8:
 
 The final restored-runtime verification remains **Not Green** because one structured-tool repetition duplicated a read. Owner closeout accepts that evidence state for progression but does not relabel it Green.
 
-Phase 8 baseline authority:
-- `docs/planning/p8-context-throughput-optimization/initial-baseline.md`
+Phase 8 authority:
+- `docs/planning/p8-context-throughput-optimization/decision-record.md`;
+- `docs/planning/p8-context-throughput-optimization/initial-baseline.md`.
 
-Phase 8 now owns the next benchmark-gated optimization loop, beginning with characterization of provider-facing context/prefill cost across ordinary, medium, and large-context workloads.
+Phase 8 has completed its initial runtime recovery and context-ladder characterization. Its current benchmark-gated optimization loop is adaptive ordinary/medium/large profile selection and qualification.
+
+
+## Phase 8 current measurement state
+
+Accepted runtime control:
+- main-model GPU Offload: 26;
+- context length: 32,768;
+- eval batch: 2,048;
+- physical batch: 512;
+- parallel: 1;
+- Flash Attention: on;
+- GPU KV cache: on;
+- experts: 8;
+- speculative draft: off.
+
+GPU Offload 26 stress evidence:
+- 80 quick-suite executions;
+- 123 provider rounds;
+- approximately 1.82 s average provider round;
+- no provider fetch failures;
+- no 32-round runaway loop;
+- three duplicate-tool-call failures remain behavioral Not Green evidence.
+
+Accepted Phase 8 context ladder:
+- artifact: `/home/jfin/dev/george/artifacts/benchmarks/2026-09-24T20-03-38-980Z-90704`;
+- 12/12 passed;
+- requested bands: 2,048 / 4,096 / 8,192 / 16,384;
+- cold/first-shape and warm-state costs are recorded separately.
+
+Candidate context composition/profile tooling:
+- ordinary / medium / large profile definitions have been locally qualified;
+- profiler/config/benchmark-focused qualification passed;
+- normal runtime behavior remained large/fixed and adaptive selection remained disabled during that tooling qualification;
+- two broader TUI streaming failures were reproduced identically on the clean pre-change HEAD and classified as pre-existing;
+- the tooling candidate must still be committed to the canonical repository before implementation prompts may assume those files exist.
+
+Next acceptance gate:
+- canonicalize the qualified profiler/profile tooling;
+- implement the adaptive selection contract from the Phase 8 decision record;
+- extend context-ladder requested-band support to ~24,576 for large-region qualification;
+- run deterministic adaptive-profile qualification plus the live context ladder;
+- accept/revise/revert before stable-prefix or provider-cache work begins.
