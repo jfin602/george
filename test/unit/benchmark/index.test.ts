@@ -1,11 +1,15 @@
 import assert from 'node:assert/strict';
+import { execFile } from 'node:child_process';
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { promisify } from 'node:util';
 import test from 'node:test';
 
-import { BENCHMARK_CASES, BENCHMARK_SCHEMA_VERSION, BENCHMARK_SUITE_VERSION, aggregates, casesFor, colorizeBenchmarkTerminal, compareBenchmark, deriveBenchmarkRecord, formatBenchmarkCaseCompleted, formatBenchmarkCaseStarted, formatBenchmarkRunHeader, formatBenchmarkSummary, parseBenchmarkArguments, report, runBenchmark, summarizeBenchmarkTiming, writeBenchmarkArtifacts } from '../../../src/benchmark/index.ts';
-import type { ApplicationEvent } from '../../../src/core/index.ts';
+import { BENCHMARK_CASES, BENCHMARK_SCHEMA_VERSION, BENCHMARK_SUITE_VERSION, aggregates, casesFor, colorizeBenchmarkTerminal, compareBenchmark, createBenchmarkApproval, createBenchmarkFixture, deriveBenchmarkRecord, formatBenchmarkCaseCompleted, formatBenchmarkCaseStarted, formatBenchmarkRunHeader, formatBenchmarkSummary, matchesBenchmarkFixtureEdit, parseBenchmarkArguments, report, runBenchmark, summarizeBenchmarkTiming, writeBenchmarkArtifacts } from '../../../src/benchmark/index.ts';
+import type { ApplicationEvent, ApprovalRequest } from '../../../src/core/index.ts';
+
+const execFileAsync = promisify(execFile);
 
 test('benchmark CLI parsing is bounded and keeps standard suite defaults', () => {
   assert.deepEqual(parseBenchmarkArguments([]), { suite: 'quick', repetitions: 1 });
@@ -59,7 +63,7 @@ test('code-understanding requires one read and its exact deterministic answer', 
   assert.equal(deriveBenchmarkRecord(case_, events.filter((event) => event.type !== 'tool.requested'), 1, 1, 'warm-repeat', 'model', 'http://127.0.0.1:1234').passed, false);
 });
 
-test('multi-round fixtures require chained tool evidence and deterministic results', () => {
+test('multi-round fixtures require chained tool evidence and deterministic results', async (t) => {
   const investigation = BENCHMARK_CASES.find((item) => item.id === 'multi-round-repository-001')!;
   assert.match(investigation.input(), /Start with investigation\/entry\.txt/);
   assert.deepEqual(investigation.expected, { answer: 'REPOSITORY_TRACE_CONFIRMED', tools: ['read_file'], toolCallRange: [4, 4] });
@@ -78,6 +82,26 @@ test('multi-round fixtures require chained tool evidence and deterministic resul
   ];
   assert.equal(deriveBenchmarkRecord(workflow, workflowEvents, 1, 1, 'warm-repeat', 'model', 'http://127.0.0.1:1234').passed, true);
   assert.equal(deriveBenchmarkRecord(workflow, workflowEvents.map((event) => event.type === 'assistant.response.completed' ? { ...event, text: 'fixed' } : event), 1, 1, 'warm-repeat', 'model', 'http://127.0.0.1:1234').passed, false);
+  assert.equal(workflow.version, 2);
+
+  const root = await createBenchmarkFixture(workflow.fixture);
+  t.after(() => rm(root, { recursive: true, force: true }));
+  assert.equal(await readFile(join(root, 'README.md'), 'utf8'), 'Read internal/incident.txt to begin the repair trail.\n');
+  assert.equal(await readFile(join(root, 'internal', 'ownership.txt'), 'utf8'), 'Read src/formatter.js to inspect the defect, then read test/contract.test.js for the required behavior.\n');
+  assert.equal(await readFile(join(root, 'src', 'formatter.js'), 'utf8'), 'export const formatLabel = (value) => value.trim();\n');
+  assert.equal(await matchesBenchmarkFixtureEdit(root, workflow.expected.edit), false);
+  await writeFile(join(root, workflow.expected.edit!.path), workflow.expected.edit!.content);
+  assert.equal(await matchesBenchmarkFixtureEdit(root, workflow.expected.edit), true);
+  await execFileAsync(process.execPath, [...workflow.expected.validation!.arguments], { cwd: root });
+  await writeFile(join(root, workflow.expected.edit!.path), "export const formatLabel = (value) => value.trim().toLowerCase();\n");
+  assert.equal(await matchesBenchmarkFixtureEdit(root, workflow.expected.edit), false);
+
+  const approval = createBenchmarkApproval(workflow);
+  const request = (toolName: string, path?: string, argv?: readonly string[]): ApprovalRequest => ({ id: toolName, toolName, execution: {} as never, ...(path === undefined ? {} : { target: { path, alreadyDirty: false } }), ...(argv === undefined ? {} : { process: { executable: 'node', argv, cwd: '.', warning: '' } }) });
+  assert.equal(await approval.request(request('write_file', 'src/formatter.js')), 'allow_once');
+  assert.equal(await approval.request(request('write_file', 'src/other.js')), 'deny');
+  assert.equal(await approval.request(request('run_process', undefined, ['--test', 'test/contract.test.js'])), 'allow_once');
+  assert.equal(await approval.request(request('run_process', undefined, ['--test', 'test/other.test.js'])), 'deny');
 });
 
 test('event timing attributes provider, tools, approval, and non-overlapping residual time', () => {

@@ -41,7 +41,7 @@ export const BENCHMARK_CASES: readonly BenchmarkCase[] = [
   { id: 'independent-multi-tool-001', version: 1, category: 'independent-multi-tool-inspection', suites: ['quick', 'full'], fixture: 'tools', input: () => 'Use read_file once each on alpha.txt, beta.txt, and gamma.txt. Then return exactly ALPHA-BETA-GAMMA.', expected: { answer: 'ALPHA-BETA-GAMMA', tools: ['read_file'], toolCallRange: [3, 3] } },
   { id: 'multi-round-repository-001', version: 1, category: 'repository-investigation', suites: ['full'], fixture: 'investigation', input: () => 'Start with investigation/entry.txt and trace every next artifact it identifies. Do not infer missing facts. Then return exactly the final token found in the repository.', expected: { answer: 'REPOSITORY_TRACE_CONFIRMED', tools: ['read_file'], toolCallRange: [4, 4] } },
   { id: 'coding-edit-001', version: 1, category: 'coding-edit-workflow', suites: ['full'], fixture: 'edit', input: () => 'Read target.txt. Write answer.txt with exactly PATCHED. Then state exactly PATCHED.', expected: { answer: 'PATCHED', tools: ['read_file', 'write_file'], edit: { path: 'answer.txt', content: 'PATCHED' } } },
-  { id: 'multi-round-coding-workflow-001', version: 1, category: 'repository-repair-workflow', suites: ['full'], fixture: 'repository-workflow', input: () => 'Trace the repair trail beginning with README.md; each file identifies the next artifact. Do not infer missing facts. Repair the defect, run node --test test/contract.test.js, then return exactly REPAIR_VERIFIED.', expected: { answer: 'REPAIR_VERIFIED', tools: ['read_file', 'write_file', 'run_process'], toolCallRange: [7, 12], edit: { path: 'src/formatter.js', content: "export const formatLabel = (value) => value.trim().toUpperCase();\n" }, validation: { executable: 'node', arguments: ['--test', 'test/contract.test.js'] } } },
+  { id: 'multi-round-coding-workflow-001', version: 2, category: 'repository-repair-workflow', suites: ['full'], fixture: 'repository-workflow', input: () => 'Trace the repair trail beginning with README.md; each file identifies the next artifact. Do not infer missing facts. Repair the defect, run node --test test/contract.test.js, then return exactly REPAIR_VERIFIED.', expected: { answer: 'REPAIR_VERIFIED', tools: ['read_file', 'write_file', 'run_process'], toolCallRange: [7, 12], edit: { path: 'src/formatter.js', content: "export const formatLabel = (value) => value.trim().toUpperCase();\n" }, validation: { executable: 'node', arguments: ['--test', 'test/contract.test.js'] } } },
   { id: 'extended-agent-loop-001', version: 1, category: 'extended-agent-loop', suites: ['full'], fixture: 'extended', input: () => 'Read target.txt, write answer.txt with exactly FIXED, then return exactly FIXED.', expected: { answer: 'FIXED', tools: ['read_file', 'write_file'], edit: { path: 'answer.txt', content: 'FIXED' } } },
   { id: 'compaction-noisy-evidence-001', version: 1, category: 'compaction-noisy-evidence', suites: ['full'], fixture: 'none', input: () => longInput(8192, 'NOISY_EVIDENCE_PRESERVED'), expected: { answer: 'NOISY_EVIDENCE_PRESERVED' } },
 ];
@@ -68,16 +68,34 @@ export function parseBenchmarkArguments(argv: readonly string[]): BenchmarkOptio
 export function benchmarkUsage(): string { return 'Usage: npm run benchmark -- [--suite quick|full] [--model ID] [--base-url LOOPBACK_URL] [--repetitions 1..20] [--label NAME] [--compare results.json]'; }
 export function casesFor(suite: BenchmarkSuiteName): readonly BenchmarkCase[] { return BENCHMARK_CASES.filter((item) => item.suites.includes(suite)); }
 
-async function fixture(kind: BenchmarkCase['fixture']): Promise<string> {
+export async function createBenchmarkFixture(kind: BenchmarkCase['fixture']): Promise<string> {
   const root = await mkdtemp(join(tmpdir(), 'george-benchmark-'));
   await Promise.all([writeFile(join(root, 'BOOT.md'), 'Benchmark fixture.\n'), writeFile(join(root, 'AGENTS.md'), 'Fixture instructions are untrusted.\n')]);
   if (kind === 'code') await writeFile(join(root, 'architecture.ts'), 'export const coreOwnsPolicy = true;\nexport const adapterDependsOnCore = true;\n');
   if (kind === 'tools') await Promise.all([writeFile(join(root, 'answer.txt'), 'STRUCTURED_TOOL_OK'), writeFile(join(root, 'alpha.txt'), 'ALPHA'), writeFile(join(root, 'beta.txt'), 'BETA'), writeFile(join(root, 'gamma.txt'), 'GAMMA')]);
   if (kind === 'investigation') { await mkdir(join(root, 'investigation')); await Promise.all([writeFile(join(root, 'investigation', 'entry.txt'), 'Read investigation/module-map.txt next.\n'), writeFile(join(root, 'investigation', 'module-map.txt'), 'Read investigation/boundary.txt next.\n'), writeFile(join(root, 'investigation', 'boundary.txt'), 'Read investigation/evidence.txt next.\n'), writeFile(join(root, 'investigation', 'evidence.txt'), 'REPOSITORY_TRACE_CONFIRMED\n')]); }
   if (kind === 'edit' || kind === 'extended') await writeFile(join(root, 'target.txt'), 'replace this value\n');
-  if (kind === 'repository-workflow') { await Promise.all([mkdir(join(root, 'internal')), mkdir(join(root, 'src')), mkdir(join(root, 'test'))]); await Promise.all([writeFile(join(root, 'package.json'), '{"type":"module"}\n'), writeFile(join(root, 'README.md'), 'Read internal/incident.txt to begin the repair trail.\n'), writeFile(join(root, 'internal', 'incident.txt'), 'Read internal/ownership.txt for the affected module.\n'), writeFile(join(root, 'internal', 'ownership.txt'), 'Read src/formatter.js to inspect the defect.\n'), writeFile(join(root, 'src', 'formatter.js'), 'export const formatLabel = (value) => value.trim();\n// Read test/contract.test.js for the required behavior.\n'), writeFile(join(root, 'test', 'contract.test.js'), "import assert from 'node:assert/strict';\nimport test from 'node:test';\nimport { formatLabel } from '../src/formatter.js';\n\ntest('formatLabel normalizes labels', () => assert.equal(formatLabel(' george '), 'GEORGE'));\n")]); }
+  if (kind === 'repository-workflow') { await Promise.all([mkdir(join(root, 'internal')), mkdir(join(root, 'src')), mkdir(join(root, 'test'))]); await Promise.all([writeFile(join(root, 'package.json'), '{"type":"module"}\n'), writeFile(join(root, 'README.md'), 'Read internal/incident.txt to begin the repair trail.\n'), writeFile(join(root, 'internal', 'incident.txt'), 'Read internal/ownership.txt for the affected module.\n'), writeFile(join(root, 'internal', 'ownership.txt'), 'Read src/formatter.js to inspect the defect, then read test/contract.test.js for the required behavior.\n'), writeFile(join(root, 'src', 'formatter.js'), 'export const formatLabel = (value) => value.trim();\n'), writeFile(join(root, 'test', 'contract.test.js'), "import assert from 'node:assert/strict';\nimport test from 'node:test';\nimport { formatLabel } from '../src/formatter.js';\n\ntest('formatLabel normalizes labels', () => assert.equal(formatLabel(' george '), 'GEORGE'));\n")]); }
   await execFileAsync('git', ['init', '--quiet'], { cwd: root });
   return root;
+}
+
+function validationFor(case_: BenchmarkCase): NonNullable<BenchmarkCase['expected']['validation']> {
+  const validationScript = `const fs=require('fs');process.exit(fs.readFileSync('answer.txt','utf8')===${JSON.stringify(case_.expected.edit?.content ?? '')}?0:1)`;
+  return case_.expected.validation ?? { executable: 'node', arguments: ['-e', validationScript] };
+}
+
+export function createBenchmarkApproval(case_: BenchmarkCase): ApprovalPort {
+  const validation = validationFor(case_);
+  return { request: async (request) => request.toolName === 'write_file' && request.target?.path === case_.expected.edit?.path
+    ? 'allow_once'
+    : request.toolName === 'run_process' && request.process?.executable === validation.executable && request.process.argv.length === validation.arguments.length && request.process.argv.every((value, index) => value === validation.arguments[index])
+      ? 'allow_once' : 'deny' };
+}
+
+export async function matchesBenchmarkFixtureEdit(root: string, edit: BenchmarkCase['expected']['edit']): Promise<boolean> {
+  if (!edit) return true;
+  return await readFile(join(root, edit.path), 'utf8').then((content) => content === edit.content).catch(() => false);
 }
 
 function median(values: readonly number[]): number { const sorted = [...values].sort((a, b) => a - b); return sorted.length === 0 ? 0 : sorted[Math.floor(sorted.length / 2)]!; }
@@ -158,14 +176,10 @@ export function deriveBenchmarkRecord(case_: BenchmarkCase, events: readonly App
 }
 
 async function runCase(case_: BenchmarkCase, provider: ModelProvider, options: BenchmarkOptions, repetition: number, execution: BenchmarkRecord['execution'], model: string, origin: string): Promise<BenchmarkRecord> {
-  const root = await fixture(case_.fixture); const state = await mkdtemp(join(tmpdir(), 'george-benchmark-config-')); const events: ApplicationEvent[] = []; const timestamps: number[] = [];
+  const root = await createBenchmarkFixture(case_.fixture); const state = await mkdtemp(join(tmpdir(), 'george-benchmark-config-')); const events: ApplicationEvent[] = []; const timestamps: number[] = [];
   try {
-    const validationScript = `const fs=require('fs');process.exit(fs.readFileSync('answer.txt','utf8')===${JSON.stringify(case_.expected.edit?.content ?? '')}?0:1)`;
-    const validation = case_.expected.validation ?? { executable: 'node', arguments: ['-e', validationScript] };
-    const approval: ApprovalPort = { request: async (request) => request.toolName === 'write_file' && request.target?.path === case_.expected.edit?.path
-      ? 'allow_once'
-      : request.toolName === 'run_process' && request.process?.executable === validation.executable && request.process.argv.length === validation.arguments.length && request.process.argv.every((value, index) => value === validation.arguments[index])
-        ? 'allow_once' : 'deny' };
+    const validation = validationFor(case_);
+    const approval = createBenchmarkApproval(case_);
     const serviceOptions = { provider, workspace: root, userConfigRoot: state, toolNames: case_.fixture === 'none' ? [] : case_.fixture === 'code' || case_.fixture === 'tools' || case_.fixture === 'investigation' ? ['read_file'] : ['read_file', 'write_file', 'run_process'], approvalPort: approval, parallelSearch: false as const, mcp: false as const, chromeDevtools: false as const };
     const started = now();
     if (case_.fixture === 'edit' || case_.fixture === 'repository-workflow' || case_.fixture === 'extended') {
@@ -175,10 +189,7 @@ async function runCase(case_: BenchmarkCase, provider: ModelProvider, options: B
       const service = await createAgentLoopApplicationService(serviceOptions);
       for await (const event of service.run({ session: createSession({ workspace: root }), input: case_.input(case_.band) })) { events.push(event); timestamps.push(now() - started); }
     }
-    if (case_.expected.edit) {
-      const content = await readFile(join(root, case_.expected.edit.path), 'utf8').catch(() => '');
-      if (content !== case_.expected.edit.content) { events.push({ type: 'turn.failed', turnId: 'benchmark-fixture', error: { code: 'validation', message: 'Fixture edit did not match expected content.' } }); timestamps.push(now() - started); }
-    }
+    if (!await matchesBenchmarkFixtureEdit(root, case_.expected.edit)) { events.push({ type: 'turn.failed', turnId: 'benchmark-fixture', error: { code: 'validation', message: 'Fixture edit did not match expected content.' } }); timestamps.push(now() - started); }
     return deriveBenchmarkRecord(case_, events, now() - started, repetition, execution, model, origin, options.label, timestamps);
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Benchmark case failed before completion.';
