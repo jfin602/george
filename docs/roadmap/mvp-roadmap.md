@@ -1,6 +1,6 @@
 # George MVP Roadmap
 
-Status: CURRENT ROADMAP — PHASE 5 OWNER-CLOSED; PHASE 6 PLANNING
+Status: CURRENT ROADMAP — PHASE 6 OWNER-CLOSED; PHASE 7 INITIAL BASELINE
 
 The roadmap deliberately proves the provider, read-only tool foundation, real interactive terminal surface, and safe autonomous tool execution before broader coding workflow, networking, or a desktop GUI.
 
@@ -267,7 +267,7 @@ Long-running in Phase 5 means a bounded attached local George run with durable r
 
 ## Phase 6 — Plugins + External Adapters
 
-Status: CURRENT PLANNING GATE — baseline package `0.6.0`
+Status: OWNER-CLOSED — accepted deterministic qualification with recorded live/native Evidence Gaps
 
 Goal: package extensions and add useful network/browser intelligence without contaminating the core, bypassing canonical execution/evidence paths, leaking credentials, or weakening George's trust boundaries.
 
@@ -339,6 +339,8 @@ Current benchmark contract:
 The benchmark harness is the control instrument for Phases 7-12. It must not itself silently optimize the runtime path it measures.
 
 ## Phase 7 — Inference Runtime Optimization
+
+Status: CURRENT PHASE — baseline package `0.7.0`; untouched full benchmark required before tuning
 
 Goal: establish the fastest reliable primary-model runtime configuration for the pinned Qwen3-Coder/LM Studio path without changing George's higher-level context or agent-loop architecture.
 

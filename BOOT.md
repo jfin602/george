@@ -53,11 +53,25 @@ Phase 6 baseline transition: package `0.6.0`.
 
 The owner explicitly accepts the recorded Phase 1-4 native-terminal/live-model Evidence Gaps plus the Phase 5 native-terminal Evidence Gap and live LM Studio/Qwen Not Green result for roadmap progression. These remain their recorded evidence states, not Green evidence.
 
-**Phase 6 — Plugins + External Adapters — is the current planning gate.**
+Phase 6 — Plugins + External Adapters — is owner-closed.
 
-Phase 6 planning authority starts with the current product, architecture, workflow, stability, roadmap, Phase 5 closeout contracts, and the approved Phase 6 decision record at `docs/planning/p6-plugins-external-adapters/decision-record.md`.
+Accepted Phase 6 implementation/qualification candidate: `b25f48b9d8b3b46fac1031c72cc4b1143270fa37` at package `0.6.8`.  
+Formal Phase 6 P9 closeout marker: `b0d87e12d437` at package `0.6.9`.  
+Formal Phase 6 closeout: `docs/phase-6-closeout.md`.  
+Phase 6 owner closeout: `docs/phase-6-owner-closeout.md`.  
+Phase 7 baseline transition: package `0.7.0`.
 
-Phase 6 documentation alignment is approved. Implementation planning now proceeds through the normal `/prompt-ass -> /prompt-plan -> /prompt-write p6` workflow.
+The owner explicitly accepts the recorded Phase 6 live Parallel/GitHub/MCP/Chrome and native-terminal Evidence Gaps for roadmap progression. These remain Evidence Gaps, not Green evidence.
+
+**Phase 7 — Inference Runtime Optimization — is the current planning/measurement gate.**
+
+Phase 7 starts from the implemented formal benchmark harness and the approved performance worksheet at `docs/planning/performance-benchmarking-worksheet.md`. The first required action is to capture the untouched `0.7.0` full-suite primary-model baseline before any runtime tuning or warm-up change.
+
+Phase 7 must follow the benchmark-gated optimization loop:
+
+`last accepted baseline -> one bounded runtime change -> benchmark -> accept/revise/revert -> new baseline`
+
+Do not stack multiple unmeasured runtime changes.
 
 ## Core premise
 
@@ -93,7 +107,8 @@ Read:
 - workflow: `docs/workflow.md`;
 - stability/testing: `docs/stability-contract.md`;
 - roadmap: `docs/roadmap/mvp-roadmap.md`;
-- Phase 6 decision authority: `docs/planning/p6-plugins-external-adapters/decision-record.md`;
+- Phase 7 performance authority: `docs/planning/performance-benchmarking-worksheet.md` and `docs/roadmap/mvp-roadmap.md`;
+- Phase 6 closeout/history when needed: `docs/phase-6-closeout.md`, `docs/phase-6-owner-closeout.md`, `docs/planning/p6-plugins-external-adapters/decision-record.md`;
 - Phase 5 closeout/history when needed: `docs/phase-5-closeout.md`, `docs/phase-5-owner-closeout.md`, `docs/planning/p5-reliability-long-runs/decision-record.md`;
 - Phase 4 closeout/history when needed: `docs/phase-4-closeout.md`, `docs/phase-4-owner-closeout.md`, `docs/planning/p4-coding-workflow-sessions/decision-record.md`;
 - Phase 3 closeout/history when needed: `docs/phase-3-closeout.md`, `docs/phase-3-owner-closeout.md`, `docs/planning/p3-context-skills/decision-record.md`;
