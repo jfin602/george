@@ -156,9 +156,21 @@ Create `docs/tasks/p8/P6-qualification-evidence.md`.
 
 Permit at most two substantial evidence-driven correction cycles; every correction adds a permanent regression guard.
 
-### P7 — evidence-only Phase-8 closeout
+### P7 — adaptive continuation-pressure hardening
 
-Audit P6 evidence and create/update `docs/phase-8-closeout.md`.
+Start from the accepted P6 candidate and explicitly qualify the edge case where ordinary or medium is selected from a small initial working set but substantial file/search/tool-result context accumulates over later continuation rounds.
+
+Prove that a frozen profile never causes silent loss of correctness-critical current/routed/project/skill/recovery context. Test current behavior before changing it. If a defect exists, prefer the smallest architecture-preserving reserve/budget/fail-closed correction and add a permanent regression guard.
+
+Do not introduce helper-model summarization, semantic relevance routing, mid-turn profile resizing, or unrelated throughput work.
+
+Create `docs/tasks/p8/P7-continuation-pressure-evidence.md`.
+
+### P8 — evidence-only Phase-8 closeout
+
+Audit both P6 integrated qualification and P7 continuation-pressure evidence and create/update `docs/phase-8-closeout.md` from the exact final post-P7 candidate.
+
+The stability verdict must explicitly cover substantial within-turn tool/file-result growth under a frozen ordinary/medium profile and confirm that unsafe pressure cannot silently discard correctness-critical context.
 
 Do not repair implementation, owner-close the phase, or advance Phase 9.
 
@@ -174,7 +186,7 @@ P4 changes semantic-neutral ordering/identity only.
 
 P5 touches provider-specific reuse only after provider-independent adaptive behavior is qualified.
 
-P6 consolidates accepted experiments and P7 records truth without repairing it.
+P6 consolidates accepted experiments. P7 adds the narrow continuation-pressure hardening gate identified after integrated qualification. P8 records final truth without repairing it.
 
 ## Preserved behavior
 
@@ -203,8 +215,8 @@ Not Phase 8:
 
 ## Model selection
 
-- P1-P6: **Terra High**
-- P7: **Terra Medium**
+- P1-P7: **Terra High**
+- P8: **Terra Medium**
 
 All prompts use:
 `Browser required: no.`
