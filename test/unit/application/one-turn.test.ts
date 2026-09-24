@@ -149,6 +149,104 @@ test('adaptive selection is canonical once per turn and keeps its profile throug
   assert.equal(provider.calls[0]?.request.input, provider.calls[1]?.request.input);
 });
 
+test('frozen adaptive profiles retain critical context through safe continuation growth and stop before an unsafe continuation', async (t) => {
+  const root = await workspace();
+  const skills = join(root, '.george', 'skills', 'pressure');
+  t.after(() => rm(root, { recursive: true, force: true }));
+  await Promise.all([
+    mkdir(join(root, 'docs'), { recursive: true }),
+    mkdir(skills, { recursive: true }),
+  ]);
+  await Promise.all([
+    writeFile(join(root, 'docs', 'selected.md'), 'SELECTED ROUTED GUIDANCE'),
+    writeFile(join(skills, 'SKILL.md'), '---\nname: pressure\ndescription: pressure skill\n---\nACTIVATED SKILL GUIDANCE\n'),
+    writeFile(join(root, 'one.txt'), 'ONE '.repeat(2_500)),
+    writeFile(join(root, 'two.txt'), 'TWO '.repeat(2_500)),
+    writeFile(join(root, 'three.txt'), 'THREE '.repeat(2_500)),
+  ]);
+  const provider = new class implements ModelProvider {
+    calls: Array<{ request: ProviderRequest; options: ProviderStreamOptions }> = [];
+    async *stream(request: ProviderRequest, options: ProviderStreamOptions = {}): AsyncGenerator<ProviderEvent> {
+      this.calls.push({ request, options });
+      const path = ['one.txt', 'two.txt', 'three.txt'][this.calls.length - 1];
+      if (path) {
+        yield { type: 'provider.response.started', responseId: `response-${this.calls.length}` };
+        yield { type: 'provider.tool.call', callId: `read-${this.calls.length}`, name: 'read_file', arguments: JSON.stringify({ path }) };
+      } else yield { type: 'provider.text.delta', delta: 'complete' };
+      yield { type: 'provider.response.completed', usage: { inputTokens: [4_000, 6_000, 7_800, 8_400][this.calls.length - 1] } };
+    }
+  }();
+  let compactions = 0;
+  const service = await createOneTurnApplicationService({
+    provider, workspace: root, toolNames: ['read_file'],
+    skillRoots: { builtin: join(root, 'no-builtins'), user: join(root, 'no-user'), workspace: join(root, '.george', 'skills') },
+    compactor: { compact: async () => { compactions += 1; return 'must not compact'; } },
+  });
+  const session = createSession({ workspace: root });
+  session.interruptions.push({ kind: 'provider-continuation', name: 'prior continuation' });
+  const events = await collect(service.run({ session, input: 'Keep the selected task evidence.', routedDocuments: ['docs/selected.md'], activatedSkills: ['pressure'] }));
+  const diagnostic = events.find((event) => event.type === 'context.assembled');
+  if (diagnostic?.type !== 'context.assembled') throw new Error('Expected context diagnostics.');
+
+  assert.equal(diagnostic.diagnostics.profileId, ORDINARY_CONTEXT_PROFILE.id);
+  assert.ok(diagnostic.diagnostics.activeSourceIds.includes('workspace:routed:docs/selected.md'));
+  assert.ok(diagnostic.diagnostics.activeSourceIds.includes('skill:workspace:pressure'));
+  assert.equal(provider.calls.length, 3);
+  for (const call of provider.calls) {
+    assert.match(call.request.instructions ?? '', /SELECTED ROUTED GUIDANCE/);
+    assert.match(call.request.instructions ?? '', /ACTIVATED SKILL GUIDANCE/);
+    assert.match(call.request.input ?? '', /Keep the selected task evidence\.|Authoritative unresolved state/);
+  }
+  assert.deepEqual(provider.calls.slice(1).map((call) => call.request.continuation?.toolResults[0]?.callId), ['read-1', 'read-2']);
+  assert.deepEqual(events.filter((event) => event.type === 'provider.response.completed').map((event) => event.usage?.inputTokens), [4_000, 6_000, 7_800]);
+  assert.equal(compactions, 0);
+  const failed = events.find((event) => event.type === 'turn.failed');
+  assert.equal(failed?.type, 'turn.failed');
+  if (failed?.type === 'turn.failed') assert.match(failed.error.message, /Frozen context profile .* cannot continue safely/);
+});
+
+test('a frozen medium profile retains its complete request through substantial continuation results', async (t) => {
+  const root = await workspace();
+  t.after(() => rm(root, { recursive: true, force: true }));
+  await Promise.all([
+    writeFile(join(root, 'one.txt'), 'ONE '.repeat(4_000)),
+    writeFile(join(root, 'two.txt'), 'TWO '.repeat(4_000)),
+  ]);
+  const provider = new class implements ModelProvider {
+    calls: Array<{ request: ProviderRequest; options: ProviderStreamOptions }> = [];
+    async *stream(request: ProviderRequest, options: ProviderStreamOptions = {}): AsyncGenerator<ProviderEvent> {
+      this.calls.push({ request, options });
+      const path = ['one.txt', 'two.txt'][this.calls.length - 1];
+      if (path) {
+        yield { type: 'provider.response.started', responseId: `medium-${this.calls.length}` };
+        yield { type: 'provider.tool.call', callId: `medium-read-${this.calls.length}`, name: 'read_file', arguments: JSON.stringify({ path }) };
+      } else yield { type: 'provider.text.delta', delta: 'complete' };
+      yield { type: 'provider.response.completed', usage: { inputTokens: [8_000, 12_000, 16_000][this.calls.length - 1] } };
+    }
+  }();
+  let compactions = 0;
+  const service = await createOneTurnApplicationService({
+    provider, workspace: root, toolNames: ['read_file'],
+    compactor: { compact: async () => { compactions += 1; return 'must not compact'; } },
+  });
+  const input = `MEDIUM CURRENT INTENT ${'x'.repeat(29_000)}`;
+  const events = await collect(service.run({ session: createSession({ workspace: root }), input }));
+  const diagnostic = events.find((event) => event.type === 'context.assembled');
+  if (diagnostic?.type !== 'context.assembled') throw new Error('Expected context diagnostics.');
+
+  assert.equal(diagnostic.diagnostics.profileId, MEDIUM_CONTEXT_PROFILE.id);
+  assert.equal(provider.calls.length, 3);
+  assert.equal(provider.calls[0]?.request.instructions, provider.calls[1]?.request.instructions);
+  assert.equal(provider.calls[1]?.request.instructions, provider.calls[2]?.request.instructions);
+  assert.equal(provider.calls[0]?.request.input, provider.calls[1]?.request.input);
+  assert.equal(provider.calls[1]?.request.input, provider.calls[2]?.request.input);
+  assert.match(provider.calls[2]?.request.input ?? '', /MEDIUM CURRENT INTENT/);
+  assert.deepEqual(provider.calls.slice(1).map((call) => call.request.continuation?.toolResults[0]?.callId), ['medium-read-1', 'medium-read-2']);
+  assert.deepEqual(events.filter((event) => event.type === 'provider.response.completed').map((event) => event.usage?.inputTokens), [8_000, 12_000, 16_000]);
+  assert.equal(compactions, 0);
+  assert.equal(events.at(-1)?.type, 'turn.completed');
+});
+
 test('adaptive probes emit source lifecycle evidence only for the final selected assembly', async (t) => {
   const root = await workspace();
   t.after(() => rm(root, { recursive: true, force: true }));

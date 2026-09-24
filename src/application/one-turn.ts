@@ -602,6 +602,7 @@ export class AgentLoopApplicationService {
       yield* this.consumeBudget(submission.session, turnId, budget, 'contextTokens', context.estimatedTokens, submission.signal);
       const baseRequest = { instructions: context.rendered.guidance, input: context.rendered.conversation, tools: this.registry.definitions };
       let continuation: ProviderContinuation | undefined;
+      let continuationTokens = 0;
       let toolCalls = 0;
       let toolRounds = 0;
       while (true) {
@@ -633,6 +634,9 @@ export class AgentLoopApplicationService {
               if (event.type === 'provider.text.delta') text += event.delta;
               if (event.type === 'provider.tool.call') calls.push(event);
               if (event.type === 'provider.response.completed') completed = true;
+              if (event.type === 'provider.response.completed' && event.usage?.inputTokens !== undefined && event.usage.inputTokens > selection.profile.providerInputTokens) {
+                throw new GeorgeError('budget', `Frozen context profile ${selection.profile.id} cannot continue safely: provider reported ${event.usage.inputTokens} input tokens above its ${selection.profile.providerInputTokens} token provider-input budget.`);
+              }
               if (event.type === 'provider.response.completed' && event.usage?.inputTokens !== undefined) yield* this.consumeBudget(submission.session, turnId, budget, 'providerInputTokens', event.usage.inputTokens, submission.signal);
               if (event.type === 'provider.response.completed' && event.usage?.outputTokens !== undefined) yield* this.consumeBudget(submission.session, turnId, budget, 'providerOutputTokens', event.usage.outputTokens, submission.signal);
               if (event.type === 'provider.error') throw event.error;
@@ -690,6 +694,11 @@ export class AgentLoopApplicationService {
             next = await iterator.next();
           }
           results.push(next.value);
+        }
+        continuationTokens += Math.ceil(JSON.stringify(results).length / 4);
+        const continuationEstimate = context.estimatedTokens + continuationTokens;
+        if (continuationEstimate > selection.profile.providerInputTokens) {
+          throw new GeorgeError('budget', `Frozen context profile ${selection.profile.id} cannot continue safely: estimated continuation context ${continuationEstimate} exceeds its ${selection.profile.providerInputTokens} token provider-input budget.`);
         }
         continuation = { responseId, toolResults: results };
       }
