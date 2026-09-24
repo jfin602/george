@@ -1,6 +1,6 @@
 # Performance + Benchmarking Worksheet
 
-Status: APPROVED PLANNING WORKSHEET — benchmark tooling implemented; Phase 7-12 optimization sequence approved
+Status: APPROVED PLANNING WORKSHEET — Phase 7 owner-closed; Phase 8 context throughput optimization active
 
 Date: 2026-09-23
 
@@ -8,7 +8,7 @@ Date: 2026-09-23
 
 Record the benchmark control instrument, current performance observations, and the approved sequence for optimizing George's primary-model path before introducing a secondary helper model.
 
-Phase 6 is owner-closed. This worksheet now governs the active Phase 7-12 performance campaign.
+Phase 7 is owner-closed. This worksheet now governs the active Phase 8-12 performance campaign.
 
 ## Implemented benchmark tooling
 
@@ -206,8 +206,7 @@ Use `--compare <prior results.json>` when possible so the recorded deltas are ti
 
 These should be resolved during the relevant phase rather than prematurely:
 
-- exact Phase 7 accepted LM Studio settings for the qualification hardware;
-- whether startup warm-up produces a real net benefit;
+- whether startup warm-up should be revisited later given the repeatedly observed post-reload penalty;
 - exact adaptive profile thresholds in Phase 8;
 - which provider-native caching/continuation mechanism is safe and useful;
 - the dependency representation used by Phase 9 concurrency;
@@ -418,3 +417,40 @@ Observed during load:
 No benchmark result was recorded because the configuration failed the runtime stability/usability gate before inference.
 
 Accepted Phase 7 steady-state reference remains approximately **1.83 s average provider round**, with the previously retained runtime settings.
+
+
+## Phase 7 closeout summary
+
+Phase 7 is owner-closed as of 2026-09-24.
+
+Formal closeout:
+- `docs/phase-7-closeout.md`
+
+Owner closeout:
+- `docs/phase-7-owner-closeout.md`
+
+Accepted runtime result:
+- `parallel=1`;
+- accepted warm quick-suite evidence: 12/12 passed;
+- 33.03 s total;
+- 18 provider rounds;
+- approximately 1.83 s average provider round;
+- 0 retries.
+
+Accepted runtime state carried into Phase 8:
+- context length: 32768;
+- eval batch size: 2048;
+- physical batch size: 512;
+- max concurrent predictions: 1;
+- Flash Attention: on;
+- GPU KV cache: on;
+- experts: 8;
+- speculative draft: off;
+- main model GPU offload retained at the prior stable working position.
+
+The final restored-runtime verification remains **Not Green** because one structured-tool repetition duplicated a read. Owner closeout accepts that evidence state for progression but does not relabel it Green.
+
+Phase 8 baseline authority:
+- `docs/planning/p8-context-throughput-optimization/initial-baseline.md`
+
+Phase 8 now owns the next benchmark-gated optimization loop, beginning with characterization of provider-facing context/prefill cost across ordinary, medium, and large-context workloads.
