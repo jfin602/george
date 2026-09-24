@@ -82,3 +82,49 @@ Do not stack multiple unmeasured context changes.
 Before implementing a context optimization, characterize the current provider-facing context cost across representative ordinary, medium, and large-context workloads using the existing benchmark harness.
 
 That characterization becomes the Phase 8 comparison baseline for subsequent context changes.
+
+
+## Baseline attempt 1 — Not accepted
+
+Label: `p8-context-baseline`
+
+Artifact:
+
+`/home/jfin/dev/george/artifacts/benchmarks/2026-09-24T16-07-22-095Z-4939`
+
+This run is retained as diagnostic evidence but is **not** accepted as the Phase 8 comparison baseline.
+
+Pre-run LM Studio evidence:
+- model key matched `qwen3-coder-30b-a3b-instruct@q4_k_m`;
+- `loaded_instances` was empty.
+
+Repository/runtime provenance:
+- benchmark reported George commit `270e47fb9981ec3080544047ad0a5559bd188ea0` clean;
+- npm reported package `0.7.0`, not the Phase 8 `0.8.0` baseline.
+
+Benchmark result:
+- 34 / 39 passed;
+- elapsed: 768.41 s;
+- provider/model time: 764.19 s (99.5%);
+- provider rounds: 117;
+- average provider round: 6.53 s;
+- input tokens: 222,098;
+- output tokens: 4,431.
+
+Observed failures:
+- `multi-round-coding-workflow-001` failed in all three repetitions because the fixture edit did not match expected content;
+- `short-reasoning-001` repetition 3 failed with `Engine protocol predict request failed: fetch failed`;
+- `long-context-4096-001` repetition 3 failed with the same provider fetch failure.
+
+Warm long-context observations within this diagnostic run:
+- ~2k case: 0.79-1.02 s;
+- ~4k case: one Green warm sample at 0.97 s; the third repetition hit a provider fetch failure;
+- ~8k case: 1.29-1.39 s;
+- ~16k case: 2.12-2.26 s.
+
+Decision:
+- do not use this run as the Phase 8 baseline;
+- synchronize the local checkout to the Phase 8 `0.8.0` baseline;
+- explicitly load the model with the accepted Phase 7 runtime configuration;
+- confirm a non-empty LM Studio `loaded_instances` snapshot before rerunning;
+- rerun the unchanged full benchmark after provenance is correct.
