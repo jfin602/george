@@ -211,3 +211,77 @@ Reason:
 Restore and retain `eval_batch_size=2048` as the accepted Phase 7 runtime baseline.
 
 The first-request/reload penalty remains a separate startup warm-up question.
+
+
+## Rejected runtime experiment 3 — Physical batch size 512 → 1024
+
+Status: REJECTED / NO MATERIAL IMPROVEMENT
+
+Starting accepted state:
+- `parallel=1`;
+- `eval_batch_size=2048`;
+- `physical_batch_size=512`;
+- Flash Attention enabled;
+- GPU KV-cache offload enabled.
+
+Experiment change:
+
+`physical_batch_size: 512 -> 1024`
+
+No other runtime/model/context/George setting was intentionally changed.
+
+### First run
+
+Label: `p7-physical-batch-1024`
+
+Artifact:
+
+`/home/jfin/dev/george/artifacts/benchmarks/2026-09-24T05-21-23-720Z-142213`
+
+Result:
+- 12 / 12 passed;
+- elapsed: 44.06 s;
+- provider/model time: 43.88 s (99.9%);
+- average provider round: 2.44 s;
+- the first post-reload long-context request showed a large startup penalty.
+
+### Warm verification
+
+Label: `p7-physical-batch-1024-warm-verify`
+
+Artifact:
+
+`/home/jfin/dev/george/artifacts/benchmarks/2026-09-24T05-22-56-511Z-142640`
+
+Result:
+- 12 / 12 passed;
+- elapsed: 33.19 s;
+- provider/model time: 33.03 s (99.9%);
+- provider rounds: 18;
+- average provider round: 1.835 s;
+- retries: 0.
+
+Accepted `physical_batch_size=512` warm reference:
+- 12 / 12 passed;
+- elapsed: 33.03 s;
+- average provider round: 1.83 s.
+
+### Decision
+
+Reject `physical_batch_size=1024` as a no-material-improvement experiment and restore `physical_batch_size=512`.
+
+Reason:
+- steady-state total time is effectively identical to the accepted 512 baseline;
+- average provider-round time is effectively identical;
+- no correctness benefit or other compensating gain was observed;
+- the Phase 7 contract requires a measurable improvement before adding runtime cost/complexity.
+
+Accepted Phase 7 runtime baseline remains:
+- context length: 32768;
+- eval batch size: 2048;
+- physical batch size: 512;
+- parallel: 1;
+- Flash Attention: on;
+- GPU KV cache: on;
+- experts: 8;
+- speculative draft: off.
