@@ -1,0 +1,39 @@
+TASK: Phase 8 / P7 — Phase 8 closeout validation
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Terra Medium`.
+- Browser required: no.
+
+VERSIONING
+- This prompt's assigned project version is `0.8.7`.
+
+GOAL
+
+Perform an evidence-only Phase-8 closeout from the exact P6 candidate and `docs/tasks/p8/P6-qualification-evidence.md`.
+
+Read BOOT/current product/architecture/workflow/stability/roadmap contracts, Phase-8 decision/assessment/plan, exact P1-P6 source/test state, P3 adaptive evidence, P4 prefix experiment record, P5 reuse experiment record, and P6 qualification evidence.
+
+Audit and report:
+- adaptive/fixed configuration;
+- ordinary/medium/large profile values and selection;
+- per-turn profile immutability;
+- promotion/omission/defer semantics;
+- precedence/provenance preservation;
+- no probe provider/tool/session side effects;
+- Phase-5 compaction/recovery preservation;
+- selected profile diagnostics;
+- accepted/rejected stable-prefix experiment;
+- accepted/rejected provider-reuse experiment and fallback;
+- canonical George authority over provider-native state;
+- benchmark artifacts and controlled runtime provenance;
+- provider-input/latency/provider-call effects;
+- deterministic context/application/provider regressions;
+- known Not Green / Evidence Gap truth including unrelated pre-existing TUI failures.
+
+Create/update `docs/phase-8-closeout.md` with explicit Implementation Complete / Stability Qualified state and per-layer Green / Not Green / Evidence Gap truth.
+
+Do not repair implementation, add another optimization experiment, owner-close Phase 8, or move BOOT/roadmap to Phase 9.
+
+Set `package.json` to `0.8.7`.
+
+Required proof: every closeout claim traces to current P6 evidence; rejected experiments remain recorded; uncontrolled/missing live evidence is never relabeled Green; documentation `git diff --check` passes; no `package-lock.json` exists.
