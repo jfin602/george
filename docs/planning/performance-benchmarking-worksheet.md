@@ -8,7 +8,7 @@ Date: 2026-09-23
 
 Record the benchmark control instrument, current performance observations, and the approved sequence for optimizing George's primary-model path before introducing a secondary helper model.
 
-This worksheet does not change the current Phase 6 implementation contract. Phase 6 remains the active roadmap gate until it is closed.
+Phase 6 is owner-closed. This worksheet now governs the active Phase 7-12 performance campaign.
 
 ## Implemented benchmark tooling
 
@@ -32,7 +32,7 @@ Supported options include:
 
 Current benchmark contract:
 - schema version: 1;
-- suite version: `v1`;
+- suite version: `v2`;
 - default suite: `quick`;
 - default repetitions: 1;
 - generated artifacts: `artifacts/benchmarks/<run-id>/results.json` and `report.md`;
@@ -41,7 +41,7 @@ Current benchmark contract:
 
 The harness runs through George's real application/provider/tool boundaries rather than benchmarking raw LM Studio HTTP alone.
 
-Current v1 cases cover:
+Current v2 cases cover:
 - short reasoning;
 - controlled long-context retrieval at approximately 2k/4k/8k/16k bands;
 - code understanding;
@@ -229,3 +229,29 @@ This worksheet still does **not**:
 - require speculative decoding.
 
 Those decisions must follow benchmark evidence and the normal George planning/qualification workflow.
+
+
+## Phase 7 experiment log
+
+### Accepted experiment 1 — Max Concurrent Predictions
+
+Decision: **accept `parallel=1`**, replacing the previous `parallel=4` runtime baseline.
+
+Evidence:
+- `p7-parallel-1`: 12/12 passed, 53.47 s total, 2.96 s average provider round; the first post-reload requests showed a large startup penalty;
+- `p7-parallel-1-warm-verify`: 12/12 passed, 33.03 s total, 1.83 s average provider round, 0 retries;
+- provider/model activity remained ~99.9% of measured time, confirming primary inference remains the dominant optimization target.
+
+Accepted current Phase 7 runtime state:
+- context length: 32768;
+- eval batch size: 2048;
+- physical batch size: 512;
+- max concurrent predictions: **1**;
+- Flash Attention: on;
+- GPU KV cache: on;
+- experts: 8;
+- speculative draft: off.
+
+The cold/reload penalty is preserved as a separate startup/warm-up question. It is not folded into the steady-state `parallel=1` decision.
+
+Subsequent Phase 7 experiments must start from this accepted state and change only one additional runtime variable at a time.
