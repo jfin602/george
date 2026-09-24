@@ -340,7 +340,7 @@ The benchmark harness is the control instrument for Phases 7-12. It must not its
 
 ## Phase 7 — Inference Runtime Optimization
 
-Status: CURRENT PHASE — baseline package `0.7.0`; untouched full benchmark required before tuning
+Status: CURRENT PHASE — baseline package `0.7.0`; initial benchmark accepted; runtime experiments active
 
 Goal: establish the fastest reliable primary-model runtime configuration for the pinned Qwen3-Coder/LM Studio path without changing George's higher-level context or agent-loop architecture.
 
