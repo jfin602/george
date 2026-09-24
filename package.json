@@ -1,6 +1,6 @@
 {
   "name": "george",
-  "version": "0.6.5",
+  "version": "0.6.6",
   "private": true,
   "type": "module",
   "engines": {
@@ -22,6 +22,7 @@
     "smoke:lm-studio": "node scripts/lm-studio-tool-cycle-smoke.ts"
   },
   "dependencies": {
+    "@modelcontextprotocol/client": "^2.1.0",
     "@opentui/core": "^0.5.12"
   },
   "devDependencies": {

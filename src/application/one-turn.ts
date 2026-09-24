@@ -52,9 +52,12 @@ import {
   createWorkspaceMutationToolExecutor,
   createParallelSearchTool,
   createGitHubTools,
+  McpAdapter,
   captureGitWorkingTreeSnapshot,
   type GitHubOptions,
   type ParallelSearchOptions,
+  type McpAdapterOptions,
+  type McpCatalogIssue,
   ToolRegistry,
   type ReadOnlyToolLimits,
   type ToolDefinition,
@@ -83,6 +86,8 @@ export type OneTurnServiceOptions = Readonly<{
   parallelSearch?: ParallelSearchOptions | false;
   /** George-owned GitHub configuration; omit or use `false` to keep it out of the provider surface. */
   github?: GitHubOptions | false;
+  /** User-global MCP configuration only; repository content is never consulted. */
+  mcp?: McpAdapterOptions | false;
   maxToolCalls?: number;
   maxToolRounds?: number;
   runBudget?: RunBudgetConfig;
@@ -203,6 +208,8 @@ export class AgentLoopApplicationService {
   private readonly recovery: RecoveryCoordinator;
   readonly hooks: HookRegistry;
   readonly plugins: PluginApplicationService;
+  /** Derived catalog evidence; unavailable/disabled MCP servers never become tools. */
+  readonly mcpCatalogIssues: readonly McpCatalogIssue[];
   private readonly diagnostics: DiagnosticObserver | undefined;
   private readonly projections = new WeakMap<Session, WorkProjection>();
   readonly workspace: Workspace;
@@ -227,6 +234,7 @@ export class AgentLoopApplicationService {
     hooks: HookRegistry,
     plugins: PluginApplicationService,
     diagnostics?: DiagnosticObserver,
+    mcpCatalogIssues: readonly McpCatalogIssue[] = [],
   ) {
     this.provider = provider;
     this.workspace = workspace;
@@ -248,6 +256,7 @@ export class AgentLoopApplicationService {
     this.hooks = hooks;
     this.plugins = plugins;
     this.diagnostics = diagnostics;
+    this.mcpCatalogIssues = mcpCatalogIssues;
   }
 
   async skillCatalog(): Promise<SkillCatalog> {
@@ -714,9 +723,10 @@ export async function createAgentLoopApplicationService(
   const manager = options.pluginManager ?? new PluginManager({ userConfigRoot });
   const enabled = await manager.enabled();
   const pluginTools = pluginToolDefinitions(enabled.plugins, process);
+  const mcpCatalog = options.mcp === false ? { definitions: [], issues: [] } : await new McpAdapter({ ...(options.mcp ?? {}), userConfigRoot }).discover();
   const roots = defaultSkillRoots(userConfigRoot, workspace.root);
   const skills = new SkillRegistry({ ...roots, ...options.skillRoots }, { maxSkillBytes: options.maxSkillBytes, maxMetadataBytes: options.maxSkillMetadataBytes, maxSkills: options.maxSkills, pluginSkills: enabled.plugins.flatMap((plugin) => plugin.manifest.skills.map((skill) => ({ pluginId: plugin.manifest.id, id: skill.id, path: join(plugin.root, skill.path), root: plugin.root }))) });
-  const registry = new ToolRegistry([
+  const baseTools = [
     ...readOnly.registry.registrations,
     ...mutation.registry.registrations,
     ...process.registry.registrations,
@@ -724,7 +734,11 @@ export async function createAgentLoopApplicationService(
     ...(options.parallelSearch === false ? [] : [createParallelSearchTool(options.parallelSearch)]),
     ...(options.github === undefined || options.github === false ? [] : createGitHubTools(options.github)),
     ...(options.additionalTools ?? []),
-  ]);
+  ];
+  const occupied = new Set(baseTools.map((tool) => tool.name));
+  const mcpTools = mcpCatalog.definitions.filter((tool) => !occupied.has(tool.name));
+  const mcpIssues = [...mcpCatalog.issues, ...mcpCatalog.definitions.filter((tool) => occupied.has(tool.name)).map((tool) => ({ server: tool.execution.source.kind === 'adapter' ? tool.execution.source.server ?? 'unknown' : 'unknown', tool: tool.name, reason: 'tool name collides with an existing George tool' }))];
+  const registry = new ToolRegistry([...baseTools, ...mcpTools]);
   const hooks = new HookRegistry();
   for (const hook of options.hooks ?? []) hooks.register(hook);
   for (const plugin of enabled.plugins) for (const hook of plugin.manifest.hooks) hooks.register({ id: `plugin:${plugin.manifest.id}:${hook.id}`, event: hook.event, kind: 'process', executable: join(plugin.root, hook.path), arguments: hook.arguments, ...(hook.priority === undefined ? {} : { priority: hook.priority }), ...(hook.timeoutMs === undefined ? {} : { timeoutMs: hook.timeoutMs }), ...(hook.configuration === undefined ? {} : { configuration: hook.configuration }) });
@@ -751,6 +765,7 @@ export async function createAgentLoopApplicationService(
     hooks,
     plugins,
     options.diagnostics,
+    mcpIssues,
   );
   return service;
 }
