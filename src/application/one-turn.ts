@@ -50,7 +50,9 @@ import {
   createProcessToolExecutor,
   createReadOnlyToolExecutor,
   createWorkspaceMutationToolExecutor,
+  createParallelSearchTool,
   captureGitWorkingTreeSnapshot,
+  type ParallelSearchOptions,
   ToolRegistry,
   type ReadOnlyToolLimits,
   type ToolDefinition,
@@ -75,6 +77,8 @@ export type OneTurnServiceOptions = Readonly<{
   toolNames?: readonly string[];
   /** George-owned registrations for a later explicit adapter boundary; provider metadata cannot add these. */
   additionalTools?: readonly ToolDefinition[];
+  /** George-owned Parallel configuration; `false` keeps the unavailable adapter out of the provider surface. */
+  parallelSearch?: ParallelSearchOptions | false;
   maxToolCalls?: number;
   maxToolRounds?: number;
   runBudget?: RunBudgetConfig;
@@ -708,6 +712,7 @@ export async function createAgentLoopApplicationService(
     ...mutation.registry.registrations,
     ...process.registry.registrations,
     ...pluginTools,
+    ...(options.parallelSearch === false ? [] : [createParallelSearchTool(options.parallelSearch)]),
     ...(options.additionalTools ?? []),
   ]);
   const hooks = new HookRegistry();
