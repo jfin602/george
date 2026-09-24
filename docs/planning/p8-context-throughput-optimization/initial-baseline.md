@@ -168,13 +168,14 @@ Decision:
 - visible LM Studio settings match the accepted control, so investigate runtime state not exposed by the current model-list snapshot (especially main model GPU-offload position), system/resource contention, and provider/runtime instability before changing context policy.
 
 
-## Runtime recovery experiment — GPU offload 20 → 24
+## Runtime recovery observation — GPU offload remained at 20
 
-Status: PROMISING / WARM CONFIRMATION REQUIRED
+Status: PROMISING WARM-STATE RECOVERY / NO OFFLOAD CHANGE OCCURRED
 
-Experiment intent:
-- restore the Phase 7 steady-state runtime envelope before beginning Phase 8 context optimization;
-- change the LM Studio main-model GPU Offload UI value from 20 to 24 while retaining all REST-visible accepted Phase 7 settings.
+Correction:
+- the run labeled `p8-runtime-recovery-gpu-offload-24` did **not** actually use GPU Offload 24;
+- the LM Studio main-model GPU Offload UI value remained at 20;
+- therefore this run cannot support any claim that increasing GPU Offload restored performance.
 
 Pre-run REST snapshot:
 - the model key matched;
@@ -204,12 +205,12 @@ Comparison:
 - accepted Phase 7 warm control: approximately 1.83 s average provider round.
 
 Interpretation:
-- steady-state performance appears restored to within a few percent of the accepted Phase 7 control;
-- the aggregate 4.14 s figure is not representative of steady-state performance because the run began from an unloaded model;
-- GPU Offload 24 is the leading recovery candidate, but the main-model offload value is not exposed by the current REST model-list response.
+- steady-state performance at GPU Offload 20 can still return to within a few percent of the accepted Phase 7 control;
+- the earlier 4.59 s/round runtime-control result therefore does not by itself prove a persistent configuration regression;
+- the discrepancy is more consistent with transient runtime/load/provider state or another uncontrolled factor than with GPU Offload 20 alone.
 
 Decision:
-- do not begin Phase 8 context optimization yet;
-- keep GPU Offload at 24;
-- without changing/reloading anything, run one immediate warm quick-suite confirmation;
-- accept the restored runtime control only if that run remains Green and stays near the ~1.83 s Phase 7 provider-round envelope.
+- do not attribute the recovery to a GPU-offload change;
+- keep GPU Offload at 20 for one clean, already-loaded warm confirmation;
+- do not begin Phase 8 context optimization until that confirmation establishes whether the Phase 7 performance envelope is reproducible.
+
