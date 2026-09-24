@@ -1,0 +1,51 @@
+TASK: Phase 8 / P8 — Phase 8 closeout validation
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Terra Medium`.
+- Browser required: no.
+
+VERSIONING
+- This prompt's assigned project version is `0.8.8`.
+
+GOAL
+
+Perform an evidence-only Phase-8 closeout from the exact accepted post-P7 candidate.
+
+Read BOOT/current product/architecture/workflow/stability/roadmap contracts, Phase-8 decision/assessment/plan, exact P1-P7 source/test state, P3 adaptive evidence, P4 prefix experiment record, P5 reuse experiment record, `docs/tasks/p8/P6-qualification-evidence.md`, and `docs/tasks/p8/P7-continuation-pressure-evidence.md`.
+
+Treat P6 as the integrated qualification baseline and P7 as the final adaptive continuation-pressure hardening gate. Every final closeout claim must reconcile both evidence records and the exact current candidate.
+
+Audit and report:
+- adaptive/fixed configuration;
+- ordinary/medium/large profile values and selection;
+- per-turn profile immutability;
+- promotion/omission/defer semantics;
+- precedence/provenance preservation;
+- no probe provider/tool/session side effects;
+- Phase-5 compaction/recovery preservation;
+- selected profile diagnostics;
+- accepted/rejected stable-prefix experiment;
+- accepted/rejected provider-reuse experiment and fallback;
+- canonical George authority over provider-native state;
+- P7 continuation-pressure behavior for initially ordinary/medium turns that grow through substantial tool/file results;
+- proof that correctness-critical current/routed/project/skill/recovery context is not silently lost after profile selection;
+- explicit bounded behavior when a frozen per-turn envelope reaches unsafe pressure;
+- confirmation that ordinary/medium are not using semantic compaction merely to remain small;
+- benchmark artifacts and controlled runtime provenance;
+- provider-input/latency/provider-call effects;
+- deterministic context/application/provider regressions;
+- known Not Green / Evidence Gap truth including unrelated pre-existing TUI failures.
+
+Create/update `docs/phase-8-closeout.md` with explicit Implementation Complete / Stability Qualified state and per-layer Green / Not Green / Evidence Gap truth. The closeout must identify the exact final candidate after P7, not the pre-P7 P6 candidate.
+
+Do not repair implementation, add another optimization experiment, owner-close Phase 8, or move BOOT/roadmap to Phase 9.
+
+Set `package.json` to `0.8.8`.
+
+Required proof:
+- every closeout claim traces to current P6 and P7 evidence plus exact source/tests;
+- P7 continuation-pressure coverage is explicitly included in the stability verdict;
+- rejected experiments remain recorded;
+- uncontrolled/missing live evidence is never relabeled Green;
+- documentation `git diff --check` passes;
+- no `package-lock.json` exists.
