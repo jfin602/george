@@ -46,6 +46,28 @@ Phase 3 context qualification must also prove that the selected context profile 
 The preferred working-set and soft-pressure numbers are qualification targets, not guarantees that every valid task must fit beneath them. Tasks requiring more context may use available profile headroom while remaining below the hard provider-input budget.
 
 
+Phase 8 adaptive-profile qualification must additionally prove:
+- the ordinary, medium, and large profile values are validated and stable;
+- adaptive selection is deterministic for identical source/session state;
+- selection starts at ordinary and only promotes monotonically `ordinary -> medium -> large`;
+- profile selection completes before the first provider request and does not oscillate during one user turn;
+- explicit fixed-profile override disables adaptive promotion and remains backward compatible;
+- the Phase 3 large/default profile remains value-for-value compatible with its original qualified limits;
+- required George/current-user/tool context is never lost because an undersized profile was tried first;
+- applicable selected project instructions, explicitly routed task documents, and explicitly activated skills promote rather than being silently discarded solely because ordinary/medium is too small;
+- lower-value optional context can still omit/defer under the documented Phase 3 whole-source rules;
+- discarded profile probes make no provider call, tool call, session mutation, permission decision, or misleading canonical context-source evidence;
+- provider-facing source precedence/order is unchanged by profile selection;
+- ordinary/medium pressure promotes before provider-backed semantic history compaction;
+- large-profile Phase 5 compaction, recovery, and hard-pressure behavior remain unchanged;
+- selected mode/profile/budgets/headroom and bounded promotion evidence are observable;
+- existing quick/full/context benchmark selection behavior remains stable.
+
+Live/performance qualification should exercise all three operating regions. The context-ladder suite should include a requested band around 24,576 in addition to the 2,048/4,096/8,192/16,384 bands so the large operating region is represented. Cold/first-shape latency and warm-state context/prefill latency must be reported separately.
+
+A smaller profile is not accepted merely because it reduces estimated tokens. Qualification must preserve retrieval/instruction correctness, required-context retention, Phase 5 evidence/recovery behavior, and provider-call count. Adaptive selection must not introduce an extra model call merely to stay inside ordinary or medium.
+
+
 ### Extension qualification
 
 Skill behavior must be deterministic enough to test independently from model inference.
