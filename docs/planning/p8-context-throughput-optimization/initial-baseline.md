@@ -166,3 +166,50 @@ Decision:
 - Phase 8 context optimization is paused until the Phase 7 runtime performance envelope is restored or the source of the regression is explained;
 - do not treat the current 4.59 s/round quick run as the Phase 8 context baseline;
 - visible LM Studio settings match the accepted control, so investigate runtime state not exposed by the current model-list snapshot (especially main model GPU-offload position), system/resource contention, and provider/runtime instability before changing context policy.
+
+
+## Runtime recovery experiment — GPU offload 20 → 24
+
+Status: PROMISING / WARM CONFIRMATION REQUIRED
+
+Experiment intent:
+- restore the Phase 7 steady-state runtime envelope before beginning Phase 8 context optimization;
+- change the LM Studio main-model GPU Offload UI value from 20 to 24 while retaining all REST-visible accepted Phase 7 settings.
+
+Pre-run REST snapshot:
+- the model key matched;
+- `loaded_instances` was empty, so the benchmark caused/encountered model load rather than beginning from a verified already-loaded instance.
+
+Artifact:
+
+`/home/jfin/dev/george/artifacts/benchmarks/2026-09-24T19-21-59-626Z-73718`
+
+Result:
+- 12 / 12 passed;
+- elapsed: 74.74 s;
+- provider/model time: 74.46 s;
+- provider rounds: 18;
+- reported aggregate average provider round: 4.14 s;
+- first repetition carried a very large cold/auto-load penalty.
+
+Warm repetitions 2-3:
+- short reasoning: ~0.20 s;
+- ~2k context: ~0.86-0.88 s;
+- structured tool workflow: ~3.39-3.43 s;
+- independent multi-tool workflow: ~6.71-6.90 s.
+
+Across warm repetitions 2-3, provider active time was approximately 22.57 s over 12 provider rounds, or approximately **1.88 s per provider round**.
+
+Comparison:
+- accepted Phase 7 warm control: approximately 1.83 s average provider round.
+
+Interpretation:
+- steady-state performance appears restored to within a few percent of the accepted Phase 7 control;
+- the aggregate 4.14 s figure is not representative of steady-state performance because the run began from an unloaded model;
+- GPU Offload 24 is the leading recovery candidate, but the main-model offload value is not exposed by the current REST model-list response.
+
+Decision:
+- do not begin Phase 8 context optimization yet;
+- keep GPU Offload at 24;
+- without changing/reloading anything, run one immediate warm quick-suite confirmation;
+- accept the restored runtime control only if that run remains Green and stays near the ~1.83 s Phase 7 provider-round envelope.
