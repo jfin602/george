@@ -397,3 +397,58 @@ Accepted Phase 7 runtime baseline remains:
 - GPU KV cache: on;
 - experts: 8;
 - speculative draft: off.
+
+
+## Rejected runtime experiment 6 — Active experts 8 → 6
+
+Status: REJECTED — CORRECTNESS REGRESSION
+
+Starting accepted state:
+- context length: 32768;
+- eval batch size: 2048;
+- physical batch size: 512;
+- parallel: 1;
+- Flash Attention: on;
+- GPU KV-cache offload: on;
+- experts: 8;
+- speculative draft: off.
+
+Experiment change:
+
+`num_experts: 8 -> 6`
+
+LM Studio configuration was independently confirmed through `/api/v1/models` immediately before the benchmark.
+
+Artifact:
+
+`/home/jfin/dev/george/artifacts/benchmarks/2026-09-24T05-34-07-275Z-146871`
+
+Result:
+- 11 / 12 passed;
+- elapsed: 49.92 s;
+- provider/model time: 49.72 s (99.9%);
+- provider rounds: 19;
+- average provider round: 2.62 s;
+- retries: 0;
+- `independent-multi-tool-001` failed because the model issued 6 tool calls where the deterministic case requires exactly 3.
+
+Warm latency improved in several cases, but the benchmark contract treats correctness independently from speed.
+
+### Decision
+
+Reject `num_experts=6` and restore `num_experts=8`.
+
+Reason:
+- benchmark correctness regressed from the accepted 12/12 quick-suite state to 11/12;
+- the model duplicated tool work under the reduced-expert configuration;
+- Phase 7 does not accept a speed improvement that reduces coding/tool-use reliability.
+
+Accepted Phase 7 runtime baseline remains:
+- context length: 32768;
+- eval batch size: 2048;
+- physical batch size: 512;
+- parallel: 1;
+- Flash Attention: on;
+- GPU KV cache: on;
+- experts: **8**;
+- speculative draft: off.
