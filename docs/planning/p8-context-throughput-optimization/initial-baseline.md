@@ -312,3 +312,46 @@ Decision:
 - retain GPU Offload 24 as the accepted stable control;
 - bracket the likely performance/stability boundary between 24 and 28;
 - test GPU Offload 26 next as the midpoint before considering 25 or 27.
+
+
+## GPU offload experiment — 26
+
+Status: ACCEPTED AS NEW BEST STABLE RUNTIME CONTROL
+
+Owner-confirmed main-model GPU Offload UI value: **26**.
+
+Artifact:
+
+`/home/jfin/dev/george/artifacts/benchmarks/2026-09-24T19-39-46-613Z-77435`
+
+Result:
+- 16 / 16 passed;
+- elapsed: 58.34 s;
+- provider/model time: 58.10 s;
+- provider rounds: 24;
+- aggregate average provider round: 2.42 s;
+- retries: 0.
+
+The first repetition again carried a post-load/warm-up penalty.
+
+Warm repetitions 2-4:
+- repetition 2 provider active time: ~10.70 s over 6 rounds = ~1.78 s/round;
+- repetition 3 provider active time: ~10.67 s over 6 rounds = ~1.78 s/round;
+- repetition 4 provider active time: ~10.31 s over 6 rounds = ~1.72 s/round;
+- combined warm provider time: ~31.67 s over 18 rounds = approximately **1.76 s/provider round**.
+
+Representative warm cases:
+- short reasoning: ~0.18-0.21 s;
+- ~2k context: ~0.80-0.89 s;
+- structured tool workflow: ~3.11-3.28 s;
+- independent multi-tool workflow: ~6.21-6.48 s.
+
+Comparison:
+- accepted GPU Offload 24 control: ~1.79 s/provider round warm;
+- original accepted Phase 7 control: ~1.83 s/provider round warm.
+
+Decision:
+- accept GPU Offload 26 as the new best-known stable runtime control;
+- keep all other accepted runtime settings unchanged;
+- test GPU Offload 27 next as the final boundary point because 28 already failed the correctness/agent-loop gate;
+- if 27 is Green and materially faster than 26, retain 27; otherwise keep 26 and stop GPU-offload tuning.
