@@ -369,3 +369,37 @@ Accepted Phase 7 runtime baseline remains:
 - GPU KV cache: on;
 - experts: 8;
 - speculative draft: off.
+
+
+### Rejected experiment 6 — Active experts
+
+Decision: **reject `num_experts=6`; retain `8`**.
+
+LM Studio's loaded configuration was independently captured immediately before the run and confirmed:
+- context length: 32768;
+- eval batch size: 2048;
+- physical batch size: 512;
+- parallel: 1;
+- Flash Attention: on;
+- GPU KV-cache offload: on;
+- experts: **6**;
+- speculative draft: off.
+
+Evidence:
+- `p7-experts-6`: 11/12 passed, 49.92 s total, 2.62 s average provider round;
+- warm latency improved on several cases;
+- `independent-multi-tool-001` regressed from exactly 3 required tool calls to 6 observed tool calls.
+
+Reason:
+- correctness/tool-use behavior regressed;
+- Phase 7 does not accept faster inference at the cost of deterministic coding-agent reliability.
+
+Accepted Phase 7 runtime baseline remains:
+- context length: 32768;
+- eval batch size: 2048;
+- physical batch size: 512;
+- max concurrent predictions: 1;
+- Flash Attention: on;
+- GPU KV cache: on;
+- experts: **8**;
+- speculative draft: off.
