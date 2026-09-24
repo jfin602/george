@@ -355,3 +355,49 @@ Decision:
 - keep all other accepted runtime settings unchanged;
 - test GPU Offload 27 next as the final boundary point because 28 already failed the correctness/agent-loop gate;
 - if 27 is Green and materially faster than 26, retain 27; otherwise keep 26 and stop GPU-offload tuning.
+
+
+## GPU Offload 26 sustained stability stress
+
+Status: RUNTIME QUALIFIED / BEHAVIORAL STRESS NOT GREEN
+
+Owner-confirmed main-model GPU Offload UI value: **26**.
+
+Artifact:
+
+`/home/jfin/dev/george/artifacts/benchmarks/2026-09-24T19-46-59-607Z-78264`
+
+Stress shape:
+- quick suite;
+- 20 repetitions;
+- 80 benchmark executions;
+- 123 provider rounds;
+- repeated structured single-tool and independent three-tool workflows.
+
+Result:
+- 77 / 80 passed;
+- elapsed: 224.59 s;
+- provider/model time: 223.68 s (99.9%);
+- average provider round: **1.82 s**;
+- retries: 0;
+- no provider fetch failures;
+- no 32-round tool-loop exhaustion;
+- no progressive latency degradation was observed.
+
+Behavioral failures:
+- independent multi-tool repetition 6 issued 6 tool calls instead of exactly 3;
+- structured-tool-use repetition 19 issued 2 tool calls instead of exactly 1;
+- independent multi-tool repetition 19 issued 6 tool calls instead of exactly 3.
+
+Interpretation:
+- GPU Offload 26 sustained the desired runtime performance envelope over 123 provider rounds;
+- the runtime did not exhibit the catastrophic runaway-loop behavior observed at GPU Offload 28;
+- deterministic tool-call behavior remains Not Green because of three duplicate-tool-call events;
+- similar duplicate-tool behavior has been observed at other runtime settings, so this stress run does not establish GPU Offload 26 as the cause.
+
+Decision:
+- retain GPU Offload 26 as the best-known stable runtime control;
+- classify its sustained runtime stability as qualified;
+- preserve the 77/80 behavioral result as Not Green rather than rewriting it as a pass;
+- treat duplicate-tool-call robustness as a separate model/agent-loop concern rather than continuing GPU-offload micro-tuning;
+- proceed with Phase 8 context/prefill work from GPU Offload 26.
