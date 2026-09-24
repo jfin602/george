@@ -180,6 +180,28 @@ Logical trust/precedence and physical/provider serialization order are separate 
 Context diagnostics should expose the selected profile plus a bounded contribution breakdown, for example core/project instructions, tools, task, skills, routed knowledge, conversation, and tool results.
 
 
+Phase 8 extends the context profile concept into an explicit **adaptive-versus-fixed operating mode**. Fixed mode preserves a caller-selected concrete profile without automatic promotion. Adaptive mode starts from the smallest profile and may promote monotonically `ordinary -> medium -> large` for one user turn before the first provider request.
+
+Adaptive selection is owned by the application/context layer. It is not model reasoning, provider routing, or presentation state. Selection must be deterministic from George-owned source/context state and must not call the provider, execute tools, mutate canonical session history, or consume executable authority.
+
+The Phase 8 adaptive profiles for the pinned 32k Qwen/LM Studio target are:
+- ordinary: 4,096-6,144 preferred working set, 7,168 soft pressure, 8,192 provider-input ceiling;
+- medium: 8,192-12,288 preferred working set, 14,336 soft pressure, 16,384 provider-input ceiling;
+- large: 12,000-18,000 preferred working set, 20,000 soft pressure, 24,576 provider-input ceiling.
+
+All three retain the 32,768 physical target, at least 8,192 reserved headroom, and the 2,560 always-on instruction target. The large profile remains value-for-value compatible with the Phase 3 concrete default profile. Reserved headroom is a minimum reserve, not a fill target.
+
+Adaptive promotion exists to preserve the deliberately selected working set, not to maximize context usage. Required George/current-user/tool context, applicable selected project instructions, explicitly routed task documents, or activated skills that cannot safely fit a smaller profile may promote to the next profile. Genuinely lower-value optional context may still omit/defer under the existing Phase 3 whole-source budget rules rather than forcing promotion.
+
+A failed required-source trial under ordinary or medium is a promotion signal, not a final context failure. Discarded profile probes are non-canonical: they must not emit duplicate durable context-source lifecycle evidence or become persisted provider-facing state.
+
+The selected profile is fixed for the remainder of that user turn's provider/tool loop. Later provider rounds do not oscillate profile size. A later user turn may select again from current canonical state.
+
+Ordinary/medium profile pressure promotes before provider-backed semantic history compaction. Phase 5 semantic compaction remains a large-profile pressure mechanism so adaptive profiles do not add primary-model summarization calls merely to remain within a small operating envelope.
+
+Final context diagnostics should expose adaptive/fixed mode, selected profile identity, selected budgets/headroom, final estimated provider-facing size, and bounded promotion evidence. Diagnostics remain derived observability only.
+
+
 Human-readable Markdown remains an authoring format, not a requirement that every byte be permanently injected. LLM-based summarization is not required for Phase 3 instruction assembly; any later compaction/summarization must preserve critical instructions and remain independently testable.
 
 Phase 5 implements compaction as provider-facing derived context over the authoritative normalized session/event history. Versioned compaction checkpoints retain durable-history provenance and do not delete or become the sole copy of the history they summarize. Critical George/user/project instructions, unresolved validation/failure state, pending approvals, interrupted/ambiguous side effects, and current recovery state must remain available whenever safety or correctness requires them.
