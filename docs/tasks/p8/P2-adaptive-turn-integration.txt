@@ -1,0 +1,42 @@
+TASK: Phase 8 / P2 — Per-turn adaptive profile integration
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Terra High`.
+- Browser required: no.
+
+VERSIONING
+- This prompt's assigned project version is `0.8.2`.
+
+GOAL
+
+Wire the P1 selector into George's canonical turn path and make normal runtime adaptive while preserving explicit fixed-profile override behavior.
+
+Read current contracts, Phase-8 decision/plan, and exact P1 source/tests before editing.
+
+Normal George startup should resolve adaptive context mode. Explicit concrete profile override remains fixed and disables promotion.
+
+For each user turn:
+1. resolve/load the same context inputs George already uses;
+2. probe ordinary -> medium -> large without provider/tool/session side effects;
+3. finalize exactly one profile before the first provider request;
+4. emit canonical source/assembly evidence for the selected assembly only;
+5. keep that selected profile fixed through all provider/tool continuation rounds.
+
+Do not let discarded probes duplicate `context.source` lifecycle evidence.
+
+Reorder pressure handling:
+- ordinary/medium pressure promotes before provider-backed semantic history compaction;
+- semantic compaction is permitted only after large is selected;
+- preserve existing Phase-5 hard/soft-pressure compaction, checkpoint reuse, cancellation, unresolved-state preservation, and failure truth at large.
+
+Extend bounded `ContextDiagnostics` with adaptive/fixed mode, attempted profile IDs, selected profile, and bounded promotion reason categories. Keep diagnostics derived/non-authoritative and never include raw source bodies or hidden reasoning.
+
+Preserve provider request count: adaptive selection itself performs zero model requests.
+
+Preserve precedence/source order/tool permissions/TUI authority/session truth.
+
+Set `package.json` to `0.8.2`.
+
+Required proof: normal startup adaptive; explicit override fixed; ordinary/medium/large turn selection; no within-turn oscillation; multi-round tool continuation retains selected profile; selected routed/project/skill content promotes rather than disappearing solely due to undersized profile; low-value optional omission remains legal; ordinary/medium never invoke compactor; large still does under existing conditions; only final source observations are canonical; existing one-turn/context/compaction/session tests plus typecheck, broad tests, runner tests, `git diff --check`, and no `package-lock.json`.
+
+Do not alter benchmark band limits or provider continuation behavior in P2.
