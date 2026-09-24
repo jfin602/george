@@ -296,21 +296,48 @@ Create `docs/tasks/p8/P6-qualification-evidence.md` tied to the exact candidate 
 
 Do not owner-close Phase 8 or advance Phase 9.
 
-## P7 — Phase 8 closeout
+## P7 — adaptive continuation-pressure hardening
 
 Target: `0.8.7`.
 
-Evidence-only audit.
+Start from the exact accepted P6 candidate and its qualification evidence.
 
-Read P6 evidence, the Phase-8 decision record, accepted/rejected P3-P5 experiment records, and exact candidate source/tests.
+Qualify the risk that an initially ordinary- or medium-selected turn can accumulate substantial file/search/tool-result material after the profile has been frozen for that turn.
+
+Build deterministic/integrated fixtures that:
+- select ordinary from a genuinely small initial working set, then execute multiple substantial tool/file-result continuation rounds;
+- exercise medium similarly where needed to cover the next envelope;
+- preserve current user intent, George invariants, required tool context, selected project/routed guidance, activated skills, and authoritative unresolved/recovery state;
+- measure/observe context or provider-input growth near the frozen profile boundary;
+- exercise the exact accepted P5 continuation/reuse behavior and fallback;
+- prove unsafe pressure never causes silent correctness-critical context loss.
+
+First test the current candidate. If it is already safe, add permanent regression coverage and evidence without changing runtime behavior.
+
+If a defect is confirmed, apply only the smallest architecture-preserving repair. Prefer conservative deterministic turn-growth reserve/selection pressure, explicit continuation/context-budget enforcement, or truthful bounded failure/degradation before any redesign.
+
+Do not add helper-model summarization, semantic relevance routing, mid-turn adaptive resizing, Phase-9 parallelism, or unrelated optimization. Preserve per-turn profile immutability unless current evidence proves safe repair requires a material architecture change; in that case return `Planning needed`.
+
+Create `docs/tasks/p8/P7-continuation-pressure-evidence.md` with exact candidate provenance, fixture shapes, selected profiles, observed growth, regression guards, validation, and Green / Not Green / Evidence Gap truth.
+
+## P8 — Phase 8 closeout
+
+Target: `0.8.8`.
+
+Evidence-only audit of the exact accepted post-P7 candidate.
+
+Read P6 integrated qualification evidence, P7 continuation-pressure evidence, the Phase-8 decision record, accepted/rejected P3-P5 experiment records, and exact candidate source/tests.
 
 Create/update `docs/phase-8-closeout.md` with:
 - Implementation Complete state;
 - Stability Qualified state;
 - accepted runtime/context policy;
 - adaptive profile evidence;
+- frozen-profile continuation-pressure evidence from P7;
+- proof that substantial tool/file-result growth does not silently discard correctness-critical current/routed/project/skill/recovery context;
+- explicit bounded behavior when the selected per-turn envelope reaches unsafe pressure;
 - stable-prefix experiment decision;
-- provider-reuse experiment decision;
+- provider-reuse experiment decision and fallback;
 - benchmark artifacts;
 - known Not Green/Evidence Gaps;
 - explicit statement that provider cache/continuation remains optimization only;
@@ -349,7 +376,8 @@ Performance acceptance always separates:
 - P5 -> `0.8.5`
 - P6 -> `0.8.6`
 - P7 -> `0.8.7`
+- P8 -> `0.8.8`
 
-P1-P6 use Terra High. P7 uses Terra Medium.
+P1-P7 use Terra High. P8 uses Terra Medium.
 
 All prompts use `Browser required: no.`
