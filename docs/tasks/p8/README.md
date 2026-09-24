@@ -29,9 +29,10 @@ Current authority:
 - P4 / `0.8.4` — one stable-prefix/context-identity experiment with keep/revert evidence.
 - P5 / `0.8.5` — one intra-turn provider-native continuation/reuse experiment with fallback and keep/revert evidence.
 - P6 / `0.8.6` — integrated Phase-8 qualification and bounded evidence-driven corrections.
-- P7 / `0.8.7` — evidence-only Phase-8 closeout.
+- P7 / `0.8.7` — adaptive continuation-pressure hardening for frozen ordinary/medium turns under substantial tool/file-result growth.
+- P8 / `0.8.8` — evidence-only Phase-8 closeout over the final post-P7 candidate.
 
-P1-P6 use Terra High. P7 uses Terra Medium.
+P1-P7 use Terra High. P8 uses Terra Medium.
 
 Every prompt uses:
 
@@ -49,7 +50,11 @@ P4 changes only semantically neutral stable-prefix/context identity and keeps/re
 
 P5 touches provider-native reuse only after provider-independent adaptive behavior is qualified.
 
-P6 consolidates the exact accepted candidate. P7 records evidence only.
+P6 consolidates the accepted P1-P5 candidate.
+
+P7 specifically hardens the post-selection continuation-pressure edge case without introducing helper summarization or a new throughput optimization.
+
+P8 records final evidence only and must include both P6 integrated qualification and P7 continuation-pressure evidence.
 
 ## Benchmark control
 
@@ -68,6 +73,6 @@ Every performance experiment must:
 
 ## Phase boundary
 
-Phase 8 ends with a qualified adaptive context policy plus explicit keep/revert outcomes for any stable-prefix and provider-reuse experiments attempted.
+Phase 8 ends with a qualified adaptive context policy, explicit keep/revert outcomes for any stable-prefix and provider-reuse experiments attempted, and explicit qualification of frozen-profile continuation pressure after substantial tool/file-result growth.
 
 It does not add helper-model compaction, parallel tool execution, model-call batching, speculative decoding, daemon/desktop work, or canonical provider cache state.
