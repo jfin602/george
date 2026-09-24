@@ -305,3 +305,42 @@ Accepted Phase 7 runtime baseline remains:
 - GPU KV cache: on;
 - experts: 8;
 - speculative draft: off.
+
+
+### Rejected experiment 4 — GPU KV-cache offload
+
+Decision: **reject CPU-resident KV cache; retain GPU KV-cache offload**.
+
+LM Studio's loaded configuration was independently captured immediately before the run and confirmed:
+- context length: 32768;
+- eval batch size: 2048;
+- physical batch size: 512;
+- parallel: 1;
+- Flash Attention: on;
+- GPU KV-cache offload: **off**;
+- experts: 8;
+- speculative draft: off.
+
+Evidence:
+- `p7-kv-cache-cpu`: 12/12 passed, 53.58 s total, 2.97 s average provider round;
+- the first repetition included the normal post-reload penalty;
+- warm cases remained consistently slower than the accepted GPU-KV baseline:
+  - short reasoning ~0.30 s vs ~0.23-0.25 s;
+  - 2k context ~0.90-0.98 s vs ~0.83-0.93 s;
+  - structured tool ~3.34-3.54 s vs ~3.17-3.27 s;
+  - independent multi-read ~6.90-6.91 s vs ~6.55-6.74 s.
+
+Reason:
+- no latency benefit;
+- warm steady-state performance regressed consistently;
+- no correctness/reliability advantage.
+
+Accepted Phase 7 runtime baseline remains:
+- context length: 32768;
+- eval batch size: 2048;
+- physical batch size: 512;
+- max concurrent predictions: 1;
+- Flash Attention: on;
+- GPU KV cache: **on**;
+- experts: 8;
+- speculative draft: off.
