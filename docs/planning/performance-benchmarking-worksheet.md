@@ -255,3 +255,28 @@ Accepted current Phase 7 runtime state:
 The cold/reload penalty is preserved as a separate startup/warm-up question. It is not folded into the steady-state `parallel=1` decision.
 
 Subsequent Phase 7 experiments must start from this accepted state and change only one additional runtime variable at a time.
+
+
+### Rejected experiment 2 — Eval batch size
+
+Decision: **reject `eval_batch_size=1024`; retain `2048`**.
+
+Evidence:
+- first run: 12/12 passed, 58.82 s total, 3.25 s average provider round, with a large post-reload startup penalty;
+- warm verification: 11/12 passed, 35.25 s total, 1.85 s average provider round;
+- accepted 2048 warm reference: 12/12 passed, 33.03 s total, 1.83 s average provider round.
+
+Reason:
+- no material latency gain;
+- slightly worse warm aggregate time;
+- correctness regression in `structured-tool-use-001`.
+
+Accepted Phase 7 runtime baseline therefore remains:
+- context length: 32768;
+- eval batch size: **2048**;
+- physical batch size: 512;
+- max concurrent predictions: 1;
+- Flash Attention: on;
+- GPU KV cache: on;
+- experts: 8;
+- speculative draft: off.
