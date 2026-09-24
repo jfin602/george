@@ -1,0 +1,40 @@
+TASK: Phase 8 / P1 — Adaptive context-profile foundation
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Terra High`.
+- Browser required: no.
+
+VERSIONING
+- This prompt's assigned project version is `0.8.1`.
+
+GOAL
+
+Implement the provider-independent adaptive/fixed context-profile substrate without changing normal runtime behavior yet.
+
+Read `BOOT.md`, `AGENTS.md`, current contracts, the Phase-8 decision record/baseline, and `docs/tasks/p8/{prompt-assessment,implementation-plan}.md`. Inspect exact config, context assembly/profiler, diagnostics types, application service construction, and tests before editing.
+
+Add explicit context operating semantics:
+- adaptive mode selects from the canonical ordinary -> medium -> large registry;
+- fixed mode uses one explicit validated concrete profile and never promotes;
+- `DEFAULT_CONTEXT_PROFILE` remains value-for-value the existing large profile;
+- existing explicit `contextProfile` callers remain backward compatible.
+
+Create the smallest deterministic selector/probe boundary over the real `assembleContext()` behavior. Do not build a second context compiler.
+
+Promotion rules must be mechanically testable:
+- required-source `ContextAssemblyError` under ordinary/medium promotes;
+- selected applicable workspace/project instructions, explicitly routed documents, and activated skills that are omitted/deferred solely by the smaller profile promote;
+- genuinely lower-value optional defaults such as missing/over-budget personality/global defaults may still omit/defer without forcing promotion;
+- order is monotonic ordinary -> medium -> large only.
+
+Probe execution must be provider-free, tool-free, hook-free, session-nonmutating, permission-neutral, and non-canonical. It must not emit normal `context.source` lifecycle evidence.
+
+Expose bounded machine-readable promotion reason categories, not free-form reasoning.
+
+Do not switch the normal TUI/application default to adaptive in P1. Do not change compaction, provider continuation, benchmark limits, prefix ordering, or tool policy.
+
+Set `package.json` to `0.8.1`.
+
+Required proof: exact profile values/registry/default preserved; adaptive/fixed config validates; identical input selects identically; ordinary/medium hard failure promotes; selected routed/project/skill pressure promotes; low-value optional omission need not promote; no probe provider/tool/session/event side effects; existing profiler/context/config behavior remains Green; typecheck, broad tests, runner tests, `git diff --check`, and no `package-lock.json`.
+
+If current source materially contradicts the approved Phase-8 contract, stop with `Planning needed`.
