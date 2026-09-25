@@ -1,0 +1,125 @@
+TASK: Correction 9 / P1 — Required structured inspection execution
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Sol Medium`.
+- Browser required: no.
+
+VERSIONING
+- Required unchanged project version: `0.9.10`.
+
+GOAL
+
+Make structured INSPECT operationally mandatory instead of relying on model prose compliance: the first provider round of a structured inspection stage must require one tool call from the already-restricted read-only inspection tool set, while continuation rounds return to ordinary automatic tool choice.
+
+Read:
+- `BOOT.md`;
+- `AGENTS.md`;
+- current product/architecture/workflow/stability contracts;
+- current Phase 9 structured-task authority;
+- `docs/tasks/c9-qwen-workunit-convergence/{P3-live-evidence,closeout}.md`;
+- `docs/tasks/c9-inspection-execution/{prompt-assessment,implementation-plan}.md`;
+- exact provider request types;
+- LM Studio adapter;
+- AgentLoop application loop;
+- StructuredTaskApplicationService INSPECT path;
+- relevant provider/application tests.
+
+Preserve:
+- Task Prompt v1 grammar;
+- current INSPECTION_TOOLS restriction;
+- mutation SHA/precondition contract;
+- production StackState/stack executor;
+- stage call/round/no-progress limits;
+- context profiles;
+- Bubblewrap/TUI;
+- ordinary chat behavior.
+
+PROVIDER-NEUTRAL TOOL CHOICE
+
+Extend the canonical provider request contract with one narrow optional tool-choice mode.
+
+Preferred semantic values:
+- `auto`;
+- `required`;
+- `none`.
+
+The exact type name may follow current conventions, but it must remain provider-neutral.
+
+Requirements:
+- absent preserves current behavior;
+- `required` requires at least one exposed tool;
+- the field can only control whether the model must choose from already-exposed tools; it cannot add capabilities;
+- provider adapters must not silently ignore an explicitly required mode.
+
+LM STUDIO MAPPING
+
+Map the provider-neutral mode to the OpenAI-compatible JSON `tool_choice` field for LM Studio.
+
+Permanent adapter tests must inspect the actual POST body and prove:
+- required -> `tool_choice: "required"`;
+- auto -> `tool_choice: "auto"`;
+- none -> `tool_choice: "none"`;
+- absent -> field omitted;
+- function-tool schema is otherwise unchanged;
+- stateful continuation still serializes correctly.
+
+Do not put Qwen-specific conditional logic in core/application code.
+
+FIRST-ROUND APPLICATION SEMANTICS
+
+Add the smallest AgentLoop submission seam needed to require a tool call on **only the first provider round** of one application-owned stage.
+
+Required behavior:
+- initial provider request can use `toolChoice: required`;
+- after the first tool call/result produces a continuation, later provider requests revert to ordinary automatic/default tool choice;
+- a required first round with zero selected tools fails deterministically before provider execution;
+- retries of the same initial provider request retain the same required semantics until that round succeeds/fails;
+- continuation retries do not become required merely because the first round was required.
+
+STRUCTURED INSPECT
+
+Apply first-round required tool choice only to structured INSPECT.
+
+Keep:
+- tool surface exactly `read_file`, `list_directory`, `search_text`, `git_status`, `git_diff`;
+- current INSPECT stage limits;
+- observed tool completion as the only evidence that satisfies inspection.
+
+Do not:
+- force a specific inspection tool;
+- synthesize inspection evidence;
+- auto-read guessed paths;
+- use required tool choice for ordinary implementation/correction stages by default.
+
+If the provider/backend rejects required tool choice, fail visibly with provider evidence rather than silently accepting text-only inspection.
+
+PERMANENT REGRESSION COVERAGE
+
+Add tests proving:
+1. provider request type accepts the three modes safely;
+2. LM Studio request body maps each mode correctly;
+3. ordinary provider requests remain unchanged when absent;
+4. structured INSPECT first provider request is required;
+5. inspection continuation request is automatic/default, not required;
+6. a text-only scripted first response cannot satisfy structured INSPECT under the new contract;
+7. the model-selected read-only tool executes through normal registry/policy;
+8. no non-inspection tools are exposed;
+9. implementation/correction and ordinary chat retain prior tool-choice behavior;
+10. existing stage limits/no-progress/read-hash/mutation regressions remain Green.
+
+VALIDATION
+
+Run:
+- focused provider adapter tests;
+- one-turn/structured-task tests;
+- frozen deterministic Phase 8 structured replay;
+- inherited c9 mutation/convergence/stack tests;
+- `npm run typecheck`;
+- `npm run test:runner`;
+- `git diff --check`.
+
+Verify package remains exactly `0.9.10` and no root `package-lock.json` exists.
+
+Do not run the official live Gate A in P1.
+
+If LM Studio cannot represent required tool choice through the supported provider API without provider-specific behavior leaking into the application layer, stop with `Planning needed` and record the exact incompatibility.

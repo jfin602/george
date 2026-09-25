@@ -1,0 +1,159 @@
+TASK: Correction 9 / P3 — Gated mandatory-inspection live qualification
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Sol Medium`.
+- Browser required: no.
+
+VERSIONING
+- Required unchanged project version: `0.9.10`.
+
+GOAL
+
+Run one fair live Qwen Gate A after mandatory structured inspection and exception-safe trace retention are deterministically Green. Spend greenfield/existing-app only if the exact frozen edit-plus-validation gate is Green.
+
+Read:
+- `BOOT.md`;
+- `AGENTS.md`;
+- current Phase 9 authority;
+- prior Phase 8/Phase 9/c9 live evidence;
+- `docs/tasks/c9-qwen-workunit-convergence/{P3-live-evidence,closeout}.md`;
+- `docs/tasks/c9-inspection-execution/{prompt-assessment,implementation-plan}.md`;
+- exact P1/P2 candidate source/tests;
+- repository-owned live-work runner/artifact writer;
+- frozen P4/greenfield/existing-app instruments.
+
+Do not modify production code in P3.
+
+RUNTIME CONTROL
+
+Use exactly:
+`qwen3-coder-30b-a3b-instruct@q4_k_m`
+
+Use supported Node 26.
+
+Before live work:
+- print `MANUAL CHECK: LM Studio GPU Offload must show 26`;
+- capture REST-visible model ID, context length, eval batch, physical batch, parallel, Flash Attention, GPU KV cache, and experts;
+- do not silently alter runtime/context/convergence settings;
+- UI-only GPU Offload 26 unconfirmed limits controlled latency claims but not functional evidence.
+
+If pinned provider/model is unavailable, record Evidence Gap and do not substitute another model.
+
+DETERMINISTIC PRE-GATE
+
+Require Green:
+- provider tool-choice mapping tests;
+- structured mandatory-INSPECT tests;
+- exception-safe live trace/artifact tests;
+- read SHA -> mutation precondition tests;
+- dynamic deterministic frozen replay;
+- Phase 9 integration;
+- inherited c9 convergence/stack floor;
+- `npm run typecheck`;
+- `npm run test:runner`;
+- `git diff --check`.
+
+GATE A — EXACT FROZEN STRUCTURED REPLAY
+
+Run exactly one official attempt.
+
+Do not modify the frozen task.
+
+Persist attempt/trace artifacts even if the production service throws.
+
+Required diagnostic evidence:
+- initial structured INSPECT provider request tool-choice mode;
+- first Qwen-selected inspection tool/call;
+- all inspection tool results;
+- whether implementation stage was reached;
+- observed target `read_file.sha256` if read_file is selected;
+- mutation request path/expectedSha256/result if reached;
+- George-owned validation result;
+- final TaskState projection;
+- terminal production error if any;
+- provider attempts/rounds/retries;
+- input/output tokens;
+- context profile/estimated tokens;
+- task/stage/run budgets;
+- duplicate/no-progress evidence;
+- correction history;
+- timing;
+- zero human coding intervention.
+
+Gate A is Green only if ALL are true:
+- INSPECT has observed read-only evidence;
+- exact required edit is made;
+- George-owned V1 passes;
+- TaskState completed and covered requirements verified;
+- zero human coding intervention;
+- no correction/task/stage budget exhaustion;
+- <=10 model-requested tool calls;
+- <=10 logical provider rounds.
+
+Compare with preserved prior evidence without rewriting any earlier result.
+
+If Gate A is Not Green:
+- STOP;
+- do not run greenfield;
+- do not run existing-app;
+- do not repair implementation in P3;
+- do not rerun until pass.
+
+GATE B — GREENFIELD
+
+Only after Gate A Green.
+
+Run exact `greenfield-express-v1` through the already-qualified production stack executor.
+
+Preserve explicit dependency-install/network authorization contract.
+
+Green requires:
+- P1/P2/P3 completed in strict production stack order;
+- all declared validations Green;
+- final StackState completed;
+- hidden acceptance Green;
+- zero human coding intervention;
+- no task/stage exhaustion.
+
+If Gate B is Not Green, STOP.
+
+GATE C — EXISTING APP
+
+Only after Gate B Green.
+
+Run exactly one official `existing-express-feature-v1` attempt.
+
+Green requires:
+- focused validation Green;
+- broad validation Green;
+- completed TaskState;
+- baseline regression preserved;
+- hidden acceptance Green;
+- zero human coding intervention;
+- no task/stage exhaustion.
+
+EVIDENCE
+
+Create:
+`docs/tasks/c9-inspection-execution/P3-live-evidence.md`
+
+Include:
+- exact candidate SHA/package;
+- runtime provenance;
+- deterministic pre-gate;
+- Gate A/B/C outcomes only where reached;
+- mandatory inspection/tool-choice evidence;
+- exception-safe trace/artifact paths;
+- raw call/round/token/context/time/budget/correction dimensions;
+- mutation/validation/task-state evidence;
+- Green / Not Green / Evidence Gap matrix.
+
+Do not:
+- alter production code;
+- retune context/runtime;
+- change convergence limits;
+- rerun a failed official workload;
+- owner-close Phase 9;
+- open Phase 10.
+
+Package remains exactly `0.9.10`; no root lockfile; `git diff --check`.

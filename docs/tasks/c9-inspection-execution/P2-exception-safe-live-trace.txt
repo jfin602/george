@@ -1,0 +1,99 @@
+TASK: Correction 9 / P2 — Exception-safe live attempt retention
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Sol Medium`.
+- Browser required: no.
+
+VERSIONING
+- Required unchanged project version: `0.9.10`.
+
+GOAL
+
+Make the repository-owned live qualification boundary retain and serialize bounded attempt evidence even when the production structured task/stack service throws before returning normally.
+
+Read:
+- `BOOT.md`;
+- `AGENTS.md`;
+- current Phase 9/c9 authority;
+- `docs/tasks/c9-qwen-workunit-convergence/{P3-live-evidence,closeout}.md`;
+- `docs/tasks/c9-inspection-execution/{prompt-assessment,implementation-plan}.md`;
+- exact P1 candidate;
+- `src/qualification/live-work.ts`;
+- ApplicationEvent / TaskState / StackState / trace/artifact contracts;
+- qualification tests.
+
+Do not change production task execution, provider tool choice, structured limits, context policy, mutation behavior, stack semantics, or runtime settings in P2.
+
+THROWN SERVICE -> QUALIFICATION RESULT
+
+Update only the qualification observer boundary so a production service exception becomes a bounded failed live-work result rather than escaping before trace/artifact construction.
+
+Required result behavior:
+- preserve every ApplicationEvent observed before the throw;
+- normalize the terminal production error to a bounded/redacted code/message;
+- set terminal/qualifying state truthfully to failure/non-qualifying;
+- hidden acceptance remains `not_run`;
+- capture current safe TaskState projection when available;
+- capture current safe StackState projection when available;
+- derive provider/tool/context/budget/validation/correction/timing metrics from the events that actually occurred;
+- preserve explicit human-intervention count supplied by the harness.
+
+Do not catch/convert failures in normal product execution. This behavior belongs to qualification observation only.
+
+EVENT CAPTURE ORDER
+
+The qualification callback must append/capture the production event **before** invoking any optional external observer callback so the core attempt evidence is not lost if optional observation code fails.
+
+If an optional observer fails:
+- retain already-captured production events;
+- record observer failure separately where current result shape permits;
+- do not relabel production success/failure.
+
+ARTIFACT DURABILITY
+
+The existing repository-owned artifact writer must accept the failed result exactly as it accepts a returned successful result.
+
+For a thrown structured service, it must still produce bounded:
+- `attempt.json`;
+- `trace.json`.
+
+They must include the terminal production error and all available evidence.
+
+Optional pretty-report rendering remains secondary and cannot erase these files.
+
+INSPECT FAILURE REGRESSION
+
+Add an executable test matching the exact current live failure class:
+
+- provider returns a first inspection response that yields no acceptable read-only tool evidence, or a deliberately throwing structured inspection fixture;
+- production structured service throws;
+- `runLiveWorkInstrument()` returns a failed result rather than losing the attempt;
+- captured events include all events emitted before the throw;
+- TaskState safe projection reflects blocked/failed state when available;
+- hidden acceptance is not run;
+- attempt/trace artifacts are written;
+- provider attempts/rounds/context/budget evidence available before the throw is retained;
+- bounded terminal error contains the structured inspection failure;
+- no secret/raw provider payload leakage is introduced.
+
+Also preserve prior tests for:
+- context diagnostics under `event.diagnostics`;
+- missing optional fields;
+- report-render failure after raw artifact write;
+- successful live-work result behavior;
+- stack qualification behavior.
+
+VALIDATION
+
+Run:
+- focused qualification/live-work tests;
+- structured-task inspection tests;
+- Phase 9 integration;
+- inherited c9 stack/convergence tests;
+- `npm run typecheck`;
+- `npm run test:runner`;
+- `git diff --check`.
+
+Verify package remains `0.9.10` and no root lockfile exists.
+
+Do not run the official live Gate A in P2.
