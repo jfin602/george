@@ -1,0 +1,142 @@
+GEORGE TASK FORMAT: 1
+
+STACK: p9
+TASK: Phase 9 / P2 — TaskState state machine and durable persistence
+KIND: implementation
+
+VERSIONING
+
+The assigned project version is `0.9.2`.
+
+- Recommended configuration: `Terra High`.
+- Browser required: no.
+
+GOAL
+
+Add canonical application-owned TaskState, deterministic state transitions, task projections, and backward-compatible durable session persistence without invoking the model to decide task truth.
+
+READ FIRST
+
+- REQUIRED: BOOT.md
+- REQUIRED: AGENTS.md
+- REQUIRED: docs/planning/p9-structured-task-execution/decision-record.md
+- REQUIRED: docs/planning/p9-structured-task-execution/task-format-v1.md
+- REQUIRED: docs/planning/p9-structured-task-execution/qualification-plan.md
+- REQUIRED: docs/tasks/p9/implementation-plan.md
+- REQUIRED: docs/stability-contract.md
+
+INSPECT
+
+- src/core/session.ts and session-store.ts
+- src/core/events.ts durable-event sanitization
+- Phase 4/5 session and recovery tests
+- P1 task definitions/parser/tests
+- application progress/work projection patterns
+
+REQUIREMENTS
+
+- R1: Introduce canonical TaskState bound to one canonical session/workspace and one parsed task definition/fingerprint.
+- R2: Track overall task status, current work unit, requirement state, work-unit dependency/status, inspection evidence, validation attempt history, correction count/history, blockers, terminal outcome, and effective permission expectation snapshot.
+- R3: Distinguish requirement addressed state from validation-backed verified state; model text alone cannot set requirement or validation Green.
+- R4: Implement deterministic transition functions that reject illegal dependency/state transitions rather than repairing them silently.
+- R5: Preserve all failed validation attempts; a later pass updates current state but never erases earlier failure evidence.
+- R6: Use an explicit bounded correction-cycle field/config with default 2 and validate its range.
+- R7: Extend Session/LocalSessionStore with bounded/redacted TaskState persistence and a deliberate schema upgrade while retaining the ability to open existing schema-v1 sessions with no task state.
+- R8: Unsupported future/malformed durable task/session state must fail visibly and must not be partially trusted.
+- R9: Provide presentation-safe bounded TaskState projections without raw prompt bodies, file bodies, process output, secrets, or provider payloads.
+- R10: Set package version to 0.9.2 and add permanent state/persistence regression coverage.
+
+INVARIANTS
+
+- I1: Canonical TaskState is George state, not model reasoning and not automatically provider context.
+- I2: Task state cannot grant tools, permissions, network, filesystem scope, or validation success.
+- I3: Existing non-task sessions remain valid and reopenable.
+- I4: Phase 5 interruption/recovery evidence remains authoritative for ambiguous side effects.
+- I5: No package-lock.json is created.
+
+WORKFLOW
+
+W1 — Define TaskState and transition contracts
+Covers: R1, R2, R3, R4, R5, R6
+Depends on: none
+
+Create small domain/application state contracts and pure transition helpers.
+
+Complete when:
+- illegal transitions fail deterministically;
+- work dependencies gate readiness;
+- failure history is append-only/bounded.
+
+W2 — Integrate TaskState with Session
+Covers: R1, R2, R3, R9
+Depends on: W1
+
+Bind optional task state to the existing session without changing ordinary transcript semantics.
+
+W3 — Upgrade durable session storage
+Covers: R7, R8
+Depends on: W2
+
+Add a deliberate schema migration path for existing v1 session files.
+
+Complete when:
+- old sessions reopen as taskless sessions;
+- new task sessions round-trip;
+- future/malformed schemas fail closed;
+- persistence stays outside the target repository.
+
+W4 — Regression and version boundary
+Covers: R10
+Depends on: W1, W2, W3
+
+VALIDATION
+
+V1 — Task state coverage
+Covers: R1, R2, R3, R4, R5, R6, R9
+Run: node --test test/unit/tasks/*.test.ts
+
+V2 — Session persistence coverage
+Covers: R7, R8, R10
+Run: node --test test/unit/core/session-store.test.ts
+
+V3 — Recovery regression
+Covers: R4, R5, R7
+Run: node --test test/unit/application/recovery.test.ts test/integration/phase5-qualification.test.ts
+
+V4 — TypeScript
+Covers: R1, R2, R7, R9
+Run: npm run typecheck
+
+V5 — Runner regression
+Covers: R10
+Run: npm run test:runner
+
+V6 — Diff hygiene
+Covers: R10
+Run: git diff --check
+
+STOP CONDITIONS
+
+- S1: Return Planning needed if durable TaskState cannot be added without discarding or silently reinterpreting existing session evidence.
+- S2: Do not invoke provider/tool execution from TaskState transitions in P2.
+- S3: Do not claim completion while state, persistence, recovery, typecheck, runner, or diff validation is failing.
+
+DELIVERABLES
+
+- D1: Canonical TaskState/state-transition implementation.
+- D2: Backward-compatible durable session schema support.
+- D3: Safe TaskState projection.
+- D4: package.json at 0.9.2.
+
+NON-GOALS
+
+- Structured provider turns.
+- Validation process execution.
+- TUI Task page.
+- Workspace Autonomous behavior.
+- Live model work.
+
+EVIDENCE
+
+- Record exact schema migration behavior and focused test results.
+- Verify package-lock.json is absent.
