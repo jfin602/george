@@ -1,8 +1,8 @@
 # Phase 9 Decision Record — Structured Task Execution + Workspace Autonomy
 
-Status: APPROVED DIRECTION — PLANNED NEXT PHASE AFTER PHASE 8
+Status: APPROVED DIRECTION — CURRENT PHASE AFTER PHASE 8 OWNER CLOSEOUT
 
-Phase 9 is the next planned George implementation phase after Phase 8 closes. It intentionally precedes Agent Loop Throughput so later throughput work optimizes the execution model George actually intends to use.
+Phase 9 is the current George implementation phase after the owner's accepted Phase 8 closeout. It intentionally precedes Agent Loop Throughput so later throughput work optimizes the execution model George actually intends to use.
 
 ## Problem
 
