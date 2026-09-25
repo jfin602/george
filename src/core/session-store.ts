@@ -100,6 +100,10 @@ function boundedArray(value: unknown, name: string, limit: number): unknown[] {
   return value;
 }
 
+function boolean(value: unknown, name: string): boolean {
+  return typeof value === 'boolean' ? value : invalid(`${name} is invalid.`);
+}
+
 function canonicalPath(value: unknown, name: string): string {
   const path = string(value, name, MAX_DURABLE_TEXT_BYTES);
   if (!isAbsolute(path) || resolve(path) !== path) invalid(`${name} must be an absolute normalized path.`);
@@ -501,10 +505,22 @@ function parseTaskState(value: unknown): TaskState {
   const safeValidations = Object.fromEntries(validationKeys.map((key) => {
     const validation = record(validations[key], 'task validation'); exactKeys(validation, ['status', 'attempts'], 'task validation');
     const attempts = boundedArray(validation.attempts, 'task validation attempts', 32).map((entry) => {
-      const attempt = record(entry, 'task validation attempt'); exactKeys(attempt, ['turnId', 'callId', 'status', 'exitCode', 'signal', ...(attempt.outcome === undefined ? [] : ['outcome'])], 'task validation attempt');
+      const attempt = record(entry, 'task validation attempt');
+      const optional = ['outcome', 'stdout', 'stderr', 'stdoutTruncated', 'stderrTruncated', 'redacted', 'error'].filter((key) => attempt[key] !== undefined);
+      exactKeys(attempt, ['turnId', 'callId', 'status', 'exitCode', 'signal', ...optional], 'task validation attempt');
       const exitCode = attempt.exitCode; if (exitCode !== null && (!Number.isInteger(exitCode) || (exitCode as number) < -1_000_000 || (exitCode as number) > 1_000_000)) invalid('task validation exit code is invalid.');
       const signal = attempt.signal; if (signal !== null && typeof signal !== 'string') invalid('task validation signal is invalid.');
-      return { turnId: string(attempt.turnId, 'task validation turn ID', 256), callId: string(attempt.callId, 'task validation call ID', 256), status: oneOf(attempt.status, 'task validation attempt status', ['passed', 'failed', 'denied', 'cancelled'] as const), exitCode: exitCode as number | null, signal: signal === null ? null : string(signal, 'task validation signal', 128), ...(attempt.outcome === undefined ? {} : { outcome: oneOf(attempt.outcome, 'task validation outcome', ['completed', 'failed', 'timed_out', 'spawn_failed'] as const) }) } as TaskValidationAttempt;
+      const error = attempt.error === undefined ? undefined : safeError(record(attempt.error, 'task validation error') as { code: string; message: string });
+      return {
+        turnId: string(attempt.turnId, 'task validation turn ID', 256), callId: string(attempt.callId, 'task validation call ID', 256), status: oneOf(attempt.status, 'task validation attempt status', ['passed', 'failed', 'denied', 'cancelled'] as const), exitCode: exitCode as number | null, signal: signal === null ? null : string(signal, 'task validation signal', 128),
+        ...(attempt.outcome === undefined ? {} : { outcome: oneOf(attempt.outcome, 'task validation outcome', ['completed', 'failed', 'timed_out', 'spawn_failed'] as const) }),
+        ...(attempt.stdout === undefined ? {} : { stdout: string(attempt.stdout, 'task validation stdout', 2048) }),
+        ...(attempt.stderr === undefined ? {} : { stderr: string(attempt.stderr, 'task validation stderr', 2048) }),
+        ...(attempt.stdoutTruncated === undefined ? {} : { stdoutTruncated: boolean(attempt.stdoutTruncated, 'task validation stdout truncation') }),
+        ...(attempt.stderrTruncated === undefined ? {} : { stderrTruncated: boolean(attempt.stderrTruncated, 'task validation stderr truncation') }),
+        ...(attempt.redacted === undefined ? {} : { redacted: boolean(attempt.redacted, 'task validation redaction') }),
+        ...(error === undefined ? {} : { error }),
+      } as TaskValidationAttempt;
     });
     const validationStatus = oneOf(validation.status, 'task validation status', ['pending', 'passed', 'failed', 'denied', 'cancelled'] as const);
     if ((validationStatus === 'pending') !== (attempts.length === 0) || (attempts.length && attempts.at(-1)!.status !== validationStatus)) invalid('task validation current status is invalid.');

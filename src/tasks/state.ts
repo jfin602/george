@@ -8,6 +8,7 @@ export const DEFAULT_MAX_CORRECTION_CYCLES = 2;
 export const MAX_CORRECTION_CYCLES = 10;
 export const MAX_TASK_EVIDENCE = 64;
 export const MAX_VALIDATION_ATTEMPTS = 32;
+export const MAX_TASK_DIAGNOSTIC_BYTES = 2 * 1024;
 
 export type TaskStatus = 'pending' | 'in_progress' | 'blocked' | 'planning_needed' | 'cancelled' | 'budget_exhausted' | 'completed' | 'failed';
 export type RequirementStatus = 'pending' | 'addressed' | 'verified';
@@ -23,6 +24,12 @@ export type TaskValidationAttempt = Readonly<{
   exitCode: number | null;
   signal: string | null;
   outcome?: 'completed' | 'failed' | 'timed_out' | 'spawn_failed';
+  stdout?: string;
+  stderr?: string;
+  stdoutTruncated?: boolean;
+  stderrTruncated?: boolean;
+  redacted?: boolean;
+  error?: Readonly<{ code: string; message: string }>;
 }>;
 export type TaskCorrection = Readonly<{ cycle: number; validationId: `V${number}`; status: 'active' | 'repaired' | 'completed' }>;
 
@@ -63,6 +70,20 @@ function freezeArray<T>(values: readonly T[]): readonly T[] { return freeze([...
 function bounded(value: string, name: string, max = 512): string {
   if (typeof value !== 'string' || !value || value.includes('\0') || Buffer.byteLength(value, 'utf8') > max) throw new Error(`Invalid task state ${name}.`);
   return value;
+}
+
+const SECRET_ASSIGNMENT = /\b([A-Za-z0-9_.-]*(?:authorization|cookie|credential|password|passwd|secret|token|api[-_]?(?:key|token)|private[-_]?key)[A-Za-z0-9_.-]*)\s*[:=]\s*(?:"[^"\r\n]*"|'[^'\r\n]*'|[^\s,;\r\n}]+)/gi;
+
+/** Bounded task evidence text with common credential forms removed before persistence or provider projection. */
+export function sanitizeTaskEvidence(value: string, maximum = MAX_TASK_DIAGNOSTIC_BYTES): Readonly<{ text: string; truncated: boolean; redacted: boolean }> {
+  const withoutNul = value.replaceAll('\0', '\ufffd');
+  const sanitized = withoutNul
+    .replace(/-----BEGIN [^-\r\n]*PRIVATE KEY-----[\s\S]*?-----END [^-\r\n]*PRIVATE KEY-----/gi, '[redacted private key]')
+    .replace(/\bBearer\s+[^\s,;]+/gi, 'Bearer [redacted]')
+    .replace(SECRET_ASSIGNMENT, '$1=[redacted]');
+  const redacted = sanitized !== withoutNul;
+  if (Buffer.byteLength(sanitized, 'utf8') <= maximum) return { text: sanitized, truncated: false, redacted };
+  return { text: `${Buffer.from(sanitized, 'utf8').subarray(0, maximum - 3).toString('utf8')}...`, truncated: true, redacted };
 }
 function id(value: string, prefix: string): void { if (!new RegExp(`^${prefix}[1-9]\\d*$`).test(value)) throw new Error(`Invalid task state ${prefix} identifier.`); }
 function correctionLimit(value: number): number {
@@ -185,7 +206,16 @@ export function recordTaskValidationAttempt(state: TaskState, validationId: `V${
   if (target.covers.some((requirement) => state.requirements[requirement] === 'pending')) throw new Error('Validation cannot verify an unaddressed requirement.');
   const current = state.validations[validationId];
   if (!current || current.attempts.length >= MAX_VALIDATION_ATTEMPTS) throw new Error('Task validation history exceeds its bound.');
-  const safe = freeze({ turnId: bounded(attempt.turnId, 'validation turn ID', 256), callId: bounded(attempt.callId, 'validation call ID', 256), status: attempt.status, exitCode: attempt.exitCode, signal: attempt.signal, ...(attempt.outcome === undefined ? {} : { outcome: attempt.outcome }) });
+  const stdout = sanitizeTaskEvidence(attempt.stdout ?? '');
+  const stderr = sanitizeTaskEvidence(attempt.stderr ?? '');
+  const error = attempt.error === undefined ? undefined : { code: bounded(attempt.error.code, 'validation error code', 128), ...sanitizeTaskEvidence(attempt.error.message, 1024) };
+  const safe = freeze({
+    turnId: bounded(attempt.turnId, 'validation turn ID', 256), callId: bounded(attempt.callId, 'validation call ID', 256), status: attempt.status, exitCode: attempt.exitCode, signal: attempt.signal,
+    ...(attempt.outcome === undefined ? {} : { outcome: attempt.outcome }), stdout: stdout.text, stderr: stderr.text,
+    stdoutTruncated: attempt.stdoutTruncated === true || stdout.truncated, stderrTruncated: attempt.stderrTruncated === true || stderr.truncated,
+    redacted: attempt.redacted === true || stdout.redacted || stderr.redacted || error?.redacted === true,
+    ...(error === undefined ? {} : { error: { code: error.code, message: error.text } }),
+  });
   if (!['passed', 'failed', 'denied', 'cancelled'].includes(safe.status) || (safe.exitCode !== null && (!Number.isInteger(safe.exitCode) || safe.exitCode < -1_000_000 || safe.exitCode > 1_000_000)) || (safe.signal !== null && (typeof safe.signal !== 'string' || safe.signal.length > 128))) throw new Error('Invalid task validation attempt.');
   const validations = { ...state.validations, [validationId]: freeze({ status: safe.status, attempts: freezeArray([...current.attempts, safe]) }) } as TaskState['validations'];
   const requirements = { ...state.requirements } as Record<`R${number}`, RequirementStatus>;

@@ -4,7 +4,7 @@ import { loadWorkspaceContextFile } from '../context/index.ts';
 import { GeorgeError, type ApplicationEvent, type LocalSessionStore } from '../core/index.ts';
 import {
   addressTaskWorkUnit, beginTaskCorrection, beginTaskWorkUnit, blockTask, completeTask, completeTaskCorrection, createTaskState, repairTaskCorrection,
-  parseTaskPrompt, recordTaskInspection, recordTaskValidationAttempt,
+  parseTaskPrompt, recordTaskInspection, recordTaskValidationAttempt, sanitizeTaskEvidence,
   projectTaskState, type TaskDefinition, type TaskState, type TaskValidation,
 } from '../tasks/index.ts';
 import { CodingWorkflowApplicationService, type CodingWorkflowCompletion, type CodingWorkflowSubmission, type ValidationRequest } from './coding-workflow.ts';
@@ -12,6 +12,7 @@ import { CodingWorkflowApplicationService, type CodingWorkflowCompletion, type C
 const INSPECTION_TOOLS = ['read_file', 'list_directory', 'search_text', 'git_status', 'git_diff'] as const;
 const CODING_TOOLS = [...INSPECTION_TOOLS, 'write_file', 'apply_patch'] as const;
 const MAX_SLICE_EVIDENCE = 8;
+const MAX_STAGE_EVIDENCE_BYTES = 8 * 1024;
 
 export type StructuredTaskSlice = Readonly<{
   workUnit: string;
@@ -30,13 +31,23 @@ function permissionProjection(policy: ReturnType<CodingWorkflowApplicationServic
 }
 
 /** A deliberately small derived view. Canonical TaskState never crosses this provider seam wholesale. */
-export function projectStructuredTaskSlice(state: TaskState, workId: `W${number}`): StructuredTaskSlice {
+export function projectStructuredTaskSlice(state: TaskState, workId: `W${number}`, stageEvidence: readonly string[] = [], failedValidationId?: `V${number}`): StructuredTaskSlice {
   const work = state.definition.workflow.find((item) => item.id === workId);
   if (!work) throw new Error('Unknown task work unit.');
   const related = state.definition.validations.filter((item) => item.covers.some((requirement) => work.covers.includes(requirement)));
   const evidence = [
-    ...state.inspections.slice(-MAX_SLICE_EVIDENCE).map((item) => `inspection: ${item.item} (${item.source})`),
-    ...related.flatMap((item) => state.validations[item.id]!.attempts.slice(-MAX_SLICE_EVIDENCE).map((attempt) => `validation ${item.id}: ${attempt.status}${attempt.exitCode === null ? '' : ` (${attempt.exitCode})`}`)),
+    ...stageEvidence,
+    ...(failedValidationId === undefined ? [] : (() => {
+      const attempt = state.validations[failedValidationId]?.attempts.at(-1);
+      if (!attempt || attempt.status !== 'failed') return [];
+      return [
+        `validation ${failedValidationId}: ${attempt.status}${attempt.outcome === undefined ? '' : ` outcome=${attempt.outcome}`}${attempt.exitCode === null ? '' : ` exit=${attempt.exitCode}`}${attempt.signal === null ? '' : ` signal=${attempt.signal}`}`,
+        ...(attempt.stdout ? [`stdout${attempt.stdoutTruncated ? ' (truncated)' : ''}: ${attempt.stdout}`] : []),
+        ...(attempt.stderr ? [`stderr${attempt.stderrTruncated ? ' (truncated)' : ''}: ${attempt.stderr}`] : []),
+        ...(attempt.error ? [`error ${attempt.error.code}: ${attempt.error.message}`] : []),
+        ...(attempt.redacted ? ['diagnostic redaction: sensitive values removed'] : []),
+      ];
+    })()),
   ].slice(-MAX_SLICE_EVIDENCE);
   return Object.freeze({
     workUnit: [`${work.id} — ${work.title}`, ...work.description, ...work.completeWhen.map((item) => `Complete when: ${item}`)].join('\n'),
@@ -95,9 +106,53 @@ function recoveryNeedsPlanning(submission: CodingWorkflowSubmission): boolean {
   return submission.session.events.some((event) => event.type === 'recovery.decision' && event.outcome === 'outcome_unknown' && event.kind !== 'provider-continuation');
 }
 
-function observedInspection(events: readonly ApplicationEvent[]): string | undefined {
-  const event = events.find((item) => item.type === 'tool.completed' && INSPECTION_TOOLS.includes(item.name as typeof INSPECTION_TOOLS[number]) && item.execution?.effect === 'local_read');
-  return event?.type === 'tool.completed' ? `${event.name}:${event.callId}` : undefined;
+function text(value: unknown, maximum = 512): string | undefined {
+  if (typeof value !== 'string' || value.includes('\0')) return undefined;
+  return sanitizeTaskEvidence(value, maximum).text;
+}
+
+function inspectionResult(event: Extract<ApplicationEvent, { type: 'tool.completed' }>): string | undefined {
+  if (!event.result.ok || !event.result.value || typeof event.result.value !== 'object' || Array.isArray(event.result.value)) return undefined;
+  const value = event.result.value as Record<string, unknown>;
+  const path = text(value.path);
+  let projected: Record<string, unknown> | undefined;
+  if (event.name === 'read_file' && path !== undefined && typeof value.text === 'string') {
+    const body = sanitizeTaskEvidence(value.text, 2 * 1024);
+    projected = { path, text: body.text, bytes: typeof value.bytes === 'number' ? value.bytes : undefined, truncated: value.truncated === true || body.truncated, redacted: body.redacted };
+  } else if (event.name === 'list_directory' && path !== undefined && Array.isArray(value.entries)) {
+    projected = { path, entries: value.entries.slice(0, 32).flatMap((entry) => {
+      if (!entry || typeof entry !== 'object' || Array.isArray(entry)) return [];
+      const item = entry as Record<string, unknown>; const name = text(item.name, 256);
+      return name === undefined || !['file', 'directory', 'symlink', 'other'].includes(String(item.kind)) ? [] : [{ name, kind: item.kind }];
+    }), truncated: value.truncated === true || value.entries.length > 32 };
+  } else if (event.name === 'search_text' && path !== undefined && Array.isArray(value.matches)) {
+    projected = { path, matches: value.matches.slice(0, 16).flatMap((match) => {
+      if (!match || typeof match !== 'object' || Array.isArray(match)) return [];
+      const item = match as Record<string, unknown>; const matchPath = text(item.path); const line = item.line; const matchText = typeof item.text === 'string' ? sanitizeTaskEvidence(item.text, 512) : undefined;
+      return matchPath === undefined || !Number.isInteger(line) || matchText === undefined ? [] : [{ path: matchPath, line, text: matchText.text, redacted: matchText.redacted }];
+    }), scannedFiles: typeof value.scannedFiles === 'number' ? value.scannedFiles : undefined, scannedBytes: typeof value.scannedBytes === 'number' ? value.scannedBytes : undefined, truncated: value.truncated === true || value.matches.length > 16 };
+  } else if ((event.name === 'git_status' || event.name === 'git_diff') && typeof value.stdout === 'string' && typeof value.stderr === 'string') {
+    const stdout = sanitizeTaskEvidence(value.stdout, 2 * 1024); const stderr = sanitizeTaskEvidence(value.stderr, 1024);
+    projected = { stdout: stdout.text, stderr: stderr.text, exitCode: typeof value.exitCode === 'number' ? value.exitCode : null, stdoutTruncated: value.stdoutTruncated === true || stdout.truncated, stderrTruncated: value.stderrTruncated === true || stderr.truncated, redacted: stdout.redacted || stderr.redacted };
+  }
+  return projected === undefined ? undefined : `inspection result ${event.name}:${event.callId} ${JSON.stringify(projected)}`;
+}
+
+function observedInspection(events: readonly ApplicationEvent[]): Readonly<{ source?: string; evidence: readonly string[] }> {
+  const completed = events.filter((item): item is Extract<ApplicationEvent, { type: 'tool.completed' }> => item.type === 'tool.completed' && INSPECTION_TOOLS.includes(item.name as typeof INSPECTION_TOOLS[number]) && item.execution?.effect === 'local_read');
+  const evidence: string[] = [];
+  let source: string | undefined;
+  let bytes = 0;
+  for (const event of completed) {
+    const item = inspectionResult(event);
+    if (!item || evidence.length === MAX_SLICE_EVIDENCE) continue;
+    const remaining = MAX_STAGE_EVIDENCE_BYTES - bytes;
+    if (remaining <= 3) break;
+    const bounded = sanitizeTaskEvidence(item, remaining).text;
+    source ??= `${event.name}:${event.callId}`;
+    evidence.push(bounded); bytes += Buffer.byteLength(bounded, 'utf8');
+  }
+  return { source, evidence: Object.freeze(evidence) };
 }
 
 /** Provider-independent structured orchestration over the canonical coding workflow. */
@@ -136,6 +191,7 @@ export class StructuredTaskApplicationService extends CodingWorkflowApplicationS
   override async run(submission: CodingWorkflowSubmission): Promise<CodingWorkflowCompletion> {
     const parsed = parseTaskPrompt(submission.input); // Marker detection is before provider/tool execution.
     if (parsed.kind === 'ordinary') return super.run(submission);
+    const budget = submission.budget ?? this.agent.createRunBudget();
     const definition = parsed.task;
     const executionPolicy = this.agent.effectiveExecutionPolicy(definition.permissions);
     if (submission.session.taskState && submission.session.taskState.definitionFingerprint !== createTaskState({ sessionId: submission.session.id, workspace: submission.session.workspace, definition }).definitionFingerprint) {
@@ -154,6 +210,7 @@ export class StructuredTaskApplicationService extends CodingWorkflowApplicationS
     catch (error) { state = blockTask(state, 'blocked', error instanceof Error ? error.message : 'READ FIRST failed.'); submission.session.taskState = state; await this.structuredStore?.save(submission.session); throw error; }
 
     let last: CodingWorkflowCompletion | undefined;
+    let stageEvidence: readonly string[] = [];
     for (const unit of definition.workflow) {
       if (state.workUnits[unit.id] === 'addressed') continue;
       if (state.workUnits[unit.id] === 'blocked') break;
@@ -162,22 +219,25 @@ export class StructuredTaskApplicationService extends CodingWorkflowApplicationS
       submission.session.taskState = state;
       await this.lifecycle(submission, state, `Structured task started ${unit.id}.`);
       const slice = projectStructuredTaskSlice(state, unit.id);
-      if (definition.inspect.length && state.inspections.length === 0) {
+      if (definition.inspect.length && stageEvidence.length === 0) {
         const events: ApplicationEvent[] = [];
-        for await (const event of this.agent.run({ session: submission.session, input: renderSlice(slice, 'inspection'), turnId: `${submission.turnId ?? randomUUID()}-inspect`, routedDocuments: routed, toolNames: INSPECTION_TOOLS, omitHistory: true, signal: submission.signal, executionPolicy })) {
+        for await (const event of this.agent.run({ session: submission.session, input: renderSlice(slice, 'inspection'), turnId: `${submission.turnId ?? randomUUID()}-inspect`, routedDocuments: routed, toolNames: INSPECTION_TOOLS, omitHistory: true, signal: submission.signal, executionPolicy, budget })) {
           events.push(event); await submission.onEvent?.(event);
         }
-        const source = observedInspection(events);
-        if (!source) {
-          state = blockTask(state, 'blocked', 'INSPECT requires observed local read/list/search/Git evidence.');
+        const observed = observedInspection(events);
+        if (!observed.source || observed.evidence.length === 0) {
+          const exhausted = events.some((event) => event.type === 'turn.failed' && event.error.code === 'budget');
+          state = blockTask(state, exhausted ? 'budget_exhausted' : 'blocked', exhausted ? 'Structured inspection exhausted the task-wide run budget.' : 'INSPECT requires observed local read/list/search/Git evidence.');
           submission.session.taskState = state;
           await this.lifecycle(submission, state, 'Structured task blocked: inspection evidence is missing.');
           throw new GeorgeError('validation', 'Structured INSPECT preflight produced no read-only evidence.');
         }
-        for (const item of definition.inspect) state = recordTaskInspection(state, { item, source });
+        stageEvidence = observed.evidence;
+        for (const item of definition.inspect) state = recordTaskInspection(state, { item, source: observed.source });
         submission.session.taskState = state;
       }
-      last = await super.run({ ...submission, input: renderSlice(projectStructuredTaskSlice(state, unit.id), 'implementation'), routedDocuments: routed, toolNames: CODING_TOOLS, omitHistory: true, validations: [], executionPolicy });
+      last = await super.run({ ...submission, input: renderSlice(projectStructuredTaskSlice(state, unit.id, stageEvidence), 'implementation'), routedDocuments: routed, toolNames: CODING_TOOLS, omitHistory: true, validations: [], executionPolicy, budget });
+      if (last.directMutations.length > 0) stageEvidence = [];
       if (last.terminalState !== 'completed') {
         state = blockTask(state, outcomeFor(last), `Work unit ${unit.id} did not complete.`);
         submission.session.taskState = state;
@@ -193,7 +253,11 @@ export class StructuredTaskApplicationService extends CodingWorkflowApplicationS
       let literal = request(validation);
       if (!literal) {
         if (validation.command.kind !== 'discover') throw new GeorgeError('validation', `Validation ${validation.id} has an invalid command.`);
-        const proposal = await super.run({ ...submission, input: `For validation ${validation.id}, scope: ${validation.command.scope}\nReturn only JSON: {"executable":"...","arguments":["..."]}. Propose a bounded local test command; do not execute tools.`, routedDocuments: routed, toolNames: [], omitHistory: true, validations: [], executionPolicy });
+        const proposal = await super.run({ ...submission, input: `For validation ${validation.id}, scope: ${validation.command.scope}\nReturn only JSON: {"executable":"...","arguments":["..."]}. Propose a bounded local test command; do not execute tools.`, routedDocuments: routed, toolNames: [], omitHistory: true, validations: [], executionPolicy, budget });
+        if (proposal.terminalState !== 'completed') {
+          state = blockTask(state, outcomeFor(proposal), `Validation ${validation.id} discovery did not complete.`);
+          submission.session.taskState = state; await this.lifecycle(submission, state, `Structured validation discovery stopped at ${validation.id}.`); return proposal;
+        }
         literal = discoveredRequest(validation, proposal.finalAssistantResponse);
       }
       for (;;) {
@@ -201,7 +265,8 @@ export class StructuredTaskApplicationService extends CodingWorkflowApplicationS
         if (pendingCorrection?.validationId !== undefined && pendingCorrection.validationId !== validation.id) throw new GeorgeError('validation', 'A different structured correction is active.');
         if (pendingCorrection?.status === 'active') {
           const repair = correctionWork(state, validation);
-          const repaired = await super.run({ ...submission, input: renderSlice(projectStructuredTaskSlice(state, repair), 'correction'), routedDocuments: routed, toolNames: CODING_TOOLS, omitHistory: true, validations: [], executionPolicy });
+          const repaired = await super.run({ ...submission, input: renderSlice(projectStructuredTaskSlice(state, repair, [], validation.id), 'correction'), routedDocuments: routed, toolNames: CODING_TOOLS, omitHistory: true, validations: [], executionPolicy, budget });
+          if (repaired.directMutations.length > 0) stageEvidence = [];
           if (repaired.terminalState !== 'completed') {
             state = blockTask(state, outcomeFor(repaired), `Correction for ${validation.id} did not complete.`);
             submission.session.taskState = state; await this.lifecycle(submission, state, `Structured correction stopped at ${validation.id}.`); return repaired;
@@ -211,10 +276,14 @@ export class StructuredTaskApplicationService extends CodingWorkflowApplicationS
           await this.lifecycle(submission, state, `Structured correction repair completed for ${validation.id}; rerunning validation.`);
           continue;
         }
-        last = await super.run({ ...submission, input: `Run no provider-owned validation. George will execute ${validation.id}.`, routedDocuments: routed, toolNames: [], omitHistory: true, validations: [literal], executionPolicy });
+        last = await super.run({ ...submission, input: `Run no provider-owned validation. George will execute ${validation.id}.`, routedDocuments: routed, toolNames: [], omitHistory: true, validations: [literal], executionPolicy, budget });
         const observed = last.validations[0];
         if (!observed) throw new GeorgeError('validation', `Validation ${validation.id} produced no process evidence.`);
-        state = recordTaskValidationAttempt(state, validation.id, { turnId: last.turnId, callId: observed.callId, status: observed.status, exitCode: observed.exitCode, signal: observed.signal, ...(observed.outcome === undefined ? {} : { outcome: observed.outcome }) });
+        state = recordTaskValidationAttempt(state, validation.id, {
+          turnId: last.turnId, callId: observed.callId, status: observed.status, exitCode: observed.exitCode, signal: observed.signal,
+          ...(observed.outcome === undefined ? {} : { outcome: observed.outcome }), stdout: observed.stdout, stderr: observed.stderr,
+          stdoutTruncated: observed.stdoutTruncated, stderrTruncated: observed.stderrTruncated, ...(observed.error === undefined ? {} : { error: observed.error }),
+        });
         const active = state.corrections.find((item) => item.status === 'repaired');
         if (active) state = completeTaskCorrection(state, active.cycle);
         submission.session.taskState = state;

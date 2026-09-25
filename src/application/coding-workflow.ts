@@ -147,7 +147,7 @@ export class CodingWorkflowApplicationService {
   async run(submission: CodingWorkflowSubmission): Promise<CodingWorkflowCompletion> {
     const timer = new WorkflowTimer(this.clock);
     const turnId = submission.turnId ?? randomUUID();
-    const budget = this.agent.createRunBudget();
+    const budget = submission.budget ?? this.agent.createRunBudget();
     const warnings: string[] = [];
     let baseline: GitWorkingTreeSnapshot | undefined;
     try { baseline = await captureGitWorkingTreeSnapshot(this.agent.workspace, undefined, { signal: submission.signal }); }

@@ -13,7 +13,7 @@ import {
   createSession,
   resolveGeorgeStateRoot,
 } from '../../../src/core/index.ts';
-import { beginTaskWorkUnit, createTaskState, parseTaskPrompt, recordTaskInspection } from '../../../src/tasks/index.ts';
+import { addressTaskWorkUnit, beginTaskWorkUnit, createTaskState, parseTaskPrompt, recordTaskInspection, recordTaskValidationAttempt } from '../../../src/tasks/index.ts';
 
 async function fixture(): Promise<{ root: string; workspace: string; state: string }> {
   const root = await mkdtemp(join(tmpdir(), 'george-session-store-'));
@@ -133,14 +133,24 @@ STOP CONDITIONS
 `);
   if (parsed.kind !== 'structured') throw new Error('Expected structured task.');
   const session = createSession({ id: 'task-session', workspace });
-  session.taskState = recordTaskInspection(beginTaskWorkUnit(createTaskState({ sessionId: session.id, workspace, definition: parsed.task }), 'W1'), { item: 'session store', source: 'read_file' });
+  let taskState = recordTaskInspection(beginTaskWorkUnit(createTaskState({ sessionId: session.id, workspace, definition: parsed.task }), 'W1'), { item: 'session store', source: 'read_file' });
+  taskState = addressTaskWorkUnit(taskState, 'W1');
+  taskState = recordTaskValidationAttempt(taskState, 'V1', {
+    turnId: 'validation', callId: 'failed', status: 'failed', exitCode: 1, signal: null, outcome: 'failed',
+    stdout: 'useful output', stderr: `API_TOKEN=DO_NOT_PERSIST\n${'x'.repeat(3000)}`, stdoutTruncated: false, stderrTruncated: false,
+  });
+  session.taskState = taskState;
   await store.save(session);
   const serialized = await readFile(join(state, 'task-session.json'), 'utf8');
   assert.match(serialized, /"schemaVersion":2/);
-  assert.doesNotMatch(serialized, /raw provider|stdout|stderr/i);
+  assert.doesNotMatch(serialized, /raw provider|DO_NOT_PERSIST/i);
   const reopened = await store.open(session.id, workspace);
   assert.equal(reopened.taskState?.definitionFingerprint, session.taskState.definitionFingerprint);
   assert.deepEqual(reopened.taskState?.inspections, [{ item: 'session store', source: 'read_file' }]);
+  assert.equal(reopened.taskState?.validations.V1?.attempts[0]?.stdout, 'useful output');
+  assert.match(reopened.taskState?.validations.V1?.attempts[0]?.stderr ?? '', /API_TOKEN=\[redacted\]/);
+  assert.equal(reopened.taskState?.validations.V1?.attempts[0]?.stderrTruncated, true);
+  assert.equal(reopened.taskState?.validations.V1?.attempts[0]?.redacted, true);
 
   const malformed = JSON.parse(serialized) as { taskState: { status: string } };
   malformed.taskState.status = 'green';

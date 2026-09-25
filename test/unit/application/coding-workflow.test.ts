@@ -7,7 +7,7 @@ import { join } from 'node:path';
 import test from 'node:test';
 
 import { createCodingWorkflowApplicationService } from '../../../src/application/index.ts';
-import { createSession, LocalSessionStore, type ApprovalDecision, type ApprovalPort, type ApprovalRequest, type ModelProvider, type ProviderEvent, type ProviderRequest, type ProviderStreamOptions } from '../../../src/core/index.ts';
+import { createSession, LocalSessionStore, type ApplicationEvent, type ApprovalDecision, type ApprovalPort, type ApprovalRequest, type ModelProvider, type ProviderEvent, type ProviderRequest, type ProviderStreamOptions } from '../../../src/core/index.ts';
 
 class ScriptedProvider implements ModelProvider {
   calls = 0;
@@ -100,6 +100,18 @@ test('workflow completion takes only the final tool-free provider round', async 
   assert.equal(completion.finalAssistantResponse, 'Final answer');
   assert.deepEqual(session.transcript, [{ role: 'user', text: 'Inspect.' }, { role: 'assistant', text: 'Final answer' }]);
   assert.deepEqual((await new LocalSessionStore({ root: state }).open('buffered-workflow', root)).transcript, session.transcript);
+});
+
+test('ordinary workflow runs still create independent budgets when none is supplied', async (t) => {
+  const root = await fixture();
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const workflow = await createCodingWorkflowApplicationService({ provider: new ScriptedProvider([[{ type: 'provider.response.completed' }], [{ type: 'provider.response.completed' }]]), workspace: root });
+  const runIds: string[] = [];
+  const observe = (event: ApplicationEvent) => { if (event.type === 'reliability.run.started') runIds.push(event.runId); };
+  await workflow.run({ session: createSession({ workspace: root }), input: 'first ordinary turn', onEvent: observe });
+  await workflow.run({ session: createSession({ workspace: root }), input: 'second ordinary turn', onEvent: observe });
+  assert.equal(runIds.length, 2);
+  assert.equal(new Set(runIds).size, 2);
 });
 
 test('workflow timing accumulates provider rounds and tools without entering canonical conversation', async (t) => {
