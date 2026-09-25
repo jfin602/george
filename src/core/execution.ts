@@ -1,5 +1,5 @@
 /** George-owned execution classification; adapters and providers cannot alter it at call time. */
-export type ToolEffect = 'local_read' | 'workspace_mutation' | 'host_process' | 'external_read' | 'remote_mutation' | 'browser_observation' | 'browser_interaction' | 'unknown_external';
+export type ToolEffect = 'local_read' | 'workspace_mutation' | 'sandboxed_workspace_process' | 'host_process' | 'external_read' | 'remote_mutation' | 'browser_observation' | 'browser_interaction' | 'unknown_external';
 export type ToolReplaySafety = 'replay_safe' | 'not_replay_safe';
 export type ToolSource = Readonly<{ kind: 'builtin' }> | Readonly<{ kind: 'plugin'; id: string }> | Readonly<{ kind: 'adapter'; id: string; server?: string }>;
 /** Bounded display/evidence fields only. Credential values never belong here. */

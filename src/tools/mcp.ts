@@ -13,7 +13,7 @@ export const DEFAULT_MCP_MAX_SCHEMA_BYTES = 16 * 1024;
 export const DEFAULT_MCP_MAX_DESCRIPTION_BYTES = 4 * 1024;
 export const DEFAULT_MCP_MAX_RESULT_BYTES = 64 * 1024;
 
-type McpEffect = Exclude<ToolEffect, 'local_read' | 'workspace_mutation' | 'host_process'>;
+type McpEffect = Exclude<ToolEffect, 'local_read' | 'workspace_mutation' | 'sandboxed_workspace_process' | 'host_process'>;
 type McpStdioServer = Readonly<{ transport: 'stdio'; command: string; args?: readonly string[]; cwd?: string; env?: Readonly<Record<string, string>> }>;
 type McpHttpServer = Readonly<{ transport: 'http'; url: string; headers?: Readonly<Record<string, string>>; credentialReference?: string }>;
 export type McpServerConfig = Readonly<{

@@ -950,3 +950,40 @@ test('external effects stay approval-gated, carry bounded George metadata, and c
     assert.equal(remainder.at(-1)?.type, 'turn.cancelled');
   }
 });
+
+test('workspace autonomous processes use the sandbox or the explicit host-approval fallback', async (t) => {
+  const root = await workspace();
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const requests: import('../../../src/core/index.ts').ApprovalRequest[] = [];
+  const service = await createOneTurnApplicationService({
+    provider: new ScriptedProvider([]), workspace: root,
+    approvalPort: { request: async (request) => { requests.push(request); return 'allow_once'; } },
+    executionPolicy: { workspace: 'workspace_autonomous', outsideWorkspace: 'reject', network: 'reject', remoteMutation: 'ask', browserInteraction: 'ask', credentialsEnvironment: 'ask' },
+  });
+  const events = await collect(service.runProcess({ session: createSession({ workspace: root }), turnId: 'sandbox', executable: 'node', arguments: ['-e', 'process.stdout.write("ok")'] }));
+  const started = events.find((event) => event.type === 'tool.started');
+  if (service.sandboxProcessCapability().available) {
+    assert.equal(requests.length, 0);
+    assert.equal(started?.execution?.effect, 'sandboxed_workspace_process');
+    assert.equal(events.some((event) => event.type === 'tool.completed'), true);
+  } else {
+    assert.equal(requests.length, 1);
+    assert.equal(requests[0]?.execution.effect, 'host_process');
+    assert.match(requests[0]?.process?.warning ?? '', /not OS\/workspace sandboxed/);
+    assert.equal(started?.execution?.effect, 'host_process');
+  }
+
+  const networkRequests: import('../../../src/core/index.ts').ApprovalRequest[] = [];
+  const network = await createOneTurnApplicationService({
+    provider: new ScriptedProvider([]), workspace: root,
+    approvalPort: { request: async (request) => { networkRequests.push(request); return 'deny'; } },
+    executionPolicy: { workspace: 'workspace_autonomous', outsideWorkspace: 'reject', network: 'ask', remoteMutation: 'ask', browserInteraction: 'ask', credentialsEnvironment: 'ask' },
+  });
+  const networkEvents = await collect(network.runProcess({ session: createSession({ workspace: root }), turnId: 'network', executable: 'node', arguments: ['-e', '0'] }));
+  assert.equal(networkRequests.length, 1);
+  assert.equal(networkEvents.some((event) => event.type === 'tool.started'), false);
+  if (network.sandboxProcessCapability().available) {
+    assert.equal(networkRequests[0]?.execution.effect, 'sandboxed_workspace_process');
+    assert.match(networkRequests[0]?.process?.warning ?? '', /host networking/);
+  } else assert.equal(networkRequests[0]?.execution.effect, 'host_process');
+});

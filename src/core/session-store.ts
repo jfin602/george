@@ -61,7 +61,7 @@ function safeHookOrigin(value: unknown): Readonly<{ hookId: string }> {
 function safeExecution(value: ToolExecutionMetadata): ToolExecutionMetadata {
   const execution = record(value, 'tool execution');
   exactKeys(execution, ['effect', 'replaySafety', 'source', ...(execution.descriptor === undefined ? [] : ['descriptor'])], 'tool execution');
-  const effect = oneOf(execution.effect, 'tool effect', ['local_read', 'workspace_mutation', 'host_process', 'external_read', 'remote_mutation', 'browser_observation', 'browser_interaction', 'unknown_external']);
+  const effect = oneOf(execution.effect, 'tool effect', ['local_read', 'workspace_mutation', 'sandboxed_workspace_process', 'host_process', 'external_read', 'remote_mutation', 'browser_observation', 'browser_interaction', 'unknown_external']);
   const replaySafety = oneOf(execution.replaySafety, 'tool replay safety', ['replay_safe', 'not_replay_safe']);
   const source = record(execution.source, 'tool source');
   const kind = oneOf(source.kind, 'tool source kind', ['builtin', 'plugin', 'adapter']);
@@ -373,7 +373,7 @@ function safeApproval(request: ApplicationEvent extends never ? never : Extract<
     if (!request.target || request.process || typeof request.target.alreadyDirty !== 'boolean') invalid('write approval has an invalid shape.');
     return { ...safe, target: { path: string(request.target.path, 'approval path', 4096), alreadyDirty: request.target.alreadyDirty } };
   }
-  if (request.execution.effect === 'host_process') {
+  if (request.execution.effect === 'host_process' || request.execution.effect === 'sandboxed_workspace_process') {
     if (!request.process || request.target) invalid('process approval has an invalid shape.');
     return {
       ...safe,
@@ -593,7 +593,7 @@ export function classifySessionInterruptions(events: readonly ApplicationEvent[]
     if (reconciled.has(event.callId)) continue;
     const effect = event.execution?.effect;
     const kind = effect === 'workspace_mutation' ? 'mutation'
-      : effect === 'host_process' ? 'process'
+      : effect === 'host_process' || effect === 'sandboxed_workspace_process' ? 'process'
         : effect !== undefined && effect !== 'local_read' ? 'external'
           // Legacy durable events lack execution metadata; retain prior classification only for them.
           : event.name === 'write_file' || event.name === 'apply_patch' ? 'mutation'

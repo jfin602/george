@@ -195,7 +195,7 @@ export class CodingWorkflowApplicationService {
     try { finalState = await captureGitWorkingTreeSnapshot(this.agent.workspace); }
     catch (error) { warnings.push(`Final workspace observation unavailable: ${bounded(asGeorgeError(error).message)}`); }
     if (!baseline?.isRepository || !finalState?.isRepository) warnings.push('Git change observation is unavailable outside a Git workspace; only direct George-native mutation evidence is known.');
-    if (events.some((event) => event.type === 'tool.started' && event.name === 'run_process')) warnings.push('An approved arbitrary process ran; newly observed files are not attributed to that process without direct evidence.');
+    if (events.some((event) => event.type === 'tool.started' && event.name === 'run_process' && event.execution?.effect === 'host_process')) warnings.push('An approved arbitrary process ran; newly observed files are not attributed to that process without direct evidence.');
     if (changes(baseline, finalState, directMutations).some((change) => change.relationship === 'no-longer-observed')) warnings.push('Pre-existing dirty paths changed during the run; their original content was not restored or normalized.');
     if (persistenceFailure) warnings.push(`Session evidence could not be persisted: ${persistenceFailure}`);
     const terminalEvent = events.at(-1);

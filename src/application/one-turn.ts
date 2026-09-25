@@ -54,6 +54,8 @@ import { PluginManager, type EnabledPlugin } from '../plugins/index.ts';
 import { PluginApplicationService, PluginCommandRegistry } from './plugin-commands.ts';
 import {
   createProcessToolExecutor,
+  createSandboxProcessToolExecutor,
+  detectSandboxProcessCapability,
   createReadOnlyToolExecutor,
   createWorkspaceMutationToolExecutor,
   dispatchOutsideFilesystemCapability,
@@ -70,6 +72,8 @@ import {
   type McpCatalogIssue,
   ToolRegistry,
   type ReadOnlyToolLimits,
+  type SandboxProcessCapability,
+  type SandboxProcessToolExecutor,
   type ToolDefinition,
   type ValidatedToolCall,
 } from '../tools/index.ts';
@@ -225,6 +229,9 @@ export class AgentLoopApplicationService {
   private readonly maxToolRounds: number;
   private readonly approvalPort: ApprovalPort;
   private readonly executionPolicy: ExecutionPolicy;
+  private readonly sandboxCapability: SandboxProcessCapability;
+  private readonly isolatedSandbox: SandboxProcessToolExecutor | undefined;
+  private readonly networkSandbox: SandboxProcessToolExecutor | undefined;
   private readonly skills: SkillRegistry;
   private readonly runBudget: RunBudgetConfig;
   private readonly clock: RunBudgetClock;
@@ -253,6 +260,9 @@ export class AgentLoopApplicationService {
     maxToolRounds: number,
     approvalPort: ApprovalPort,
     executionPolicy: ExecutionPolicy,
+    sandboxCapability: SandboxProcessCapability,
+    isolatedSandbox: SandboxProcessToolExecutor | undefined,
+    networkSandbox: SandboxProcessToolExecutor | undefined,
     skills: SkillRegistry,
     runBudget: RunBudgetConfig,
     clock: RunBudgetClock,
@@ -276,6 +286,9 @@ export class AgentLoopApplicationService {
     this.maxToolRounds = maxToolRounds;
     this.approvalPort = approvalPort;
     this.executionPolicy = executionPolicy;
+    this.sandboxCapability = sandboxCapability;
+    this.isolatedSandbox = isolatedSandbox;
+    this.networkSandbox = networkSandbox;
     this.skills = skills;
     this.runBudget = runBudget;
     this.clock = clock;
@@ -435,6 +448,9 @@ export class AgentLoopApplicationService {
     });
   }
 
+  /** Bounded evidence; availability is established by a real namespace/mount probe. */
+  sandboxProcessCapability(): SandboxProcessCapability { return this.sandboxCapability; }
+
   private async approvalRequest(callId: string, validated: ValidatedToolCall, policy: ExecutionPolicy, outsidePath?: string, signal?: AbortSignal): Promise<ApprovalRequest | undefined> {
     const { definition, arguments: arguments_ } = validated;
     if (outsidePath !== undefined) return { id: callId, toolName: definition.name, execution: definition.execution, target: { path: outsidePath, alreadyDirty: false, outsideWorkspace: true } };
@@ -460,6 +476,17 @@ export class AgentLoopApplicationService {
         },
       };
     }
+    if (definition.execution.effect === 'sandboxed_workspace_process') {
+      if (policy.network === 'reject') return undefined;
+      const cwd = await resolveWorkspacePath(this.workspace, (arguments_.cwd as string | undefined) ?? '.');
+      return {
+        id: callId, toolName: definition.name, execution: definition.execution,
+        process: {
+          executable: arguments_.executable as string, argv: arguments_.arguments as string[], cwd: cwd.slice(this.workspace.root.length + 1) || '.',
+          warning: 'This sandboxed workspace process requests allow-once access to host networking.',
+        },
+      };
+    }
     return { id: callId, toolName: definition.name, execution: definition.execution };
   }
 
@@ -477,17 +504,20 @@ export class AgentLoopApplicationService {
   ): AsyncGenerator<ApplicationEvent, import('../tools/index.ts').ToolResult> {
     const emit = (event: ApplicationEvent): readonly ApplicationEvent[] => this.record(session, event);
     const origin = hookId === undefined ? {} : { origin: { hookId } };
-    const registration = registry.registration(call.name);
+    const policy = intersectExecutionPolicy(this.executionPolicy, submissionPolicy);
+    const sandbox = policy.network === 'ask' ? this.networkSandbox : this.isolatedSandbox;
+    const activeRegistry = !hookId && call.name === 'run_process' && policy.workspace === 'workspace_autonomous' && registry.registration(call.name) && sandbox
+      ? sandbox.registry : registry;
+    const registration = activeRegistry.registration(call.name);
     const execution = registration?.execution;
     yield* emit({ type: 'tool.requested', turnId, callId: call.callId, name: call.name, arguments: call.arguments, ...(execution === undefined ? {} : { execution }), ...origin });
     if (!hookId && budget) yield* this.invokeHooks(session, { name: 'tool.before', sessionId: session.id, turnId, runId: budget.id, operation: { callId: call.callId, name: call.name } }, budget, signal);
     if (signal?.aborted) throw cancellationError(signal);
-    const validation = registry.validate(call);
+    const validation = activeRegistry.validate(call);
     if ('callId' in validation) {
       yield* emit({ type: 'tool.failed', turnId, callId: call.callId, name: call.name, result: validation.result as Extract<typeof validation.result, { ok: false }>, ...(execution === undefined ? {} : { execution }), ...origin });
       return validation;
     }
-    const policy = intersectExecutionPolicy(this.executionPolicy, submissionPolicy);
     let outside: Awaited<ReturnType<typeof resolveOutsideFilesystemCapability>>;
     try {
       outside = await resolveOutsideFilesystemCapability(call, validation.definition.execution.effect === 'workspace_mutation');
@@ -548,7 +578,7 @@ export class AgentLoopApplicationService {
     const startedAt = call.name === 'run_process' ? this.clock() : undefined;
     const result = outside
       ? await dispatchOutsideFilesystemCapability(outside, call, { signal, ...(input === undefined ? {} : { input }) })
-      : await registry.dispatch(call, { signal, ...(input === undefined ? {} : { input }) });
+      : await activeRegistry.dispatch(call, { signal, ...(input === undefined ? {} : { input }) });
     if (result.result.ok) yield* emit({ type: 'tool.completed', turnId, callId: call.callId, name: call.name, result: result.result, execution: validation.definition.execution, ...origin });
     else {
       yield* emit({ type: 'tool.failed', turnId, callId: call.callId, name: call.name, result: result.result, execution: validation.definition.execution, ...origin });
@@ -802,6 +832,12 @@ export async function createAgentLoopApplicationService(
   const readOnly = createReadOnlyToolExecutor(workspace, options.readOnlyLimits);
   const mutation = createWorkspaceMutationToolExecutor(workspace);
   const process = createProcessToolExecutor(workspace);
+  const configuredPolicy = validateExecutionPolicy(options.executionPolicy ?? DEFAULT_EXECUTION_POLICY);
+  const sandboxCapability = configuredPolicy.workspace === 'workspace_autonomous'
+    ? await detectSandboxProcessCapability(workspace)
+    : { backend: 'bubblewrap' as const, available: false, reason: 'Workspace Autonomous mode is not enabled; capability was not probed.' };
+  const isolatedSandbox = sandboxCapability.available ? createSandboxProcessToolExecutor(workspace, sandboxCapability) : undefined;
+  const networkSandbox = sandboxCapability.available ? createSandboxProcessToolExecutor(workspace, sandboxCapability, { allowNetwork: true }) : undefined;
   const userConfigRoot = options.userConfigRoot ?? resolveGeorgeUserConfigRoot();
   const manager = options.pluginManager ?? new PluginManager({ userConfigRoot });
   const enabled = await manager.enabled();
@@ -843,7 +879,10 @@ export async function createAgentLoopApplicationService(
     positive(options.maxToolCalls, DEFAULT_MAX_TOOL_CALLS, 'maxToolCalls'),
     positive(options.maxToolRounds, DEFAULT_MAX_TOOL_ROUNDS, 'maxToolRounds'),
     options.approvalPort ?? denyApprovalPort,
-    validateExecutionPolicy(options.executionPolicy ?? DEFAULT_EXECUTION_POLICY),
+    configuredPolicy,
+    sandboxCapability,
+    isolatedSandbox,
+    networkSandbox,
     skills,
     validateRunBudget(options.runBudget ?? DEFAULT_RUN_BUDGET),
     options.clock ?? Date.now,

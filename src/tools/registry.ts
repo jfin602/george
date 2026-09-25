@@ -43,7 +43,7 @@ export type ToolCall = Readonly<{ callId: string; name: string; arguments: strin
 export type ToolResult = ProviderToolResult;
 export type ValidatedToolCall = Readonly<{ definition: ToolDefinition; arguments: JsonObject }>;
 
-const EFFECTS: readonly ToolEffect[] = ['local_read', 'workspace_mutation', 'host_process', 'external_read', 'remote_mutation', 'browser_observation', 'browser_interaction', 'unknown_external'];
+const EFFECTS: readonly ToolEffect[] = ['local_read', 'workspace_mutation', 'sandboxed_workspace_process', 'host_process', 'external_read', 'remote_mutation', 'browser_observation', 'browser_interaction', 'unknown_external'];
 
 function boundedText(value: unknown, name: string, maximum = 256): string {
   if (typeof value !== 'string' || !value.trim() || Buffer.byteLength(value, 'utf8') > maximum || /[\u0000-\u001f\u007f]/.test(value)) throw new Error(`Invalid tool execution ${name}.`);

@@ -202,6 +202,8 @@ export type ProcessToolExecutor = Readonly<{
   registry: ToolRegistry;
   definitions: ToolRegistry['definitions'];
   execute: (call: ProcessToolCall, options?: Readonly<{ signal?: AbortSignal; input?: string }>) => Promise<ProcessToolResult>;
+  /** Trusted executor composition only; provider calls must use `execute` or the registry. */
+  executeInternal: (call: ProcessToolCall, options?: Readonly<{ signal?: AbortSignal; input?: string }>) => Promise<ProcessToolResult>;
 }>;
 
 export function createProcessToolExecutor(workspace: Workspace, configuredLimits: ProcessToolLimits = {}): ProcessToolExecutor {
@@ -294,5 +296,5 @@ export function createProcessToolExecutor(workspace: Workspace, configuredLimits
     }
     return executeRaw(call, options);
   };
-  return { workspace, registry, definitions: registry.definitions, execute };
+  return { workspace, registry, definitions: registry.definitions, execute, executeInternal: executeRaw };
 }
