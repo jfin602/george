@@ -10,6 +10,32 @@ Phase 8 is owner-closed with accepted Not Green / Evidence Gap agentic-context e
 
 Qualification is split into deterministic correctness, bounded task-slice correctness, mandatory replay of the Phase 8 edit-plus-validation regression, security/containment, TUI behavior, live-model execution, and longitudinal work benchmarks.
 
+## Current post-correction qualification authority
+
+The original qualification sequence remains historical authority, but current Phase 9 acceptance uses the following strict live gates after deterministic regression floors pass:
+
+1. **Gate A — frozen Phase 8 structured edit-plus-validation replay.**
+   - Must make the exact edit, pass George-owned validation, finish with completed/verified TaskState, use zero human coding intervention, avoid task/stage/correction exhaustion, and remain within the currently locked `<=10` model-requested tool calls and `<=10` logical provider rounds.
+   - Must retain bounded attempt/trace artifacts even when production execution throws.
+   - Record first INSPECT tool-choice mode, selected inspection tools, read SHA/mutation-precondition provenance, validation/correction state, provider rounds/attempts/retries/tokens, context profile/estimated input, task/stage/run budgets, and timing where observable.
+2. **Gate B — `greenfield-express-v1`.**
+   - Runs only after Gate A Green.
+   - Must execute through the production structured task-stack service, preserve strict fail-stop ordering, complete declared validations, and pass hidden acceptance.
+3. **Gate C — `existing-express-feature-v1`.**
+   - Runs only after Gate B Green.
+   - Must preserve baseline behavior, pass focused/broad validation and hidden acceptance.
+
+An official Not Green workload is not immediately rerun merely to obtain a pass. The failed attempt remains evidence; implementation must change under an approved correction before a new official attempt is spent.
+
+Current qualified sub-boundaries:
+- production StackState/task-stack validation, ordering, fail-stop, history, and durable resume — Green deterministically;
+- Bubblewrap Workspace Autonomous containment — Green;
+- full-file `read_file.sha256` -> mutation current-content precondition — Green;
+- mandatory first-round structured INSPECT tool call — Green;
+- exception-safe official live-attempt retention/artifact persistence — Green.
+
+Current live Gate A remains **Not Green**. Qwen used the required inspection path and completed four local-read executions in two provider rounds, but the current INSPECT stage continued until its four-execution ceiling fired. Implementation, mutation, and George-owned validation were not reached. The active qualification question is therefore the application-owned completion transition from sufficient qualifying INSPECT evidence into implementation.
+
 ## Task-format parser and validator
 
 Deterministic tests cover valid minimal/full v1 tasks, ordinary chat without the marker, unsupported format versions, missing/duplicate/unknown sections, duplicate IDs, unknown references, dependency cycles, invalid KIND, invalid validation discovery, invalid permission values, and prompts attempting to request more authority than configured.
@@ -18,7 +44,7 @@ Invalid structured prompts fail closed before provider/tool execution.
 
 ## Task state and orchestration
 
-Fixtures prove requirement/work-unit/validation state derives from authoritative events rather than model claims; dependencies prevent premature work; READ FIRST follows Phase 3/8 routing; INSPECT requires actual evidence; required validation blocks completion while pending/failed; Planning needed/blocked are explicit; bounded correction retains failure history; correction exhaustion terminates truthfully; interruption/reopen reconstructs state without blind replay; and task state contains no model private reasoning.
+Fixtures prove requirement/work-unit/validation state derives from authoritative events rather than model claims; dependencies prevent premature work; READ FIRST follows Phase 3/8 routing; INSPECT requires actual evidence and its first provider round requires a read-only tool call; required validation blocks completion while pending/failed; Planning needed/blocked are explicit; bounded correction retains failure history; correction exhaustion terminates truthfully; interruption/reopen reconstructs state without blind replay; and task state contains no model private reasoning. Deterministic qualification must also prove that whatever completion rule advances INSPECT into implementation is George-owned, bounded, and cannot be satisfied by narration alone.
 
 The complete durable TaskState must remain distinct from provider-facing task slices. Deterministic coverage must prove:
 - only the current work unit plus applicable requirements/invariants/validation/stops are sent by default;

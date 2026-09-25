@@ -382,6 +382,22 @@ A test renderer remains useful deterministic evidence but is not automatically p
 
 For Phase 5, native-terminal qualification should additionally characterize responsiveness during representative long streaming plus accumulated execution/work-log history, including cancellation and terminal restoration under that load.
 
+## Official qualification attempt durability
+
+For official live qualification, evidence retention is part of correctness.
+
+A production task/stack/provider/tool failure or exception must not erase the bounded attempt evidence already observed. Qualification harnesses must:
+- capture normalized application events before optional observers/renderers consume them;
+- retain safe TaskState/StackState projections when available;
+- normalize terminal errors into bounded/redacted evidence;
+- derive metrics only from fields actually present in the authoritative event schema;
+- persist the bounded raw attempt/trace envelope before optional human-readable report rendering;
+- keep hidden acceptance `not_run` when the production task/stack did not complete;
+- treat missing optional metrics as Evidence Gap rather than throwing away the attempt;
+- never relabel a thrown/failed production execution as Green merely because the qualification observer successfully captured it.
+
+An optional observer, postprocessor, or report-rendering failure must remain distinguishable from production execution truth. A later reporting fix does not erase the original production result.
+
 ## Regression permanence
 
 Every confirmed regression must leave a permanent detector at the lowest reliable reproduction layer or justified combination of layers.

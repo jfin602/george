@@ -103,6 +103,22 @@ Phase 9 moves deterministic requirements, work-unit/dependency state, validation
 
 The failed Phase 8 agentic edit/validation workload must remain visible longitudinal evidence. Phase 9 must not claim that structured execution fixes it until the Phase 9 live-work instruments and qualification evidence actually demonstrate improvement.
 
+### Current Phase 9 correction status — 2026-09-25
+
+Package remains `0.9.10`; Phase 9 remains open and Phase 10 is not opened.
+
+Post-closeout correction evidence now establishes:
+- `c9-structured-task-convergence`: production `StackState` / ordered fail-stop task-stack execution is implemented and deterministically qualified; structured stage evidence handoff, task-wide budgeting, direct George-owned validation, and bounded convergence controls are implemented;
+- `c9-qwen-workunit-convergence`: full-file `read_file.sha256` -> mutation `expectedSha256` is qualified, so a model can obtain the safe precondition required to modify an existing file;
+- `c9-inspection-execution`: provider-neutral first-round required tool choice for structured INSPECT and exception-safe live-attempt retention are qualified.
+
+The current live Gate A remains **Not Green** for a narrower reason. Qwen entered structured INSPECT, selected relevant read-only tools, and produced four successful local-read executions in two provider rounds, but George kept the INSPECT stage active until its four-execution stage ceiling fired. Implementation/mutation/George-owned validation were never reached. The remaining active Phase 9 blocker is therefore structured INSPECT stage-completion semantics, not stack execution, mutation preconditions, mandatory first inspection tool use, or live-trace retention.
+
+Current correction evidence:
+- `docs/tasks/c9-structured-task-convergence/closeout.md`;
+- `docs/tasks/c9-qwen-workunit-convergence/closeout.md`;
+- `docs/tasks/c9-inspection-execution/closeout.md`.
+
 Historical Phase 1-8 prompts/evidence are not renumbered or rewritten.
 
 ## Core premise
@@ -140,7 +156,7 @@ Read:
 - stability/testing: `docs/stability-contract.md`;
 - roadmap: `docs/roadmap/mvp-roadmap.md`;
 - Living Project Map / Software Graph, when relevant: `docs/planning/living-project-map/decision-record.md` (then its graph, interaction, and qualification companions as needed);
-- current Phase 9 authority: `docs/planning/p9-structured-task-execution/decision-record.md`, `docs/planning/p9-structured-task-execution/task-format-v1.md`, and `docs/planning/p9-structured-task-execution/qualification-plan.md`;
+- current Phase 9 authority: `docs/planning/p9-structured-task-execution/decision-record.md`, `docs/planning/p9-structured-task-execution/task-format-v1.md`, and `docs/planning/p9-structured-task-execution/qualification-plan.md`; latest correction truth: `docs/tasks/c9-structured-task-convergence/closeout.md`, `docs/tasks/c9-qwen-workunit-convergence/closeout.md`, and `docs/tasks/c9-inspection-execution/closeout.md`;
 - Phase 8 closeout/history when needed: `docs/phase-8-closeout.md`, `docs/phase-8-owner-closeout.md`, `docs/tasks/c8-agentic-context/closeout.md`, `docs/planning/c8-agentic-context/decision-record.md`, `docs/planning/c8-agentic-context/qualification-plan.md`, `docs/planning/p8-context-throughput-optimization/decision-record.md`, `docs/planning/p8-context-throughput-optimization/initial-baseline.md`, and `docs/planning/performance-benchmarking-worksheet.md`;
 - Phase 7 closeout/history when needed: `docs/phase-7-closeout.md`, `docs/phase-7-owner-closeout.md`, `docs/planning/p7-inference-runtime-optimization/initial-baseline.md`;
 - Phase 6 closeout/history when needed: `docs/phase-6-closeout.md`, `docs/phase-6-owner-closeout.md`, `docs/planning/p6-plugins-external-adapters/decision-record.md`;

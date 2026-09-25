@@ -10,6 +10,38 @@ Mandatory longitudinal replay artifact: [`P4-phase8-regression-evidence.md`](tas
 
 This record audits the existing P1–P9 candidate and records observed evidence. It does not repair code, retune context/runtime, open Phase 10, alter Phase 9 planning history, or constitute owner acceptance.
 
+## Post-closeout correction refresh — current Phase 9 state
+
+This document's original P1-P9 candidate audit and the 2026-09-25 live closeout refresh remain historical evidence. Later Phase 9 corrections do not rewrite those failures.
+
+Current package remains `0.9.10`; Phase 9 is still open and has not received owner acceptance.
+
+The subsequent correction chain materially narrowed the remaining blocker:
+
+1. **`c9-structured-task-convergence`** — implemented bounded inspection-to-implementation evidence continuity, validation-failure diagnostics, one task-wide run budget, direct George-owned literal validation, structured-stage convergence limits, exact duplicate/no-progress read guards, and the missing production task-stack executor. Production stack validation/order/fail-stop/history/resume is qualified deterministically. Live convergence remained Not Green.
+2. **`c9-qwen-workunit-convergence`** — qualified the safe edit-enablement contract by adding full-file `read_file.sha256`, provider-visible mutation-precondition guidance, structured hash propagation, and dynamic read-result -> mutation regression coverage. It also added typed live trace extraction; the first live attempt then exposed that structured INSPECT could end without accepted read evidence and that a thrown service could still bypass artifact creation.
+3. **`c9-inspection-execution`** — qualified provider-neutral first-round required tool choice for structured INSPECT and exception-safe qualification result/artifact retention. In the latest official Gate A, Qwen could not finish INSPECT text-only: it selected `read_file` first and made four successful local-read executions. The attempt nevertheless ended `budget_exhausted` because the unchanged INSPECT four-execution stage ceiling fired before George advanced to implementation.
+
+Latest Gate A retained evidence:
+- first Qwen inspection call: `read_file {"path":"src/label.js"}`;
+- observed target SHA-256: `4cd4635c7d8ef07c10bf7a2296d0f4d79cd3e753c1794774656eac5e764d4352`;
+- model-requested tool calls: 6; successful executed local reads: 4;
+- provider rounds / attempts / retries: `2 / 2 / 0`;
+- provider tokens: `3,946 / 134`;
+- selected context: ordinary profile, ~`1,981` estimated tokens, `8,192` provider-input budget;
+- human coding interventions: `0`;
+- implementation/mutation/V1: not reached;
+- final TaskState: `budget_exhausted`.
+
+Therefore the current active Phase 9 blocker is **INSPECT stage completion after sufficient qualifying evidence**. The stack executor, mutation-precondition path, mandatory first inspection call, live failure retention, and Bubblewrap containment should not be reopened absent new contrary evidence.
+
+Correction evidence:
+- [`c9-structured-task-convergence`](tasks/c9-structured-task-convergence/closeout.md);
+- [`c9-qwen-workunit-convergence`](tasks/c9-qwen-workunit-convergence/closeout.md);
+- [`c9-inspection-execution`](tasks/c9-inspection-execution/closeout.md).
+
+Phase 10 remains gated on Phase 9 owner closeout.
+
 ## 2026-09-25 live closeout refresh
 
 The refresh ran on clean HEAD `9b031333d3091df37aaab9b2c03175df76101bac`, package `0.9.10`, Node `v26.10.0`, npm `11.19.0`, Linux `7.0.0-31-generic`, and Bubblewrap `0.9.0`. The exact pinned Qwen instance was loaded with the expected REST-visible context/batch/parallel/Flash Attention/GPU-KV/expert controls. GPU Offload 26 remains UI-only and unconfirmed. The bounded LM Studio smoke was Green.

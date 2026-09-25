@@ -103,6 +103,20 @@ Multiple structured prompts may form a versioned task stack. George validates st
 
 Durable state must retain enough evidence to reconstruct the active stack/task/work unit, requirement state, completed/outstanding validation, correction state, and interruption/outcome-unknown evidence. Resume must not blindly replay ambiguous side effects.
 
+### Post-implementation structured-execution clarifications
+
+Phase 9 correction evidence makes several originally directional decisions concrete without changing George Task Prompt v1.
+
+**Task-stack authority.** Canonical `StackState` is distinct from per-task `TaskState`. George validates the complete structured stack before provider/tool work, executes tasks in strict ordinal order through the production structured-task service, preserves completed/failing TaskState history, stops the stack at the first non-completed task, and resumes without blindly replaying completed or ambiguous work.
+
+**Stage evidence and budgets.** Structured inspection may project bounded sanitized successful local-read evidence into the immediately dependent implementation stage without making raw file bodies durable TaskState. Validation failures retain bounded safe diagnostics for correction. One task-wide `RunBudget` is shared across structured subruns; literal validation is George-owned and does not require a provider round merely to launch an already-resolved command.
+
+**Safe mutation preconditions.** `read_file` exposes the full current-file SHA-256 even when returned text is bounded/truncated. That observed hash is the provider-visible current-content precondition for modifying an existing file with `write_file` or `apply_patch`. Mutation execution still rejects missing/stale preconditions; the harness does not silently fill them behind the model's back.
+
+**Provider-neutral tool choice.** The provider request boundary supports normalized tool-choice semantics. Structured INSPECT uses a required tool choice on its first provider round while exposing only the read-only INSPECTION_TOOLS; continuation rounds return to normal automatic/default tool choice. Provider-specific wire translation remains in adapters.
+
+**Current unresolved INSPECT completion boundary.** Mandatory first tool use is qualified, but the latest live replay shows the current INSPECT stage can continue requesting relevant reads until its execution ceiling fires even after qualifying evidence exists. Phase 9 must not treat that ceiling exhaustion as useful convergence. The completion rule for transitioning from sufficient inspection evidence into implementation remains the active correction boundary.
+
 ### Transcript and Task TUI pages
 
 Phase 9 supersedes the earlier presentation direction that permanently interleaved routine work-log rows into the conversation surface.

@@ -107,6 +107,8 @@ Benchmark evidence complements tests and phase qualification; it does not replac
 
 Before the larger Phase 9 live-work instruments, replay the frozen Phase 8 agentic edit-plus-validation failure as an equivalent structured-task workload. Preserve the original Not Green result and record the structured result side-by-side; a later pass is improvement evidence, not deletion of the historical failure.
 
+For current Phase 9 correction qualification, that replay is the strict Gate A. Greenfield runs only after Gate A Green; existing-app runs only after greenfield Green. An official Not Green live workload is preserved and is not rerun merely to obtain a pass before an approved implementation change. Qualification must persist a bounded attempt/trace envelope even when production execution throws or optional reporting fails.
+
 After Phase 9 establishes `greenfield-express-v1` and `existing-express-feature-v1`, rerun those frozen live-work instruments at later phase closeouts when the supported environment is available. Preserve their prompt/fixture/hidden-acceptance versions so longitudinal results remain comparable.
 
 ## Stability questions

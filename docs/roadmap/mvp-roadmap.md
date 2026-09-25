@@ -417,11 +417,21 @@ Phase 8 is owner-closed because the deterministic context machinery and safety b
 
 ## Phase 9 — Structured Task Execution + Workspace Autonomy
 
-Status: CURRENT PHASE — baseline package `0.9.0`
+Status: CURRENT PHASE — package `0.9.10`; implementation substantially complete; live Qwen convergence still Not Green
 
 Decision authority: `docs/planning/p9-structured-task-execution/decision-record.md`.  
 Task-format authority: `docs/planning/p9-structured-task-execution/task-format-v1.md`.  
 Qualification authority: `docs/planning/p9-structured-task-execution/qualification-plan.md`.
+
+Current evidence after Phase 9 corrections:
+- production task-stack validation/order/fail-stop/durable resume is qualified deterministically;
+- Workspace Autonomous Bubblewrap containment remains Green;
+- full-file read SHA -> safe existing-file mutation precondition is qualified;
+- structured INSPECT now requires a read-only tool on its first provider round;
+- official live-attempt evidence survives production-service exceptions;
+- the current mandatory live replay is still Not Green because INSPECT continues after sufficient successful reads until the stage execution ceiling fires, so implementation is not reached;
+- native Node-26 real-TTY/OpenTUI behavior remains an Evidence Gap;
+- Phase 9 is not owner-closed and Phase 10 remains unopened.
 
 Goal: make George execute rich software-development task stacks reliably with the local coding model by moving deterministic requirements/workflow/validation/permission orchestration into the harness rather than asking the model to infer it from frontier-model-style prose.
 

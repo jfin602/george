@@ -97,6 +97,42 @@ Completed unrelated work units, stale validation history, and unrelated requirem
 
 This separation is required by the Phase 8 smallest-sufficient-working-set law. Phase 9 must not invent a new agentic context threshold: the inherited ordinary/medium/large values remain provisional, and task-slice usefulness is measured against the retained `agentic-context` benchmark rather than assumed from nominal capacity.
 
+### Phase 9 post-implementation boundaries
+
+The implemented structured-task architecture now includes a canonical production stack layer:
+
+~~~text
+Task Prompt v1 definitions
+        |
+        v
+ validateTaskStack()
+        |
+        v
+ application-owned StackState
+ ordered tasks / current task / completed history / terminal outcome
+        |
+        v
+ StructuredTaskStackApplicationService
+        |
+        v
+ StructuredTaskApplicationService
+        |
+        v
+ bounded provider stage -> tools -> George-owned validation
+~~~
+
+`StackState` and per-task `TaskState` are separate authorities. A stack validates before first execution, advances only after the current task is truthfully completed, preserves per-task evidence, fails/stops before later tasks when the current task is non-completed, and resumes through existing recovery rules rather than replaying completed/ambiguous work.
+
+Structured execution also has these qualified boundaries:
+- one task-wide run budget spans inspection, implementation, validation discovery/execution, and correction subruns;
+- bounded successful inspection evidence may be projected into the dependent implementation stage without making raw file bodies canonical TaskState;
+- literal validation executes directly through George's process/policy/evidence boundary without a provider round that makes no model decision;
+- `read_file` exposes the full current-file SHA-256, which is the explicit provider-visible precondition used for safe existing-file `write_file` / `apply_patch`;
+- provider requests support normalized tool choice, with adapter-specific wire translation isolated below the provider interface;
+- structured INSPECT requires one first-round tool call from its already capability-reduced read-only tool set; continuation rounds return to normal automatic/default choice.
+
+The current live evidence leaves one structured-stage boundary unresolved: INSPECT can continue issuing relevant reads until its stage ceiling even after qualifying evidence exists. Stage completion/transition into implementation must remain application-owned and bounded; ceiling exhaustion is a failure guard, not the intended completion mechanism.
+
 ## Progress and status events
 
 George's normalized application event stream is the presentation-independent source for visible work state.
@@ -196,7 +232,7 @@ Provider responsibilities include:
 - protocol translation;
 - capability reporting;
 - normalized streamed text and tool-call events;
-- translation of George's normalized tool definitions into provider request schemas;
+- translation of George's normalized tool definitions and normalized tool-choice intent into provider request schemas;
 - translation of normalized tool results/continuations back into provider protocol;
 - cancellation and timeout behavior;
 - provider error normalization.
