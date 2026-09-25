@@ -67,6 +67,56 @@ Live/performance qualification should exercise all three operating regions. The 
 
 A smaller profile is not accepted merely because it reduces estimated tokens. Qualification must preserve retrieval/instruction correctness, required-context retention, Phase 5 evidence/recovery behavior, and provider-call count. Adaptive selection must not introduce an extra model call merely to stay inside ordinary or medium.
 
+### Phase 8 agentic-context correction qualification
+
+The `c8-agentic-context` correction adds a stronger acceptance rule for production context boundaries.
+
+Synthetic long-context retrieval/prefill tests are not sufficient evidence that a context size is a useful coding-agent working set.
+
+Profile/routing acceptance must use real George-shaped agentic workloads with:
+- normal George instructions;
+- realistic project guidance;
+- normal provider-facing tool schemas;
+- repository reads/searches;
+- multi-round tool continuation;
+- at least one bounded edit-plus-validation workflow.
+
+Initial exploratory measurement should ascend through approximately 2k/4k/6k/8k/10k/12k provider-facing working-set bands and stop when a repeatable capability/latency cliff is established. These bands are instrumentation, not production profile definitions.
+
+Agentic qualification must record:
+- deterministic task success;
+- required instruction/fact retention;
+- expected tool names and call counts;
+- duplicate or unrequested tool behavior;
+- response-start/first-useful-output timing;
+- full workflow latency;
+- provider attempts/rounds/retries/timeouts;
+- provider-reported input/output tokens when available;
+- selected profile/mode;
+- promotion/omission/defer/compaction evidence.
+
+A context size is not accepted merely because:
+- it fits beneath a provider-input ceiling;
+- the provider eventually accepts it;
+- a synthetic sentinel-retrieval case passes;
+- token count is lower.
+
+A candidate healthy envelope requires coding-agent correctness plus operationally reasonable latency/reliability relative to smaller accepted bands.
+
+Runtime/provider health is part of evidence validity. LM Studio connection loss, incomplete streams, material unverified runtime changes, or timeouts without usable response evidence remain Not Green/Evidence Gap for the relevant claim and must not be converted into a context-threshold conclusion.
+
+After exploratory measurement, confirm the candidate healthy envelope and the next materially worse region with bounded repeat evidence. Large repetition batches are not required.
+
+Any correction to profile values, soft-pressure thresholds, provider-input operating ceilings, routing/defer priority, or promotion rules must preserve:
+- Phase 3 trust/precedence/source integrity;
+- no silent truncation of critical sources;
+- Phase 5 canonical-history/recovery/compaction authority;
+- Phase 8 per-turn selection/probe neutrality;
+- P7 frozen-profile continuation-pressure fail-closed behavior;
+- fixed-profile compatibility unless explicitly changed by an approved decision.
+
+The 32,768 physical context target is safety/headroom capacity and is not itself an agentic acceptance target.
+
 
 ### Extension qualification
 
