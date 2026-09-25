@@ -87,6 +87,16 @@ Task prompt content remains below George/user permission policy and cannot regis
 
 Durable task state is bound to canonical workspace/session identity and inherits Phase 4/5 interruption/recovery truth. Ambiguous side effects are never replayed merely because a work unit remains incomplete.
 
+### Canonical TaskState is not provider context
+
+The complete parsed task, requirement ledger, work-unit graph, validation history, correction history, blockers, and durable evidence remain canonical George state.
+
+Provider-facing task context is a derived bounded projection for the current work unit. By default it includes only the current objective, applicable requirements/invariants, active validation/stop conditions, relevant repository/context evidence, and bounded unresolved/correction evidence.
+
+Completed unrelated work units, stale validation history, and unrelated requirements remain durable but are not resent merely because they are still part of TaskState.
+
+This separation is required by the Phase 8 smallest-sufficient-working-set law. Phase 9 must not invent a new agentic context threshold: the inherited ordinary/medium/large values remain provisional, and task-slice usefulness is measured against the retained `agentic-context` benchmark rather than assumed from nominal capacity.
+
 ## Progress and status events
 
 George's normalized application event stream is the presentation-independent source for visible work state.
@@ -162,13 +172,17 @@ Inside one canonical workspace, qualified native reads/writes and sandboxed ordi
 
 Outside `reject` denies the requested outside resource without presenting approval. Outside `ask` emits one bounded approval request for the specific resource/action. An allow-once decision cannot become a broad remembered host grant.
 
+Outside approval is a separate capability path. It does not modify the canonical workspace root, weaken `resolveWorkspacePath` / mutation containment, or cause outside paths to be treated as normal workspace-native paths.
+
 The task format may declare the permissions a task expects, but the effective policy is the intersection with configured user authority; task/repository/model/plugin/remote text can never raise the ceiling.
 
 ### Workspace process containment
 
 The existing host-process executor remains explicitly non-sandboxed and approval-required under its historical contract.
 
-Workspace Autonomous process execution requires a distinct OS-enforced containment path. The selected implementation must actually prevent disallowed host filesystem access rather than relying on `cwd`. If containment cannot be initialized, George must fail closed or fall back to the normal approval-required host-process path. It must never label or auto-run cwd-only execution as sandboxed.
+Workspace Autonomous process execution requires a distinct OS-enforced containment path and a separately identifiable execution/policy path. Auto-approval must not be added to the existing host `run_process` path merely because its cwd is workspace-contained.
+
+The selected autonomous implementation must actually prevent disallowed host filesystem access rather than relying on `cwd`. If containment cannot be initialized, George must fail closed or fall back to the normal approval-required host-process path. It must never label or auto-run cwd-only execution as sandboxed.
 
 The concrete Linux containment technology is an implementation-planning decision. Broader general-purpose host/container sandboxing remains outside Phase 9.
 
