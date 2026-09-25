@@ -1,0 +1,44 @@
+TASK: Correction 8 / P6 — Agentic context correction closeout
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Terra Medium`.
+- Browser required: no.
+
+VERSIONING
+- Required unchanged project version: `0.8.8`.
+
+GOAL
+
+Perform an evidence-only closeout of correction c8-agentic-context from the exact P5 candidate.
+
+Read BOOT/current product/architecture/workflow/stability/roadmap contracts, c8 decision/qualification/assessment/plan, P2 measurement evidence, P3 policy decision, P4 deterministic qualification evidence, P5 live qualification evidence, historical Phase-8 decision/evidence, and exact current source/tests.
+
+Audit and report:
+- accepted agentic-context benchmark contract/version;
+- synthetic context ladder's retained characterization role;
+- measured healthy agentic working-set region, if established;
+- measured next risk/cliff region, if established;
+- whether runtime provenance was controlled;
+- final production adaptive/fixed/profile/agentic-limit policy;
+- routing/promotion/omit/defer behavior;
+- explicit behavior when correctness-critical selected context cannot fit the qualified adaptive envelope;
+- fixed/manual override semantics;
+- Phase-3 trust/precedence/source integrity;
+- Phase-5 compaction/recovery authority;
+- P7 frozen-turn continuation-pressure safety;
+- deterministic benchmark/context/application/provider regression evidence;
+- real George coding-agent evidence;
+- native TUI evidence;
+- all Not Green and Evidence Gap truth.
+
+Create `docs/tasks/c8-agentic-context/closeout.md` with explicit Implementation Complete / Correction Qualified state and Green / Not Green / Evidence Gap per layer.
+
+Do not repair implementation, modify production policy, run another optimization, rewrite `docs/phase-8-closeout.md`, owner-close Phase 8, advance Phase 9, or change package version.
+
+Required proof:
+- every conclusion traces to current P2-P5 evidence/source/tests;
+- no synthetic retrieval result is presented as sufficient agentic profile-boundary evidence;
+- no uncontrolled provider/runtime run is relabeled controlled;
+- package version remains exactly `0.8.8`;
+- `git diff --check` passes;
+- no `package-lock.json` exists.
