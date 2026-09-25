@@ -301,7 +301,7 @@ function durableEvent(event: ApplicationEvent): ApplicationEvent | undefined {
     }
     case 'workflow.completed': return { type: event.type, turnId: string(event.turnId, 'turn ID', 256), completion: safeWorkflowCompletion(event.completion) };
     case 'task.updated': {
-      const status = oneOf(event.status, 'task status', ['pending', 'in_progress', 'blocked', 'planning_needed', 'cancelled', 'completed', 'failed']);
+      const status = oneOf(event.status, 'task status', ['pending', 'in_progress', 'blocked', 'planning_needed', 'cancelled', 'budget_exhausted', 'completed', 'failed']);
       const fingerprint = string(event.fingerprint, 'task fingerprint', 64);
       if (!/^[a-f0-9]{64}$/.test(fingerprint)) invalid('task fingerprint is invalid.');
       return { type: event.type, turnId: string(event.turnId, 'turn ID', 256), fingerprint, status, ...(event.currentWorkUnit === undefined ? {} : { currentWorkUnit: string(event.currentWorkUnit, 'task work unit', 64) }), blockerCount: boundedInteger(event.blockerCount, 'task blocker count', 64) };
@@ -485,7 +485,7 @@ function parseTaskState(value: unknown): TaskState {
   const definition = (() => { try { return parseSerializedTaskDefinition(string(item.definition, 'task definition', 128 * 1024)); } catch { return invalid('task definition is invalid.'); } })();
   const fingerprint = string(item.definitionFingerprint, 'task definition fingerprint', 64);
   if (!/^[a-f0-9]{64}$/.test(fingerprint) || fingerprint !== taskDefinitionFingerprint(definition)) invalid('task definition fingerprint does not match.');
-  const status = oneOf(item.status, 'task status', ['pending', 'in_progress', 'blocked', 'planning_needed', 'cancelled', 'completed', 'failed'] as const);
+  const status = oneOf(item.status, 'task status', ['pending', 'in_progress', 'blocked', 'planning_needed', 'cancelled', 'budget_exhausted', 'completed', 'failed'] as const);
   const requirementKeys = definition.requirements.map(({ id }) => id);
   const workKeys = definition.workflow.map(({ id }) => id);
   const validationKeys = definition.validations.map(({ id }) => id);
@@ -511,11 +511,11 @@ function parseTaskState(value: unknown): TaskState {
     return [key, { status: validationStatus, attempts }];
   })) as TaskState['validations'];
   const correctionLimit = boundedInteger(item.correctionLimit, 'task correction limit', 10);
-  const corrections = boundedArray(item.corrections, 'task corrections', correctionLimit).map((entry, index) => { const correction = record(entry, 'task correction'); exactKeys(correction, ['cycle', 'validationId', 'status'], 'task correction'); const validationId = string(correction.validationId, 'task correction validation', 64) as `V${number}`; if (!validationKeys.includes(validationId) || correction.cycle !== index + 1) invalid('task correction is invalid.'); return { cycle: correction.cycle as number, validationId, status: oneOf(correction.status, 'task correction status', ['active', 'completed'] as const) }; });
-  if (corrections.filter((item) => item.status === 'active').length > 1) invalid('task correction state is invalid.');
+  const corrections = boundedArray(item.corrections, 'task corrections', correctionLimit).map((entry, index) => { const correction = record(entry, 'task correction'); exactKeys(correction, ['cycle', 'validationId', 'status'], 'task correction'); const validationId = string(correction.validationId, 'task correction validation', 64) as `V${number}`; if (!validationKeys.includes(validationId) || correction.cycle !== index + 1) invalid('task correction is invalid.'); return { cycle: correction.cycle as number, validationId, status: oneOf(correction.status, 'task correction status', ['active', 'repaired', 'completed'] as const) }; });
+  if (corrections.filter((item) => item.status !== 'completed').length > 1) invalid('task correction state is invalid.');
   const blockers = boundedArray(item.blockers, 'task blockers', 64).map((blocker) => boundedMessage(string(blocker, 'task blocker', 512)));
-  const terminalOutcome = item.terminalOutcome === undefined ? undefined : oneOf(item.terminalOutcome, 'task terminal outcome', ['blocked', 'planning_needed', 'cancelled', 'completed', 'failed'] as const);
-  if ((terminalOutcome === undefined) === ['blocked', 'planning_needed', 'cancelled', 'completed', 'failed'].includes(status)) invalid('task terminal outcome is invalid.');
+  const terminalOutcome = item.terminalOutcome === undefined ? undefined : oneOf(item.terminalOutcome, 'task terminal outcome', ['blocked', 'planning_needed', 'cancelled', 'budget_exhausted', 'completed', 'failed'] as const);
+  if ((terminalOutcome === undefined) === ['blocked', 'planning_needed', 'cancelled', 'budget_exhausted', 'completed', 'failed'].includes(status)) invalid('task terminal outcome is invalid.');
   if (terminalOutcome !== undefined && terminalOutcome !== status) invalid('task terminal outcome does not match status.');
   return Object.freeze({ schemaVersion: TASK_STATE_SCHEMA_VERSION, sessionId: identifier(item.sessionId, 'task session ID'), workspace: canonicalPath(item.workspace, 'task workspace'), definition, definitionFingerprint: fingerprint, status, ...(currentWorkUnit === undefined ? {} : { currentWorkUnit }), requirements: Object.freeze(safeRequirements), workUnits: Object.freeze(safeWorkUnits), inspections: Object.freeze(inspections), validations: Object.freeze(safeValidations), correctionLimit, corrections: Object.freeze(corrections), blockers: Object.freeze(blockers), ...(terminalOutcome === undefined ? {} : { terminalOutcome }), effectivePermissionExpectations: Object.freeze(safePermissionExpectations(item.effectivePermissionExpectations)) });
 }

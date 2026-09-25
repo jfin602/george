@@ -9,7 +9,7 @@ export const MAX_CORRECTION_CYCLES = 10;
 export const MAX_TASK_EVIDENCE = 64;
 export const MAX_VALIDATION_ATTEMPTS = 32;
 
-export type TaskStatus = 'pending' | 'in_progress' | 'blocked' | 'planning_needed' | 'cancelled' | 'completed' | 'failed';
+export type TaskStatus = 'pending' | 'in_progress' | 'blocked' | 'planning_needed' | 'cancelled' | 'budget_exhausted' | 'completed' | 'failed';
 export type RequirementStatus = 'pending' | 'addressed' | 'verified';
 export type WorkUnitStatus = 'pending' | 'active' | 'addressed' | 'blocked';
 export type ValidationStatus = 'pending' | 'passed' | 'failed' | 'denied' | 'cancelled';
@@ -24,7 +24,7 @@ export type TaskValidationAttempt = Readonly<{
   signal: string | null;
   outcome?: 'completed' | 'failed' | 'timed_out' | 'spawn_failed';
 }>;
-export type TaskCorrection = Readonly<{ cycle: number; validationId: `V${number}`; status: 'active' | 'completed' }>;
+export type TaskCorrection = Readonly<{ cycle: number; validationId: `V${number}`; status: 'active' | 'repaired' | 'completed' }>;
 
 export type TaskState = Readonly<{
   schemaVersion: 1;
@@ -69,7 +69,7 @@ function correctionLimit(value: number): number {
   if (!Number.isInteger(value) || value < 0 || value > MAX_CORRECTION_CYCLES) throw new Error(`Task correction limit must be between 0 and ${MAX_CORRECTION_CYCLES}.`);
   return value;
 }
-function terminal(status: TaskStatus): status is TaskTerminalOutcome { return status === 'blocked' || status === 'planning_needed' || status === 'cancelled' || status === 'completed' || status === 'failed'; }
+function terminal(status: TaskStatus): status is TaskTerminalOutcome { return status === 'blocked' || status === 'planning_needed' || status === 'cancelled' || status === 'budget_exhausted' || status === 'completed' || status === 'failed'; }
 function validation(definition: TaskDefinition, validationId: `V${number}`): TaskValidation {
   const result = definition.validations.find((item) => item.id === validationId);
   if (!result) throw new Error('Unknown task validation.');
@@ -122,6 +122,18 @@ export function parseSerializedTaskDefinition(value: string): TaskDefinition {
   return parsed.task;
 }
 
+/** Validates only new Task Prompt v1 stacks; historical phase-runner prompts remain its own grammar. */
+export function validateTaskStack(definitions: readonly TaskDefinition[]): void {
+  if (!definitions.length) throw new Error('Structured task stack must contain at least one task.');
+  const stack = definitions[0]!.stack;
+  if (definitions.some((definition) => definition.stack !== stack)) throw new Error('Structured task stack identity does not agree.');
+  if (definitions.length > 1 && !stack) throw new Error('Multiple structured tasks require STACK metadata.');
+  const ordinals = definitions.map((definition) => definition.task.ordinal);
+  if (new Set(ordinals).size !== ordinals.length || ordinals.some((ordinal, index) => index && ordinal <= ordinals[index - 1]!)) throw new Error('Structured task stack numbering must be strictly increasing.');
+  const closeouts = definitions.filter((definition) => definition.kind === 'closeout');
+  if (closeouts.length > 1 || (closeouts.length === 1 && definitions.at(-1) !== closeouts[0])) throw new Error('Structured task stack closeout must be unique and last.');
+}
+
 export function createTaskState(options: Readonly<{
   sessionId: string;
   workspace: string;
@@ -165,8 +177,9 @@ export function addressTaskWorkUnit(state: TaskState, workId: `W${number}`): Tas
 /** Records an observed validation process result. It appends evidence and never accepts model text. */
 export function recordTaskValidationAttempt(state: TaskState, validationId: `V${number}`, attempt: TaskValidationAttempt): TaskState {
   if (terminal(state.status)) throw new Error('Task validation is not currently allowed.');
-  const activeCorrection = state.corrections.find((item) => item.status === 'active');
+  const activeCorrection = state.corrections.find((item) => item.status !== 'completed');
   if (activeCorrection && activeCorrection.validationId !== validationId) throw new Error('Only the active correction validation may run.');
+  if (activeCorrection?.status === 'active') throw new Error('Task correction repair must complete before revalidation.');
   const target = validation(state.definition, validationId);
   if (target.covers.some((requirement) => state.requirements[requirement] === 'pending')) throw new Error('Validation cannot verify an unaddressed requirement.');
   const current = state.validations[validationId];
@@ -183,7 +196,7 @@ export function recordTaskValidationAttempt(state: TaskState, validationId: `V${
 }
 
 export function beginTaskCorrection(state: TaskState, validationId: `V${number}`): TaskState {
-  if (terminal(state.status) || state.validations[validationId]?.status !== 'failed') throw new Error('Only a failed validation can begin correction.');
+  if (terminal(state.status) || state.validations[validationId]?.status !== 'failed' || state.corrections.some((item) => item.status !== 'completed')) throw new Error('Only a failed validation can begin correction.');
   if (state.corrections.length >= state.correctionLimit) throw new Error('Task correction limit is exhausted.');
   validation(state.definition, validationId);
   const correction = freeze({ cycle: state.corrections.length + 1, validationId, status: 'active' as const });
@@ -192,8 +205,15 @@ export function beginTaskCorrection(state: TaskState, validationId: `V${number}`
 
 export function completeTaskCorrection(state: TaskState, cycle: number): TaskState {
   const correction = state.corrections.find((item) => item.cycle === cycle);
-  if (!correction || correction.status !== 'active') throw new Error('Task correction is not active.');
+  if (!correction || correction.status !== 'repaired') throw new Error('Task correction is not ready for completion.');
   return clone(state, { corrections: freezeArray(state.corrections.map((item) => item.cycle === cycle ? freeze({ ...item, status: 'completed' as const }) : item)) });
+}
+
+/** Marks a normally completed repair before the canonical process revalidation. */
+export function repairTaskCorrection(state: TaskState, cycle: number): TaskState {
+  const correction = state.corrections.find((item) => item.cycle === cycle);
+  if (!correction || correction.status !== 'active') throw new Error('Task correction is not active.');
+  return clone(state, { corrections: freezeArray(state.corrections.map((item) => item.cycle === cycle ? freeze({ ...item, status: 'repaired' as const }) : item)) });
 }
 
 export function blockTask(state: TaskState, outcome: Exclude<TaskTerminalOutcome, 'completed'>, blocker: string): TaskState {
@@ -204,7 +224,7 @@ export function blockTask(state: TaskState, outcome: Exclude<TaskTerminalOutcome
 }
 
 export function completeTask(state: TaskState): TaskState {
-  if (terminal(state.status) || state.currentWorkUnit || state.corrections.some((item) => item.status === 'active') || Object.values(state.workUnits).some((status) => status !== 'addressed') || Object.values(state.requirements).some((status) => status !== 'verified') || Object.values(state.validations).some((entry) => entry.status !== 'passed')) throw new Error('Task cannot complete before all work and validations verify.');
+  if (terminal(state.status) || state.currentWorkUnit || state.corrections.some((item) => item.status !== 'completed') || Object.values(state.workUnits).some((status) => status !== 'addressed') || Object.values(state.requirements).some((status) => status !== 'verified') || Object.values(state.validations).some((entry) => entry.status !== 'passed')) throw new Error('Task cannot complete before all work and validations verify.');
   return clone(state, { status: 'completed', terminalOutcome: 'completed' });
 }
 

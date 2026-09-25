@@ -10,10 +10,12 @@ import {
   completeTask,
   completeTaskCorrection,
   createTaskState,
+  repairTaskCorrection,
   parseTaskPrompt,
   projectTaskState,
   recordTaskInspection,
   recordTaskValidationAttempt,
+  validateTaskStack,
 } from '../../../src/tasks/index.ts';
 
 const prompt = `GEORGE TASK FORMAT: 1
@@ -85,7 +87,7 @@ test('validation observations append failures, then verify only after an observe
   current = recordTaskValidationAttempt(current, 'V1', { turnId: 't1', callId: 'v1', status: 'failed', exitCode: 1, signal: null, outcome: 'failed' });
   assert.equal(current.requirements.R1, 'addressed');
   current = beginTaskCorrection(current, 'V1');
-  current = completeTaskCorrection(current, 1);
+  current = completeTaskCorrection(repairTaskCorrection(current, 1), 1);
   current = recordTaskValidationAttempt(current, 'V1', { turnId: 't2', callId: 'v2', status: 'passed', exitCode: 0, signal: null, outcome: 'completed' });
   assert.deepEqual(current.validations.V1?.attempts.map((attempt) => attempt.status), ['failed', 'passed']);
   assert.equal(current.requirements.R1, 'verified');
@@ -99,4 +101,23 @@ test('TaskState correction bounds and projection do not expose task prompt bodie
   assert.equal(JSON.stringify(view).includes('node --test'), false);
   assert.equal(JSON.stringify(view).includes('SECRET_PROVIDER_PAYLOAD'), false);
   assert.equal(view.blockerCount, 1);
+});
+
+test('TaskState rejects correction once its configured cycle budget is exhausted', () => {
+  let current = createTaskState({ sessionId: 'limited', workspace: '/workspace', definition: state().definition, correctionLimit: 0 });
+  current = beginTaskWorkUnit(current, 'W1');
+  current = recordTaskInspection(current, { item: 'current state', source: 'read' });
+  current = addressTaskWorkUnit(current, 'W1');
+  current = addressTaskWorkUnit(beginTaskWorkUnit(current, 'W2'), 'W2');
+  current = recordTaskValidationAttempt(current, 'V1', { turnId: 'failed', callId: 'failed', status: 'failed', exitCode: 1, signal: null, outcome: 'failed' });
+  assert.throws(() => beginTaskCorrection(current, 'V1'), /exhausted/);
+});
+
+test('new structured stacks require agreeing ordered metadata without changing historical prompt handling', () => {
+  const first = state().definition;
+  const second = { ...first, stack: 'p9', task: { ordinal: 2, title: 'Second' } } as typeof first;
+  const stacked = { ...first, stack: 'p9', task: { ordinal: 1, title: 'First' } } as typeof first;
+  validateTaskStack([stacked, second]);
+  assert.throws(() => validateTaskStack([second, stacked]), /numbering/);
+  assert.throws(() => validateTaskStack([first, second]), /identity/);
 });

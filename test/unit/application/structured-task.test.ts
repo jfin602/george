@@ -6,6 +6,7 @@ import test from 'node:test';
 
 import { StructuredTaskApplicationService, createCodingWorkflowApplicationService } from '../../../src/application/index.ts';
 import { createSession, type ApprovalDecision, type ApprovalPort, type ApprovalRequest, type ModelProvider, type ProviderEvent, type ProviderRequest } from '../../../src/core/index.ts';
+import { addressTaskWorkUnit, beginTaskCorrection, beginTaskWorkUnit, createTaskState, parseTaskPrompt, recordTaskValidationAttempt } from '../../../src/tasks/index.ts';
 
 class Provider implements ModelProvider {
   readonly requests: ProviderRequest[] = [];
@@ -124,4 +125,56 @@ test('DISCOVER validation accepts only an explicit executable/argv proposal and 
   const input = task.replace('Run: node --version\n\nV2 — Second check\nCovers: R2\nRun: node --version', 'Run: DISCOVER\nScope: focused local check for first work\n\nV2 — Second check\nCovers: R2\nRun: node --version');
   await service.run({ session: createSession({ workspace: root }), input });
   assert.match(provider.requests[4]?.input ?? '', /focused local check/);
+});
+
+test('failed validation is retained through a bounded normal-tool correction and safe resume', async (t) => {
+  const root = await workspace();
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const input = `GEORGE TASK FORMAT: 1
+
+TASK: P5 — Correction
+KIND: implementation
+
+GOAL
+
+Repair only the failed check.
+
+REQUIREMENTS
+
+- R1: The check passes after repair.
+
+WORKFLOW
+
+W1 — Repairable work
+Covers: R1
+Depends on: none
+
+VALIDATION
+
+V1 — Marker check
+Covers: R1
+Run: node -e "process.exit(require('node:fs').existsSync('fixed.txt') ? 0 : 1)"
+
+STOP CONDITIONS
+
+- S1: Stop truthfully.
+`;
+  const parsed = parseTaskPrompt(input);
+  if (parsed.kind !== 'structured') throw new Error('Expected structured task.');
+  let taskState = createTaskState({ sessionId: 'resume', workspace: root, definition: parsed.task });
+  taskState = addressTaskWorkUnit(beginTaskWorkUnit(taskState, 'W1'), 'W1');
+  taskState = recordTaskValidationAttempt(taskState, 'V1', { turnId: 'old', callId: 'old-check', status: 'failed', exitCode: 1, signal: null, outcome: 'failed' });
+  taskState = beginTaskCorrection(taskState, 'V1');
+  const provider = new Provider([
+    [{ type: 'provider.response.started', responseId: 'repair' }, { type: 'provider.tool.call', callId: 'repair', name: 'write_file', arguments: '{"path":"fixed.txt","content":"fixed"}' }, { type: 'provider.response.completed' }],
+    [{ type: 'provider.response.completed' }],
+    [{ type: 'provider.response.completed' }],
+  ]);
+  const workflow = await createCodingWorkflowApplicationService({ provider, workspace: root, approvalPort: new Allow() });
+  const session = createSession({ id: 'resume', workspace: root });
+  session.taskState = taskState;
+  await new StructuredTaskApplicationService(workflow.agent).run({ session, input, turnId: 'resume' });
+  assert.equal(session.taskState?.status, 'completed');
+  assert.deepEqual(session.taskState?.validations.V1?.attempts.map((attempt) => attempt.status), ['failed', 'passed']);
+  assert.deepEqual(session.taskState?.corrections.map((correction) => correction.status), ['completed']);
 });
