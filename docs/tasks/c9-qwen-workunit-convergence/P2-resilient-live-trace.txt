@@ -1,0 +1,111 @@
+TASK: Correction 9 / P2 — Resilient live work-unit trace capture
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Sol Medium`.
+- Browser required: no.
+
+VERSIONING
+- Required unchanged project version: `0.9.10`.
+
+GOAL
+
+Make official Phase 9/c9 live qualification attempts produce durable bounded diagnostic evidence even when optional postprocessing/rendering fails, so the next Qwen Gate A result cannot lose its tool/provider/context/TaskState trace.
+
+Read:
+- `BOOT.md`;
+- `AGENTS.md`;
+- current Phase 9/c9 authority;
+- `docs/tasks/c9-qwen-workunit-convergence/{prompt-assessment,implementation-plan}.md`;
+- exact P1 candidate;
+- `src/qualification/live-work.ts`;
+- ApplicationEvent/ContextDiagnostics/TaskState/StackState/run-budget contracts;
+- current Phase 9/c9 qualification runner/tests;
+- the prior c9 P5 evidence describing the `context.assembled` postprocessor crash.
+
+Do not modify production task execution, stack execution, convergence limits, context policy, tool permissions, or runtime settings in P2.
+
+REPOSITORY-OWNED LIVE TRACE
+
+Extend the narrow qualification boundary with a typed bounded live trace/result that can report at least:
+
+- terminal task/stack status;
+- safe TaskState projection;
+- safe StackState projection when present;
+- provider attempts;
+- logical provider rounds;
+- retries;
+- input/output token usage;
+- ordered model-requested tool calls:
+  - call ID;
+  - tool name;
+  - bounded/sanitized requested arguments sufficient for diagnosis;
+  - execution effect when known;
+  - terminal success/failure/denied state;
+- successful workspace mutation path/resulting SHA evidence;
+- validation outcomes;
+- correction count;
+- context assembly evidence:
+  - `diagnostics.profileId`;
+  - attempted profiles;
+  - promotion reasons;
+  - estimated tokens;
+  - provider-input budget/headroom;
+- run/task/stage budget pressure or exhaustion;
+- workflow/total timing where actually observable;
+- hidden-acceptance result;
+- explicit human-intervention count supplied by qualification harness.
+
+Use the actual current `ApplicationEvent` union. For `context.assembled`, context information is under `event.diagnostics`; do not assume a nonexistent top-level profile object.
+
+TOTAL / FAILURE-RESILIENT EXTRACTION
+
+Derived trace extraction must not throw merely because:
+- an optional usage/timing/profile field is absent;
+- an event type has no metric for one requested dimension;
+- a future bounded event is unknown to an older optional renderer.
+
+Missing data becomes explicit unavailable evidence rather than an exception.
+
+Preserve the bounded event list returned by the official run even if derived trace rendering fails.
+
+ARTIFACT ORDERING
+
+Provide/reuse a repository-owned helper for official qualification artifacts such that:
+1. attempt identity/runtime/workspace outcome and bounded event/TaskState/StackState evidence are written first;
+2. derived metrics/pretty report are rendered second;
+3. a pretty-report failure cannot erase or invalidate the already-written raw bounded attempt envelope.
+
+Use atomic/bounded writes where existing artifact conventions support them.
+
+Never persist:
+- secrets;
+- unrestricted provider payloads;
+- raw environment dumps;
+- hidden acceptance source/assertions.
+
+PERMANENT TESTS
+
+Add tests using actual typed event shapes proving:
+- current `context.assembled.diagnostics.profileId` is extracted correctly;
+- missing optional usage does not throw;
+- tool request/terminal pairing is stable;
+- mutation evidence is captured;
+- TaskState/StackState safe projections are retained;
+- trace extraction survives unrelated/unsupported bounded events;
+- artifact envelope remains available when optional report rendering throws;
+- the exact previous `Cannot read properties of undefined (reading 'id')` class cannot recur against the current context event contract.
+
+VALIDATION
+
+Run:
+- focused qualification/live-work tests;
+- Phase 9 integration;
+- c9 production-stack/fail-stop tests;
+- affected ApplicationEvent/context diagnostic tests;
+- `npm run typecheck`;
+- `npm run test:runner`;
+- `git diff --check`.
+
+Verify package remains `0.9.10` and no root lockfile exists.
+
+Do not run the official Gate A live attempt in P2.

@@ -1,0 +1,98 @@
+TASK: Correction 9 / P1 — Safe mutation precondition visibility
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Sol Medium`.
+- Browser required: no.
+
+VERSIONING
+- Required unchanged project version: `0.9.10`.
+
+GOAL
+
+Make George's safe existing-file mutation contract executable by the local coding model: a successful `read_file` must expose the exact current-content SHA-256 required by `write_file` / `apply_patch`, and structured implementation evidence must preserve that precondition.
+
+Read:
+- `BOOT.md`;
+- `AGENTS.md`;
+- current product/architecture/workflow/stability contracts;
+- current Phase 9 Task Prompt / structured-task authority;
+- `docs/tasks/c9-structured-task-convergence/{P5-live-evidence,closeout}.md`;
+- `docs/tasks/c9-qwen-workunit-convergence/{prompt-assessment,implementation-plan}.md`;
+- exact read-only tools, mutation tools, structured-task projection, provider/tool schemas, and affected tests.
+
+Do not change Task Prompt v1 syntax, context profiles, production stack execution, Bubblewrap, TUI, retries, correction count, or Phase 10 scope.
+
+READ_FILE HASH CONTRACT
+
+Extend the canonical `read_file` result with:
+
+`sha256: string`
+
+Requirements:
+- lowercase 64-character SHA-256;
+- hash represents the **full current file bytes**, not only the returned/truncated text prefix;
+- compute from the same opened file instance used for the read so the returned text/hash pair is not assembled from two independently reopened path versions;
+- do not load arbitrarily large files wholly into memory solely to hash them;
+- preserve canonical workspace/symlink containment;
+- preserve cancellation/bounds where applicable;
+- preserve existing `path`, `text`, `bytes`, and `truncated` behavior unless a current contract requires a deliberate documented clarification.
+
+MUTATION TOOL GUIDANCE
+
+Keep mutation safety unchanged.
+
+Provider-visible metadata must clearly communicate:
+- `read_file` returns the current SHA-256 mutation precondition;
+- when `write_file` overwrites an existing file, `expectedSha256` must be the latest observed `read_file.sha256`;
+- `apply_patch.expectedSha256` must likewise use the latest observed current-file hash;
+- creating a new file remains distinct from overwriting an existing file.
+
+Do not silently auto-fill `expectedSha256` behind the model's back.
+Do not weaken current-content precondition checking.
+
+STRUCTURED EVIDENCE
+
+Update the bounded structured inspection projection so a successful `read_file` evidence item includes:
+- path;
+- bounded/redacted text;
+- full-file `sha256`;
+- existing bounded metadata.
+
+The provider-facing implementation slice must therefore contain the exact hash needed for the next safe mutation.
+
+Do not persist raw file bodies into canonical TaskState.
+
+PERMANENT REGRESSION COVERAGE
+
+Add tests proving all of the following:
+
+1. `read_file` returns the correct SHA-256 for a normal file.
+2. A truncated `read_file` still returns the SHA-256 of the full file, not only the returned prefix.
+3. Workspace/symlink containment remains unchanged.
+4. A hash obtained from actual `read_file` output can be passed directly to `write_file` to overwrite that same existing file.
+5. A hash obtained from actual `read_file` output can be passed directly to `apply_patch`.
+6. A stale observed hash still fails after an intervening mutation.
+7. Structured inspection evidence includes the observed hash and keeps existing redaction/bounds.
+8. Provider-facing mutation metadata documents the read-hash -> mutation-precondition relationship.
+9. The frozen Phase 8 structured replay deterministic provider no longer succeeds only because the hash is hard-coded ahead of inspection. Add a dynamic scripted provider or equivalent permanent guard that obtains the hash from George's actual read/tool-result continuation before issuing the mutation.
+
+The regression must fail if `read_file.sha256` is later removed from the model-visible edit path.
+
+VALIDATION
+
+Run:
+- focused read-only/mutation tool tests;
+- structured-task and frozen Phase 8 replay tests;
+- relevant provider/tool-schema tests;
+- affected Phase 9/c9 regression tests;
+- `npm run typecheck`;
+- `npm run test:runner`;
+- `git diff --check`.
+
+Verify:
+- package remains exactly `0.9.10`;
+- root `package-lock.json` remains absent.
+
+Do not run an official live Qwen Gate A attempt in P1.
+
+If supplying the safe hash would require weakening the current-content mutation precondition or exposing outside-workspace authority, return `Planning needed` rather than changing the safety contract.
