@@ -1,4 +1,4 @@
-TASK: Correction 9 / P5 — Gated live structured convergence qualification
+TASK: Correction 9 / P5 — Gated production-stack live convergence qualification
 
 MODEL / REASONING / USAGE
 - Recommended configuration: `Sol Medium`.
@@ -9,132 +9,192 @@ VERSIONING
 
 GOAL
 
-Qualify c9-structured-task-convergence against the pinned live Qwen path, spending larger live-work attempts only after the smallest frozen regression proves functional correctness and material convergence improvement.
+Qualify the corrected Phase 9 execution architecture against live pinned Qwen, including both within-task convergence and the new production multi-task stack executor.
 
-Read `BOOT.md`, `AGENTS.md`, current Phase 9/c9 authority and exact P1-P4 candidate source/tests, latest Phase 9 live artifacts/evidence, preserved Phase 8 historical evidence, and the repository-owned live-work runner before execution.
+Read:
+- `BOOT.md`;
+- `AGENTS.md`;
+- Phase 9 authority;
+- all `docs/tasks/c9-structured-task-convergence/` assessment/plan/P1-P4 evidence;
+- exact current P1-P4 source/tests;
+- preserved Phase 8 historical evidence;
+- first Phase 9 live qualification evidence;
+- frozen P4/greenfield/existing-app instruments;
+- production stack service and repository-owned qualification runner.
+
+Do not change production implementation in P5.
 
 RUNTIME CONTROL
 
-Use pinned model:
+Use:
 `qwen3-coder-30b-a3b-instruct@q4_k_m`
-
-Before controlled live work:
-- print `MANUAL CHECK: LM Studio GPU Offload must show 26`;
-- capture REST-visible model/context/eval-batch/physical-batch/parallel/Flash-Attention/GPU-KV/experts settings;
-- do not silently change runtime/context settings;
-- unconfirmed UI-only GPU Offload 26 permits functional evidence but not controlled latency claims.
 
 Use supported Node 26.
 
-If LM Studio/provider is unavailable, record Evidence Gap and do not substitute another model.
+Before live work:
+- print `MANUAL CHECK: LM Studio GPU Offload must show 26`;
+- capture REST-visible model/context/eval-batch/physical-batch/parallel/Flash-Attention/GPU-KV/experts settings;
+- do not silently alter runtime/context;
+- UI-only Offload 26 unconfirmed means functional evidence is valid but controlled latency claims remain limited.
+
+If the pinned model/provider is unavailable, record Evidence Gap and stop live gates.
 
 DETERMINISTIC PRE-GATE
 
-Run:
-- focused c9 P1-P4 tests;
+Run the full affected correction floor, including:
+- P1-P4 c9 focused tests;
+- production stack execution/fail-stop/resume tests;
 - frozen deterministic Phase 8 structured replay;
 - Phase 9 integrated qualification;
+- affected session/recovery/structured-task tests;
 - `npm run typecheck`;
 - `npm run test:runner`;
 - `git diff --check`.
 
 Unexpected failures remain visible.
 
-GATE A — EXACT FROZEN P4 STRUCTURED REPLAY
+GATE A — FROZEN PHASE 8 STRUCTURED REPLAY
 
-Run exactly one official live attempt after the deterministic pre-gate.
+Run exactly one official live attempt.
 
 Green requires ALL:
-- exact required file repair;
+- exact required edit;
 - George-owned V1 passes;
-- TaskState terminal status completed with covered requirements verified;
+- TaskState completed;
+- covered requirements verified;
 - zero human coding intervention;
 - no correction-limit exhaustion;
-- no run/stage-budget exhaustion;
+- no task/stage budget exhaustion;
 - <=10 model-requested tool calls;
 - <=10 logical provider rounds.
 
-Also record:
-- provider attempts/retries;
-- context profile and estimated/reported tokens;
-- total provider input/output;
-- elapsed and stage timings;
-- exact model tool sequence;
-- duplicate/no-progress guard events;
+Record:
+- exact tool sequence;
+- duplicate/no-progress events;
+- provider attempts/rounds/retries;
+- selected context profile;
+- input/output tokens;
+- elapsed/stage timings;
 - inspection evidence handoff;
-- validation failure diagnostics if any;
-- task-wide and stage-budget snapshots.
+- validation diagnostics/corrections;
+- task-wide/stage budget snapshots;
+- final TaskState.
 
-The 10-call ceiling is anchored to the preserved Phase 8 failed run; the 10-round ceiling requires at least a 50% reduction from the failed first Phase 9 20-round result while allowing bounded structured overhead.
-
-Provider input must be materially below the first failed Phase 9 63,253-token result; record the delta, but do not create a new production context threshold from one fixture.
+Compare with:
+- preserved Phase 8 Not Green: 10 calls / 7 rounds / 20,765 input / 45.826 s;
+- first Phase 9 Not Green: 25 calls / 20 rounds / 63,253 input / 344.745 s.
 
 If Gate A is not Green:
-- STOP live qualification;
+- STOP;
 - do not run greenfield;
 - do not run existing-app;
-- preserve the failure;
 - do not rerun until pass;
-- do not change production code in P5.
+- record Not Green/Evidence Gap truth.
 
-GATE B — GREENFIELD
+GATE B — GREENFIELD THROUGH PRODUCTION STACK EXECUTOR
 
-Only if Gate A is Green.
+Only after Gate A Green.
 
-Use exact `greenfield-express-v1` frozen tasks/fixture/hidden acceptance.
+Use exact frozen `greenfield-express-v1`.
 
-Dependency installation is harness-level and requires the explicit authorization flag defined in P4.
+Validate the entire stack before any live task begins.
 
-Run one official stack attempt.
+Dependency installation remains explicit harness/user-authorized setup under the existing instrument contract.
 
-Fail-stop:
-- if P1 is not completed/Green, P2/P3 must not run;
-- if P2 fails, P3 must not run;
-- hidden acceptance is qualifying only after all three tasks complete.
+Execute the full frozen P1 -> P2 -> P3 stack through the **production structured task-stack service**, not manual task sequencing in the runner.
 
-Green requires:
-- P1/P2/P3 completed truthfully;
+Qualification must prove:
+- production StackState exists and is authoritative;
+- P1 completed before P2 starts;
+- P2 completed before P3 starts;
+- task histories remain preserved after transitions;
+- validations are George-owned;
+- the runner is only observing the production stack executor.
+
+FAIL-STOP PROOF
+
+In addition to the official success-path run, use deterministic/scripted coverage already installed in P4 as authority that a failed P1 produces zero P2/P3 provider calls. Do not deliberately sabotage the official live run to re-prove fail-stop.
+
+If the official live P1 fails/blocks/planning_needed/cancels/exhausts:
+- production stack must stop immediately;
+- P2/P3 must remain not started;
+- hidden acceptance is non-qualifying;
+- preserve the failure.
+
+Green Gate B requires:
+- P1/P2/P3 completed through production stack state;
 - all declared validations Green;
 - hidden acceptance Green;
 - zero human coding intervention;
-- no unbounded duplicate/no-progress behavior;
-- no stage/task budget exhaustion.
+- no task/stage budget exhaustion;
+- no unbounded duplicate/no-progress loop;
+- truthful stack final state `completed`.
 
-Record all raw call/round/token/time/correction/task-state dimensions.
+Record raw per-task and aggregate:
+- TaskState/StackState;
+- corrections;
+- tool calls;
+- provider rounds/attempts/retries;
+- tokens/context;
+- elapsed;
+- budget consumption;
+- approvals/sandbox events.
 
-If Gate B is Not Green, STOP; do not run existing-app.
+If Gate B is Not Green, STOP; do not run Gate C.
 
 GATE C — EXISTING APP
 
-Only if Gate B is Green.
+Only after Gate B Green.
 
-Run exactly one official `existing-express-feature-v1` attempt.
+Run exactly one official `existing-express-feature-v1` attempt through the current production structured path.
 
 Green requires:
 - focused validation Green;
 - broad validation Green;
 - completed TaskState;
-- preserved baseline tests;
+- baseline regressions preserved;
 - hidden acceptance Green;
 - zero human coding intervention;
-- no stage/task budget exhaustion.
+- no task/stage budget exhaustion.
 
 Record raw metrics as above.
 
+STACK RESUME QUALIFICATION
+
+Run one bounded deterministic/integration qualification of the production stack resume boundary against the P4 candidate:
+- complete first task;
+- persist;
+- reopen;
+- verify current/next task is restored correctly;
+- verify completed task is not re-executed;
+- verify ambiguous interrupted side effect remains blocked/planning-needed under Phase 5 rules.
+
+Do not manufacture ambiguous live side effects just for this proof if deterministic integration coverage is sufficient.
+
 EVIDENCE
 
-Create `docs/tasks/c9-structured-task-convergence/P5-live-evidence.md` containing:
+Create/update:
+`docs/tasks/c9-structured-task-convergence/P5-live-evidence.md`
+
+Record:
 - exact candidate SHA/package;
 - runtime provenance;
-- deterministic pre-gate results;
-- Gate A comparison versus preserved Phase 8 and first Phase 9 live evidence;
-- Gate B/C results only if reached;
-- raw call/round/token/time/task/budget/duplicate/correction metrics;
-- Green / Not Green / Evidence Gap matrix;
-- exact Git-ignored artifact paths.
+- deterministic pre-gate;
+- Gate A/B/C outcomes and gating decisions;
+- production stack state evidence;
+- exact call/round/token/time deltas;
+- hidden acceptance;
+- intervention count;
+- task/stage budget evidence;
+- artifact paths;
+- Green / Not Green / Evidence Gap matrix.
 
-Do not update Phase 9 owner/roadmap state.
+Do not:
+- repair implementation;
+- alter convergence/stack limits;
+- retune context/runtime;
+- rerun a failed official workload until pass;
+- owner-close Phase 9;
+- open Phase 10.
 
-Do not repair implementation, alter limits, retune context/runtime, or rerun a Not Green official workload in P5.
-
-Package must remain `0.9.10`; `git diff --check`; no root lockfile.
+Package remains exactly `0.9.10`; `git diff --check`; no root lockfile.
