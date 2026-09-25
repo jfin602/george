@@ -94,7 +94,11 @@ test('agentic fixtures stay source-bounded and scripted runs use the normal codi
     assert.equal(record.passed, true, JSON.stringify(record.failureReason));
     assert.equal(record.contextSelection?.mode, 'adaptive');
     assert.ok(record.contextSelection?.attemptedProfileIds.length);
-    assert.match(report({ schemaVersion: BENCHMARK_SCHEMA_VERSION, suiteVersion: BENCHMARK_SUITE_VERSION, run: { id: 'agentic', startedAt: '', suite: 'agentic-context', repetitions: 1, gitCommit: 'abc', dirty: false, node: 'v26', platform: 'linux', architecture: 'x64', cpu: 'fixture', cpuCount: 1, memoryBytes: 1, provider: { type: 'lm-studio-responses', origin: 'http://127.0.0.1:1234', model: 'scripted' } }, records: [record], aggregates: aggregates([record]) }), /Context selection/);
+    assert.deepEqual(Object.keys(record.contextSelection?.categoryTokens ?? {}).toSorted(), ['conversation', 'core', 'project', 'routed', 'skills', 'task', 'toolResults', 'tools']);
+    assert.deepEqual(Object.keys(record.contextSelection?.dispositions ?? {}).toSorted(), ['deferred', 'duplicate', 'failed', 'omitted', 'routed']);
+    const rendered = report({ schemaVersion: BENCHMARK_SCHEMA_VERSION, suiteVersion: BENCHMARK_SUITE_VERSION, run: { id: 'agentic', startedAt: '', suite: 'agentic-context', repetitions: 1, gitCommit: 'abc', dirty: false, node: 'v26', platform: 'linux', architecture: 'x64', cpu: 'fixture', cpuCount: 1, memoryBytes: 1, provider: { type: 'lm-studio-responses', origin: 'http://127.0.0.1:1234', model: 'scripted' } }, records: [record], aggregates: aggregates([record]) });
+    assert.match(rendered, /Context selection/);
+    for (const artifact of [JSON.stringify(record), rendered]) assert.doesNotMatch(artifact, /component local-workflow-1 owns a compact local contract/);
   };
   let response = 0;
   const complete = (events: readonly ProviderEvent[]): readonly ProviderEvent[] => [{ type: 'provider.response.started', responseId: `script-${++response}` }, ...events, { type: 'provider.response.completed' }];
