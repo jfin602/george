@@ -59,6 +59,8 @@ Implementation:
     -> /prompt-plan
     -> /prompt-write <folder>
 
+For newly authored implementation stacks, use the GPT-6 Sol routing contract in `docs/workflow.md`: Medium by default, High for materially harder/riskier work, XHigh only exceptionally, and no Terra for new prompts. Preserve historical model-label semantics. Do not emit an executable model configuration until the runner supports and validates it.
+
 Every correction stack must include a permanent regression guard for the defect class.
 
 The locked product and architecture laws live in `docs/project-overview.md` and `docs/architecture.md`. Qualification discipline lives in `docs/stability-contract.md`.
