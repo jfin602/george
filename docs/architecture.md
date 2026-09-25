@@ -129,9 +129,9 @@ Structured execution also has these qualified boundaries:
 - literal validation executes directly through George's process/policy/evidence boundary without a provider round that makes no model decision;
 - `read_file` exposes the full current-file SHA-256, which is the explicit provider-visible precondition used for safe existing-file `write_file` / `apply_patch`;
 - provider requests support normalized tool choice, with adapter-specific wire translation isolated below the provider interface;
-- structured INSPECT requires one first-round tool call from its already capability-reduced read-only tool set; continuation rounds return to normal automatic/default choice.
+- structured INSPECT requires one first-round tool call from its already capability-reduced read-only tool set; after the first successful inspection tool round, George completes the bounded preflight and advances directly to implementation without an inspection continuation.
 
-The current live evidence leaves one structured-stage boundary unresolved: INSPECT can continue issuing relevant reads until its stage ceiling even after qualifying evidence exists. Stage completion/transition into implementation must remain application-owned and bounded; ceiling exhaustion is a failure guard, not the intended completion mechanism.
+The current live evidence qualifies the INSPECT transition and leaves text-file edit fidelity as the active Phase 9 boundary. `write_file` is an exact full-replacement primitive and must write the caller-supplied text without silent newline normalization. `apply_patch` preserves untouched current-file bytes and is the preferred localized-edit primitive. Existing UTF-8 text framing metadata may be exposed through read evidence so the model can preserve final-newline state and line-ending convention. Application/tool policy may reject an unacknowledged framing change recoverably; intentional framing changes require explicit opt-in rather than hidden normalization.
 
 ## Progress and status events
 

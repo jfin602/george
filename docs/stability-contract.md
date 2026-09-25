@@ -398,6 +398,24 @@ A production task/stack/provider/tool failure or exception must not erase the bo
 
 An optional observer, postprocessor, or report-rendering failure must remain distinguishable from production execution truth. A later reporting fix does not erase the original production result.
 
+## Text-file edit fidelity qualification
+
+For model-authored edits to existing text files, stability includes preserving file framing that the task did not ask to change.
+
+Deterministic coverage must prove:
+- an existing final newline is preserved by localized edits unless intentionally changed;
+- files without a final newline remain without one unless intentionally changed;
+- LF and CRLF framing are preserved when the edited region does not require a convention change;
+- mixed/ambiguous framing degrades explicitly rather than being silently normalized;
+- `write_file` remains exact full replacement and never silently repairs model output;
+- `apply_patch` preserves untouched bytes around an exact edit;
+- accidental framing changes are rejected recoverably by default for existing UTF-8 text files;
+- an intentional framing change requires an explicit bounded opt-in and remains observable;
+- stale SHA/precondition rejection continues to run before mutation publication;
+- semantic validation and TaskState completion do not substitute for byte-exact acceptance when exact file content is a qualification requirement.
+
+Live exact-edit evidence should record requested content byte count, resulting byte count/SHA, and final-newline/line-ending state where relevant so model-request defects remain distinguishable from executor transformations.
+
 ## Regression permanence
 
 Every confirmed regression must leave a permanent detector at the lowest reliable reproduction layer or justified combination of layers.

@@ -18,27 +18,30 @@ Current package remains `0.9.10`; Phase 9 is still open and has not received own
 
 The subsequent correction chain materially narrowed the remaining blocker:
 
-1. **`c9-structured-task-convergence`** — implemented bounded inspection-to-implementation evidence continuity, validation-failure diagnostics, one task-wide run budget, direct George-owned literal validation, structured-stage convergence limits, exact duplicate/no-progress read guards, and the missing production task-stack executor. Production stack validation/order/fail-stop/history/resume is qualified deterministically. Live convergence remained Not Green.
-2. **`c9-qwen-workunit-convergence`** — qualified the safe edit-enablement contract by adding full-file `read_file.sha256`, provider-visible mutation-precondition guidance, structured hash propagation, and dynamic read-result -> mutation regression coverage. It also added typed live trace extraction; the first live attempt then exposed that structured INSPECT could end without accepted read evidence and that a thrown service could still bypass artifact creation.
-3. **`c9-inspection-execution`** — qualified provider-neutral first-round required tool choice for structured INSPECT and exception-safe qualification result/artifact retention. In the latest official Gate A, Qwen could not finish INSPECT text-only: it selected `read_file` first and made four successful local-read executions. The attempt nevertheless ended `budget_exhausted` because the unchanged INSPECT four-execution stage ceiling fired before George advanced to implementation.
+1. **`c9-structured-task-convergence`** — qualified the production task-stack boundary and implemented bounded stage evidence continuity, task-wide budgeting, direct literal validation, convergence ceilings, and no-progress guards.
+2. **`c9-qwen-workunit-convergence`** — qualified full-file `read_file.sha256` -> existing-file mutation preconditions and added repository-owned live trace extraction.
+3. **`c9-inspection-execution`** — qualified mandatory first-round structured INSPECT tool execution and exception-safe live attempt retention.
+4. **`c9-inspection-stage-completion`** — qualified application-owned INSPECT completion after one successful tool round. The latest Gate A now reaches implementation, safe mutation, George-owned V1, and completed TaskState without inspection continuation or stage exhaustion.
 
-Latest Gate A retained evidence:
-- first Qwen inspection call: `read_file {"path":"src/label.js"}`;
-- observed target SHA-256: `4cd4635c7d8ef07c10bf7a2296d0f4d79cd3e753c1794774656eac5e764d4352`;
-- model-requested tool calls: 6; successful executed local reads: 4;
-- provider rounds / attempts / retries: `2 / 2 / 0`;
-- provider tokens: `3,946 / 134`;
-- selected context: ordinary profile, ~`1,981` estimated tokens, `8,192` provider-input budget;
-- human coding interventions: `0`;
-- implementation/mutation/V1: not reached;
-- final TaskState: `budget_exhausted`.
+Latest official Gate A evidence:
+- INSPECT: one successful provider tool round, four ordered local reads, then direct transition to implementation;
+- target read SHA-256: `4cd4635c7d8ef07c10bf7a2296d0f4d79cd3e753c1794774656eac5e764d4352`;
+- implementation used that exact SHA as `write_file.expectedSha256`;
+- Qwen requested a 59-byte replacement containing the semantic `.toUpperCase()` repair;
+- George wrote exactly those 59 bytes and returned resulting SHA `4d4442213eef8109d7df78a656145a263976e6fde1476e281a6368c036c38861`;
+- the frozen required file is 60 bytes because it preserves the existing final `\n`;
+- George-owned V1 passed once; TaskState ended `completed`; R1/R2 were verified; W1 addressed; zero corrections;
+- model-requested tool calls: 5; provider rounds / attempts / retries: `3 / 3 / 0`; provider tokens: `7,567 / 276`; zero human coding intervention; no stage/task/run-budget exhaustion.
 
-Therefore the current active Phase 9 blocker is **INSPECT stage completion after sufficient qualifying evidence**. The stack executor, mutation-precondition path, mandatory first inspection call, live failure retention, and Bubblewrap containment should not be reopened absent new contrary evidence.
+Gate A therefore remains **Not Green** solely because byte-exact acceptance failed on the missing final newline. This is not a mutation-engine transformation defect: `write_file` is full replacement and wrote exactly the caller-supplied content.
+
+The active Phase 9 blocker is **text-file edit fidelity**: existing text framing such as final-newline state and line-ending convention must be preserved by default unless the task explicitly changes it. Localized edits should prefer exact patching so untouched bytes naturally survive. Full replacement must remain exact caller-supplied content; George must not silently append or normalize newlines.
 
 Correction evidence:
 - [`c9-structured-task-convergence`](tasks/c9-structured-task-convergence/closeout.md);
 - [`c9-qwen-workunit-convergence`](tasks/c9-qwen-workunit-convergence/closeout.md);
-- [`c9-inspection-execution`](tasks/c9-inspection-execution/closeout.md).
+- [`c9-inspection-execution`](tasks/c9-inspection-execution/closeout.md);
+- [`c9-inspection-stage-completion`](tasks/c9-inspection-stage-completion/closeout.md).
 
 Phase 10 remains gated on Phase 9 owner closeout.
 

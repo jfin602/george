@@ -17,7 +17,7 @@ The original qualification sequence remains historical authority, but current Ph
 1. **Gate A — frozen Phase 8 structured edit-plus-validation replay.**
    - Must make the exact edit, pass George-owned validation, finish with completed/verified TaskState, use zero human coding intervention, avoid task/stage/correction exhaustion, and remain within the currently locked `<=10` model-requested tool calls and `<=10` logical provider rounds.
    - Must retain bounded attempt/trace artifacts even when production execution throws.
-   - Record first INSPECT tool-choice mode, selected inspection tools, read SHA/mutation-precondition provenance, validation/correction state, provider rounds/attempts/retries/tokens, context profile/estimated input, task/stage/run budgets, and timing where observable.
+   - Record first INSPECT tool-choice mode, selected inspection tools, read SHA/mutation-precondition provenance, mutation tool and requested/result byte counts, pre/post SHA, final-newline state, recognized line-ending convention where applicable, validation/correction state, provider rounds/attempts/retries/tokens, context profile/estimated input, task/stage/run budgets, and timing where observable.
 2. **Gate B — `greenfield-express-v1`.**
    - Runs only after Gate A Green.
    - Must execute through the production structured task-stack service, preserve strict fail-stop ordering, complete declared validations, and pass hidden acceptance.
@@ -32,9 +32,10 @@ Current qualified sub-boundaries:
 - Bubblewrap Workspace Autonomous containment — Green;
 - full-file `read_file.sha256` -> mutation current-content precondition — Green;
 - mandatory first-round structured INSPECT tool call — Green;
-- exception-safe official live-attempt retention/artifact persistence — Green.
+- exception-safe official live-attempt retention/artifact persistence — Green;
+- application-owned INSPECT completion after one successful tool round — Green.
 
-Current live Gate A remains **Not Green**. Qwen used the required inspection path and completed four local-read executions in two provider rounds, but the current INSPECT stage continued until its four-execution ceiling fired. Implementation, mutation, and George-owned validation were not reached. The active qualification question is therefore the application-owned completion transition from sufficient qualifying INSPECT evidence into implementation.
+Current live Gate A remains **Not Green** only on byte-exact text-file fidelity. Qwen advanced from INSPECT into implementation, reused the observed target SHA as `write_file.expectedSha256`, made the semantic repair, passed George-owned V1, and ended with completed TaskState. However the requested full replacement was 59 bytes and omitted the existing final newline while the frozen exact requirement is 60 bytes. The mutation engine wrote the requested bytes exactly. The active qualification question is therefore preservation of existing text framing during model-authored edits.
 
 ## Task-format parser and validator
 
@@ -53,6 +54,22 @@ The complete durable TaskState must remain distinct from provider-facing task sl
 - a passing correction does not erase the earlier durable failure;
 - task slicing preserves Phase 3/8 trust, precedence, routing, whole-source integrity, and required-context behavior;
 - no new guessed context-size threshold is introduced merely to implement slicing.
+
+## Text-file edit fidelity qualification
+
+Phase 9 exact-edit qualification must distinguish semantic correctness from byte-exact file fidelity.
+
+For existing UTF-8 text files, deterministic and integrated coverage must prove:
+- `read_file` can expose bounded framing metadata without changing its full-file SHA authority, including whether the file ends in a newline and the recognized line-ending convention where safely determinable;
+- localized `apply_patch` preserves all untouched bytes, including an existing final newline and surrounding LF/CRLF framing;
+- full-replacement `write_file` remains exact caller-supplied content and never silently appends/removes/normalizes newlines;
+- accidental final-newline removal/addition or line-ending conversion on an existing text file is rejected recoverably by default;
+- an intentional framing change requires an explicit bounded opt-in and remains visible in tool/evidence state;
+- a fidelity rejection supplies bounded diagnostic evidence so the model can retry while preserving normal mutation preconditions;
+- non-text or framing-ambiguous files do not gain invented normalization semantics;
+- hidden/exact acceptance remains independent from semantic test success when a task requires exact content.
+
+A passing behavior test or completed TaskState does not by itself establish byte-exact acceptance. Official Gate A records the requested mutation bytes and the observed final bytes separately.
 
 ## TUI qualification
 

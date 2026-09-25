@@ -113,9 +113,11 @@ Phase 9 correction evidence makes several originally directional decisions concr
 
 **Safe mutation preconditions.** `read_file` exposes the full current-file SHA-256 even when returned text is bounded/truncated. That observed hash is the provider-visible current-content precondition for modifying an existing file with `write_file` or `apply_patch`. Mutation execution still rejects missing/stale preconditions; the harness does not silently fill them behind the model's back.
 
+**Text-file edit fidelity.** Existing text-file edits should preserve untouched file framing by default, including final-newline state and recognized line-ending convention, unless the task explicitly changes that framing. `write_file` remains an exact full-replacement primitive: George writes the caller-supplied text and must not silently append/remove/normalize newlines. `apply_patch` is the preferred localized-edit primitive because unchanged bytes naturally remain intact. For an existing UTF-8 text file, a full replacement that changes framing must be rejected recoverably unless the mutation explicitly acknowledges the framing change. Read/inspection evidence should expose bounded framing metadata sufficient for the model to preserve it. Intentional framing changes remain possible through an explicit bounded opt-in rather than implicit normalization.
+
 **Provider-neutral tool choice.** The provider request boundary supports normalized tool-choice semantics. Structured INSPECT uses a required tool choice on its first provider round while exposing only the read-only INSPECTION_TOOLS; continuation rounds return to normal automatic/default tool choice. Provider-specific wire translation remains in adapters.
 
-**Current unresolved INSPECT completion boundary.** Mandatory first tool use is qualified, but the latest live replay shows the current INSPECT stage can continue requesting relevant reads until its execution ceiling fires even after qualifying evidence exists. Phase 9 must not treat that ceiling exhaustion as useful convergence. The completion rule for transitioning from sufficient inspection evidence into implementation remains the active correction boundary.
+**INSPECT completion boundary.** Mandatory first tool use and application-owned completion after the first successful inspection tool round are now qualified. The latest live replay advances directly into implementation without inspection continuation or stage exhaustion. The active correction boundary has moved to byte-exact text-file edit fidelity.
 
 ### Transcript and Task TUI pages
 
