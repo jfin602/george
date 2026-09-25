@@ -12,24 +12,27 @@ import {
   type Workspace,
 } from '../core/index.ts';
 import { ToolRegistry, type ToolDefinition } from './registry.ts';
+import { classifyTextFraming, type TextFraming } from './text-framing.ts';
 
 const SHA256_HEX = /^[a-f0-9]{64}$/;
 
 export const WORKSPACE_MUTATION_TOOL_DEFINITIONS = [
   {
-    name: 'write_file', description: 'Atomically create or overwrite bounded workspace text. Overwriting an existing file requires expectedSha256 from the latest read_file.sha256; creation omits it.', execution: { effect: 'workspace_mutation', replaySafety: 'not_replay_safe', source: { kind: 'builtin' } },
+    name: 'write_file', description: 'Atomically create or exactly replace bounded workspace text using the latest read_file.sha256 for an existing target. Prefer apply_patch for localized existing-file edits. Existing text must preserve read_file.textFraming unless an intentional framing change is acknowledged; George never reformats content.', execution: { effect: 'workspace_mutation', replaySafety: 'not_replay_safe', source: { kind: 'builtin' } },
     inputSchema: {
       type: 'object', properties: {
         path: { type: 'string', minLength: 1 }, content: { type: 'string', maxLength: 1024 * 1024 },
         expectedSha256: { type: 'string', minLength: 64, maxLength: 64, description: 'Latest observed read_file.sha256 for an existing target; omit only when creating a new file.' },
+        allowTextFramingChange: { type: 'boolean', description: 'Acknowledge an intentional change from read_file.textFraming; this does not rewrite or format content.' },
       }, required: ['path', 'content'], additionalProperties: false,
     },
   },
   {
-    name: 'apply_patch', description: 'Atomically apply bounded, unambiguous exact-text edits using expectedSha256 from the latest read_file.sha256.', execution: { effect: 'workspace_mutation', replaySafety: 'not_replay_safe', source: { kind: 'builtin' } },
+    name: 'apply_patch', description: 'Preferred for localized existing-file edits: atomically apply bounded, unambiguous exact-text edits using the latest read_file.sha256 while preserving untouched bytes and read_file.textFraming unless an intentional framing change is acknowledged.', execution: { effect: 'workspace_mutation', replaySafety: 'not_replay_safe', source: { kind: 'builtin' } },
     inputSchema: {
       type: 'object', properties: {
         path: { type: 'string', minLength: 1 }, expectedSha256: { type: 'string', minLength: 64, maxLength: 64, description: 'Latest observed read_file.sha256 for the current target.' },
+        allowTextFramingChange: { type: 'boolean', description: 'Acknowledge an intentional change from read_file.textFraming; this does not rewrite or format content.' },
         edits: {
           type: 'array', minItems: 1, maxItems: 128, items: {
             type: 'object', properties: {
@@ -60,8 +63,8 @@ export type MutationToolResult = Readonly<{
 }>;
 
 export type MutationToolCall =
-  | Readonly<{ name: 'write_file'; path: string; content: string; expectedSha256?: string }>
-  | Readonly<{ name: 'apply_patch'; path: string; expectedSha256: string; edits: readonly Readonly<{ oldText: string; newText: string }>[] }>;
+  | Readonly<{ name: 'write_file'; path: string; content: string; expectedSha256?: string; allowTextFramingChange?: boolean }>
+  | Readonly<{ name: 'apply_patch'; path: string; expectedSha256: string; edits: readonly Readonly<{ oldText: string; newText: string }>[]; allowTextFramingChange?: boolean }>;
 
 export type MutationToolLimits = Readonly<{
   maxContentBytes?: number;
@@ -117,6 +120,16 @@ function assertCurrentHash(content: Buffer, expected: string): void {
 
 function assertActive(signal?: AbortSignal): void {
   if (signal?.aborted) throw cancellationError(signal);
+}
+
+function sameFraming(left: TextFraming, right: TextFraming): boolean {
+  return left.lineEnding === right.lineEnding && left.finalNewline === right.finalNewline;
+}
+
+function assertFramingPreserved(current: TextFraming | undefined, proposed: TextFraming | undefined, allow: boolean | undefined, fullReplacement: boolean): void {
+  if (!current || !proposed || allow || (!fullReplacement && sameFraming(current, proposed))) return;
+  if (fullReplacement && current.lineEnding !== 'mixed' && sameFraming(current, proposed)) return;
+  throw new GeorgeError('validation', `Text framing change requires explicit acknowledgement: current lineEnding=${current.lineEnding} finalNewline=${current.finalNewline}; proposed lineEnding=${proposed.lineEnding} finalNewline=${proposed.finalNewline}.`);
 }
 
 async function replaceAtomically(path: string, content: string, mode: number | undefined, signal?: AbortSignal): Promise<void> {
@@ -235,6 +248,7 @@ export function createWorkspaceMutationToolExecutor(
       ? { isRepository: false, repositoryRoot: null, entries: [], target: { path: target.relativePath, dirty: false } }
       : await captureGitWorkingTreeSnapshot(workspace, target.path, { maxBytes: limits.maxGitSnapshotBytes, signal: options.signal });
     let next: string;
+    let currentFraming: TextFraming | undefined;
     if (call.name === 'write_file') {
       assertText(call.content, limits.maxContentBytes, 'content');
       if (Buffer.byteLength(call.content, 'utf8') > limits.maxFileBytes) throw new GeorgeError('validation', 'Resulting file exceeds its byte limit.');
@@ -243,8 +257,10 @@ export function createWorkspaceMutationToolExecutor(
         const current = await readFile(target.path);
         if (current.length > limits.maxFileBytes) throw new GeorgeError('validation', 'Current file exceeds its byte limit.');
         assertCurrentHash(current, call.expectedSha256);
+        currentFraming = classifyTextFraming(current);
       }
       next = call.content;
+      if (target.exists) assertFramingPreserved(currentFraming, classifyTextFraming(next), call.allowTextFramingChange, true);
     } else {
       if (!target.exists) throw new GeorgeError('validation', 'Patch target must already exist.');
       assertHash(call.expectedSha256);
@@ -254,6 +270,7 @@ export function createWorkspaceMutationToolExecutor(
       assertCurrentHash(current, call.expectedSha256);
       const text = current.toString('utf8');
       if (text.includes('\0') || !Buffer.from(text, 'utf8').equals(current)) throw new GeorgeError('validation', 'Patch target must be a UTF-8 text file.');
+      currentFraming = classifyTextFraming(current);
       next = text;
       for (const edit of call.edits) {
         if (!edit.oldText) throw new GeorgeError('validation', 'Patch oldText must not be empty.');
@@ -262,6 +279,7 @@ export function createWorkspaceMutationToolExecutor(
         next = exactReplace(next, edit.oldText, edit.newText);
       }
       if (Buffer.byteLength(next, 'utf8') > limits.maxFileBytes) throw new GeorgeError('validation', 'Resulting file exceeds its byte limit.');
+      assertFramingPreserved(currentFraming, classifyTextFraming(next), call.allowTextFramingChange, false);
     }
     assertActive(options.signal);
     await replaceAtomically(target.path, next, target.mode, options.signal);
@@ -270,11 +288,11 @@ export function createWorkspaceMutationToolExecutor(
   const registry = new ToolRegistry([
     {
       ...WORKSPACE_MUTATION_TOOL_DEFINITIONS[0],
-      execute: async (arguments_, options) => executeRaw({ name: 'write_file', path: arguments_.path as string, content: arguments_.content as string, ...(typeof arguments_.expectedSha256 === 'string' ? { expectedSha256: arguments_.expectedSha256 } : {}) }, options) as unknown as JsonObject,
+      execute: async (arguments_, options) => executeRaw({ name: 'write_file', path: arguments_.path as string, content: arguments_.content as string, ...(typeof arguments_.expectedSha256 === 'string' ? { expectedSha256: arguments_.expectedSha256 } : {}), ...(typeof arguments_.allowTextFramingChange === 'boolean' ? { allowTextFramingChange: arguments_.allowTextFramingChange } : {}) }, options) as unknown as JsonObject,
     },
     {
       ...WORKSPACE_MUTATION_TOOL_DEFINITIONS[1],
-      execute: async (arguments_, options) => executeRaw({ name: 'apply_patch', path: arguments_.path as string, expectedSha256: arguments_.expectedSha256 as string, edits: arguments_.edits as unknown as readonly Readonly<{ oldText: string; newText: string }>[] }, options) as unknown as JsonObject,
+      execute: async (arguments_, options) => executeRaw({ name: 'apply_patch', path: arguments_.path as string, expectedSha256: arguments_.expectedSha256 as string, edits: arguments_.edits as unknown as readonly Readonly<{ oldText: string; newText: string }>[], ...(typeof arguments_.allowTextFramingChange === 'boolean' ? { allowTextFramingChange: arguments_.allowTextFramingChange } : {}) }, options) as unknown as JsonObject,
     },
   ]);
   const execute = async (call: MutationToolCall, options: Readonly<{ signal?: AbortSignal }> = {}): Promise<MutationToolResult> => {

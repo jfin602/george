@@ -12,10 +12,11 @@ import {
   type Workspace,
 } from '../core/index.ts';
 import { ToolRegistry, type ToolDefinition } from './registry.ts';
+import { TextFramingScanner, type TextFraming } from './text-framing.ts';
 
 export const READ_ONLY_TOOL_DEFINITIONS = [
   {
-    name: 'read_file', description: 'Read bounded text and the full current-file SHA-256 mutation precondition from a workspace file.', execution: { effect: 'local_read', replaySafety: 'replay_safe', source: { kind: 'builtin' } },
+    name: 'read_file', description: 'Read bounded text plus the full current-file SHA-256 mutation precondition and, for recognized UTF-8 text, full-file line-ending/final-newline framing evidence.', execution: { effect: 'local_read', replaySafety: 'replay_safe', source: { kind: 'builtin' } },
     inputSchema: { type: 'object', properties: { path: { type: 'string', minLength: 1 } }, required: ['path'], additionalProperties: false },
   },
   {
@@ -47,7 +48,7 @@ export type ReadOnlyToolCall =
   | Readonly<{ name: 'git_diff' }>;
 
 export type ReadOnlyToolResult =
-  | Readonly<{ name: 'read_file'; path: string; text: string; bytes: number; truncated: boolean; sha256: string }>
+  | Readonly<{ name: 'read_file'; path: string; text: string; bytes: number; truncated: boolean; sha256: string; textFraming?: TextFraming }>
   | Readonly<{
       name: 'list_directory';
       path: string;
@@ -128,23 +129,26 @@ async function boundedRead(path: string, maxBytes: number): Promise<{ text: stri
   }
 }
 
-async function boundedReadWithHash(path: string, maxBytes: number, signal?: AbortSignal): Promise<{ text: string; bytes: number; truncated: boolean; sha256: string }> {
+async function boundedReadWithHash(path: string, maxBytes: number, signal?: AbortSignal): Promise<{ text: string; bytes: number; truncated: boolean; sha256: string; textFraming?: TextFraming }> {
   const handle = await open(path, 'r');
   try {
     const prefix = Buffer.alloc(maxBytes);
     const chunk = Buffer.alloc(64 * 1024);
     const hash = createHash('sha256');
+    const framing = new TextFramingScanner();
     let total = 0;
     for (;;) {
       if (signal?.aborted) throw cancellationError(signal);
       const { bytesRead } = await handle.read(chunk, 0, chunk.length, null);
       if (bytesRead === 0) break;
       hash.update(chunk.subarray(0, bytesRead));
+      framing.update(chunk.subarray(0, bytesRead));
       if (total < maxBytes) chunk.copy(prefix, total, 0, Math.min(bytesRead, maxBytes - total));
       total += bytesRead;
     }
     const bytes = Math.min(total, maxBytes);
-    return { text: prefix.subarray(0, bytes).toString('utf8'), bytes, truncated: total > maxBytes, sha256: hash.digest('hex') };
+    const textFraming = framing.finish();
+    return { text: prefix.subarray(0, bytes).toString('utf8'), bytes, truncated: total > maxBytes, sha256: hash.digest('hex'), ...(textFraming === undefined ? {} : { textFraming }) };
   } finally {
     await handle.close();
   }

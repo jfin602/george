@@ -33,10 +33,10 @@ test('read-only filesystem tools bound reads, listings, and search work', async 
   });
 
   const read = await executor.execute({ name: 'read_file', path: 'long.txt' });
-  assert.deepEqual(read, { name: 'read_file', path: 'long.txt', text: '01234', bytes: 5, truncated: true, sha256: createHash('sha256').update('0123456789abcdefghij').digest('hex') });
+  assert.deepEqual(read, { name: 'read_file', path: 'long.txt', text: '01234', bytes: 5, truncated: true, sha256: createHash('sha256').update('0123456789abcdefghij').digest('hex'), textFraming: { lineEnding: 'none', finalNewline: 'none' } });
   const normal = await executor.execute({ name: 'read_file', path: 'first.txt' });
   assert.equal(normal.name === 'read_file' && normal.sha256, createHash('sha256').update('needle one\n').digest('hex'));
-  assert.match(executor.definitions[0]!.description, /full current-file SHA-256 mutation precondition/);
+  assert.match(executor.definitions[0]!.description, /full current-file SHA-256 mutation precondition.*full-file line-ending\/final-newline framing evidence/);
   const listing = await executor.execute({ name: 'list_directory', path: '.' });
   assert.equal(listing.name, 'list_directory');
   assert.equal(listing.entries.length, 1);
@@ -47,6 +47,33 @@ test('read-only filesystem tools bound reads, listings, and search work', async 
   assert.equal(search.truncated, true);
   assert.ok(search.scannedFiles >= 1);
   assert.ok(search.scannedBytes <= 100);
+});
+
+test('read_file reports full-file UTF-8 framing without changing bounded text or SHA', async (t) => {
+  const root = await fixture();
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const files: ReadonlyArray<readonly [string, Buffer | string, unknown]> = [
+    ['lf-final.txt', 'one\ntwo\n', { lineEnding: 'lf', finalNewline: 'lf' }],
+    ['lf-open.txt', 'one\ntwo', { lineEnding: 'lf', finalNewline: 'none' }],
+    ['crlf-final.txt', 'one\r\ntwo\r\n', { lineEnding: 'crlf', finalNewline: 'crlf' }],
+    ['crlf-open.txt', 'one\r\ntwo', { lineEnding: 'crlf', finalNewline: 'none' }],
+    ['mixed.txt', 'one\r\ntwo\nthree\rfour', { lineEnding: 'mixed', finalNewline: 'none' }],
+    ['bare-cr.txt', 'one\rtwo', { lineEnding: 'mixed', finalNewline: 'none' }],
+    ['chunk-boundary.txt', `${'x'.repeat(65_535)}\r\n`, { lineEnding: 'crlf', finalNewline: 'crlf' }],
+    ['invalid.txt', Buffer.from([0xc3, 0x28]), undefined],
+    ['nul.txt', 'one\0two\n', undefined],
+  ];
+  await Promise.all(files.map(([name, content]) => writeFile(join(root, name), content)));
+  const executor = createReadOnlyToolExecutor(await resolveWorkspaceRoot(root), { maxReadBytes: 4 });
+  for (const [name, content, textFraming] of files) {
+    const result = await executor.execute({ name: 'read_file', path: name });
+    if (result.name !== 'read_file') throw new Error('Expected read_file output.');
+    assert.deepEqual(result.textFraming, textFraming, name);
+    assert.equal(result.sha256, createHash('sha256').update(content).digest('hex'), name);
+    assert.equal(result.bytes, Math.min(4, Buffer.byteLength(content)), name);
+    assert.equal(result.truncated, Buffer.byteLength(content) > 4, name);
+  }
+  assert.deepEqual((await executor.execute({ name: 'read_file', path: 'lf-final.txt' })).textFraming, { lineEnding: 'lf', finalNewline: 'lf' }, 'truncated text uses full-file framing');
 });
 
 test('Git executor uses bounded fixed read-only commands and preserves this dirty tree', async (t) => {

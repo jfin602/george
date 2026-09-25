@@ -26,7 +26,7 @@ export type ToolInputSchema =
   | Readonly<{ type: 'string'; minLength?: number; maxLength?: number; description?: string }>
   | Readonly<{ type: 'number'; minimum?: number; maximum?: number }>
   | Readonly<{ type: 'integer'; minimum?: number; maximum?: number }>
-  | Readonly<{ type: 'boolean' }>
+  | Readonly<{ type: 'boolean'; description?: string }>
   | Readonly<{ type: 'null' }>;
 
 export type ToolDefinition = Readonly<{

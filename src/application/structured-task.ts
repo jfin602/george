@@ -125,7 +125,13 @@ function inspectionResult(event: Extract<ApplicationEvent, { type: 'tool.complet
   let projected: Record<string, unknown> | undefined;
   if (event.name === 'read_file' && path !== undefined && typeof value.text === 'string' && typeof value.sha256 === 'string' && /^[a-f0-9]{64}$/.test(value.sha256)) {
     const body = sanitizeTaskEvidence(value.text, 2 * 1024);
-    projected = { path, sha256: value.sha256, text: body.text, bytes: typeof value.bytes === 'number' ? value.bytes : undefined, truncated: value.truncated === true || body.truncated, redacted: body.redacted };
+    const framing = value.textFraming;
+    const textFraming = framing && typeof framing === 'object' && !Array.isArray(framing)
+      && ['none', 'lf', 'crlf', 'mixed'].includes(String((framing as Record<string, unknown>).lineEnding))
+      && ['none', 'lf', 'crlf'].includes(String((framing as Record<string, unknown>).finalNewline))
+      ? { lineEnding: (framing as Record<string, unknown>).lineEnding, finalNewline: (framing as Record<string, unknown>).finalNewline }
+      : undefined;
+    projected = { path, sha256: value.sha256, text: body.text, bytes: typeof value.bytes === 'number' ? value.bytes : undefined, truncated: value.truncated === true || body.truncated, redacted: body.redacted, ...(textFraming === undefined ? {} : { textFraming }) };
   } else if (event.name === 'list_directory' && path !== undefined && Array.isArray(value.entries)) {
     projected = { path, entries: value.entries.slice(0, 32).flatMap((entry) => {
       if (!entry || typeof entry !== 'object' || Array.isArray(entry)) return [];
