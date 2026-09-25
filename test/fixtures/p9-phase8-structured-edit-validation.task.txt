@@ -1,0 +1,68 @@
+GEORGE TASK FORMAT: 1
+
+STACK: p9
+TASK: P4 — Phase 8 structured edit-validation regression replay
+KIND: qualification
+
+GOAL
+
+Repair the deterministic local label defect and let George run the required validation.
+
+READ FIRST
+
+- REQUIRED: BOOT.md
+- REQUIRED: AGENTS.md
+- REQUIRED: docs/task-brief.md
+- REQUIRED: docs/evidence-notes.md
+
+INSPECT
+
+- src/label.js and test/label.test.js
+
+REQUIREMENTS
+
+- R1: src/label.js exactly exports label as value.trim().toUpperCase().
+- R2: The required Node label test passes after the repair.
+
+INVARIANTS
+
+- I1: Work only in the local fixture; do not use network or unrelated tools.
+- I2: George owns validation execution; model narration cannot satisfy it.
+
+WORKFLOW
+
+W1 — Repair the local label
+Covers: R1, R2
+Depends on: none
+Read src/label.js, make the one required local repair, and leave validation to George.
+Complete when:
+- src/label.js has the exact required export.
+
+VALIDATION
+
+V1 — Label contract
+Covers: R1, R2
+Run: node --test test/label.test.js
+
+STOP CONDITIONS
+
+- S1: Stop and retain evidence if the required validation fails.
+
+DELIVERABLES
+
+- D1: The exact label repair and its validation evidence.
+
+NON-GOALS
+
+- Change context profiles, runtime settings, or unrelated fixture files.
+
+PERMISSIONS
+
+- Workspace: standard
+- Outside workspace: reject
+- Network: reject
+- Remote mutation: reject
+
+EVIDENCE
+
+- Preserve the Phase 8 Not Green result separately; this fixture is its structured counterpart.
