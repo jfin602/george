@@ -60,11 +60,13 @@ The agent loop's ordinary default tool-call/tool-round limits remain broad. Stru
 
 The live 20/23-round failures show that the broad inherited limits are not sufficient convergence protection for Qwen.
 
-### 6. The live-work qualification path needs deterministic fail-stop semantics
+### 6. Production structured-stack execution is incomplete
 
-The first greenfield live harness continued later stack tasks after P1 failed. Qualification must stop at the first failed/blocked/cancelled/budget-exhausted task, and hidden acceptance must run only after the full frozen stack completes.
+P1 confirmed the stronger case: `validateTaskStack()` has no production execution caller and `StructuredTaskApplicationService` owns only one task at a time.
 
-This is a qualification-runner defect unless source inspection proves the production stack contract itself is incomplete.
+The first greenfield live harness therefore had to orchestrate multiple tasks outside the product and incorrectly continued later tasks after P1 failed.
+
+Phase 9 explicitly promised durable task-stack state. The correction must complete that missing production boundary with application-owned ordered execution, fail-stop semantics, per-task evidence retention, and safe resume. Qualification tooling must consume that production executor rather than becoming a second task authority.
 
 ## Correction objective
 
@@ -99,17 +101,17 @@ Carry bounded successful inspection evidence into the immediately dependent impl
 
 Remove deterministic validation-only provider turns. Add structured-stage capability-reducing provider/tool ceilings and a safe exact repeated replay-safe-read/no-progress guard scoped to structured execution. Preserve ordinary chat/tool-loop behavior.
 
-### P4 — reusable fail-stop live-work runner
+### P4 — production structured task-stack execution
 
-Replace ad-hoc qualification orchestration with a reusable repository-owned runner for the frozen Phase 9 instruments. It must validate task stacks, stop after the first non-completed task, keep hidden acceptance outside the model workspace, and record comparable raw metrics.
+P1 confirmed a missing Phase 9 product boundary: `validateTaskStack()` exists, but production executes only one structured task at a time. Implement application-owned StackState plus strict ordered/fail-stop/durable stack execution, preserve each task's TaskState history, and make the live-work runner a thin observer of that production executor.
 
-### P5 — gated live requalification
+### P5 — gated production-stack live requalification
 
-Run the frozen P4 replay first. The larger live-work stacks may run only if P4 is functionally Green and demonstrates material convergence improvement. Greenfield must stop immediately on the first failed task. Existing-app runs only after greenfield qualifies.
+Run the frozen P4 replay first. Only after that convergence gate is Green, run `greenfield-express-v1` through the **production stack executor** and prove P1 -> P2 -> P3 progression/fail-stop truth. Existing-app runs only after greenfield qualifies.
 
-### P6 — correction closeout
+### P6 — convergence + stack-boundary correction closeout
 
-Evidence-only. Reconcile deterministic and live evidence; do not owner-close Phase 9 or open Phase 10.
+Evidence-only. Reconcile both within-task convergence and the newly completed production stack boundary. Do not owner-close Phase 9 or open Phase 10.
 
 ## Acceptance direction
 

@@ -158,27 +158,73 @@ Keep model instructions concise but explicit: use supplied observed evidence, pe
 
 Do not solve convergence by injecting the complete TaskState.
 
-## P4 — repository-owned live-work runner
+## P4 — production structured task-stack execution
 
-Build a reusable qualification runner, not a second task authority.
+P1 established that the approved Phase 9 stack contract is materially incomplete: `validateTaskStack()` exists, but no application-owned production caller executes an ordered stack.
 
-It must:
-- load the frozen Phase 9 instruments;
-- validate definitions with the canonical parser/`validateTaskStack`;
-- create disposable workspaces;
-- use real LM Studio/provider/application/tool/context boundaries;
-- keep hidden acceptance outside model-visible workspaces;
-- support explicit user-authorized dependency installation as harness setup;
-- record exact model/runtime/context/tool/provider/task metrics;
-- stop a stack immediately after the first task whose TaskState/completion is not completed/Green;
-- never execute P2/P3 after greenfield P1 failure;
-- never run hidden acceptance as a passing qualification after an incomplete stack;
-- preserve every attempted result;
-- support the frozen P4 replay as the first gate.
+Complete that product boundary.
 
-If source inspection proves the production Task Prompt stack contract itself is materially incomplete rather than the temporary harness being wrong, stop with `Planning needed` instead of hiding that architecture issue in benchmark tooling.
+### Canonical stack authority
 
-## P5 — live qualification
+Add a bounded durable StackState, separate from but linked to individual TaskState records.
+
+Represent at minimum:
+- stack identity/fingerprint;
+- ordered task identities/ordinals/fingerprints;
+- per-task status;
+- current task;
+- completed task history;
+- terminal stack outcome;
+- blocker/failure summary;
+- workspace/session binding.
+
+Do not merge all task definitions into one TaskState.
+
+### Production stack application service
+
+Add a provider-independent application-owned service that:
+1. parses/receives every task definition;
+2. validates the entire stack before provider/tool work;
+3. executes tasks strictly by ordinal through `StructuredTaskApplicationService`;
+4. advances only after the current task is truthfully completed;
+5. immediately stops on failed/blocked/planning_needed/cancelled/budget_exhausted/non-completed state;
+6. preserves completed and failing TaskState evidence;
+7. emits bounded stack lifecycle/projection events.
+
+### Durable resume
+
+Persist stack state under existing session-store/recovery authority.
+
+Reopen must:
+- retain completed tasks;
+- resume at the correct current/next task;
+- never rerun an already completed task;
+- never blindly replay ambiguous side effects;
+- use Phase 5 reconciliation for an interrupted current task.
+
+Existing taskless/single-task sessions remain compatible.
+
+### Presentation projection
+
+Expose enough application-owned stack projection for the existing Task view/header to show stack identity, completed/current/not-started tasks, and terminal state. Do not redesign OpenTUI or move authority into it.
+
+### Qualification runner
+
+Then build/update a reusable repository-owned live-work runner as a thin client of production stack execution.
+
+It must not own task sequencing.
+
+For greenfield it must use production P1 -> P2 -> P3 stack execution and prove:
+- invalid stack fails before P1;
+- P1 failure means zero P2/P3 provider work;
+- P2 failure means zero P3 provider work;
+- completed P1 persists across reopen;
+- reopen resumes at P2, not P1;
+- hidden acceptance is qualifying only after full completion.
+
+Dependency installation remains explicitly authorized harness setup and hidden acceptance remains outside model-visible workspaces.
+
+## P5 — gated production-stack live qualification
 
 Use the pinned Qwen/LM Studio control and latest available runtime provenance.
 
@@ -195,7 +241,7 @@ Required Green:
 - <=10 model-requested tool calls;
 - <=10 logical provider rounds.
 
-Also record tokens, elapsed time, retries, stage-level budgets, duplicate/no-progress events, and evidence-handoff diagnostics.
+Record tokens, elapsed time, retries, stage-level budgets, duplicate/no-progress events, and evidence-handoff diagnostics.
 
 If Gate A is not Green:
 - stop live qualification;
@@ -203,18 +249,23 @@ If Gate A is not Green:
 - record Not Green;
 - do not chase a pass with repeated runs.
 
-### Gate B — greenfield
+### Gate B — greenfield through production stack authority
 
 Only after Gate A Green.
 
-Run the exact frozen stack in order. Dependency installation remains harness/user-authorized setup.
+Run the exact frozen `greenfield-express-v1` stack through the production stack application service. The qualification runner may set up the disposable workspace/dependencies and observe evidence, but may not sequence P1/P2/P3 itself.
 
-If P1 fails/blocks/cancels/exhausts:
-- stop immediately;
-- P2/P3 must not run;
-- hidden acceptance may be run only as an expected failed/non-qualifying observation if the qualification contract explicitly records it as such; never represent it as stack acceptance.
+Green requires:
+- canonical stack state;
+- strict P1 -> P2 -> P3 order;
+- all three tasks completed;
+- all declared validations Green;
+- hidden acceptance Green;
+- zero human coding intervention;
+- no task/stage budget exhaustion;
+- final stack state completed.
 
-Green requires all tasks/validations plus hidden acceptance.
+If any task fails/blocks/cancels/exhausts, production stack execution must stop immediately and later tasks remain not started.
 
 ### Gate C — existing-app
 
@@ -222,30 +273,41 @@ Only after greenfield Green.
 
 Run one official frozen task and hidden acceptance.
 
-Green requires focused/broad validation, completed TaskState, and hidden acceptance.
+Green requires focused/broad validation, completed TaskState, preserved baseline tests, and hidden acceptance.
 
 Create `docs/tasks/c9-structured-task-convergence/P5-live-evidence.md`.
 
 Do not edit Phase 9 owner/roadmap state in P5.
 
-## P6 — closeout
+## P6 — convergence and production-stack closeout
 
 Create `docs/tasks/c9-structured-task-convergence/closeout.md`.
 
-Audit:
-- diagnosed causes;
-- implemented evidence handoff;
+Audit separately:
+- convergence diagnosis/fixes;
+- inspection and validation evidence handoff;
 - shared task budget;
 - direct validation;
 - stage convergence controls;
-- fail-stop live runner;
-- deterministic regression;
-- P4 live gate;
-- greenfield/existing live results if gates allowed them;
+- duplicate/no-progress handling;
+- missing production stack boundary discovered by P1;
+- canonical StackState;
+- production ordered/fail-stop execution;
+- stack durable resume;
+- Task projection;
+- live-work runner delegation to production stack authority;
+- deterministic regressions;
+- Gate A/B/C results if reached;
 - inherited Phase 9 Bubblewrap/TUI evidence;
 - every remaining Not Green/Evidence Gap.
 
-Closeout may qualify only the correction. It does not owner-close Phase 9 or advance Phase 10.
+Report:
+- Implementation Complete;
+- Convergence Correction Qualified;
+- Production Stack Boundary Qualified;
+- Overall c9 Correction Qualified.
+
+Closeout qualifies only the correction. It does not owner-close Phase 9 or advance Phase 10.
 
 ## Validation floor
 

@@ -1,4 +1,4 @@
-TASK: Correction 9 / P4 — Fail-stop frozen live-work runner
+TASK: Correction 9 / P4 — Production structured task-stack execution
 
 MODEL / REASONING / USAGE
 - Recommended configuration: `Sol Medium`.
@@ -9,91 +9,204 @@ VERSIONING
 
 GOAL
 
-Replace the ad-hoc Phase 9 live qualification orchestration with one reusable repository-owned runner that executes the frozen structured instruments through George's real current boundaries and stops truthfully at the first failed task.
+Complete the missing Phase 9 production task-stack boundary discovered by P1/P4 planning: George can parse individual Task Prompt v1 files and validate a stack definition, but the production application path does not yet own ordered multi-task execution, durable stack progress, fail-stop behavior, or resume.
 
-Read `BOOT.md`, `AGENTS.md`, current Phase 9 authority, `docs/tasks/c9-structured-task-convergence/{prompt-assessment,implementation-plan,P1-diagnostic-evidence}.md`, exact P2/P3 source/tests, frozen P4/greenfield/existing-app fixtures, hidden acceptance tests, provider/runtime/config code, and current benchmark/qualification artifact conventions.
+Implement that missing application/core boundary now. This is required Phase 9 architecture, not benchmark-only tooling.
 
-Do not create a second task parser, state machine, tool loop, permission system, or acceptance truth model.
+Read:
+- `BOOT.md`;
+- `AGENTS.md`;
+- current product/architecture/workflow/stability contracts;
+- current Phase 9 structured-task decision/format/qualification authority;
+- `docs/tasks/c9-structured-task-convergence/{prompt-assessment,implementation-plan,P1-diagnostic-evidence}.md`;
+- exact P1-P3 correction candidate source/tests;
+- `src/tasks/`;
+- `src/application/structured-task.ts`;
+- session/session-store/recovery/event contracts;
+- Task/Transcript TUI projections;
+- frozen `greenfield-express-v1` and `existing-express-feature-v1` instruments.
 
-The runner must use:
-- canonical Task Prompt v1 parsing;
-- canonical `validateTaskStack`;
-- real `LmStudioResponsesProvider`;
-- real coding/structured application services;
-- real context/profile/tool/approval/recovery paths;
-- current execution policy and Bubblewrap selection where applicable;
-- hidden acceptance only from outside the model-visible workspace.
+Preserve all P1-P3 convergence fixes.
 
-SUPPORTED INSTRUMENTS
+PRODUCTION STACK CONTRACT
 
-At minimum:
-1. frozen Phase 8 structured edit-validation replay;
-2. `greenfield-express-v1`;
-3. `existing-express-feature-v1`.
+Add a provider-independent application-owned structured task-stack execution boundary, using the smallest architecture-compatible design.
 
-GREENFIELD FAIL-STOP
+Preferred shape:
 
-For the frozen three-task greenfield stack:
-- validate the full stack before any model work;
-- execute P1 first;
-- if P1 ends failed/blocked/planning_needed/cancelled/budget_exhausted or does not reach required validation/completion truth, STOP;
-- P2 and P3 must not start;
-- preserve the failed P1 result;
-- do not represent later task attempts from the original temporary harness as qualifying evidence;
-- hidden acceptance is qualifying only after the full stack completed; if optionally run after an incomplete stack for diagnosis, label it non-qualifying/expected-failure evidence.
+```text
+Task Prompt v1 definitions
+        |
+        v
+validateTaskStack()
+        |
+        v
+canonical StackState
+stack identity / ordered tasks / current task / terminal state
+        |
+        v
+StructuredTaskStackApplicationService
+        |
+        +--> StructuredTaskApplicationService for one task
+        |
+        +--> fail-stop / durable transition / resume
+```
 
-Apply equivalent stop-on-first-non-completed semantics to every multi-task instrument.
+Do not put stack authority in OpenTUI, benchmark code, the LM Studio provider, or a temporary qualification harness.
 
-DEPENDENCY INSTALLATION
+TASK STACK STATE
 
-The runner may support explicit harness-level dependency installation needed by the frozen instruments, but:
-- it requires a deliberate CLI flag/config that represents user authorization;
-- it is not a Qwen/model tool call;
-- it is scoped to the disposable fixture workspace;
-- it records exact command/outcome/version/lockfile state;
-- no flag means missing prerequisite -> Evidence Gap, not silent network use.
+Introduce canonical bounded stack state sufficient to represent:
+- schema version;
+- session/workspace identity;
+- stack identity/fingerprint;
+- ordered task identities/fingerprints/ordinals;
+- per-task status;
+- current task ordinal/index;
+- completed task history;
+- terminal stack outcome;
+- blocker/failure summary;
+- effective execution-policy expectation as needed;
+- enough durable evidence to resume safely.
 
-HIDDEN ACCEPTANCE ISOLATION
+The exact internal type names may follow existing conventions.
 
-- never copy hidden acceptance into model-visible workspaces;
-- never include hidden assertion source/path in provider prompts;
-- invoke acceptance externally only after the relevant model run;
-- record result without feeding hidden assertions back to Qwen during the same official attempt.
+Preserve each individual task's TaskState/evidence. Advancing to P2 must not destroy P1 completion/validation history.
 
-METRICS / ARTIFACTS
+Do not solve this by treating three task definitions as one giant merged TaskState.
 
-Write bounded Git-ignored artifacts with:
-- exact George/package/model/runtime/context/task/fixture/acceptance versions;
-- per-task terminal state and TaskState projection;
-- provider attempts/logical rounds/retries;
-- model-requested tool calls and duplicate/no-progress events;
-- context profile/tokens;
-- stage budget consumption/exhaustion;
-- validations/corrections;
-- workspace/sandbox/approval events;
-- wall time;
-- human intervention count;
-- hidden acceptance outcome.
+STACK VALIDATION
 
-Do not store secrets, raw environment dumps, unrestricted provider payloads, or hidden acceptance source.
+Before the first provider/tool execution:
+- parse every structured task;
+- run canonical `validateTaskStack`;
+- reject mixed stack identity;
+- reject invalid ordering/duplicates;
+- enforce closeout-last semantics where applicable;
+- fail before P1 if any task definition is invalid.
 
-RUNNER CORRECTNESS TESTS
+No partial execution of an invalid stack.
 
-Add deterministic tests proving:
-- stack validation occurs before execution;
-- P1 failure prevents P2/P3 provider calls;
-- P1 pass permits P2;
-- P2 failure prevents P3;
-- acceptance is qualifying only after full stack completion;
-- dependency install cannot occur without explicit harness authorization;
-- hidden acceptance path stays outside copied/model-visible workspace;
-- every attempted task remains in output artifacts;
-- a stopped stack cannot be summarized as Green.
+EXECUTION
 
-If P1 diagnostic proved that the **production** structured stack contract itself is materially missing and a proper product stack state/executor is required to satisfy the approved Phase 9 architecture, stop with `Planning needed` rather than burying that architecture work in a benchmark script.
+Execute strictly in task ordinal order.
 
-Otherwise keep this as qualification tooling over existing canonical task execution.
+For each task:
+1. establish the task as current in StackState;
+2. execute through the existing corrected `StructuredTaskApplicationService`;
+3. retain its complete canonical TaskState and completion/evidence;
+4. advance only if the task reaches the required completed state.
 
-Run focused runner/instrument tests, `node --test test/integration/phase9-qualification.test.ts`, `npm run typecheck`, `npm run test:runner`, `git diff --check`, and verify package remains `0.9.10` with no root lockfile.
+FAIL-STOP
 
-Do not run the official live qualification in P4; that is P5.
+If any task ends:
+- failed;
+- blocked;
+- planning_needed;
+- cancelled;
+- budget_exhausted;
+- or otherwise not truthfully completed,
+
+then:
+- terminate the stack immediately;
+- do not start later tasks;
+- preserve the failing task state/evidence;
+- record stack terminal outcome;
+- expose the next task as not started rather than skipped-success.
+
+This must be production behavior, not a qualification-script convention.
+
+DURABLE RESUME
+
+Integrate StackState with existing LocalSessionStore/session/recovery rules.
+
+Resume must:
+- restore already-completed task history;
+- identify the exact current/next task;
+- never replay an interrupted/ambiguous mutation/process/provider continuation blindly;
+- use Phase 5 reconciliation before resuming an incomplete current task;
+- never rerun an already completed task merely because the process restarted;
+- retain historical task evidence as history rather than current activity.
+
+If one Session cannot safely hold multiple task histories without schema work, make the smallest deliberate session-schema extension required. Existing taskless/single-task sessions must remain openable.
+
+TASK BOUNDARY / SESSION MODEL
+
+Do not fake stack progression with unrelated ad-hoc sessions unless current architecture proves that is the canonical durable design.
+
+The production stack service must provide one coherent stack-level authority for:
+- progress;
+- failure;
+- resume;
+- TUI projection;
+- qualification.
+
+Individual task execution may internally use task-scoped state as needed, but stack truth belongs to George.
+
+TUI / PROJECTION
+
+Add presentation-safe stack projection sufficient for the existing Task page/header to render:
+- stack ID;
+- task list;
+- completed/current/not-started status;
+- current task/work unit;
+- terminal failure/block state.
+
+Do not redesign the TUI in this prompt. Add only the projection/event support required so the existing Phase 9 UI can consume stack state without becoming authoritative.
+
+LIVE-WORK RUNNER
+
+Now build/update the repository-owned qualification runner as a thin consumer of the production stack service.
+
+It must:
+- use the production stack executor for `greenfield-express-v1`;
+- use the normal single-task structured path for single-task instruments where appropriate;
+- keep hidden acceptance outside model-visible workspaces;
+- support explicit harness-level dependency installation only with deliberate authorization;
+- record raw provider/tool/task/context/sandbox metrics;
+- never implement its own task progression logic.
+
+GREENFIELD REGRESSION
+
+Add a deterministic fixture proving:
+- full stack validates before P1;
+- P1 completed -> P2 may start;
+- P1 failure -> P2/P3 receive zero provider calls;
+- P2 failure -> P3 receives zero provider calls;
+- a completed P1 remains durable after reopen;
+- reopen resumes at P2, not P1;
+- terminal stack failure remains terminal unless the documented resume/recovery contract explicitly permits continuing the same failed task;
+- hidden acceptance is qualifying only after full stack completion.
+
+Preserve:
+- current Task Prompt v1 grammar;
+- P1-P3 convergence limits/evidence handoff/task-wide budget/direct validation;
+- ordinary unstructured chat behavior;
+- Workspace Autonomous/Bubblewrap behavior;
+- Phase 8 and first Phase 9 historical failures;
+- package version `0.9.10`.
+
+Do not:
+- retune context;
+- add Phase 10 concurrency/batching;
+- add helper models;
+- broaden permissions/network;
+- redesign TUI;
+- weaken fail-stop behavior for benchmark convenience.
+
+Required validation:
+- focused stack state/service/session/resume tests;
+- updated live-work runner deterministic tests;
+- existing structured-task/correction tests;
+- `node --test test/integration/phase9-qualification.test.ts`;
+- affected recovery/session-store tests;
+- `npm run typecheck`;
+- `npm run test:runner`;
+- `git diff --check`;
+- no root `package-lock.json`.
+
+Create/update permanent regression coverage for the missing production stack-executor defect.
+
+Do not run the official live qualification in P4; P5 owns live evidence.
+
+If implementing production stack authority would require changing the approved Task Prompt v1 syntax, permission ceiling, or canonical recovery laws, return `Planning needed`. Do not return Planning needed merely because the stack executor was previously missing; filling that boundary is the purpose of this prompt.

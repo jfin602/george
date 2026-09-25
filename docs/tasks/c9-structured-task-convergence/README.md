@@ -8,15 +8,17 @@ Trigger evidence:
 - existing-app: Not Green, 47 calls, 23 rounds, validation never reached, 449.249 s;
 - deterministic Phase 9 and real Bubblewrap containment remain Green.
 
-The correction is intentionally narrow. It repairs information continuity and bounded convergence inside structured work units and makes the frozen live qualification fail-stop/repeatable. It does not retune context, redesign TUI, change Bubblewrap policy, or begin Phase 10.
+The correction began as a convergence repair. P1 additionally proved an unfinished Phase 9 product boundary: George can validate structured stack metadata but has no production application-owned executor for ordered multi-task stacks. P4–P6 therefore complete and qualify that already-approved Phase 9 stack contract in addition to the P1–P3 convergence work.
+
+The correction still does not retune context, redesign TUI, change Bubblewrap policy, or begin Phase 10.
 
 Prompt order:
 1. P1 — convergence diagnostic/evidence;
 2. P2 — stage evidence continuity + shared task budget;
 3. P3 — direct validation + convergence guards;
-4. P4 — fail-stop live-work runner;
-5. P5 — gated live requalification;
-6. P6 — correction closeout.
+4. P4 — production structured task-stack execution + thin fail-stop qualification runner;
+5. P5 — gated live convergence and production-stack qualification;
+6. P6 — convergence + stack-boundary correction closeout.
 
 Required unchanged package version for every prompt: `0.9.10`.
 
