@@ -12,6 +12,13 @@ import { createStackState, createTaskState, parseTaskPrompt } from '../../../src
 class Provider implements ModelProvider {
   async *stream(_request: ProviderRequest): AsyncGenerator<ProviderEvent> { yield { type: 'provider.response.completed', usage: { inputTokens: 4, outputTokens: 1 } }; }
 }
+class NoInspectionProvider implements ModelProvider {
+  async *stream(_request: ProviderRequest): AsyncGenerator<ProviderEvent> {
+    yield { type: 'provider.response.started', responseId: 'inspection-without-tool' };
+    yield { type: 'provider.text.delta', delta: 'raw-provider-secret=TOP_SECRET_PROVIDER_PAYLOAD' };
+    yield { type: 'provider.response.completed', usage: { inputTokens: 7, outputTokens: 2 } };
+  }
+}
 class Allow implements ApprovalPort { async request(_request: ApprovalRequest): Promise<ApprovalDecision> { return 'allow_once'; } }
 const prompt = (ordinal: number, fail = false) => `GEORGE TASK FORMAT: 1
 
@@ -44,6 +51,8 @@ STOP CONDITIONS
 - S1: Stop truthfully.
 `;
 
+const inspectionPrompt = `${prompt(1)}\nINSPECT\n\n- current implementation\n`;
+
 test('live-work runner delegates stack progression and gates hidden acceptance on full completion', async (t) => {
   const workspace = await mkdtemp(join(tmpdir(), 'george-live-runner-'));
   t.after(() => rm(workspace, { recursive: true, force: true }));
@@ -56,10 +65,57 @@ test('live-work runner delegates stack progression and gates hidden acceptance o
   assert.equal(acceptanceCalls, 0);
   assert.equal(failed.metrics.stackUpdates > 0, true);
 
-  const passed = await runLiveWorkInstrument({ attemptId: 'passed', humanInterventions: 0, kind: 'stack', service, session: createSession({ workspace }), prompts: [prompt(1), prompt(2)], acceptancePath: join(workspace, '..', 'hidden.test.mjs'), runHiddenAcceptance: async () => { acceptanceCalls += 1; return true; } });
+  const passed = await runLiveWorkInstrument({ attemptId: 'passed', humanInterventions: 0, kind: 'stack', service, session: createSession({ workspace }), prompts: [prompt(1), prompt(2)], acceptancePath: join(workspace, '..', 'hidden.test.mjs'), runHiddenAcceptance: async () => { acceptanceCalls += 1; return true; }, onEvent: () => { throw new Error('optional observer failed'); } });
   assert.equal(passed.qualifying, true);
+  assert.equal(passed.terminalError, null);
+  assert.match(passed.observerError?.message ?? '', /optional observer failed/);
+  assert.equal(passed.events.length > 0, true, 'core evidence is captured before the optional observer runs');
   assert.equal(acceptanceCalls, 1);
   assert.equal(passed.metrics.providerInputTokens, 8);
+});
+
+test('thrown structured inspection retains a bounded failed result and durable artifacts', async (t) => {
+  const workspace = await mkdtemp(join(tmpdir(), 'george-live-inspection-failure-'));
+  const artifacts = await mkdtemp(join(tmpdir(), 'george-live-inspection-artifacts-'));
+  t.after(() => Promise.all([rm(workspace, { recursive: true, force: true }), rm(artifacts, { recursive: true, force: true })]));
+  const workflow = await createCodingWorkflowApplicationService({ provider: new NoInspectionProvider(), workspace, approvalPort: new Allow() });
+  const service = new StructuredTaskApplicationService(workflow.agent);
+  const session = createSession({ workspace });
+  let acceptanceCalls = 0;
+  const observed: ApplicationEvent[] = [];
+
+  const result = await runLiveWorkInstrument({
+    attemptId: 'inspection-failure', humanInterventions: 3, kind: 'single', service, session, prompt: inspectionPrompt,
+    acceptancePath: join(workspace, '..', 'hidden.test.mjs'), runHiddenAcceptance: async () => { acceptanceCalls += 1; return true; },
+    onEvent: (event) => { observed.push(event); },
+  });
+
+  assert.equal(result.qualifying, false);
+  assert.equal(result.terminalStatus, 'blocked');
+  assert.equal(result.hiddenAcceptance, 'not_run');
+  assert.equal(acceptanceCalls, 0);
+  assert.deepEqual(result.terminalError, { code: 'validation', message: 'Structured INSPECT preflight produced no read-only evidence.' });
+  assert.equal(result.trace.taskState?.status, 'blocked');
+  assert.equal(result.trace.humanInterventions, 3);
+  assert.equal(result.metrics.providerAttempts, 1);
+  assert.equal(result.metrics.providerRounds, 1);
+  assert.equal(result.metrics.providerInputTokens, 7);
+  assert.equal(result.metrics.providerOutputTokens, 2);
+  assert.equal(result.metrics.contextAssemblies, 1);
+  assert.equal(result.trace.budgets.latest.length > 0, true);
+  assert.equal(result.trace.correctionCount, 0);
+  assert.equal((result.trace.timing.totalMs ?? -1) >= 0, true);
+  assert.deepEqual(result.events, observed.filter((event) => !['provider.text.delta', 'input.submitted', 'assistant.response.completed'].includes(event.type)), 'every bounded operational event observed before the throw is retained');
+  assert.equal(result.events.some((event) => event.type === 'provider.attempt.started'), true);
+  assert.equal(result.events.some((event) => event.type === 'provider.response.completed'), true);
+  assert.equal(result.events.some((event) => event.type === 'turn.failed'), false, 'text-only inspection returns normally before the structured service rejects missing evidence');
+
+  await writeLiveWorkArtifacts({ directory: artifacts, workspace, result });
+  const attempt = await readFile(join(artifacts, 'attempt.json'), 'utf8');
+  const trace = await readFile(join(artifacts, 'trace.json'), 'utf8');
+  assert.match(attempt, /Structured INSPECT preflight produced no read-only evidence/);
+  assert.match(trace, /Structured INSPECT preflight produced no read-only evidence/);
+  assert.equal(`${attempt}${trace}`.includes('TOP_SECRET_PROVIDER_PAYLOAD'), false);
 });
 
 test('live-work runner rejects model-visible acceptance and unauthorized dependency installation', async (t) => {
@@ -128,7 +184,7 @@ test('artifact envelope survives optional report rendering failure', async (t) =
   const root = await mkdtemp(join(tmpdir(), 'george-live-artifact-'));
   t.after(() => rm(root, { recursive: true, force: true }));
   const trace = extractLiveWorkTrace({ events: [], terminalStatus: 'failed', hiddenAcceptance: 'not_run', humanInterventions: 0 });
-  const result: LiveWorkResult = Object.freeze({ attemptId: 'artifact-failure', qualifying: false, terminalStatus: 'failed', hiddenAcceptance: 'not_run', metrics: trace.metrics, trace, events: Object.freeze([]) });
+  const result: LiveWorkResult = Object.freeze({ attemptId: 'artifact-failure', qualifying: false, terminalStatus: 'failed', terminalError: null, observerError: null, hiddenAcceptance: 'not_run', metrics: trace.metrics, trace, events: Object.freeze([]) });
   await assert.rejects(writeLiveWorkArtifacts({ directory: root, workspace: root, result, renderReport: () => { throw new TypeError("Cannot read properties of undefined (reading 'id')"); } }), /reading 'id'/);
   const envelope = JSON.parse(await readFile(join(root, 'attempt.json'), 'utf8')) as { attemptId: string; terminalStatus: string };
   assert.equal(envelope.attemptId, 'artifact-failure');

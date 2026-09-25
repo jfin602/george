@@ -3,12 +3,14 @@ import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import { isAbsolute, join, relative, resolve } from 'node:path';
 
 import type { StructuredTaskApplicationService, StructuredTaskStackApplicationService } from '../application/index.ts';
-import type { ApplicationEvent, RunBudgetDimension, RunBudgetSnapshot, Session, ToolEffect } from '../core/index.ts';
+import { asGeorgeError, type ApplicationEvent, type RunBudgetDimension, type RunBudgetSnapshot, type Session, type ToolEffect } from '../core/index.ts';
 import { projectStackState, projectTaskState, sanitizeTaskEvidence, type StackStateProjection, type TaskStateProjection } from '../tasks/index.ts';
 
 const MAX_LIVE_EVENTS = 4_096;
 const MAX_ARGUMENT_BYTES = 2_048;
 const SHA256 = /^[0-9a-f]{64}$/;
+
+export type LiveWorkError = Readonly<{ code: string; message: string }>;
 
 export type LiveWorkMetrics = Readonly<{
   providerAttempts: number;
@@ -33,6 +35,8 @@ export type LiveWorkToolCall = Readonly<{
 
 export type LiveWorkTrace = Readonly<{
   terminalStatus: string;
+  terminalError: LiveWorkError | null;
+  observerError: LiveWorkError | null;
   taskState: TaskStateProjection | null;
   stackState: StackStateProjection | null;
   metrics: LiveWorkMetrics;
@@ -58,6 +62,8 @@ export type LiveWorkResult = Readonly<{
   attemptId: string;
   qualifying: boolean;
   terminalStatus: string;
+  terminalError: LiveWorkError | null;
+  observerError: LiveWorkError | null;
   hiddenAcceptance: 'passed' | 'failed' | 'not_run';
   metrics: LiveWorkMetrics;
   trace: LiveWorkTrace;
@@ -72,6 +78,8 @@ export type LiveWorkArtifactEnvelope = Readonly<{
   workspace: string;
   qualifying: boolean;
   terminalStatus: string;
+  terminalError: LiveWorkError | null;
+  observerError: LiveWorkError | null;
   hiddenAcceptance: LiveWorkResult['hiddenAcceptance'];
   humanInterventions: number;
   taskState: TaskStateProjection | null;
@@ -124,6 +132,11 @@ function safeArguments(value: unknown): string {
   return sanitizeTaskEvidence(diagnostic, MAX_ARGUMENT_BYTES).text;
 }
 
+function safeError(error: unknown): LiveWorkError {
+  const normalized = asGeorgeError(error);
+  return Object.freeze({ code: sanitizeTaskEvidence(normalized.code, 128).text, message: sanitizeTaskEvidence(normalized.message, 1024).text });
+}
+
 function operationalEvent(event: ApplicationEvent): boolean {
   return event.type !== 'provider.text.delta' && event.type !== 'input.submitted' && event.type !== 'assistant.response.completed';
 }
@@ -150,6 +163,8 @@ function metrics(events: readonly ApplicationEvent[]): LiveWorkMetrics {
 export function extractLiveWorkTrace(options: Readonly<{
   events: readonly ApplicationEvent[];
   terminalStatus: string;
+  terminalError?: LiveWorkError | null;
+  observerError?: LiveWorkError | null;
   taskState?: Session['taskState'];
   stackState?: Session['stackState'];
   hiddenAcceptance: LiveWorkResult['hiddenAcceptance'];
@@ -197,10 +212,12 @@ export function extractLiveWorkTrace(options: Readonly<{
     else if (event.type === 'turn.failed' && event.error.code === 'budget') stageExhaustion.push({ turnId: event.turnId, message: sanitizeTaskEvidence(event.error.message, 512).text });
     else if (event.type === 'workflow.completed') workflows.push({ turnId: event.turnId, totalMs: number(event.completion.timing?.totalMs) });
   }
-  const taskState = options.taskState ? projectTaskState(options.taskState) : null;
-  const stackState = options.stackState ? projectStackState(options.stackState) : null;
+  let taskState: TaskStateProjection | null = null;
+  let stackState: StackStateProjection | null = null;
+  try { taskState = options.taskState ? projectTaskState(options.taskState) : null; } catch { /* Invalid partial state is not safe qualification evidence. */ }
+  try { stackState = options.stackState ? projectStackState(options.stackState) : null; } catch { /* Invalid partial state is not safe qualification evidence. */ }
   return Object.freeze({
-    terminalStatus: options.terminalStatus, taskState, stackState, metrics: Object.freeze(metrics(options.events)), toolCalls: Object.freeze(toolCalls), mutations: Object.freeze(mutations), validations: Object.freeze(validations), correctionCount: taskState?.corrections.length ?? 0, contexts: Object.freeze(contexts),
+    terminalStatus: options.terminalStatus, terminalError: options.terminalError ?? null, observerError: options.observerError ?? null, taskState, stackState, metrics: Object.freeze(metrics(options.events)), toolCalls: Object.freeze(toolCalls), mutations: Object.freeze(mutations), validations: Object.freeze(validations), correctionCount: taskState?.corrections.length ?? 0, contexts: Object.freeze(contexts),
     budgets: Object.freeze({ latest: Object.freeze([...snapshots].map(([runId, snapshot]) => ({ runId, snapshot }))), pressure: Object.freeze(pressure), exhaustion: Object.freeze(exhaustion), taskExhausted: options.terminalStatus === 'budget_exhausted' || taskState?.status === 'budget_exhausted' || stackState?.status === 'budget_exhausted', stageExhaustion: Object.freeze(stageExhaustion) }),
     timing: Object.freeze({ totalMs: number(options.totalMs), workflows: Object.freeze(workflows) }), hiddenAcceptance: options.hiddenAcceptance, humanInterventions: options.humanInterventions, eventsOmitted: options.eventsOmitted ?? 0,
   });
@@ -218,22 +235,32 @@ export async function runLiveWorkInstrument(submission: LiveWorkSubmission): Pro
   const started = performance.now();
   const events: ApplicationEvent[] = [];
   let eventsOmitted = 0;
+  let observerError: LiveWorkError | null = null;
   const onEvent = async (event: ApplicationEvent) => {
     if (operationalEvent(event) && events.length < MAX_LIVE_EVENTS) events.push(event);
     else eventsOmitted += 1;
-    await submission.onEvent?.(event);
+    if (submission.onEvent && observerError === null) {
+      try { await submission.onEvent(event); } catch (error) { observerError = safeError(error); }
+    }
   };
   let terminalStatus: string;
-  if (submission.kind === 'stack') terminalStatus = (await submission.service.run({ session: submission.session, prompts: submission.prompts, onEvent })).state.status;
-  else {
-    await submission.service.run({ session: submission.session, input: submission.prompt, onEvent });
-    terminalStatus = submission.session.taskState?.status ?? 'failed';
+  let terminalError: LiveWorkError | null = null;
+  try {
+    if (submission.kind === 'stack') terminalStatus = (await submission.service.run({ session: submission.session, prompts: submission.prompts, onEvent })).state.status;
+    else {
+      await submission.service.run({ session: submission.session, input: submission.prompt, onEvent });
+      terminalStatus = submission.session.taskState?.status ?? 'failed';
+    }
+  } catch (error) {
+    terminalError = safeError(error);
+    const observed = submission.kind === 'stack' ? submission.session.stackState?.status : submission.session.taskState?.status;
+    terminalStatus = observed && !['pending', 'in_progress', 'completed'].includes(observed) ? observed : 'failed';
   }
   let hiddenAcceptance: LiveWorkResult['hiddenAcceptance'] = 'not_run';
-  if (terminalStatus === 'completed') hiddenAcceptance = await submission.runHiddenAcceptance() ? 'passed' : 'failed';
+  if (terminalError === null && terminalStatus === 'completed') hiddenAcceptance = await submission.runHiddenAcceptance() ? 'passed' : 'failed';
   const frozenEvents = Object.freeze([...events]);
-  const trace = extractLiveWorkTrace({ events: frozenEvents, terminalStatus, taskState: submission.session.taskState, stackState: submission.session.stackState, hiddenAcceptance, humanInterventions: submission.humanInterventions, totalMs: performance.now() - started, eventsOmitted });
-  return Object.freeze({ attemptId: submission.attemptId, qualifying: terminalStatus === 'completed' && hiddenAcceptance === 'passed', terminalStatus, hiddenAcceptance, metrics: trace.metrics, trace, events: frozenEvents });
+  const trace = extractLiveWorkTrace({ events: frozenEvents, terminalStatus, terminalError, observerError, taskState: submission.session.taskState, stackState: submission.session.stackState, hiddenAcceptance, humanInterventions: submission.humanInterventions, totalMs: performance.now() - started, eventsOmitted });
+  return Object.freeze({ attemptId: submission.attemptId, qualifying: terminalError === null && terminalStatus === 'completed' && hiddenAcceptance === 'passed', terminalStatus, terminalError, observerError, hiddenAcceptance, metrics: trace.metrics, trace, events: frozenEvents });
 }
 
 function eventEvidence(event: ApplicationEvent): Readonly<Record<string, unknown>> {
@@ -264,7 +291,7 @@ export async function writeLiveWorkArtifacts(options: Readonly<{
   renderReport?: (envelope: LiveWorkArtifactEnvelope) => string | Promise<string>;
 }>): Promise<Readonly<{ envelopePath: string; tracePath: string; reportPath?: string }>> {
   await mkdir(options.directory, { recursive: true });
-  const envelope: LiveWorkArtifactEnvelope = Object.freeze({ schemaVersion: 1, attemptId: options.result.attemptId, runtime: Object.freeze({ node: process.version, platform: process.platform, arch: process.arch }), workspace: resolve(options.workspace), qualifying: options.result.qualifying, terminalStatus: options.result.terminalStatus, hiddenAcceptance: options.result.hiddenAcceptance, humanInterventions: options.result.trace.humanInterventions, taskState: options.result.trace.taskState, stackState: options.result.trace.stackState, eventEvidence: Object.freeze(options.result.events.map(eventEvidence)) });
+  const envelope: LiveWorkArtifactEnvelope = Object.freeze({ schemaVersion: 1, attemptId: options.result.attemptId, runtime: Object.freeze({ node: process.version, platform: process.platform, arch: process.arch }), workspace: resolve(options.workspace), qualifying: options.result.qualifying, terminalStatus: options.result.terminalStatus, terminalError: options.result.terminalError, observerError: options.result.observerError, hiddenAcceptance: options.result.hiddenAcceptance, humanInterventions: options.result.trace.humanInterventions, taskState: options.result.trace.taskState, stackState: options.result.trace.stackState, eventEvidence: Object.freeze(options.result.events.map(eventEvidence)) });
   const envelopePath = join(options.directory, 'attempt.json');
   await atomicJson(envelopePath, envelope);
   const tracePath = join(options.directory, 'trace.json');
