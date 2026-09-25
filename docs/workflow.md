@@ -18,6 +18,22 @@ Read `BOOT.md`, `AGENTS.md`, and the narrowest relevant docs before substantial 
 
 Do not jump from a substantial idea directly to implementation prompts.
 
+## Codex model-routing policy
+
+George's forward-looking implementation-prompt baseline is GPT-6 Sol.
+
+For newly authored executable implementation stacks, once the phase runner supports the corresponding concrete model IDs and reasoning efforts:
+- use `GPT-6 Sol Medium` as the default for ordinary implementation prompts, routine corrections, focused refactors, tests, documentation implementation, and ordinary closeout work;
+- escalate to `GPT-6 Sol High` when the task is architecture-sensitive, spans broad behavior, involves difficult debugging, changes agent-loop/context/permission/security boundaries, or otherwise benefits materially from deeper reasoning;
+- use `GPT-6 Sol XHigh` only as an exceptional escalation for unusually ambiguous, difficult, or failure-prone work where the additional reasoning budget is justified;
+- do not use Terra for newly authored prompts;
+- do not use Luna as the normal implementation baseline; reserve it for deliberate lower-cost/high-throughput experiments or future helper-model work when separately qualified;
+- do not use maximum/pro-tier reasoning as routine routing. It requires an explicit task-specific decision.
+
+Model recommendation labels are provenance-bearing execution metadata. Historical prompt files, recorded evidence, and legacy recommendation labels must retain their original semantics. Never silently remap an existing label such as `Sol Medium` or `Terra High` to a different concrete model or reasoning effort. New model generations must use new explicit labels.
+
+This policy is a workflow contract, not permission to bypass runner validation. Until runner support for GPT-6 Sol labels is implemented and regression-tested, `/prompt-write` must not emit an executable configuration that the current runner cannot parse. Existing/in-progress stacks keep their authored configuration and are not rewritten merely to adopt the new baseline.
+
 ## Planning philosophy
 
 > Plan richly; prompt sparsely; validate rigorously.

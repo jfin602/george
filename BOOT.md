@@ -179,6 +179,8 @@ Implementation planning:
 
 `/prompt-ass -> /prompt-plan -> /prompt-write <folder>`
 
+Model routing for newly authored implementation stacks is GPT-6 Sol-first: Medium is the default, High is the normal escalation for materially harder/riskier work, and XHigh is exceptional. Terra is not used for new prompts. Historical model labels and evidence keep their original meanings and must not be silently remapped. GPT-6 Sol executable labels become active only after the phase runner supports and validates their exact concrete mappings.
+
 Execution-brief philosophy:
 
 > Plan richly; prompt sparsely; validate rigorously.
