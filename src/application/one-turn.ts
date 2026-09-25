@@ -145,6 +145,10 @@ export type OneTurnSubmission = Readonly<{
   timeoutMs?: number;
   routedDocuments?: readonly string[];
   activatedSkills?: readonly string[];
+  /** Per-turn capability reduction; it can never add to the canonical registry. */
+  toolNames?: readonly string[];
+  /** Application-owned bounded turns may omit transcript history when it would leak unrelated durable state. */
+  omitHistory?: boolean;
   budget?: RunBudget;
 }>;
 
@@ -443,15 +447,16 @@ export class AgentLoopApplicationService {
     budget?: RunBudget,
     input?: string,
     hookId?: string,
+    registry = this.registry,
   ): AsyncGenerator<ApplicationEvent, import('../tools/index.ts').ToolResult> {
     const emit = (event: ApplicationEvent): readonly ApplicationEvent[] => this.record(session, event);
     const origin = hookId === undefined ? {} : { origin: { hookId } };
-    const registration = this.registry.registration(call.name);
+    const registration = registry.registration(call.name);
     const execution = registration?.execution;
     yield* emit({ type: 'tool.requested', turnId, callId: call.callId, name: call.name, arguments: call.arguments, ...(execution === undefined ? {} : { execution }), ...origin });
     if (!hookId && budget) yield* this.invokeHooks(session, { name: 'tool.before', sessionId: session.id, turnId, runId: budget.id, operation: { callId: call.callId, name: call.name } }, budget, signal);
     if (signal?.aborted) throw cancellationError(signal);
-    const validation = this.registry.validate(call);
+    const validation = registry.validate(call);
     if ('callId' in validation) {
       yield* emit({ type: 'tool.failed', turnId, callId: call.callId, name: call.name, result: validation.result as Extract<typeof validation.result, { ok: false }>, ...(execution === undefined ? {} : { execution }), ...origin });
       return validation;
@@ -491,7 +496,7 @@ export class AgentLoopApplicationService {
     }
     yield* emit({ type: 'tool.started', turnId, callId: call.callId, name: call.name, execution: validation.definition.execution, ...origin });
     const startedAt = call.name === 'run_process' ? this.clock() : undefined;
-    const result = await this.registry.dispatch(call, { signal, ...(input === undefined ? {} : { input }) });
+    const result = await registry.dispatch(call, { signal, ...(input === undefined ? {} : { input }) });
     if (result.result.ok) yield* emit({ type: 'tool.completed', turnId, callId: call.callId, name: call.name, result: result.result, execution: validation.definition.execution, ...origin });
     else {
       yield* emit({ type: 'tool.failed', turnId, callId: call.callId, name: call.name, result: result.result, execution: validation.definition.execution, ...origin });
@@ -517,12 +522,13 @@ export class AgentLoopApplicationService {
   async *run(submission: AgentLoopSubmission): AsyncGenerator<ApplicationEvent> {
     const turnId = submission.turnId ?? randomUUID();
     const budget = submission.budget ?? this.createRunBudget();
+    const registry = submission.toolNames === undefined ? this.registry : this.registry.select(submission.toolNames);
     const emit = (event: ApplicationEvent): readonly ApplicationEvent[] => this.record(submission.session, event);
     yield* emit({ type: 'turn.started', turnId });
     yield* emit({ type: 'reliability.run.started', turnId, runId: budget.id, budget: budget.snapshot() });
     yield* emit({ type: 'budget.state', turnId, runId: budget.id, budget: budget.snapshot() });
     yield* this.invokeHooks(submission.session, { name: 'turn.started', sessionId: submission.session.id, turnId, runId: budget.id }, budget, submission.signal);
-    const priorTranscript = completedHistory(submission.session.transcript);
+    const priorTranscript = submission.omitHistory ? [] : completedHistory(submission.session.transcript);
     yield* emit({ type: 'input.submitted', text: submission.input });
     yield* this.invokeHooks(submission.session, { name: 'input.submitted', sessionId: submission.session.id, turnId, runId: budget.id }, budget, submission.signal);
     try {
@@ -547,7 +553,7 @@ export class AgentLoopApplicationService {
           ...(this.userConfigRoot === undefined ? {} : { userGlobalInstructionsPath: join(this.userConfigRoot, 'instructions.md'), personalityPath: join(this.userConfigRoot, 'personality.md') }),
           ...(submission.routedDocuments === undefined ? {} : { routedDocuments: submission.routedDocuments }),
           ...(activatedSkills === undefined ? {} : { activatedSkills }),
-          normalizedToolDefinitions: JSON.stringify(this.registry.definitions), maxTokens: profile.providerInputTokens, optionalMaxTokens: profile.softPressureTokens,
+          normalizedToolDefinitions: JSON.stringify(registry.definitions), maxTokens: profile.providerInputTokens, optionalMaxTokens: profile.softPressureTokens,
           ...(this.maxContextSourceBytes === undefined ? {} : { maxSourceBytes: this.maxContextSourceBytes }),
         });
         selection = await selectContextProfile({ mode: this.contextMode, profile: this.profile, assemble: (profile) => assembleContext(contextInput(profile)) });
@@ -600,7 +606,7 @@ export class AgentLoopApplicationService {
       yield* this.invokeHooks(submission.session, { name: 'context.assembled', sessionId: submission.session.id, turnId, runId: budget.id }, budget, submission.signal);
       if (submission.signal?.aborted) throw cancellationError(submission.signal);
       yield* this.consumeBudget(submission.session, turnId, budget, 'contextTokens', context.estimatedTokens, submission.signal);
-      const baseRequest = { instructions: context.rendered.guidance, input: context.rendered.conversation, tools: this.registry.definitions };
+      const baseRequest = { instructions: context.rendered.guidance, input: context.rendered.conversation, tools: registry.definitions };
       let continuation: ProviderContinuation | undefined;
       let continuationTokens = 0;
       let toolCalls = 0;
@@ -687,7 +693,7 @@ export class AgentLoopApplicationService {
             yield* emit({ type: 'tool.failed', turnId, callId: call.callId, name: call.name, result });
             throw new GeorgeError('tool', result.error.message);
           }
-          const iterator = this.executeTool(submission.session, turnId, call, submission.signal, budget);
+          const iterator = this.executeTool(submission.session, turnId, call, submission.signal, budget, undefined, undefined, registry);
           let next = await iterator.next();
           while (!next.done) {
             yield next.value;

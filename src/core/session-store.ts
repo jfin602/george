@@ -300,6 +300,12 @@ function durableEvent(event: ApplicationEvent): ApplicationEvent | undefined {
       return { type: event.type, turnId: string(event.turnId, 'turn ID', 256), callId: string(event.callId, 'validation call ID', 256), status: oneOf(event.status, 'validation status', ['passed', 'failed', 'denied', 'cancelled']), exitCode, signal: event.signal === null ? null : string(event.signal, 'validation signal', 128), ...(event.outcome === undefined ? {} : { outcome: oneOf(event.outcome, 'validation outcome', ['completed', 'failed', 'timed_out', 'spawn_failed']) as 'completed' | 'failed' | 'timed_out' | 'spawn_failed' }), stdoutTruncated: event.stdoutTruncated === true, stderrTruncated: event.stderrTruncated === true, ...(event.error === undefined ? {} : { error: safeError(event.error) }) };
     }
     case 'workflow.completed': return { type: event.type, turnId: string(event.turnId, 'turn ID', 256), completion: safeWorkflowCompletion(event.completion) };
+    case 'task.updated': {
+      const status = oneOf(event.status, 'task status', ['pending', 'in_progress', 'blocked', 'planning_needed', 'cancelled', 'completed', 'failed']);
+      const fingerprint = string(event.fingerprint, 'task fingerprint', 64);
+      if (!/^[a-f0-9]{64}$/.test(fingerprint)) invalid('task fingerprint is invalid.');
+      return { type: event.type, turnId: string(event.turnId, 'turn ID', 256), fingerprint, status, ...(event.currentWorkUnit === undefined ? {} : { currentWorkUnit: string(event.currentWorkUnit, 'task work unit', 64) }), blockerCount: boundedInteger(event.blockerCount, 'task blocker count', 64) };
+    }
     case 'activity.updated': return undefined; // Live state is intentionally not durable history.
     case 'progress.milestone': return { type: event.type, turnId: string(event.turnId, 'turn ID', 256), category: oneOf(event.category, 'progress category', ['context', 'inspection', 'editing', 'validation', 'recovery', 'completion']), message: boundedMessage(string(event.message, 'progress message', 4096)) };
     case 'work.updated': return { type: event.type, item: safeWorkItem(event.item) };

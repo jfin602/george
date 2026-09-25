@@ -3,6 +3,7 @@ import type { ApprovalRequest } from './approval.ts';
 import type { ContextOperatingMode, ContextProfile } from './config.ts';
 import type { RunBudgetDimension, RunBudgetSnapshot } from './run-budget.ts';
 import type { ToolExecutionMetadata } from './execution.ts';
+import type { TaskStatus } from '../tasks/state.ts';
 
 export type ContextCheckpointEvidence = Readonly<{
   version: number;
@@ -187,6 +188,8 @@ export type ApplicationEvent =
   | Readonly<{ type: 'validation.started'; turnId: string; callId: string; label: string; intent: string }>
   | Readonly<{ type: 'validation.completed'; turnId: string; callId: string; status: 'passed' | 'failed' | 'denied' | 'cancelled'; exitCode: number | null; signal: string | null; outcome?: 'completed' | 'failed' | 'timed_out' | 'spawn_failed'; stdoutTruncated: boolean; stderrTruncated: boolean; error?: Readonly<{ code: string; message: string }> }>
   | Readonly<{ type: 'workflow.completed'; turnId: string; completion: WorkflowCompletion }>
+  /** Bounded structured-task lifecycle/projection evidence; task/provider/tool bodies never appear here. */
+  | Readonly<{ type: 'task.updated'; turnId: string; fingerprint: string; status: TaskStatus; currentWorkUnit?: string; blockerCount: number }>
   | Readonly<{ type: 'activity.updated'; turnId?: string; category: WorkCategory; message: string }>
   | Readonly<{ type: 'progress.milestone'; turnId: string; category: ProgressCategory; message: string }>
   | Readonly<{ type: 'work.updated'; item: WorkItem }>

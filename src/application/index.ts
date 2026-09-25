@@ -1,5 +1,6 @@
 export * from './one-turn.ts';
 export * from './coding-workflow.ts';
+export * from './structured-task.ts';
 export * from './progress.ts';
 export * from './retry.ts';
 export * from './recovery.ts';
