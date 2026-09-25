@@ -28,9 +28,9 @@ Do not jump from a substantial idea directly to implementation prompts.
 
 `/prompt-write` distills the accepted plan into the smallest precise implementation brief. Do not copy planning analysis wholesale.
 
-## Structured task authoring — planned Phase 9 contract
+## Structured task authoring — current Phase 9 contract
 
-Phase 9 adds George Task Prompt v1 as the execution-facing prompt contract.
+Phase 9 uses George Task Prompt v1 as the current execution-facing prompt contract.
 
 Rich architecture/decomposition remains in `/prompt-ass` and `/prompt-plan`. For Phase 9 and later structured stacks, `/prompt-write` should compile that accepted plan into the standardized constrained-natural-language grammar in `docs/planning/p9-structured-task-execution/task-format-v1.md` rather than emitting a frontier-model memo whose structure must be inferred by the local executor.
 
@@ -39,6 +39,12 @@ The format is human-readable but deterministically parseable. Sol/Astra or a hum
 A structured prompt cannot grant permissions. Declared permission expectations are intersected with the user's configured execution ceiling.
 
 Historical Phase 1-8 task prompts keep their original grammar/evidence and are not rewritten retroactively.
+
+Phase 9 task authoring must also preserve the final Phase 8 evidence boundary:
+- the full structured task/ledger is canonical George state, not automatic provider context;
+- `/prompt-write` should author enough explicit structure for George to slice the current work unit without repeatedly sending the entire planning memo to Qwen;
+- no prompt should assume a newly proven healthy agentic context envelope, because Phase 8 established none;
+- Phase 9 qualification prompts must include the frozen Phase 8 edit-plus-validation regression replay before claiming structured execution improves real coding work.
 
 ## Phase runner
 
@@ -98,6 +104,8 @@ Use:
 - generated `artifacts/benchmarks/<run-id>/results.json`, `report.md`, and optional `comparison.md` as performance evidence.
 
 Benchmark evidence complements tests and phase qualification; it does not replace them. Do not accept a speed change that regresses deterministic correctness, permission/recovery guarantees, or required evidence semantics. Do not combine multiple unmeasured performance changes into one acceptance gate.
+
+Before the larger Phase 9 live-work instruments, replay the frozen Phase 8 agentic edit-plus-validation failure as an equivalent structured-task workload. Preserve the original Not Green result and record the structured result side-by-side; a later pass is improvement evidence, not deletion of the historical failure.
 
 After Phase 9 establishes `greenfield-express-v1` and `existing-express-feature-v1`, rerun those frozen live-work instruments at later phase closeouts when the supported environment is available. Preserve their prompt/fixture/hidden-acceptance versions so longitudinal results remain comparable.
 
