@@ -1,0 +1,202 @@
+TASK: Correction 9 / P1 — Text-file framing evidence and mutation fidelity guard
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Sol Medium`.
+- Browser required: no.
+
+VERSIONING
+- Required unchanged project version: `0.9.10`.
+
+GOAL
+
+Prevent accidental byte-level framing changes when the model edits an existing text file, without silently modifying model output. Add full-file framing evidence to `read_file`, add recoverable preservation guards to existing-file mutations, propagate framing into structured implementation evidence, and install permanent regression coverage for the exact missing-final-newline defect.
+
+Read:
+- `BOOT.md`;
+- `AGENTS.md`;
+- current architecture/workflow/stability contracts;
+- current Phase 9 decision/qualification authority;
+- `docs/tasks/c9-inspection-stage-completion/{P2-live-evidence,closeout}.md`;
+- `docs/tasks/c9-text-file-edit-fidelity/{prompt-assessment,implementation-plan}.md`;
+- exact read-only tool, mutation tool, structured inspection projection, application loop, and affected tests.
+
+Preserve:
+- Task Prompt v1;
+- production StackState/task-stack executor;
+- task-wide budget/direct validation/convergence controls;
+- mandatory first-round INSPECT tool choice;
+- successful-tool-round INSPECT completion;
+- read SHA/current-content preconditions;
+- exception-safe live trace;
+- Bubblewrap/TUI/context/runtime/stage limits.
+
+Do not silently append, remove, or normalize newlines.
+
+TEXT-FRAMING CLASSIFICATION
+
+Implement the narrowest reusable internal classifier needed by read and mutation paths.
+
+For recognized UTF-8 text, expose:
+
+- line-ending convention: `none | lf | crlf | mixed`;
+- final-newline style: `none | lf | crlf`.
+
+Requirements:
+- classify from the complete current file, not only the returned prefix;
+- valid UTF-8 is required;
+- NUL-containing input is not ordinary text for this contract;
+- bare-CR or otherwise ambiguous newline use must degrade conservatively to `mixed` rather than being silently called LF/CRLF;
+- do not add a dependency.
+
+READ_FILE
+
+Extend the canonical `read_file` result with optional text-framing metadata.
+
+Preferred shape:
+
+`textFraming?: { lineEnding: 'none' | 'lf' | 'crlf' | 'mixed'; finalNewline: 'none' | 'lf' | 'crlf' }`
+
+Exact property names may follow repository conventions, but keep the representation small and provider-safe.
+
+Requirements:
+- compute framing during the same opened-file full scan that already computes SHA-256;
+- no second path reopen between SHA and framing evidence;
+- no unbounded full-file buffering solely for classification;
+- preserve cancellation;
+- preserve current path/text/bytes/truncated/SHA semantics;
+- truncated provider text still receives full-file framing;
+- invalid UTF-8/NUL input omits text-framing metadata instead of inventing it.
+
+Update the provider-visible `read_file` description to mention current SHA and framing evidence.
+
+MUTATION TOOL CONTRACT
+
+Add one optional explicit acknowledgement to BOTH `write_file` and `apply_patch`:
+
+`allowTextFramingChange?: boolean`
+
+Use that name unless a current naming convention makes a close equivalent materially better.
+
+Default/absence means false.
+
+For an existing target:
+
+1. preserve canonical path resolution and Git snapshot behavior;
+2. verify the current-content SHA exactly as today;
+3. classify the current file if it is recognized UTF-8 text;
+4. construct the exact proposed/result content exactly as today;
+5. classify proposed/result framing;
+6. before publication, reject an unacknowledged framing change with a bounded recoverable `validation` tool error;
+7. if explicit acknowledgement is true, permit the exact requested bytes;
+8. publication remains verbatim.
+
+The error should identify only bounded framing facts such as:
+
+`Text framing change requires explicit acknowledgement: current lineEnding=lf finalNewline=lf; proposed lineEnding=lf finalNewline=none.`
+
+Do not echo unrestricted file bodies.
+
+WRITE_FILE
+
+- Existing recognized text target: preserve final-newline state and recognized line-ending convention by default.
+- Existing `mixed` target: a full replacement requires `allowTextFramingChange: true` because whole-file framing fidelity cannot be established from the coarse category alone.
+- New-file creation: unchanged; there is no prior framing to preserve.
+- Existing non-text/unrecognized target: preserve prior mutation behavior rather than inventing a text policy.
+
+APPLY_PATCH
+
+- Keep exact oldText/newText semantics.
+- Untouched bytes must remain unchanged.
+- If resulting recognized framing differs from current framing, reject unless `allowTextFramingChange: true`.
+- A localized patch that leaves framing unchanged proceeds normally.
+- Do not force opt-in merely because the current file is `mixed` if an exact patch leaves the recognized framing unchanged; untouched mixed bytes remain intact.
+
+PROVIDER GUIDANCE
+
+Update provider-visible mutation descriptions/schema descriptions so the model knows:
+
+- prefer `apply_patch` for localized changes to existing files;
+- `write_file` replaces the entire file exactly;
+- preserve `read_file.textFraming` unless the task explicitly asks to change it;
+- `allowTextFramingChange` is only an explicit acknowledgement for intentional framing changes;
+- the flag is not a formatter and does not make George rewrite content.
+
+STRUCTURED INSPECTION EVIDENCE
+
+Extend the allowlisted `read_file` structured inspection projection to carry valid `textFraming` alongside:
+- path;
+- bounded/redacted text;
+- SHA;
+- existing bounded metadata.
+
+Do not durably store raw file bodies in TaskState.
+
+RECOVERABLE MODEL LOOP
+
+A framing rejection must behave as a normal tool failure:
+- no file mutation is published;
+- current SHA remains valid;
+- the provider continuation receives the bounded error;
+- the model may retry with corrected content, `apply_patch`, or explicit acknowledgement if the task genuinely calls for a framing change.
+
+PERMANENT REGRESSION COVERAGE
+
+Add executable tests covering at least:
+
+READS
+1. LF with final LF;
+2. LF without final newline;
+3. CRLF with final CRLF;
+4. CRLF without final newline;
+5. mixed/bare-CR ambiguity;
+6. truncated text still reports full-file framing;
+7. invalid UTF-8/NUL has no textFraming;
+8. existing SHA behavior unchanged.
+
+MUTATIONS
+9. existing LF file: full replacement removing final newline rejects, bytes/SHA unchanged;
+10. same-framing full replacement succeeds;
+11. explicit acknowledgement permits intentional final-newline removal;
+12. CRLF -> LF full replacement rejects by default;
+13. CRLF -> LF succeeds with explicit acknowledgement;
+14. full replacement of current mixed framing requires explicit acknowledgement;
+15. localized apply_patch preserves final newline and LF framing;
+16. localized apply_patch preserves CRLF framing;
+17. patch that changes framing rejects without acknowledgement;
+18. new-file write behavior remains unchanged;
+19. stale expectedSha256 remains independently rejected.
+
+STRUCTURED / MODEL PATH
+20. structured inspection projection includes framing metadata;
+21. provider tool descriptions clearly expose patch preference and framing policy;
+22. frozen Gate-A-shaped scripted provider first requests the exact bad 59-byte no-newline write;
+23. George rejects that write without changing the file;
+24. provider continuation receives bounded current/proposed framing evidence;
+25. the scripted provider retries with the still-valid SHA using corrected 60-byte content or exact apply_patch;
+26. final fixture bytes exactly match the frozen expected content;
+27. George-owned V1 passes and TaskState completes;
+28. ordinary non-framing mutation behavior remains Green.
+
+Do not weaken or edit the frozen exact acceptance fixture.
+
+VALIDATION
+
+Run:
+- focused read-only/mutation tests;
+- structured-task/coding-workflow tests;
+- frozen deterministic Phase 8 replay;
+- inherited mandatory-INSPECT/stage-completion tests;
+- exception-safe live trace tests;
+- Phase 9 integration;
+- inherited c9 convergence/stack floor;
+- `npm run typecheck`;
+- `npm run test:runner`;
+- `git diff --check`.
+
+Verify:
+- package remains exactly `0.9.10`;
+- no root `package-lock.json`.
+
+Do not run official live Gate A in P1.
+
+If implementing the guard would require silent content normalization, broad formatter behavior, or weakening exact mutation semantics, stop with `Planning needed`.

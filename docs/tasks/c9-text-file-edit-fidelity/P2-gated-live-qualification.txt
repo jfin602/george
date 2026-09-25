@@ -1,0 +1,185 @@
+TASK: Correction 9 / P2 — Gated text-file edit fidelity live qualification
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Sol Medium`.
+- Browser required: no.
+
+VERSIONING
+- Required unchanged project version: `0.9.10`.
+
+GOAL
+
+Qualify the corrected text-file framing/fidelity path against the pinned Qwen model using the exact frozen Gate A first. Run the larger Phase 9 live-work instruments only if the exact byte-level edit finally goes Green.
+
+Read:
+- `BOOT.md`;
+- `AGENTS.md`;
+- current Phase 9 decision/qualification authority;
+- preserved Phase 8/Phase 9/c9 live evidence;
+- `docs/tasks/c9-inspection-stage-completion/{P2-live-evidence,closeout}.md`;
+- `docs/tasks/c9-text-file-edit-fidelity/{prompt-assessment,implementation-plan}.md`;
+- exact P1 candidate source/tests;
+- repository-owned live-work trace/artifact code;
+- frozen P4/greenfield/existing-app instruments.
+
+Do not modify production code in P2.
+
+RUNTIME CONTROL
+
+Use exactly:
+
+`qwen3-coder-30b-a3b-instruct@q4_k_m`
+
+Use supported Node 26.
+
+Before live work:
+- print `MANUAL CHECK: LM Studio GPU Offload must show 26`;
+- capture REST-visible model ID, context length, eval batch, physical batch, parallel, Flash Attention, GPU KV cache, and experts;
+- do not silently alter runtime/context/convergence/retry/correction/stage settings;
+- UI-only GPU Offload 26 remaining unconfirmed limits controlled latency claims but not functional evidence.
+
+If pinned provider/model is unavailable, record Evidence Gap and do not substitute another model.
+
+DETERMINISTIC PRE-GATE
+
+Require Green:
+- P1 framing/read/mutation/structured recovery tests;
+- inherited SHA/precondition tests;
+- mandatory INSPECT/tool-round completion tests;
+- exception-safe trace/artifact tests;
+- frozen deterministic Phase 8 replay;
+- Phase 9 integration;
+- inherited c9 convergence/stack regression floor;
+- `npm run typecheck`;
+- `npm run test:runner`;
+- `git diff --check`.
+
+GATE A — EXACT FROZEN STRUCTURED REPLAY
+
+Run exactly one new official attempt.
+
+Do not modify the frozen task/fixture or exact expected content.
+
+Persist repository-owned attempt/trace evidence.
+
+Record:
+
+INSPECT / EVIDENCE
+- target `read_file.sha256`;
+- target `read_file.textFraming`;
+- exact framing metadata supplied in the implementation slice;
+- proof of one-round INSPECT completion/no inspection continuation.
+
+MUTATION
+- first mutation tool;
+- requested content byte count or patch edit shape;
+- `expectedSha256`;
+- `allowTextFramingChange` if present;
+- any framing-preservation rejection;
+- exact bounded current/proposed framing diagnostic;
+- whether the rejected attempt left file bytes/SHA unchanged;
+- retry tool and byte count/edit shape;
+- retry precondition;
+- final mutation result SHA and byte count;
+- final textFraming / exact final bytes.
+
+VALIDATION / STATE
+- George-owned V1;
+- corrections;
+- final TaskState and requirement/work-unit truth;
+- hidden acceptance.
+
+METRICS
+- model-requested/executed tool calls;
+- provider rounds/attempts/retries;
+- input/output tokens;
+- context profile/estimated tokens/headroom;
+- task/stage/run budgets;
+- duplicate/no-progress evidence;
+- timing;
+- human coding intervention.
+
+Gate A is Green only if ALL are true:
+- exact required 60-byte content including final newline;
+- George-owned V1 passes;
+- completed/verified TaskState;
+- hidden/exact acceptance Green;
+- zero human coding intervention;
+- no correction/task/stage budget exhaustion;
+- <=10 model-requested tool calls;
+- <=10 logical provider rounds.
+
+Do not count a normal recoverable framing tool rejection as task/stage budget exhaustion.
+
+Compare with all prior preserved attempts without rewriting them.
+
+If Gate A is Not Green:
+- STOP;
+- do not run greenfield;
+- do not run existing-app;
+- do not repair implementation in P2;
+- do not rerun until another approved implementation change.
+
+GATE B — GREENFIELD PRODUCTION STACK
+
+Only after Gate A Green.
+
+Run exact `greenfield-express-v1` through the already-qualified production stack executor.
+
+Preserve explicit dependency/network authorization.
+
+Green requires:
+- strict production stack ordering;
+- all tasks and declared validations completed;
+- final StackState completed;
+- hidden acceptance Green;
+- zero human coding intervention;
+- no task/stage exhaustion;
+- text-file framing guard does not introduce unrelated regressions.
+
+If Gate B is Not Green, STOP and do not run Gate C.
+
+GATE C — EXISTING APP
+
+Only after Gate B Green.
+
+Run exact `existing-express-feature-v1`.
+
+Green requires:
+- focused validation Green;
+- broad validation Green;
+- completed TaskState;
+- baseline preservation;
+- hidden acceptance Green;
+- zero human coding intervention;
+- no task/stage exhaustion;
+- no accidental framing churn in unrelated edited text files.
+
+EVIDENCE
+
+Create:
+
+`docs/tasks/c9-text-file-edit-fidelity/P2-live-evidence.md`
+
+Include:
+- exact candidate SHA/package;
+- runtime provenance;
+- deterministic pre-gate;
+- Gate A/B/C only where reached;
+- framing evidence/rejection/recovery;
+- exact byte-level acceptance;
+- mutation/validation/state truth;
+- calls/rounds/tokens/context/budgets/timing/intervention;
+- artifact paths;
+- Green / Not Green / Evidence Gap matrix.
+
+Do not:
+- alter production code;
+- weaken exact acceptance;
+- retune context/runtime;
+- change stage limits;
+- rerun a failed official workload;
+- owner-close Phase 9;
+- open Phase 10.
+
+Package remains exactly `0.9.10`; no root lockfile; `git diff --check`.
