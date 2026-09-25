@@ -409,7 +409,7 @@ P7 must **not** auto-run host processes.
 
 ## P8 — Bubblewrap Workspace Autonomous process containment — 0.9.8
 
-Use Terra Ultra.
+Use Sol Medium.
 
 Implement a separate Linux sandbox process executor using `bwrap`.
 
