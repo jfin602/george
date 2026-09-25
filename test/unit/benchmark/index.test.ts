@@ -188,8 +188,11 @@ test('multi-round fixtures require chained tool evidence and deterministic resul
   const approval = createBenchmarkApproval(workflow);
   const request = (toolName: string, path?: string, argv?: readonly string[]): ApprovalRequest => ({ id: toolName, toolName, execution: {} as never, ...(path === undefined ? {} : { target: { path, alreadyDirty: false } }), ...(argv === undefined ? {} : { process: { executable: 'node', argv, cwd: '.', warning: '' } }) });
   assert.equal(await approval.request(request('write_file', 'src/formatter.js')), 'allow_once');
+  assert.equal(await approval.request({ ...request('write_file', 'src/formatter.js'), mutation: { intent: 'text_framing_change', warning: 'bounded' } }), 'deny');
+  assert.equal(await approval.request(request('apply_patch', 'src/formatter.js')), 'deny');
   assert.equal(await approval.request(request('write_file', 'src/other.js')), 'deny');
   assert.equal(await approval.request(request('run_process', undefined, ['--test', 'test/contract.test.js'])), 'allow_once');
+  assert.equal(await approval.request({ ...request('run_process', undefined, ['--test', 'test/contract.test.js']), mutation: { intent: 'text_framing_change', warning: 'bounded' } }), 'deny');
   assert.equal(await approval.request(request('run_process', undefined, ['--test', 'test/other.test.js'])), 'deny');
 });
 

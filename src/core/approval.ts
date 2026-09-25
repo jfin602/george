@@ -3,11 +3,14 @@ import type { ToolExecutionMetadata } from './execution.ts';
 
 export type ApprovalDecision = 'allow_once' | 'deny';
 
+export const TEXT_FRAMING_CHANGE_WARNING = 'Existing text framing will change if this mutation is allowed.';
+
 export type ApprovalRequest = Readonly<{
   id: string;
   toolName: string;
   execution: ToolExecutionMetadata;
   target?: Readonly<{ path: string; alreadyDirty: boolean; outsideWorkspace?: boolean }>;
+  mutation?: Readonly<{ intent: 'text_framing_change'; warning: string }>;
   process?: Readonly<{ executable: string; argv: readonly string[]; cwd: string; warning: string }>;
 }>;
 

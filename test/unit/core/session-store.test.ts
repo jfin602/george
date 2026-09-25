@@ -9,6 +9,7 @@ import {
   DURABLE_SESSION_SCHEMA_VERSION,
   LocalSessionStore,
   MAX_DURABLE_SESSION_BYTES,
+  TEXT_FRAMING_CHANGE_WARNING,
   appendSessionEvent,
   createSession,
   resolveGeorgeStateRoot,
@@ -207,13 +208,15 @@ test('durable evidence is bounded, excludes raw payloads, and classifies incompl
   appendSessionEvent(session, { type: 'tool.requested', turnId: 'turn-1', callId: 'process', name: 'run_process', arguments: '{"environment":"SECRET_ENV"}' });
   appendSessionEvent(session, {
     type: 'approval.requested', turnId: 'turn-1', callId: 'approval',
-    request: { id: 'approval', toolName: 'write_file', execution: { effect: 'workspace_mutation', replaySafety: 'not_replay_safe', source: { kind: 'builtin' } }, target: { path: 'never-created.txt', alreadyDirty: false } },
+    request: { id: 'approval', toolName: 'write_file', execution: { effect: 'workspace_mutation', replaySafety: 'not_replay_safe', source: { kind: 'builtin' } }, target: { path: 'never-created.txt', alreadyDirty: false }, mutation: { intent: 'text_framing_change', warning: TEXT_FRAMING_CHANGE_WARNING } },
   });
   await store.save(session);
   const serialized = await readFile(join(state, 'session-1.json'), 'utf8');
   assert.doesNotMatch(serialized, /SECRET_WRITE_BODY|SECRET_ENV|SECRET_APPROVAL_BODY|RAW_PROVIDER_WIRE|UNBOUNDED_PROCESS_OUTPUT|TUI_RENDERABLE|TOP_SECRET_PROVIDER_PAYLOAD|stdout|stderr|environment/);
 
   const reopened = await store.open('session-1', workspace);
+  const approval = reopened.events.find((event) => event.type === 'approval.requested');
+  assert.equal(approval?.type === 'approval.requested' ? approval.request.mutation?.intent : undefined, 'text_framing_change');
   assert.deepEqual(reopened.interruptions.map((item) => item.kind).sort(), ['approval', 'mutation', 'process', 'provider-continuation']);
   assert.deepEqual(reopened.transcript, []);
   await assert.rejects(readFile(join(workspace, 'never-created.txt')), /ENOENT/);

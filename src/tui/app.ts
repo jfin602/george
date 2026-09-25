@@ -942,7 +942,7 @@ export class GeorgeTui {
 
   private approvalText(request: ApprovalRequest): string {
     const detail = request.target
-      ? `Target: ${request.target.path}${request.target.alreadyDirty ? ' (already dirty)' : ''}`
+      ? [`Target: ${request.target.path}${request.target.alreadyDirty ? ' (already dirty)' : ''}`, ...(request.mutation ? [`Warning: ${request.mutation.warning}`] : [])].join('\n')
       : request.process
         ? `Executable: ${request.process.executable}\nArgv: ${JSON.stringify(request.process.argv)}\nCwd: ${request.process.cwd}\nWarning: ${request.process.warning}`
         : [
@@ -958,7 +958,7 @@ export class GeorgeTui {
   }
 
   private approvalHeight(request: ApprovalRequest): number {
-    if (request.target || request.process) return 6; // Preserve the established local write/process layout.
+    if (request.target || request.process) return 6 + Number(request.mutation !== undefined); // Preserve the established local write/process layout.
     const detail = request.execution.descriptor;
     return Math.min(10, 4 + Number(detail?.service !== undefined) + Number(detail?.origin !== undefined) + Number(detail?.resource !== undefined) + Number(detail?.operation !== undefined) + Number(detail?.warning !== undefined) + Number(detail?.credentialConfigured !== undefined));
   }

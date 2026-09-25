@@ -1012,6 +1012,15 @@ test('test renderer presents normalized approvals and allow, deny, and Esc keep 
   assert.equal(await readFile(join(denied.workspace, 'denied.txt'), 'utf8'), 'before');
   assert.equal(denied.app.work.some((entry) => entry.item.status === 'denied'), true);
 
+  const framing = await tui(new ApprovalProvider({ type: 'provider.tool.call', callId: 'framing', name: 'write_file', arguments: '{"path":"framing.txt","content":"body","allowTextFramingChange":true}' }));
+  t.after(() => cleanup(framing));
+  await framing.setup.mockInput.typeText('show exceptional intent');
+  framing.setup.mockInput.pressEnter();
+  await framing.setup.waitForFrame((frame) => frame.includes('Existing text framing will change'));
+  assert.match(framing.setup.captureCharFrame(), /Target: framing.txt/);
+  framing.setup.mockInput.pressKey('d', { ctrl: true });
+  await framing.app.waitForIdle();
+
   const cancelled = await write('cancel', 'cancelled.txt', 'never');
   await cancelled.setup.mockInput.typeText('cancel it');
   cancelled.setup.mockInput.pressEnter();

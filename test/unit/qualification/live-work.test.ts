@@ -6,7 +6,7 @@ import test from 'node:test';
 
 import { StructuredTaskApplicationService, StructuredTaskStackApplicationService, createCodingWorkflowApplicationService } from '../../../src/application/index.ts';
 import { createSession, type ApplicationEvent, type ApprovalDecision, type ApprovalPort, type ApprovalRequest, type ModelProvider, type ProviderEvent, type ProviderRequest } from '../../../src/core/index.ts';
-import { extractLiveWorkTrace, runGreenfieldExpressV1, runLiveWorkInstrument, writeLiveWorkArtifacts, type LiveWorkResult } from '../../../src/qualification/index.ts';
+import { createFrozenEditQualificationApproval, extractLiveWorkTrace, runGreenfieldExpressV1, runLiveWorkInstrument, writeLiveWorkArtifacts, type LiveWorkResult } from '../../../src/qualification/index.ts';
 import { createStackState, createTaskState, parseTaskPrompt } from '../../../src/tasks/index.ts';
 
 class Provider implements ModelProvider {
@@ -20,6 +20,8 @@ class NoInspectionProvider implements ModelProvider {
   }
 }
 class Allow implements ApprovalPort { async request(_request: ApprovalRequest): Promise<ApprovalDecision> { return 'allow_once'; } }
+const mutationExecution = { effect: 'workspace_mutation', replaySafety: 'not_replay_safe', source: { kind: 'builtin' } } as const;
+const processExecution = { effect: 'host_process', replaySafety: 'not_replay_safe', source: { kind: 'builtin' } } as const;
 const prompt = (ordinal: number, fail = false) => `GEORGE TASK FORMAT: 1
 
 STACK: live-runner
@@ -52,6 +54,28 @@ STOP CONDITIONS
 `;
 
 const inspectionPrompt = `${prompt(1)}\nINSPECT\n\n- current implementation\n`;
+
+test('frozen edit qualification approval allows only ordinary exact-target mutations and exact validation', async () => {
+  const approval = createFrozenEditQualificationApproval({ targetPath: 'src/label.js', validation: { executable: 'node', arguments: ['--test', 'test/label.test.js'] } });
+  const target = (toolName: 'write_file' | 'apply_patch', path = 'src/label.js', mutation?: ApprovalRequest['mutation'], outsideWorkspace = false): ApprovalRequest => ({
+    id: `${toolName}-${path}`, toolName, execution: mutationExecution,
+    target: { path, alreadyDirty: false, ...(outsideWorkspace ? { outsideWorkspace: true } : {}) }, ...(mutation === undefined ? {} : { mutation }),
+  });
+  const process = (argv: readonly string[], executable = 'node', toolName = 'run_process'): ApprovalRequest => ({ id: toolName, toolName, execution: processExecution, process: { executable, argv, cwd: '.', warning: '' } });
+  const framing = { intent: 'text_framing_change' as const, warning: 'Existing text framing will change if this mutation is allowed.' };
+
+  assert.equal(await approval.request(target('write_file')), 'allow_once');
+  assert.equal(await approval.request(target('apply_patch')), 'allow_once');
+  assert.equal(await approval.request(target('write_file', 'src/other.js')), 'deny');
+  assert.equal(await approval.request(target('apply_patch', 'src/other.js')), 'deny');
+  assert.equal(await approval.request(target('write_file', 'src/label.js', framing)), 'deny');
+  assert.equal(await approval.request(target('apply_patch', 'src/label.js', framing)), 'deny');
+  assert.equal(await approval.request(target('write_file', 'src/label.js', undefined, true)), 'deny');
+  assert.equal(await approval.request(process(['--test', 'test/label.test.js'])), 'allow_once');
+  assert.equal(await approval.request(process(['--test', 'test/other.test.js'])), 'deny');
+  assert.equal(await approval.request(process(['--test', 'test/label.test.js'], 'npm')), 'deny');
+  assert.equal(await approval.request(process(['--test', 'test/label.test.js'], 'node', 'other_tool')), 'deny');
+});
 
 test('live-work runner delegates stack progression and gates hidden acceptance on full completion', async (t) => {
   const workspace = await mkdtemp(join(tmpdir(), 'george-live-runner-'));

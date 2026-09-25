@@ -149,10 +149,10 @@ function validationFor(case_: BenchmarkCase): NonNullable<BenchmarkCase['expecte
 
 export function createBenchmarkApproval(case_: BenchmarkCase): ApprovalPort {
   const validation = validationFor(case_);
-  return { request: async (request) => request.toolName === 'write_file' && request.target?.path === case_.expected.edit?.path
-    ? 'allow_once'
-    : request.toolName === 'run_process' && request.process?.executable === validation.executable && request.process.argv.length === validation.arguments.length && request.process.argv.every((value, index) => value === validation.arguments[index])
-      ? 'allow_once' : 'deny' };
+  return { request: async (request) => request.mutation !== undefined ? 'deny'
+    : request.toolName === 'write_file' && request.target?.path === case_.expected.edit?.path ? 'allow_once'
+      : request.toolName === 'run_process' && request.process?.executable === validation.executable && request.process.argv.length === validation.arguments.length && request.process.argv.every((value, index) => value === validation.arguments[index])
+        ? 'allow_once' : 'deny' };
 }
 
 export async function matchesBenchmarkFixtureEdit(root: string, edit: BenchmarkCase['expected']['edit']): Promise<boolean> {

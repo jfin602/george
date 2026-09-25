@@ -3,7 +3,7 @@ import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import { isAbsolute, join, relative, resolve } from 'node:path';
 
 import type { StructuredTaskApplicationService, StructuredTaskStackApplicationService } from '../application/index.ts';
-import { asGeorgeError, type ApplicationEvent, type RunBudgetDimension, type RunBudgetSnapshot, type Session, type ToolEffect } from '../core/index.ts';
+import { asGeorgeError, type ApprovalPort, type ApplicationEvent, type RunBudgetDimension, type RunBudgetSnapshot, type Session, type ToolEffect } from '../core/index.ts';
 import { projectStackState, projectTaskState, sanitizeTaskEvidence, type StackStateProjection, type TaskStateProjection } from '../tasks/index.ts';
 
 const MAX_LIVE_EVENTS = 4_096;
@@ -101,6 +101,28 @@ export type LiveWorkSubmission = Common & (
   | Readonly<{ kind: 'stack'; service: StructuredTaskStackApplicationService; prompts: readonly string[] }>
   | Readonly<{ kind: 'single'; service: StructuredTaskApplicationService; prompt: string }>
 );
+
+/** Frozen Phase 9 edit gate only: exact target, ordinary mutation, exact validation. */
+export function createFrozenEditQualificationApproval(options: Readonly<{
+  targetPath: string;
+  validation: Readonly<{ executable: string; arguments: readonly string[] }>;
+}>): ApprovalPort {
+  return { request: async (request) => {
+    if (request.mutation !== undefined) return 'deny';
+    if ((request.toolName === 'write_file' || request.toolName === 'apply_patch')
+      && request.execution.effect === 'workspace_mutation'
+      && request.process === undefined
+      && request.target?.outsideWorkspace !== true
+      && request.target?.path === options.targetPath) return 'allow_once';
+    if (request.toolName === 'run_process'
+      && (request.execution.effect === 'host_process' || request.execution.effect === 'sandboxed_workspace_process')
+      && request.target === undefined
+      && request.process?.executable === options.validation.executable
+      && request.process.argv.length === options.validation.arguments.length
+      && request.process.argv.every((value, index) => value === options.validation.arguments[index])) return 'allow_once';
+    return 'deny';
+  } };
+}
 
 function outsideWorkspace(workspace: string, path: string): boolean {
   const target = resolve(path);

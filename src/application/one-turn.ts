@@ -10,6 +10,7 @@ import {
   DEFAULT_RUN_BUDGET,
   denyApprovalPort,
   GeorgeError,
+  TEXT_FRAMING_CHANGE_WARNING,
   resolveWorkspaceRoot,
   resolveWorkspaceMutationPath,
   resolveWorkspacePath,
@@ -475,15 +476,19 @@ export class AgentLoopApplicationService {
 
   private async approvalRequest(callId: string, validated: ValidatedToolCall, policy: ExecutionPolicy, outsidePath?: string, signal?: AbortSignal): Promise<ApprovalRequest | undefined> {
     const { definition, arguments: arguments_ } = validated;
-    if (outsidePath !== undefined) return { id: callId, toolName: definition.name, execution: definition.execution, target: { path: outsidePath, alreadyDirty: false, outsideWorkspace: true } };
+    const mutation = (definition.name === 'write_file' || definition.name === 'apply_patch') && arguments_.allowTextFramingChange === true
+      ? { intent: 'text_framing_change' as const, warning: TEXT_FRAMING_CHANGE_WARNING }
+      : undefined;
+    if (outsidePath !== undefined) return { id: callId, toolName: definition.name, execution: definition.execution, target: { path: outsidePath, alreadyDirty: false, outsideWorkspace: true }, ...(mutation === undefined ? {} : { mutation }) };
     if (definition.execution.effect === 'local_read') return undefined;
     if (definition.execution.effect === 'workspace_mutation') {
-      if (policy.workspace === 'workspace_autonomous') return undefined;
+      if (policy.workspace === 'workspace_autonomous' && mutation === undefined) return undefined;
       const target = await resolveWorkspaceMutationPath(this.workspace, arguments_.path as string);
       const git = await captureGitWorkingTreeSnapshot(this.workspace, target.path, { signal });
       return {
         id: callId, toolName: definition.name, execution: definition.execution,
         target: { path: target.relativePath, alreadyDirty: git.target?.dirty ?? false },
+        ...(mutation === undefined ? {} : { mutation }),
       };
     }
     if (definition.execution.effect === 'host_process') {

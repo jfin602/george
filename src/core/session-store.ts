@@ -4,6 +4,7 @@ import { homedir } from 'node:os';
 import { basename, isAbsolute, join, resolve } from 'node:path';
 
 import { GeorgeError } from './errors.ts';
+import { TEXT_FRAMING_CHANGE_WARNING } from './approval.ts';
 import type { ContextProfile } from './config.ts';
 import type { ApplicationEvent, ContextCheckpointEvidence, ContextDiagnostics, ProviderUsage } from './events.ts';
 import type { RunBudgetDimension, RunBudgetSnapshot } from './run-budget.ts';
@@ -383,8 +384,15 @@ function safeApproval(request: ApplicationEvent extends never ? never : Extract<
   const safe = { id: string(request.id, 'approval ID', 256), toolName: string(request.toolName, 'approval tool name', 256), execution: safeExecution(request.execution) } as const;
   if (request.execution.effect === 'workspace_mutation') {
     if (!request.target || request.process || typeof request.target.alreadyDirty !== 'boolean') invalid('write approval has an invalid shape.');
-    return { ...safe, target: { path: string(request.target.path, 'approval path', 4096), alreadyDirty: request.target.alreadyDirty } };
+    if (request.target.outsideWorkspace !== undefined && request.target.outsideWorkspace !== true) invalid('write approval has an invalid outside-workspace marker.');
+    const mutation = request.mutation === undefined ? undefined : {
+      intent: oneOf(request.mutation.intent, 'approval mutation intent', ['text_framing_change']),
+      warning: string(request.mutation.warning, 'approval mutation warning', 256),
+    } as const;
+    if (mutation !== undefined && mutation.warning !== TEXT_FRAMING_CHANGE_WARNING) invalid('approval mutation warning is invalid.');
+    return { ...safe, target: { path: string(request.target.path, 'approval path', 4096), alreadyDirty: request.target.alreadyDirty, ...(request.target.outsideWorkspace === true ? { outsideWorkspace: true } : {}) }, ...(mutation === undefined ? {} : { mutation }) };
   }
+  if (request.mutation) invalid('non-mutation approval has mutation intent.');
   if (request.execution.effect === 'host_process' || request.execution.effect === 'sandboxed_workspace_process') {
     if (!request.process || request.target) invalid('process approval has an invalid shape.');
     return {
