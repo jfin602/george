@@ -1,23 +1,44 @@
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
 import test from 'node:test';
 
-import { BENCHMARK_CASES, BENCHMARK_SCHEMA_VERSION, BENCHMARK_SUITE_VERSION, DEFAULT_CONTEXT_BANDS, aggregates, casesFor, colorizeBenchmarkTerminal, compareBenchmark, contextLadderCases, createBenchmarkApproval, createBenchmarkFixture, deriveBenchmarkRecord, formatBenchmarkCaseCompleted, formatBenchmarkCaseStarted, formatBenchmarkRunHeader, formatBenchmarkSummary, formatContextLadderSummary, matchesBenchmarkFixtureEdit, parseBenchmarkArguments, report, runBenchmark, summarizeBenchmarkTiming, writeBenchmarkArtifacts } from '../../../src/benchmark/index.ts';
-import type { ApplicationEvent, ApprovalRequest } from '../../../src/core/index.ts';
+import { BENCHMARK_CASES, BENCHMARK_SCHEMA_VERSION, BENCHMARK_SUITE_VERSION, DEFAULT_AGENTIC_CONTEXT_BANDS, DEFAULT_CONTEXT_BANDS, aggregates, agenticContextCases, casesFor, colorizeBenchmarkTerminal, compareBenchmark, contextLadderCases, createBenchmarkApproval, createBenchmarkFixture, deriveBenchmarkRecord, formatBenchmarkCaseCompleted, formatBenchmarkCaseStarted, formatBenchmarkRunHeader, formatBenchmarkSummary, formatContextLadderSummary, matchesBenchmarkFixtureEdit, parseBenchmarkArguments, report, runBenchmark, runBenchmarkCase, summarizeBenchmarkTiming, writeBenchmarkArtifacts } from '../../../src/benchmark/index.ts';
+import type { ApplicationEvent, ApprovalRequest, ModelProvider, ProviderEvent, ProviderRequest, ProviderStreamOptions } from '../../../src/core/index.ts';
 import { assembleContext } from '../../../src/context/index.ts';
 
 const execFileAsync = promisify(execFile);
 
+class ScriptedProvider implements ModelProvider {
+  calls: ProviderRequest[] = [];
+  private readonly rounds: (readonly ProviderEvent[])[];
+  constructor(rounds: readonly (readonly ProviderEvent[])[]) { this.rounds = [...rounds]; }
+  async *stream(request: ProviderRequest, _options: ProviderStreamOptions = {}): AsyncGenerator<ProviderEvent> { this.calls.push(request); yield* this.rounds.shift() ?? []; }
+}
+
 test('benchmark CLI parsing is bounded and keeps standard suite defaults', () => {
   assert.deepEqual(parseBenchmarkArguments([]), { suite: 'quick', repetitions: 1 });
   assert.deepEqual(parseBenchmarkArguments(['--suite', 'full', '--repetitions', '3', '--model', 'model']), { suite: 'full', repetitions: 3, model: 'model' });
-  assert.throws(() => parseBenchmarkArguments(['--suite', 'slow']), /quick, full, or context/);
+  assert.throws(() => parseBenchmarkArguments(['--suite', 'slow']), /quick, full, context, or agentic-context/);
   assert.throws(() => parseBenchmarkArguments(['--repetitions', '0']), /1 to 20/);
   assert.throws(() => parseBenchmarkArguments(['--unknown', 'x']), /Unknown benchmark flag/);
+});
+
+test('agentic context suite has isolated bands and stable family order', () => {
+  assert.deepEqual(DEFAULT_AGENTIC_CONTEXT_BANDS, [2048, 4096, 6144, 8192, 10240, 12288]);
+  assert.deepEqual(parseBenchmarkArguments(['--suite', 'agentic-context', '--agentic-context-bands', '6144,2048']), { suite: 'agentic-context', repetitions: 1, agenticContextBands: [2048, 6144] });
+  assert.throws(() => parseBenchmarkArguments(['--suite', 'quick', '--agentic-context-bands', '2048']), /require --suite agentic-context/);
+  assert.throws(() => parseBenchmarkArguments(['--suite', 'agentic-context', '--context-bands', '2048']), /require --suite context/);
+  assert.throws(() => parseBenchmarkArguments(['--suite', 'agentic-context', '--agentic-context-bands', '2048,2048']), /duplicates/);
+  assert.deepEqual(agenticContextCases([4096, 2048]).map((item) => item.id), [
+    'agentic-inspection-2048-001', 'agentic-investigation-2048-001', 'agentic-edit-validation-2048-001',
+    'agentic-inspection-4096-001', 'agentic-investigation-4096-001', 'agentic-edit-validation-4096-001',
+  ]);
+  assert.deepEqual(casesFor('agentic-context', [999], [2048]).map((item) => item.band), [2048, 2048, 2048]);
 });
 
 test('context suite parses default and custom deterministic ladder bands', () => {
@@ -51,7 +72,39 @@ test('generated context ladder cases retain identity, order, exact sentinels, an
   assert.deepEqual(casesFor('full').map((item) => item.id), BENCHMARK_CASES.filter((item) => item.suites.includes('full')).map((item) => item.id));
 });
 
-test('the versioned v2 registry covers each category and quick is a selection of it', () => {
+test('agentic fixtures stay source-bounded and scripted runs use the normal coding tool surface', async (t) => {
+  const [inspection, investigation, repair] = agenticContextCases([12_288]);
+  const root = await createBenchmarkFixture(inspection!.fixture, inspection);
+  t.after(() => rm(root, { recursive: true, force: true }));
+  for (const path of ['.george/instructions.md', 'AGENTS.md', 'docs/task-brief.md', 'docs/evidence-notes.md']) assert.ok((await readFile(join(root, path))).byteLength <= 64 * 1024);
+  assert.match(await readFile(join(root, '.george/instructions.md'), 'utf8'), /local fixture/);
+  assert.match(await readFile(join(root, 'docs/ownership.md'), 'utf8'), /AGENTIC_INSPECTION_12288_ORCHID/);
+  const unexpected = deriveBenchmarkRecord(inspection!, [
+    { type: 'tool.requested', turnId: 't', callId: 'read', name: 'read_file', arguments: '{}' },
+    { type: 'tool.requested', turnId: 't', callId: 'external', name: 'parallel_search', arguments: '{}' },
+    { type: 'assistant.response.completed', turnId: 't', text: inspection!.expected.answer! }, { type: 'turn.completed', turnId: 't' },
+  ], 1, 1, 'warm-repeat', 'scripted', 'http://127.0.0.1:1234');
+  assert.match(unexpected.failureReason ?? '', /Unexpected tools: parallel_search/);
+
+  const run = async (case_: NonNullable<typeof inspection>, rounds: readonly (readonly ProviderEvent[])[]) => {
+    const provider = new ScriptedProvider(rounds);
+    const record = await runBenchmarkCase(case_, provider, { suite: 'agentic-context', repetitions: 1 }, 1, 'first-run-in-benchmark-process', 'scripted', 'http://127.0.0.1:1234');
+    assert.ok(provider.calls[0]?.tools?.some((tool) => tool.name === 'parallel_search'));
+    assert.ok(provider.calls[0]?.tools?.some((tool) => tool.name === 'read_file'));
+    assert.equal(record.passed, true, JSON.stringify(record.failureReason));
+    assert.equal(record.contextSelection?.mode, 'adaptive');
+    assert.ok(record.contextSelection?.attemptedProfileIds.length);
+    assert.match(report({ schemaVersion: BENCHMARK_SCHEMA_VERSION, suiteVersion: BENCHMARK_SUITE_VERSION, run: { id: 'agentic', startedAt: '', suite: 'agentic-context', repetitions: 1, gitCommit: 'abc', dirty: false, node: 'v26', platform: 'linux', architecture: 'x64', cpu: 'fixture', cpuCount: 1, memoryBytes: 1, provider: { type: 'lm-studio-responses', origin: 'http://127.0.0.1:1234', model: 'scripted' } }, records: [record], aggregates: aggregates([record]) }), /Context selection/);
+  };
+  let response = 0;
+  const complete = (events: readonly ProviderEvent[]): readonly ProviderEvent[] => [{ type: 'provider.response.started', responseId: `script-${++response}` }, ...events, { type: 'provider.response.completed' }];
+  await run(inspection!, [complete([{ type: 'provider.tool.call', callId: 'read', name: 'read_file', arguments: '{"path":"docs/ownership.md"}' }]), complete([{ type: 'provider.text.delta', delta: inspection!.expected.answer! }])]);
+  await run(investigation!, ['entry.txt', 'module-map.txt', 'boundary.txt', 'evidence.txt'].map((path, index) => complete([{ type: 'provider.tool.call', callId: `read-${index}`, name: 'read_file', arguments: JSON.stringify({ path: `investigation/${path}` }) }])).concat([complete([{ type: 'provider.text.delta', delta: investigation!.expected.answer! }])]));
+  const expectedSha256 = createHash('sha256').update('export const label = (value) => value.trim();\n').digest('hex');
+  await run(repair!, [complete([{ type: 'provider.tool.call', callId: 'read', name: 'read_file', arguments: '{"path":"src/label.js"}' }]), complete([{ type: 'provider.tool.call', callId: 'write', name: 'write_file', arguments: JSON.stringify({ path: 'src/label.js', content: repair!.expected.edit!.content, expectedSha256 }) }]), complete([{ type: 'provider.text.delta', delta: repair!.expected.answer! }])]);
+});
+
+test('the v3 standard registry keeps quick as a selection of it', () => {
   assert.deepEqual([...new Set(BENCHMARK_CASES.map((item) => item.category))].length, 10);
   assert.ok(casesFor('quick').every((item) => BENCHMARK_CASES.includes(item)));
   assert.ok(casesFor('full').length > casesFor('quick').length);
@@ -160,13 +213,15 @@ test('JSON artifacts, report, aggregates, and comparison remain stable', async (
   const record = deriveBenchmarkRecord(BENCHMARK_CASES[0]!, [{ type: 'turn.completed', turnId: 't' }], 10, 1, 'first-run-in-benchmark-process', 'model', 'http://127.0.0.1:1234');
   const results = { schemaVersion: BENCHMARK_SCHEMA_VERSION, suiteVersion: BENCHMARK_SUITE_VERSION, run: { id: 'fixture-run', startedAt: '2026-01-01T00:00:00.000Z', suite: 'quick' as const, repetitions: 1, gitCommit: 'abc', dirty: false, node: 'v26', platform: 'linux', architecture: 'x64', cpu: 'fixture', cpuCount: 1, memoryBytes: 1, provider: { type: 'lm-studio-responses' as const, origin: 'http://127.0.0.1:1234', model: 'model' } }, records: [record], aggregates: aggregates([record]) };
   const directory = await writeBenchmarkArtifacts(results, root);
-  assert.match(await readFile(join(directory, 'results.json'), 'utf8'), /"schemaVersion": 2/);
+  assert.match(await readFile(join(directory, 'results.json'), 'utf8'), /"schemaVersion": 3/);
   assert.match(await readFile(join(directory, 'report.md'), 'utf8'), /short-reasoning-001/);
   assert.match(report(results), /Provider-active ms/);
   assert.doesNotMatch(report(results), /\u001b\[/);
   assert.match(await compareBenchmark(join(directory, 'results.json'), results), /provider-active ms delta/);
   await writeFile(join(root, 'v1.json'), JSON.stringify({ ...results, schemaVersion: 1, suiteVersion: 'v1' }));
   await assert.rejects(compareBenchmark(join(root, 'v1.json'), results), /Cannot compare benchmark schema\/suite/);
+  await writeFile(join(root, 'v2.json'), JSON.stringify({ ...results, schemaVersion: 2, suiteVersion: 'v2' }));
+  assert.match(await compareBenchmark(join(root, 'v2.json'), results), /Legacy v2 artifact/);
 });
 
 test('benchmark progress and result formatting is readable without terminal control sequences', () => {
