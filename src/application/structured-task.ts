@@ -5,7 +5,7 @@ import { GeorgeError, type ApplicationEvent, type LocalSessionStore } from '../c
 import {
   addressTaskWorkUnit, beginTaskCorrection, beginTaskWorkUnit, blockTask, completeTask, completeTaskCorrection, createTaskState, repairTaskCorrection,
   parseTaskPrompt, recordTaskInspection, recordTaskValidationAttempt, sanitizeTaskEvidence,
-  projectTaskState, type TaskDefinition, type TaskState, type TaskValidation,
+  projectTaskState, updateCurrentStackTask, type TaskDefinition, type TaskState, type TaskValidation,
 } from '../tasks/index.ts';
 import { CodingWorkflowApplicationService, type CodingWorkflowCompletion, type CodingWorkflowSubmission, type ValidationRequest } from './coding-workflow.ts';
 
@@ -29,7 +29,7 @@ export type StructuredTaskSlice = Readonly<{
   evidence: readonly string[];
 }>;
 
-function permissionProjection(policy: ReturnType<CodingWorkflowApplicationService['agent']['effectiveExecutionPolicy']>): import('../tasks/index.ts').PermissionExpectation {
+export function permissionProjection(policy: ReturnType<CodingWorkflowApplicationService['agent']['effectiveExecutionPolicy']>): import('../tasks/index.ts').PermissionExpectation {
   return {
     workspace: policy.workspace === 'workspace_autonomous' ? 'autonomous' : 'standard', outsideWorkspace: policy.outsideWorkspace,
     network: policy.network, remoteMutation: policy.remoteMutation,
@@ -174,6 +174,7 @@ export class StructuredTaskApplicationService extends CodingWorkflowApplicationS
   }
 
   private async lifecycle(submission: CodingWorkflowSubmission, state: TaskState, message: string): Promise<void> {
+    if (submission.session.stackState?.currentTaskIndex !== undefined) submission.session.stackState = updateCurrentStackTask(submission.session.stackState, state);
     const turnId = submission.turnId ?? 'structured-task';
     const projection = projectTaskState(state);
     const events = [
@@ -214,7 +215,7 @@ export class StructuredTaskApplicationService extends CodingWorkflowApplicationS
     }
     let routed: readonly string[];
     try { routed = await this.routed(definition); }
-    catch (error) { state = blockTask(state, 'blocked', error instanceof Error ? error.message : 'READ FIRST failed.'); submission.session.taskState = state; await this.structuredStore?.save(submission.session); throw error; }
+    catch (error) { state = blockTask(state, 'blocked', error instanceof Error ? error.message : 'READ FIRST failed.'); submission.session.taskState = state; await this.lifecycle(submission, state, 'Structured task blocked: READ FIRST failed.'); throw error; }
 
     let last: CodingWorkflowCompletion | undefined;
     let stageEvidence: readonly string[] = [];

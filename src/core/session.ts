@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 
 import type { ApplicationEvent } from './events.ts';
 import type { TaskState } from '../tasks/state.ts';
+import type { StackState } from '../tasks/stack-state.ts';
 
 export type TranscriptEntry = Readonly<{
   role: 'user' | 'assistant';
@@ -17,6 +18,8 @@ export type Session = {
   interruptions: SessionInterruption[];
   /** Optional canonical structured-task state; ordinary sessions remain taskless. */
   taskState?: TaskState;
+  /** Optional canonical ordered task-stack state; contains every task's durable history. */
+  stackState?: StackState;
 };
 
 export type SessionInterruption = Readonly<{

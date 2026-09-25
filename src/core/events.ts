@@ -190,6 +190,7 @@ export type ApplicationEvent =
   | Readonly<{ type: 'workflow.completed'; turnId: string; completion: WorkflowCompletion }>
   /** Bounded structured-task lifecycle/projection evidence; task/provider/tool bodies never appear here. */
   | Readonly<{ type: 'task.updated'; turnId: string; fingerprint: string; status: TaskStatus; currentWorkUnit?: string; blockerCount: number }>
+  | Readonly<{ type: 'stack.updated'; turnId: string; fingerprint: string; stackId: string; status: TaskStatus; currentTaskOrdinal?: number; completedTasks: number; totalTasks: number }>
   | Readonly<{ type: 'activity.updated'; turnId?: string; category: WorkCategory; message: string }>
   | Readonly<{ type: 'progress.milestone'; turnId: string; category: ProgressCategory; message: string }>
   | Readonly<{ type: 'work.updated'; item: WorkItem }>

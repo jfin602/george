@@ -8,7 +8,7 @@ import test from 'node:test';
 
 import { projectStructuredTaskSlice } from '../../src/application/index.ts';
 import { DEFAULT_EXECUTION_POLICY, LocalSessionStore, createSession, intersectExecutionPolicy } from '../../src/core/index.ts';
-import { addressTaskWorkUnit, beginTaskWorkUnit, createTaskState, parseTaskPrompt, projectTaskState, recordTaskValidationAttempt } from '../../src/tasks/index.ts';
+import { addressTaskWorkUnit, beginTaskWorkUnit, createTaskState, parseTaskPrompt, projectTaskState, recordTaskValidationAttempt, validateTaskStack } from '../../src/tasks/index.ts';
 import { renderTask, taskHeader } from '../../src/tui/app.ts';
 
 const ROOT = process.cwd();
@@ -55,11 +55,13 @@ test('Phase 9 freezes versioned task stacks and keeps acceptance outside model-v
   assert.equal(await digest(join(existing, 'base')), existingMetadata.fixtureSourceSha256);
   const greenfieldTasks = (await readdir(greenfield)).filter((name) => name.endsWith('.task.txt')).sort();
   assert.deepEqual(greenfieldTasks, ['P1-scaffold.task.txt', 'P2-api.task.txt', 'P3-tests-docs-closeout.task.txt']);
+  const definitions = [];
   for (const name of greenfieldTasks) {
     const parsed = parseTaskPrompt(await text(join(greenfield, name)));
     assert.equal(parsed.kind, 'structured');
-    if (parsed.kind === 'structured') assert.equal(parsed.task.stack, 'greenfield-express-v1');
+    if (parsed.kind === 'structured') { assert.equal(parsed.task.stack, 'greenfield-express-v1'); definitions.push(parsed.task); }
   }
+  validateTaskStack(definitions);
   const existingTask = parseTaskPrompt(await text(join(existing, 'P1-tag-feature.task.txt')));
   assert.equal(existingTask.kind, 'structured');
   if (existingTask.kind === 'structured') assert.equal(existingTask.task.stack, 'existing-express-feature-v1');

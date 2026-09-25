@@ -11,8 +11,9 @@ import type { ToolExecutionMetadata } from './execution.ts';
 import type { TranscriptEntry, Session, SessionInterruption } from './session.ts';
 import { resolveWorkspaceRoot } from './workspace.ts';
 import { TASK_STATE_SCHEMA_VERSION, parseSerializedTaskDefinition, serializeTaskDefinition, taskDefinitionFingerprint, type TaskState, type TaskValidationAttempt } from '../tasks/state.ts';
+import { STACK_STATE_SCHEMA_VERSION, restoreStackState, type StackState } from '../tasks/stack-state.ts';
 
-export const DURABLE_SESSION_SCHEMA_VERSION = 2;
+export const DURABLE_SESSION_SCHEMA_VERSION = 3;
 export const MAX_DURABLE_SESSION_BYTES = 1024 * 1024;
 export const MAX_DURABLE_EVENTS = 2048;
 export const MAX_DURABLE_TRANSCRIPT_ENTRIES = 1024;
@@ -25,10 +26,12 @@ type DurableSession = Readonly<{
   transcript: readonly TranscriptEntry[];
   events: readonly ApplicationEvent[];
   taskState?: TaskState;
+  stackState?: StackState;
 }>;
 
 type DurableTaskState = Readonly<Omit<TaskState, 'definition'> & { definition: string }>;
-type SerializedDurableSession = Readonly<Omit<DurableSession, 'taskState'> & { taskState?: DurableTaskState }>;
+type DurableStackState = Readonly<Omit<StackState, 'tasks'> & { tasks: readonly Readonly<Omit<StackState['tasks'][number], 'taskState'> & { taskState: DurableTaskState }>[] }>;
+type SerializedDurableSession = Readonly<Omit<DurableSession, 'taskState' | 'stackState'> & { taskState?: DurableTaskState; stackState?: DurableStackState }>;
 
 export type SessionStoreOptions = Readonly<{
   root?: string;
@@ -310,6 +313,11 @@ function durableEvent(event: ApplicationEvent): ApplicationEvent | undefined {
       if (!/^[a-f0-9]{64}$/.test(fingerprint)) invalid('task fingerprint is invalid.');
       return { type: event.type, turnId: string(event.turnId, 'turn ID', 256), fingerprint, status, ...(event.currentWorkUnit === undefined ? {} : { currentWorkUnit: string(event.currentWorkUnit, 'task work unit', 64) }), blockerCount: boundedInteger(event.blockerCount, 'task blocker count', 64) };
     }
+    case 'stack.updated': {
+      const fingerprint = string(event.fingerprint, 'stack fingerprint', 64);
+      if (!/^[a-f0-9]{64}$/.test(fingerprint)) invalid('stack fingerprint is invalid.');
+      return { type: event.type, turnId: string(event.turnId, 'turn ID', 256), fingerprint, stackId: string(event.stackId, 'stack ID', 512), status: oneOf(event.status, 'stack status', ['pending', 'in_progress', 'blocked', 'planning_needed', 'cancelled', 'budget_exhausted', 'completed', 'failed']), ...(event.currentTaskOrdinal === undefined ? {} : { currentTaskOrdinal: boundedInteger(event.currentTaskOrdinal, 'current task ordinal') }), completedTasks: boundedInteger(event.completedTasks, 'completed stack tasks', 64), totalTasks: boundedInteger(event.totalTasks, 'total stack tasks', 64) };
+    }
     case 'activity.updated': return undefined; // Live state is intentionally not durable history.
     case 'progress.milestone': return { type: event.type, turnId: string(event.turnId, 'turn ID', 256), category: oneOf(event.category, 'progress category', ['context', 'inspection', 'editing', 'validation', 'recovery', 'completion']), message: boundedMessage(string(event.message, 'progress message', 4096)) };
     case 'work.updated': return { type: event.type, item: safeWorkItem(event.item) };
@@ -482,6 +490,17 @@ function safeTaskState(state: TaskState, sessionId: string, workspace: string): 
   return durable;
 }
 
+function safeStackState(state: StackState, sessionId: string, workspace: string): DurableStackState {
+  if (state.sessionId !== sessionId || state.workspace !== workspace) invalid('stack state belongs to a different session or workspace.');
+  try { restoreStackState(state); } catch (error) { invalid(error instanceof Error ? error.message : 'stack state is invalid.'); }
+  return {
+    ...state,
+    tasks: state.tasks.map((task) => ({ ...task, taskState: safeTaskState(task.taskState, sessionId, workspace) })),
+    completedTaskOrdinals: [...state.completedTaskOrdinals],
+    effectivePermissionExpectations: { ...state.effectivePermissionExpectations },
+  };
+}
+
 function parseTaskState(value: unknown): TaskState {
   const item = record(value, 'task state');
   exactKeys(item, ['schemaVersion', 'sessionId', 'workspace', 'definition', 'definitionFingerprint', 'status', ...(item.currentWorkUnit === undefined ? [] : ['currentWorkUnit']), 'requirements', 'workUnits', 'inspections', 'validations', 'correctionLimit', 'corrections', 'blockers', ...(item.terminalOutcome === undefined ? [] : ['terminalOutcome']), 'effectivePermissionExpectations'], 'task state');
@@ -536,6 +555,38 @@ function parseTaskState(value: unknown): TaskState {
   return Object.freeze({ schemaVersion: TASK_STATE_SCHEMA_VERSION, sessionId: identifier(item.sessionId, 'task session ID'), workspace: canonicalPath(item.workspace, 'task workspace'), definition, definitionFingerprint: fingerprint, status, ...(currentWorkUnit === undefined ? {} : { currentWorkUnit }), requirements: Object.freeze(safeRequirements), workUnits: Object.freeze(safeWorkUnits), inspections: Object.freeze(inspections), validations: Object.freeze(safeValidations), correctionLimit, corrections: Object.freeze(corrections), blockers: Object.freeze(blockers), ...(terminalOutcome === undefined ? {} : { terminalOutcome }), effectivePermissionExpectations: Object.freeze(safePermissionExpectations(item.effectivePermissionExpectations)) });
 }
 
+function parseStackState(value: unknown, sessionId: string, workspace: string): StackState {
+  const item = record(value, 'stack state');
+  const optional = ['currentTaskIndex', 'terminalOutcome', 'blockerSummary'].filter((key) => item[key] !== undefined);
+  exactKeys(item, ['schemaVersion', 'sessionId', 'workspace', 'stackId', 'fingerprint', 'tasks', ...optional, 'completedTaskOrdinals', 'status', 'effectivePermissionExpectations'], 'stack state');
+  if (item.schemaVersion !== STACK_STATE_SCHEMA_VERSION) invalid(`unsupported stack state schema version ${String(item.schemaVersion)}.`);
+  if (item.sessionId !== sessionId || item.workspace !== workspace) invalid('stack state belongs to a different session or workspace.');
+  const fingerprint = string(item.fingerprint, 'stack fingerprint', 64);
+  if (!/^[a-f0-9]{64}$/.test(fingerprint)) invalid('stack fingerprint is invalid.');
+  const tasks = boundedArray(item.tasks, 'stack tasks', 64).map((entry) => {
+    const task = record(entry, 'stack task');
+    exactKeys(task, ['ordinal', 'fingerprint', 'status', 'taskState'], 'stack task');
+    return { ordinal: boundedInteger(task.ordinal, 'stack task ordinal'), fingerprint: string(task.fingerprint, 'stack task fingerprint', 64), status: oneOf(task.status, 'stack task status', ['pending', 'in_progress', 'blocked', 'planning_needed', 'cancelled', 'budget_exhausted', 'completed', 'failed'] as const), taskState: parseTaskState(task.taskState) };
+  });
+  const currentTaskIndex = item.currentTaskIndex === undefined ? undefined : boundedInteger(item.currentTaskIndex, 'current stack task index', 63);
+  const terminalOutcome = item.terminalOutcome === undefined ? undefined : oneOf(item.terminalOutcome, 'stack terminal outcome', ['blocked', 'planning_needed', 'cancelled', 'budget_exhausted', 'completed', 'failed'] as const);
+  const state = {
+    schemaVersion: STACK_STATE_SCHEMA_VERSION,
+    sessionId,
+    workspace,
+    stackId: string(item.stackId, 'stack ID', 512),
+    fingerprint,
+    tasks,
+    ...(currentTaskIndex === undefined ? {} : { currentTaskIndex }),
+    completedTaskOrdinals: boundedArray(item.completedTaskOrdinals, 'completed stack tasks', 64).map((ordinal) => boundedInteger(ordinal, 'completed stack task ordinal')),
+    status: oneOf(item.status, 'stack status', ['pending', 'in_progress', 'blocked', 'planning_needed', 'cancelled', 'budget_exhausted', 'completed', 'failed'] as const),
+    ...(terminalOutcome === undefined ? {} : { terminalOutcome }),
+    ...(item.blockerSummary === undefined ? {} : { blockerSummary: boundedMessage(string(item.blockerSummary, 'stack blocker summary', 512)) }),
+    effectivePermissionExpectations: safePermissionExpectations(item.effectivePermissionExpectations),
+  } as StackState;
+  try { return restoreStackState(state); } catch (error) { return invalid(error instanceof Error ? error.message : 'stack state is invalid.'); }
+}
+
 function durableSession(session: Session, workspace: string): SerializedDurableSession {
   // Durable events intentionally omit prior input bodies, so they cannot rebuild a reopened transcript.
   // A trailing user entry is the only incomplete canonical turn state and remains non-durable.
@@ -549,6 +600,7 @@ function durableSession(session: Session, workspace: string): SerializedDurableS
     schemaVersion: DURABLE_SESSION_SCHEMA_VERSION, id: identifier(session.id, 'session ID'), workspace, transcript,
     events: session.events.map(durableEvent).filter((event): event is ApplicationEvent => event !== undefined),
     ...(session.taskState === undefined ? {} : { taskState: safeTaskState(session.taskState, session.id, workspace) }),
+    ...(session.stackState === undefined ? {} : { stackState: safeStackState(session.stackState, session.id, workspace) }),
   };
 }
 
@@ -572,15 +624,24 @@ function parseDurableSession(value: unknown): DurableSession {
     exactKeys(item, ['schemaVersion', 'id', 'workspace', 'transcript', 'events'], 'session');
     return { schemaVersion: 1, id: identifier(item.id, 'session ID'), workspace: canonicalPath(item.workspace, 'workspace'), transcript: parseTranscript(item.transcript), events: parseEvents(item.events) };
   }
-  exactKeys(item, ['schemaVersion', 'id', 'workspace', 'transcript', 'events', ...(item.taskState === undefined ? [] : ['taskState'])], 'session');
+  if (item.schemaVersion === 2) {
+    exactKeys(item, ['schemaVersion', 'id', 'workspace', 'transcript', 'events', ...(item.taskState === undefined ? [] : ['taskState'])], 'session');
+    const id = identifier(item.id, 'session ID');
+    const workspace = canonicalPath(item.workspace, 'workspace');
+    const taskState = item.taskState === undefined ? undefined : parseTaskState(item.taskState);
+    if (taskState && (taskState.sessionId !== id || taskState.workspace !== workspace)) invalid('task state belongs to a different session or workspace.');
+    return { schemaVersion: 2, id, workspace, transcript: parseTranscript(item.transcript), events: parseEvents(item.events), ...(taskState === undefined ? {} : { taskState }) };
+  }
+  exactKeys(item, ['schemaVersion', 'id', 'workspace', 'transcript', 'events', ...(item.taskState === undefined ? [] : ['taskState']), ...(item.stackState === undefined ? [] : ['stackState'])], 'session');
   if (item.schemaVersion !== DURABLE_SESSION_SCHEMA_VERSION) invalid(`unsupported schema version ${String(item.schemaVersion)}.`);
   const id = identifier(item.id, 'session ID');
   const workspace = canonicalPath(item.workspace, 'workspace');
   const taskState = item.taskState === undefined ? undefined : parseTaskState(item.taskState);
+  const stackState = item.stackState === undefined ? undefined : parseStackState(item.stackState, id, workspace);
   if (taskState && (taskState.sessionId !== id || taskState.workspace !== workspace)) invalid('task state belongs to a different session or workspace.');
   return {
     schemaVersion: DURABLE_SESSION_SCHEMA_VERSION, id, workspace, transcript: parseTranscript(item.transcript), events: parseEvents(item.events),
-    ...(taskState === undefined ? {} : { taskState }),
+    ...(taskState === undefined ? {} : { taskState }), ...(stackState === undefined ? {} : { stackState }),
   };
 }
 
@@ -671,7 +732,7 @@ export class LocalSessionStore {
       if (Buffer.byteLength(raw, 'utf8') > MAX_DURABLE_SESSION_BYTES) invalid('session exceeds its byte bound.');
       const value = parseDurableSession(JSON.parse(raw));
       if (value.workspace !== expectedWorkspace) invalid('session belongs to a different workspace.');
-      return { id: value.id, workspace: value.workspace, transcript: [...value.transcript], events: [...value.events], interruptions: classifySessionInterruptions(value.events), ...(value.taskState === undefined ? {} : { taskState: value.taskState }) };
+      return { id: value.id, workspace: value.workspace, transcript: [...value.transcript], events: [...value.events], interruptions: classifySessionInterruptions(value.events), ...(value.taskState === undefined ? {} : { taskState: value.taskState }), ...(value.stackState === undefined ? {} : { stackState: value.stackState }) };
     } catch (error) {
       durableError(error);
     }

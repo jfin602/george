@@ -15,7 +15,7 @@ import {
 
 import { CodingWorkflowApplicationService, type AgentLoopApplicationService } from '../application/index.ts';
 import { createSession, type ApprovalRequest, type ApprovalResolver, type ApplicationEvent, type ContextDiagnostics, type Measurement, type Session, type TranscriptEntry, type WorkItem } from '../core/index.ts';
-import { type TaskState } from '../tasks/index.ts';
+import { type StackState, type TaskState } from '../tasks/index.ts';
 
 export const COMPOSER_KEY_BINDINGS: TextareaKeyBinding[] = [
   { name: 'return', action: 'submit' },
@@ -83,7 +83,7 @@ export type TranscriptWorkEntry = Readonly<{
 
 export type TuiPage = 'transcript' | 'task';
 
-function taskAccess(state: TaskState): string {
+function taskAccess(state: Pick<TaskState, 'effectivePermissionExpectations'>): string {
   const entries = Object.entries(state.effectivePermissionExpectations)
     .filter(([, value]) => value !== undefined)
     .map(([name, value]) => `${name.replace(/([A-Z])/g, ' $1').toLowerCase()} ${value}`);
@@ -91,8 +91,19 @@ function taskAccess(state: TaskState): string {
 }
 
 /** Bounded presentation projection; it reads canonical state but has no authority over it. */
-export function renderTask(state: TaskState | undefined, work: readonly TranscriptWorkEntry[], width = Number.MAX_SAFE_INTEGER): string {
+export function renderTask(state: TaskState | StackState | undefined, work: readonly TranscriptWorkEntry[], width = Number.MAX_SAFE_INTEGER): string {
   if (!state) return 'No structured task is active.\n\nOrdinary chat remains available. Submit a GEORGE TASK FORMAT: 1 prompt to show task progress.';
+  if ('tasks' in state) {
+    const current = state.currentTaskIndex === undefined ? undefined : state.tasks[state.currentTaskIndex];
+    const tasks = state.tasks.map((task, index) => `  P${task.ordinal} (${task.status}${index === state.currentTaskIndex ? ', current' : ''}): ${bounded(task.taskState.definition.task.title, 480)}`);
+    return [
+      `Stack ${state.stackId} · ${state.status}`,
+      '', 'Tasks', ...tasks,
+      '', `Current task: ${current ? `P${current.ordinal} — ${current.taskState.definition.task.title}` : 'none'}`,
+      ...(state.blockerSummary ? [`Terminal blocker: ${state.blockerSummary}`] : []),
+      '', ...(current ? renderTask(current.taskState, work, width).split('\n') : ['No task has started.']),
+    ].join('\n');
+  }
   const definition = state.definition;
   const current = state.currentWorkUnit === undefined ? undefined : definition.workflow.find((item) => item.id === state.currentWorkUnit);
   const line = (text: string) => wrapTranscriptBody(bounded(text, 480), Math.max(1, width - 2)).join('\n  ');
@@ -117,8 +128,12 @@ export function renderTask(state: TaskState | undefined, work: readonly Transcri
   ].join('\n');
 }
 
-export function taskHeader(state: TaskState | undefined): string {
+export function taskHeader(state: TaskState | StackState | undefined): string {
   if (!state) return 'Task: ordinary chat · progress inactive · access standard approvals';
+  if ('tasks' in state) {
+    const current = state.currentTaskIndex === undefined ? undefined : state.tasks[state.currentTaskIndex];
+    return bounded(`Stack: ${state.stackId} · ${state.completedTaskOrdinals.length}/${state.tasks.length} tasks completed · ${current ? `P${current.ordinal} ${current.taskState.currentWorkUnit ?? 'no active work'}` : 'no active task'} · ${state.status} · access ${taskAccess(state)}`, 480);
+  }
   const total = Object.keys(state.requirements).length;
   const verified = Object.values(state.requirements).filter((status) => status === 'verified').length;
   return bounded(`Task: ${state.definition.task.title} · ${state.currentWorkUnit ?? 'no active work'} · ${verified}/${total} requirements verified · ${state.status} · access ${taskAccess(state)}`, 480);
@@ -410,7 +425,7 @@ export class GeorgeTui {
     layout.add(new TextRenderable(this.renderer, { id: 'header', width: '100%', height: 1, flexShrink: 0, fg: NEON_THEME.mint, content: 'George — local coding agent' }));
     this.statusView = new TextRenderable(this.renderer, { id: 'status', width: '100%', height: 1, flexShrink: 0, fg: NEON_THEME.green, content: this.status('Ready') });
     layout.add(this.statusView);
-    this.taskHeaderView = new TextRenderable(this.renderer, { id: 'task-header', width: '100%', height: 1, flexShrink: 0, fg: NEON_THEME.muted, content: taskHeader(this.session.taskState) });
+    this.taskHeaderView = new TextRenderable(this.renderer, { id: 'task-header', width: '100%', height: 1, flexShrink: 0, fg: NEON_THEME.muted, content: taskHeader(this.session.stackState ?? this.session.taskState) });
     layout.add(this.taskHeaderView);
     this.contextView = new TextRenderable(this.renderer, { id: 'context', width: '100%', height: 2, flexShrink: 0, fg: NEON_THEME.muted, content: 'Context: awaiting first turn' });
     layout.add(this.contextView);
@@ -715,7 +730,7 @@ export class GeorgeTui {
     this.recordWork(event);
     this.refreshTranscript();
     this.refreshTask();
-    this.taskHeaderView.content = taskHeader(this.session.taskState);
+    this.taskHeaderView.content = taskHeader(this.session.stackState ?? this.session.taskState);
     if (event.type === 'context.assembled') {
       this.contextView.content = contextText(event.diagnostics);
       this.contextView.height = event.diagnostics.activeSourceIds.some((id) => id.startsWith('skill:')) ? 3 : 2;
@@ -770,13 +785,13 @@ export class GeorgeTui {
     const entries = this.revealedAssistant === undefined ? this.session.transcript : this.session.transcript.map((entry, index) =>
       index === this.revealedAssistant!.index ? { ...entry, text: this.revealedAssistant!.text } : entry,
     );
-    this.transcriptView.content = renderTranscript(entries, this.diagnostics, bodyWidth, this.session.taskState ? [] : this.work);
+    this.transcriptView.content = renderTranscript(entries, this.diagnostics, bodyWidth, this.session.taskState || this.session.stackState ? [] : this.work);
   }
 
   private refreshTask(): void {
     const bodyWidth = this.taskView.width - 2;
     if (bodyWidth < 1) return;
-    this.taskView.content = renderTask(this.session.taskState, this.work, bodyWidth);
+    this.taskView.content = renderTask(this.session.stackState ?? this.session.taskState, this.work, bodyWidth);
   }
 
   private async revealAssistant(text: string): Promise<void> {

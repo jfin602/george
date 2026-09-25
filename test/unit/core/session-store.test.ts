@@ -91,7 +91,7 @@ test('opening rejects malformed, unsupported, oversized, and invalid normalized 
   await assert.rejects(store.open('session-1', workspace), /byte bound/);
 });
 
-test('schema-v1 sessions migrate as taskless while schema-v2 TaskState round-trips safely', async () => {
+test('legacy sessions remain openable while current TaskState round-trips safely', async () => {
   const { workspace, state } = await fixture();
   const store = new LocalSessionStore({ root: state });
   await mkdir(state);
@@ -142,7 +142,7 @@ STOP CONDITIONS
   session.taskState = taskState;
   await store.save(session);
   const serialized = await readFile(join(state, 'task-session.json'), 'utf8');
-  assert.match(serialized, /"schemaVersion":2/);
+  assert.match(serialized, /"schemaVersion":3/);
   assert.doesNotMatch(serialized, /raw provider|DO_NOT_PERSIST/i);
   const reopened = await store.open(session.id, workspace);
   assert.equal(reopened.taskState?.definitionFingerprint, session.taskState.definitionFingerprint);
@@ -151,6 +151,13 @@ STOP CONDITIONS
   assert.match(reopened.taskState?.validations.V1?.attempts[0]?.stderr ?? '', /API_TOKEN=\[redacted\]/);
   assert.equal(reopened.taskState?.validations.V1?.attempts[0]?.stderrTruncated, true);
   assert.equal(reopened.taskState?.validations.V1?.attempts[0]?.redacted, true);
+
+  const legacyV2 = JSON.parse(serialized) as { schemaVersion: number; id: string; taskState: { sessionId: string } };
+  legacyV2.schemaVersion = 2;
+  legacyV2.id = 'task-session-v2';
+  legacyV2.taskState.sessionId = legacyV2.id;
+  await writeFile(join(state, 'task-session-v2.json'), JSON.stringify(legacyV2));
+  assert.equal((await store.open('task-session-v2', workspace)).taskState?.definitionFingerprint, session.taskState.definitionFingerprint);
 
   const malformed = JSON.parse(serialized) as { taskState: { status: string } };
   malformed.taskState.status = 'green';
