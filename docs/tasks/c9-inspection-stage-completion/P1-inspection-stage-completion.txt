@@ -1,0 +1,133 @@
+TASK: Correction 9 / P1 — Deterministic structured inspection stage completion
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Sol Medium`.
+- Browser required: no.
+
+VERSIONING
+- Required unchanged project version: `0.9.10`.
+
+GOAL
+
+Make structured INSPECT complete at the correct deterministic boundary: after the first provider tool round that executes at least one successful qualifying read-only tool, George must finish the preflight turn and advance to implementation instead of asking the model for another inspection continuation.
+
+Read:
+- `BOOT.md`;
+- `AGENTS.md`;
+- current Phase 9 decision/qualification authority;
+- `docs/tasks/c9-inspection-execution/closeout.md`;
+- `docs/tasks/c9-inspection-stage-completion/{prompt-assessment,implementation-plan}.md`;
+- exact current `AgentLoopApplicationService`;
+- `CodingWorkflowApplicationService`;
+- `StructuredTaskApplicationService`;
+- relevant provider/tool/structured-task tests.
+
+Preserve:
+- first-round structured INSPECT `initialToolChoice: 'required'`;
+- existing INSPECTION_TOOLS restriction;
+- current tool schema/policy/approval behavior;
+- stage call/round/no-progress ceilings;
+- task-wide run budget;
+- mutation SHA/precondition contract;
+- exception-safe live trace;
+- production stack executor;
+- Task Prompt v1;
+- ordinary chat/implementation/correction behavior.
+
+APPLICATION-OWNED TOOL-ROUND COMPLETION
+
+Add the narrowest typed agent-loop submission option that lets a caller finish a bounded turn after the first **successful tool round**.
+
+Preferred semantic shape:
+
+`completeAfterSuccessfulToolRound?: boolean`
+
+or an equivalently narrow typed option.
+
+When absent/false, current loop behavior must remain unchanged.
+
+When enabled:
+
+1. request the provider normally;
+2. execute the full admitted tool-call round in provider order using the existing ToolRegistry, policy, approval, budget, and lifecycle paths;
+3. after that round completes, inspect the normalized tool results;
+4. if at least one tool result is successful, finish the turn successfully without constructing/sending a provider continuation;
+5. if every tool result failed/denied, do not claim completion; preserve the existing bounded continuation/failure behavior.
+
+Do not terminate mid-round after the first successful individual call.
+
+Do not bypass a stage/tool limit that is already violated by the provider's round.
+
+TURN / TRANSCRIPT TRUTH
+
+Early successful completion after a tool round must preserve the existing provider-round assistant commit contract:
+
+- text emitted by a provider round containing tool calls remains provisional and must not become canonical assistant transcript/final assistant response;
+- all provider/tool lifecycle events remain recorded;
+- normal turn-completed hooks/events still run;
+- completion must not fabricate assistant text;
+- CodingWorkflowCompletion must classify the turn as completed when no actual failure/validation failure exists.
+
+Do not require an extra provider final-text round merely to close INSPECT.
+
+STRUCTURED INSPECT
+
+Enable the new completion option only on the structured INSPECT subrun.
+
+Required behavior:
+
+- first INSPECT provider request still has `toolChoice: required`;
+- Qwen may select any/all tools from the existing restricted inspection tool set;
+- George executes the admitted tool calls for that first round;
+- if at least one successful local-read result is observed, the INSPECT turn ends immediately after the round;
+- `StructuredTaskApplicationService` extracts the successful tool events exactly as today;
+- bounded stage evidence is recorded;
+- the task proceeds to the implementation stage without an inspection continuation provider request.
+
+A failed/denied-only first round does not satisfy INSPECT.
+
+The existing four-call INSPECT ceiling remains a fallback failure guard, not the intended completion mechanism.
+
+PERMANENT REGRESSION COVERAGE
+
+Add tests proving:
+
+1. ordinary agent-loop behavior is unchanged when the option is absent;
+2. with the option enabled, one provider tool round containing a successful tool result completes without a provider continuation;
+3. all calls in that round execute in model order before completion;
+4. provider/tool/result events are retained;
+5. provisional assistant text from the tool-calling round is not committed;
+6. normal turn completion and hooks still fire;
+7. a failed/denied-only tool round does not satisfy the early completion condition;
+8. existing stage tool-call limits still fail if the provider round itself exceeds the admitted limit;
+9. structured INSPECT uses both required initial tool choice and successful-tool-round completion;
+10. structured INSPECT with one successful read advances to implementation;
+11. structured INSPECT with several successful reads in one provider round advances to implementation after that round and preserves all admitted evidence;
+12. no second INSPECT provider request occurs after a successful first round;
+13. implementation/correction and ordinary chat retain normal continuation semantics;
+14. read SHA -> mutation precondition regressions remain Green;
+15. frozen deterministic Phase 8 replay reaches implementation/George-owned validation with one INSPECT provider round.
+
+Do not alter the frozen task fixture to make these tests easier.
+
+VALIDATION
+
+Run:
+- focused one-turn/structured/coding-workflow tests;
+- provider tool-choice tests;
+- mutation-precondition tests;
+- exception-safe live trace tests;
+- frozen deterministic Phase 8 replay;
+- inherited c9 stack/convergence tests;
+- `node --test test/integration/phase9-qualification.test.ts`;
+- `npm run typecheck`;
+- `npm run test:runner`;
+- `git diff --check`.
+
+Verify:
+- package remains exactly `0.9.10`;
+- no root `package-lock.json`.
+
+Do not run the official live Gate A in P1.
+
+If the only way to implement this would be to globally weaken provider continuation semantics rather than add a bounded application-owned mode, stop with `Planning needed`.
