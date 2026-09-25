@@ -92,7 +92,8 @@ VALIDATION
 
 V1 — Structured application coverage
 Covers: R1, R2, R3, R4, R5, R6, R7, R8, R9, R10, R11, R12
-Run: node --test test/unit/tasks/*.test.ts test/unit/application/structured-task.test.ts
+Run: DISCOVER
+Scope: focused Task Prompt/TaskState plus structured-task application tests affected by P1-P3
 
 V2 — Agent/context regressions
 Covers: R6, R7, R8

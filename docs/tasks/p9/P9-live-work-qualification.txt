@@ -97,11 +97,13 @@ Run: node --test test/integration/phase9-qualification.test.ts
 
 V2 — Focused structured/autonomy/sandbox regressions
 Covers: R6, R11
-Run: node --test test/unit/tasks/*.test.ts test/unit/application/structured-task.test.ts test/unit/tools/sandbox-process.test.ts test/unit/tui/app.test.ts
+Run: DISCOVER
+Scope: focused Phase 9 task, structured orchestration, sandbox-process, and TUI regression tests
 
 V3 — Inherited agent/context/recovery regression
 Covers: R5, R6
-Run: node --test test/unit/application/one-turn.test.ts test/unit/context/*.test.ts test/unit/application/recovery.test.ts test/integration/phase5-qualification.test.ts
+Run: DISCOVER
+Scope: inherited agent-loop, context, recovery, and Phase 5 qualification regressions affected by Phase 9
 
 V4 — TypeScript
 Covers: R6, R12

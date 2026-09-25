@@ -80,7 +80,8 @@ VALIDATION
 
 V1 — Structured correction/stack tests
 Covers: R1, R2, R3, R4, R5, R6, R9, R10
-Run: node --test test/unit/tasks/*.test.ts test/unit/application/structured-task.test.ts
+Run: DISCOVER
+Scope: focused structured correction, stack, TaskState, and structured-task application tests affected by P5
 
 V2 — Persistence/recovery tests
 Covers: R7, R8

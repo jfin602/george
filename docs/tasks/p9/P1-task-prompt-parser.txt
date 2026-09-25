@@ -97,7 +97,8 @@ VALIDATION
 
 V1 — Task parser unit coverage
 Covers: R1, R2, R3, R4, R5, R6, R7, R8
-Run: node --test test/unit/tasks/*.test.ts
+Run: DISCOVER
+Scope: focused task parser/domain tests created or affected by P1 under test/unit/tasks
 
 V2 — TypeScript
 Covers: R1, R6, R7

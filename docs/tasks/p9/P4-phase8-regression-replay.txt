@@ -87,7 +87,8 @@ Scope: focused tests for the frozen structured counterpart of the Phase 8 agenti
 
 V2 — Structured application regressions
 Covers: R5, R8
-Run: node --test test/unit/application/structured-task.test.ts test/unit/tasks/*.test.ts
+Run: DISCOVER
+Scope: structured-task application and task-domain regressions affected by the P4 replay/hardening
 
 V3 — TypeScript
 Covers: R5, R8

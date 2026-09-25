@@ -93,7 +93,8 @@ VALIDATION
 
 V1 — Task state coverage
 Covers: R1, R2, R3, R4, R5, R6, R9
-Run: node --test test/unit/tasks/*.test.ts
+Run: DISCOVER
+Scope: focused TaskState/state-transition tests created or affected by P1-P2 under test/unit/tasks
 
 V2 — Session persistence coverage
 Covers: R7, R8, R10

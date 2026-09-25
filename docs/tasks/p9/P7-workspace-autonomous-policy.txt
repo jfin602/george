@@ -82,7 +82,8 @@ VALIDATION
 
 V1 — Execution policy/application tests
 Covers: R1, R2, R3, R4, R10, R11, R12, R13
-Run: node --test test/unit/application/one-turn.test.ts test/unit/application/structured-task.test.ts test/unit/core/*.test.ts
+Run: DISCOVER
+Scope: execution-policy, structured-task, and affected core-policy/config/session tests for Workspace Autonomous behavior
 
 V2 — Filesystem tool adversarial tests
 Covers: R5, R6, R7, R8, R9, R13

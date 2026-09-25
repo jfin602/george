@@ -82,7 +82,8 @@ Run: npm run test:tui
 
 V2 — Progress/task projection coverage
 Covers: R2, R4, R5, R6
-Run: node --test test/unit/application/progress.test.ts test/unit/tasks/*.test.ts test/unit/application/structured-task.test.ts
+Run: DISCOVER
+Scope: progress/task projection, TaskState, and structured-task application tests affected by the Transcript/Task TUI split
 
 V3 — TypeScript
 Covers: R1, R5
