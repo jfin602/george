@@ -1,6 +1,6 @@
 # George MVP Roadmap
 
-Status: CURRENT ROADMAP — PHASE 7 OWNER-CLOSED; PHASE 8 ACTIVE
+Status: CURRENT ROADMAP — PHASE 7 OWNER-CLOSED; PHASE 8 AGENTIC-CONTEXT CORRECTION ACTIVE
 
 The roadmap deliberately proves the provider, read-only tool foundation, real interactive terminal surface, and safe autonomous tool execution before broader coding workflow, networking, or a desktop GUI.
 
@@ -377,64 +377,74 @@ Closeout:
 
 ## Phase 8 — Context Throughput Optimization
 
-Status: CURRENT PHASE — baseline package `0.8.0`; runtime/context measurement complete; adaptive-profile implementation/qualification active
+Status: CURRENT PHASE — package `0.8.8` implemented and deterministically qualified; correction `c8-agentic-context` active; not owner-closed
 
-Decision authority: `docs/planning/p8-context-throughput-optimization/decision-record.md`.  
-Measurement/evidence authority: `docs/planning/p8-context-throughput-optimization/initial-baseline.md`.
+Original decision authority: `docs/planning/p8-context-throughput-optimization/decision-record.md`.  
+Original measurement/evidence authority: `docs/planning/p8-context-throughput-optimization/initial-baseline.md`.  
+Correction authority: `docs/planning/c8-agentic-context/decision-record.md`.  
+Correction qualification: `docs/planning/c8-agentic-context/qualification-plan.md`.  
+Formal `0.8.8` evidence closeout: `docs/phase-8-closeout.md`.
 
-Goal: reduce provider-facing context/prefill cost while preserving Phase 3 instruction precedence, provenance, smallest-sufficient-working-set behavior, Phase 5 recovery evidence, and provider independence.
+Goal: reduce provider-facing context cost while preserving real coding-agent competence. George now optimizes for an empirically qualified **effective agentic working set**, not maximum context occupancy.
 
-Measured control:
-- Qwen3-Coder 30B A3B Q4_K_M through LM Studio;
-- accepted main-model GPU Offload: 26;
-- sustained runtime control: ~1.82 s average provider round over 123 provider rounds;
-- accepted context-ladder baseline at requested 2k/4k/8k/16k bands;
-- cold/first-shape context cost is tracked separately from warm-state prefill cost.
+Implemented `0.8.8` foundation:
+- explicit adaptive-versus-fixed context mode;
+- deterministic ordinary -> medium -> large probing before the first provider request;
+- provider/tool/session-neutral discarded probes;
+- one frozen selected profile per user turn;
+- Phase 3 trust/precedence/source identity and whole-source omit/defer/fail behavior;
+- promotion before provider-backed semantic compaction for ordinary/medium;
+- Phase 5 large-profile compaction/recovery preservation;
+- bounded selected-profile/promotion diagnostics;
+- frozen-turn continuation-pressure fail-closed protection;
+- 32,768 physical context retained as the pinned runtime target.
 
-Adaptive profile direction:
-- ordinary: preferred 4,096-6,144; soft pressure 7,168; provider-input ceiling 8,192;
-- medium: preferred 8,192-12,288; soft pressure 14,336; provider-input ceiling 16,384;
-- large: preferred 12,000-18,000; soft pressure 20,000; provider-input ceiling 24,576;
-- all three retain 32,768 physical context, at least 8,192 reserved headroom, and a 2,560 always-on instruction target;
-- the large profile remains value-for-value compatible with the Phase 3 default/fixed profile.
+Current implemented profile values remain historical/current implementation truth, not final agentic operating envelopes:
+- ordinary: preferred 4,096-6,144; soft 7,168; provider-input ceiling 8,192;
+- medium: preferred 8,192-12,288; soft 14,336; provider-input ceiling 16,384;
+- large: preferred 12,000-18,000; soft 20,000; provider-input ceiling 24,576.
 
-Scope:
-- implement explicit adaptive-versus-fixed context mode;
-- select one adaptive profile per user turn before the first provider request;
-- probe/promotion order is ordinary -> medium -> large, with no within-turn oscillation;
-- promote when required/current-task or deliberately selected project/skill/routed context cannot safely fit the smaller profile;
-- preserve omission/defer behavior for genuinely lower-value optional context instead of filling larger profiles merely because capacity exists;
-- treat undersized-profile required-source failure as a promotion signal, not a final failure;
-- keep discarded profile probes deterministic, local, provider-free, tool-free, session-nonmutating, and non-canonical;
-- promote ordinary/medium before invoking provider-backed semantic history compaction;
-- retain Phase 5 compaction/recovery behavior at large-profile pressure;
-- expose selected profile, mode, budgets/headroom, and bounded promotion evidence in context diagnostics;
-- extend context-ladder qualification to include a ~24,576 requested band so all operating regions are exercised;
-- after adaptive profiles qualify, separately investigate stable prompt prefixes, incremental/changed-context submission, and provider-native reuse/caching where supported;
-- keep provider-native cache/continuation state as an optimization only; George's canonical normalized history and context provenance remain authoritative;
-- measure context/input tokens, first-output/response-start timing, correctness, and full workflow latency after each individual context optimization.
+Why the correction is active:
+- deterministic Phase 8 context behavior is Green;
+- live real-George qualification showed correct profile selection but poor/unstable provider behavior at medium/large real-agent request shapes;
+- a representative medium-selected request carried roughly 48.6 KB of instruction-channel text plus nine normal tool schemas and took roughly 88 seconds to first useful output;
+- similarly sized synthetic long-context cases can be much faster on warm runs;
+- the existing context ladder uses no tools and mostly user-input filler, so it is not representative enough to choose coding-agent profile boundaries;
+- later request-shape isolation controls became invalid when LM Studio stopped producing usable completions and then stopped accepting connections, so the exact inference cliff remains unresolved.
+
+Correction scope:
+- add a real agentic-context benchmark using normal George instructions, realistic project guidance, normal tool schemas, real repository reads/searches, multi-round investigation, and edit-plus-validation work;
+- measure approximate 2k/4k/6k/8k/10k/12k provider-facing working-set bands as exploratory instrumentation, not production profile definitions;
+- stop ascending when a repeatable capability/latency cliff is established;
+- confirm the candidate healthy envelope and the next materially worse region with bounded repeat evidence;
+- measure task correctness, tool correctness/counts, duplicate/unrequested tools, first-useful-output latency, workflow latency, provider calls/retries/timeouts, provider-reported tokens, and context disposition/promotion evidence;
+- revise profile values/routing/promotion policy only after that evidence exists;
+- prefer high-signal required/task/repository context, deterministic routing/defer, and existing safe compaction before routine promotion to a larger envelope;
+- keep 32k physical context as safety/headroom capacity unless a separate runtime experiment changes it;
+- preserve all Phase 3, Phase 5, and P7 correctness/safety boundaries.
 
 Success condition:
-- adaptive selection is deterministic and preserves precedence, routing, required context, recovery, and instruction-following behavior;
-- ordinary work uses the smallest sufficient profile rather than the large profile by default;
-- medium/large work promotes rather than silently losing deliberately selected context;
-- profile selection adds no provider call merely to stay within ordinary/medium;
-- accepted profile/context changes materially reduce measured context exposure or latency on representative workloads;
-- fixed-profile override behavior remains stable;
-- provider-specific reuse remains behind adapter boundaries and never becomes the only copy of context/session state.
+- a regression-protected agentic-context benchmark exists;
+- the pinned Qwen/LM Studio path has an empirically supported healthy coding-agent working-set envelope;
+- final ordinary/medium/large and routing/promotion policy is evidence-backed rather than capacity-derived;
+- real George coding scenarios remain correct and usable under the accepted policy;
+- required context, precedence/provenance, recovery, and continuation-pressure safety remain intact;
+- the synthetic context ladder is retained and labeled as runtime/prefill characterization rather than profile-boundary authority;
+- remaining Not Green/Evidence Gap results are recorded explicitly.
 
 Non-goals:
 - helper-model semantic compaction;
-- parallel tool execution;
-- model-call batching;
+- model-generated semantic relevance routing;
+- Phase 10 parallel tool execution or batching;
 - speculative decoding;
 - daemon/desktop work;
-- making LM Studio/provider cache state canonical;
-- rewriting Phase 3 or Phase 5 historical evidence.
+- making provider cache state canonical;
+- changing tool permission authority;
+- changing the pinned primary model inside this correction.
 
 ## Phase 9 — Structured Task Execution + Workspace Autonomy
 
-Status: PLANNED NEXT PHASE AFTER PHASE 8
+Status: PLANNED NEXT PHASE AFTER PHASE 8 AGENTIC-CONTEXT CORRECTION AND OWNER CLOSEOUT
 
 Decision authority: `docs/planning/p9-structured-task-execution/decision-record.md`.  
 Task-format authority: `docs/planning/p9-structured-task-execution/task-format-v1.md`.  
