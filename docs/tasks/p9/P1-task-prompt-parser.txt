@@ -1,0 +1,138 @@
+GEORGE TASK FORMAT: 1
+
+STACK: p9
+TASK: Phase 9 / P1 — Task Prompt v1 parser and domain model
+KIND: implementation
+
+VERSIONING
+
+The assigned project version is `0.9.1`.
+
+- Recommended configuration: `Terra High`.
+- Browser required: no.
+
+GOAL
+
+Implement the provider-independent George Task Prompt v1 parser, validator, command parser, and immutable task-domain model. This prompt must not execute structured tasks yet.
+
+READ FIRST
+
+- REQUIRED: BOOT.md
+- REQUIRED: AGENTS.md
+- REQUIRED: docs/planning/p9-structured-task-execution/decision-record.md
+- REQUIRED: docs/planning/p9-structured-task-execution/task-format-v1.md
+- REQUIRED: docs/planning/p9-structured-task-execution/qualification-plan.md
+- REQUIRED: docs/tasks/p9/prompt-assessment.md
+- REQUIRED: docs/tasks/p9/implementation-plan.md
+- REQUIRED: docs/stability-contract.md
+- REQUIRED: docs/workflow.md
+
+INSPECT
+
+- current core/application module boundaries and exports
+- phase-runner prompt grammar and version rules
+- existing validation request/process semantics
+- relevant parser/config/unit-test conventions
+
+REQUIREMENTS
+
+- R1: Add a dedicated provider/presentation-independent `src/tasks/` domain and parser for GEORGE TASK FORMAT 1.
+- R2: A prompt without the exact format marker remains ordinary chat; a prompt with the marker must parse or fail closed with bounded deterministic diagnostics.
+- R3: Enforce the approved required/optional top-level sections, reject unknown/duplicate sections, validate KIND, unique R/I/W/V/S/D identities, references, ordered work units, dependency cycles, DISCOVER Scope, STACK/TASK metadata, and PERMISSIONS values.
+- R4: Parse literal VALIDATION Run values into a shell-free executable/argv representation; reject shell operators, substitutions, redirection, pipelines, command chaining, NUL, malformed quoting, and other implicit-shell semantics.
+- R5: Apply explicit bounded prompt/section/entry/count limits and deterministic source ordering without silently truncating authoritative task text.
+- R6: Represent READ FIRST, INSPECT, requirements, invariants, workflow, validations, stops, deliverables, non-goals, permissions, versioning, and evidence in typed immutable task definitions.
+- R7: Export the new task contracts through narrow existing index boundaries without coupling them to OpenTUI, LM Studio, or tool executors.
+- R8: Set the package version to 0.9.1 and add permanent parser/validator regression coverage.
+
+INVARIANTS
+
+- I1: Parsing executes no provider, tool, filesystem mutation, approval, process, network, hook, or plugin action.
+- I2: Task text cannot create executable authority or bypass existing permission/context policy.
+- I3: Historical Phase 1-8 phase prompts are not rewritten or reinterpreted by this implementation.
+- I4: No package-lock.json is created.
+
+WORKFLOW
+
+W1 — Define Task Prompt v1 domain contracts
+Covers: R1, R6, R7
+Depends on: none
+
+Inspect existing type/export conventions, then implement the smallest task-domain representation needed by the approved format.
+
+Complete when:
+- every approved section has a typed representation;
+- stable IDs/references preserve authored ordering;
+- the domain has no presentation/provider dependency.
+
+W2 — Implement deterministic parser and semantic validation
+Covers: R2, R3, R5
+Depends on: W1
+
+Parse exact section structure and run deterministic semantic checks after syntax parsing.
+
+Complete when:
+- valid minimal and full examples parse;
+- malformed/unsupported/ambiguous structured prompts fail before execution;
+- ordinary chat is distinguishable without error.
+
+W3 — Implement shell-free validation command parsing
+Covers: R4
+Depends on: W1
+
+Implement a small literal command lexer/parser suitable for executable + argv only.
+
+Complete when:
+- ordinary quoted arguments are supported deterministically;
+- shell metacharacter/expansion cases are rejected;
+- no shell invocation is introduced.
+
+W4 — Regression and version boundary
+Covers: R8
+Depends on: W2, W3
+
+Add focused tests and update package.json only.
+
+VALIDATION
+
+V1 — Task parser unit coverage
+Covers: R1, R2, R3, R4, R5, R6, R7, R8
+Run: node --test test/unit/tasks/*.test.ts
+
+V2 — TypeScript
+Covers: R1, R6, R7
+Run: npm run typecheck
+
+V3 — Phase runner regression
+Covers: R8
+Run: npm run test:runner
+
+V4 — Diff hygiene
+Covers: R8
+Run: git diff --check
+
+STOP CONDITIONS
+
+- S1: Return Planning needed if implementing the approved grammar requires changing Task Prompt v1 syntax or authority semantics rather than implementing them.
+- S2: Do not add task execution, TUI, permission, sandbox, or provider behavior in P1.
+- S3: Do not claim completion while parser tests, typecheck, runner tests, or diff check are failing.
+
+DELIVERABLES
+
+- D1: Typed Task Prompt v1 domain/parser implementation.
+- D2: Permanent parser/validator/command regression tests.
+- D3: package.json at 0.9.1.
+
+NON-GOALS
+
+- TaskState persistence.
+- Provider task slicing.
+- Structured task execution.
+- Workspace Autonomous behavior.
+- TUI changes.
+- Live Qwen qualification.
+
+EVIDENCE
+
+- Preserve exact focused test counts and any unexpected failures.
+- Verify package-lock.json is absent.
