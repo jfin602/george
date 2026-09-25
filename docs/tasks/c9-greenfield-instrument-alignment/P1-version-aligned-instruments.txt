@@ -1,0 +1,202 @@
+TASK: Correction 9 / P1 — Version and align Phase 9 live-work instruments
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Sol Medium`.
+- Browser required: no.
+
+VERSIONING
+- Required unchanged project version: `0.9.10`.
+
+GOAL
+
+Create aligned v2 Phase 9 live-work instruments and matching qualification runner entry points while preserving every exercised v1 instrument/result immutably. This is qualification-only work: do not change production structured-task behavior.
+
+Read:
+- `BOOT.md`;
+- `AGENTS.md`;
+- current Phase 9 Task Prompt v1, decision, and qualification authority;
+- `docs/stability-contract.md`;
+- `docs/tasks/c9-mutation-intent-authority/{P2-live-evidence,closeout}.md`;
+- `docs/tasks/c9-greenfield-instrument-alignment/{prompt-assessment,implementation-plan}.md`;
+- exact v1 greenfield/existing-app fixtures, metadata, READMEs, acceptance tests;
+- `src/qualification/live-work.ts`;
+- Phase 9 qualification/integration tests.
+
+LOCKED BOUNDARY
+
+Do NOT modify production agent execution semantics.
+
+In particular, do not change:
+- `src/application/structured-task.ts` behavior;
+- Task Prompt grammar/version;
+- stage limits;
+- duplicate/no-progress guards;
+- provider/context/runtime policy;
+- mutation/approval semantics;
+- Bubblewrap/TUI behavior.
+
+If passing the v2 fixtures appears to require production behavior changes, stop with `Planning needed`.
+
+V1 IMMUTABILITY
+
+Preserve exactly:
+- `test/fixtures/p9-live-work/greenfield-express-v1/**`;
+- `test/fixtures/p9-live-work/existing-express-feature-v1/**`;
+- `test/acceptance/p9-live-work/greenfield-express-v1.test.mjs`;
+- `test/acceptance/p9-live-work/existing-express-feature-v1.test.mjs`;
+- v1 metadata versions and recorded digests;
+- `runGreenfieldExpressV1()`;
+- `runExistingExpressFeatureV1()`.
+
+Permanent tests must fail if these historical artifacts drift.
+
+GREENFIELD V2
+
+Create:
+
+`test/fixtures/p9-live-work/greenfield-express-v2/`
+
+with:
+- `P1-scaffold.task.txt`;
+- `P2-api.task.txt`;
+- `P3-tests-docs-closeout.task.txt`;
+- `README.md`;
+- `instrument.json`.
+
+The required application behavior remains the same as v1.
+
+P1:
+- add top-level `INSPECT` for clean repository structure, package/dependency state, and Git baseline;
+- remove the inspection-only workflow unit;
+- WORKFLOW begins directly with creating the minimal ESM Express skeleton;
+- preserve R1/R2/R3 intent and V1;
+- preserve explicit network/dependency prerequisite truth.
+
+P2:
+- retain top-level INSPECT for current application source and package scripts;
+- remove the duplicate inspection workflow unit;
+- WORKFLOW contains only actual route/validation implementation;
+- preserve R1-R5 and `npm test` validation.
+
+P3:
+- top-level INSPECT covers application routes/validation, existing tests, and current docs;
+- remove duplicate inspection workflow;
+- remove pre-validation `Validate and report` work;
+- WORKFLOW contains only focused tests + README/documentation implementation;
+- requirements describe software/docs outputs only;
+- exact changed-files/validation/prerequisite/completion reporting belongs in EVIDENCE after George-owned V1/V2;
+- preserve V1 `npm test` and V2 `npm run check` semantics.
+
+Metadata:
+- instrument name `greenfield-express-v2`;
+- version `2`;
+- taskFormat `1`;
+- new taskStackSha256 matching exact v2 task files;
+- acceptanceVersion `1`;
+- explicitly reference/reuse the unchanged v1 behavioral acceptance implementation/path;
+- preserve exact dependency prerequisite.
+
+EXISTING-APP V2
+
+Create:
+
+`test/fixtures/p9-live-work/existing-express-feature-v2/`
+
+Prefer a self-contained copy of the v1 `base/` fixture bytes.
+
+The base bytes must be unchanged. Therefore:
+- `fixtureVersion` remains `1`;
+- `fixtureSourceSha256` matches v1 exactly.
+
+Add:
+- aligned `P1-tag-feature.task.txt`;
+- `README.md`;
+- `instrument.json`;
+- unchanged `base/` bytes.
+
+Task:
+- keep top-level INSPECT for routes/tests/README/Git;
+- remove the redundant inspect workflow unit;
+- W1 implements validated tag behavior;
+- W2 adds feature tests/docs;
+- preserve existing functional requirements;
+- split the old mixed reporting requirement so README update is a normal requirement;
+- put exact focused/broad validation/completion reporting expectations in EVIDENCE;
+- keep V1 and V2 unchanged.
+
+Metadata:
+- instrument `existing-express-feature-v2`;
+- version `2`;
+- taskFormat `1`;
+- fixtureVersion `1`;
+- unchanged fixtureSourceSha256;
+- acceptanceVersion `1`;
+- explicitly reuse unchanged existing-app v1 behavioral acceptance;
+- preserve dependency prerequisite.
+
+QUALIFICATION RUNNERS
+
+In the qualification layer add:
+
+- `runGreenfieldExpressV2()`;
+- `runExistingExpressFeatureV2()`.
+
+Requirements:
+- v2 greenfield loads exactly P1/P2/P3 v2 task files in numeric order;
+- v2 existing loads exactly the v2 task;
+- both delegate to the same `runLiveWorkInstrument()` and production task/stack services;
+- no duplicated orchestration logic;
+- v1 runner functions remain behaviorally unchanged.
+
+TESTS
+
+Add permanent coverage proving:
+
+V1 HISTORY
+1. v1 metadata and digests remain unchanged;
+2. v1 task files parse and remain frozen;
+3. v1 runners still load v1 files;
+4. v1 acceptance files remain outside model-visible workspaces.
+
+V2 METADATA
+5. greenfield v2 metadata version/digest matches v2 task files;
+6. existing v2 fixture digest exactly equals v1 when base bytes are unchanged;
+7. acceptanceVersion remains 1 and reuse is explicit;
+8. dependency prerequisites remain explicit.
+
+V2 SEMANTICS
+9. all v2 task files parse under Task Prompt v1;
+10. greenfield v2 validates as a stack;
+11. every required preflight is top-level INSPECT;
+12. no v2 workflow unit exists solely to duplicate INSPECT;
+13. no work unit depends on title keywords for semantics;
+14. no pre-validation work unit claims exact validation results;
+15. post-validation reporting expectations live in EVIDENCE.
+
+RUNNERS
+16. v1 and v2 runner entry points load only their matching versions;
+17. greenfield v2 runner passes P1/P2/P3 in strict order to production stack service;
+18. existing v2 runner passes only its aligned task to production single-task service.
+
+INHERITED
+19. Gate A deterministic/frozen replay remains Green;
+20. Phase 9 integration and inherited c9 floors remain Green.
+
+Do not edit hidden acceptance behavior unless a test proves the application requirements changed. This correction is task-authoring alignment, not product requirement relaxation.
+
+VALIDATION
+
+Run:
+- focused qualification/live-work tests;
+- Phase 9 integration;
+- parser/task-stack validation tests;
+- inherited c9 affected floor;
+- `npm run typecheck`;
+- `npm run test:runner`;
+- `git diff --check`.
+
+Verify:
+- package exactly `0.9.10`;
+- no root `package-lock.json`.
+
+Do not run live Gate B2/C2 in P1.

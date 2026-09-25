@@ -1,0 +1,111 @@
+TASK: Correction 9 / P3 — Greenfield instrument alignment closeout
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Sol Medium`.
+- Browser required: no.
+
+VERSIONING
+- Required unchanged project version: `0.9.10`.
+
+GOAL
+
+Perform an evidence-only closeout of `c9-greenfield-instrument-alignment` from the exact P2 candidate and determine whether Phase 9 is ready for separate owner closeout.
+
+Read:
+- `BOOT.md`;
+- current roadmap/architecture/workflow/stability/Phase 9 authority;
+- prior c9 correction closeouts;
+- `docs/tasks/c9-mutation-intent-authority/{P2-live-evidence,closeout}.md`;
+- `docs/tasks/c9-greenfield-instrument-alignment/{prompt-assessment,implementation-plan,P2-live-evidence}.md`;
+- exact v1/v2 fixture metadata and current tests.
+
+Audit separately:
+
+V1 EVIDENCE PRESERVATION
+- v1 files/digests unchanged;
+- v1 runners unchanged;
+- v1 Gate B historical Not Green remains Not Green;
+- v1 acceptance behavior remains preserved.
+
+V2 INSTRUMENT SEMANTICS
+- top-level INSPECT owns preflight observation;
+- WORKFLOW contains actual progression only;
+- no title-based semantic heuristics;
+- no pre-validation work unit claims exact validation results;
+- EVIDENCE contains post-validation reporting expectations;
+- Task Prompt format remains version 1.
+
+V2 VERSIONING
+- new task/instrument versions/digests;
+- acceptance version 1 reuse is explicit and behaviorally unchanged;
+- existing fixture version/digest remains unchanged when bytes are unchanged;
+- v1 and v2 are independently runnable.
+
+RUNNER
+- v2 runner functions load only v2;
+- v1 functions still load only v1;
+- both delegate to production task/stack services.
+
+LIVE QUALIFICATION
+- Gate A inherited Green remains valid;
+- Gate B2 greenfield result;
+- Gate C2 existing-app result only if B2 allowed it;
+- all stop reasons and evidence gaps.
+
+INHERITED PRODUCTION BOUNDARIES
+- production task-stack execution;
+- evidence/budget/direct-validation/convergence controls;
+- SHA mutation preconditions;
+- INSPECT required tool call/completion;
+- exception-safe trace;
+- text framing/mutation fidelity;
+- mutation intent authority;
+- Bubblewrap containment;
+- unchanged context/runtime policy;
+- native TUI Evidence Gap unless separately resolved.
+
+Create:
+
+`docs/tasks/c9-greenfield-instrument-alignment/closeout.md`
+
+Report separately:
+- Implementation Complete: yes/no;
+- v1 Evidence Preserved: yes/no;
+- v2 Instrument Semantics Qualified: yes/no;
+- v2 Runner Qualified: yes/no;
+- Gate A Inherited Green: yes/no;
+- Gate B2 Greenfield Qualified: yes/no;
+- Gate C2 Existing-App Qualified / Not Run: yes/no/state;
+- Overall c9-greenfield-instrument-alignment Qualified: yes/no;
+- Phase 9 Ready For Owner Closeout: yes/no.
+
+QUALIFICATION RULES
+
+Phase 9 Ready For Owner Closeout is **Yes** only if:
+- Gate A inherited Green remains valid;
+- B2 Green;
+- C2 Green;
+- no new blocking production or qualification regression is observed.
+
+If Yes, explicitly state the next action is a separate `/closeout phase 9`.
+
+Do not owner-close Phase 9 inside this prompt.
+
+Do not:
+- repair implementation;
+- edit fixtures after live attempts;
+- rerun B2/C2;
+- rewrite v1 evidence;
+- open Phase 10;
+- change package version.
+
+Required proof:
+- focused v1/v2 fixture/runner tests;
+- Phase 9 integration;
+- inherited c9 affected floor;
+- `npm run typecheck`;
+- `npm run test:runner`;
+- appropriate broad characterization with unrelated OpenTUI/runtime gaps retained truthfully;
+- `git diff --check`;
+- package exactly `0.9.10`;
+- no root `package-lock.json`.

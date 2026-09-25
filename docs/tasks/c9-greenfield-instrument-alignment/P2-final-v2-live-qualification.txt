@@ -1,0 +1,171 @@
+TASK: Correction 9 / P2 — Final aligned Phase 9 larger-work qualification
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Sol Medium`.
+- Browser required: no.
+
+VERSIONING
+- Required unchanged project version: `0.9.10`.
+
+GOAL
+
+Run the final larger-work Phase 9 qualification using the aligned v2 instruments. Gate A is already Green and must not be rerun because P1 changed qualification fixtures/runners only, not production execution behavior.
+
+Read:
+- `BOOT.md`;
+- `AGENTS.md`;
+- current Phase 9 qualification authority;
+- `docs/tasks/c9-mutation-intent-authority/{P2-live-evidence,closeout}.md`;
+- `docs/tasks/c9-greenfield-instrument-alignment/{prompt-assessment,implementation-plan}.md`;
+- exact P1 candidate v2 fixtures/metadata/runners/tests;
+- repository-owned live trace/artifact code.
+
+Do not modify production code or v2 fixture/task semantics in P2.
+
+GATE A — INHERITED GREEN
+
+Record, do not rerun:
+
+Gate A qualifying evidence from `c9-mutation-intent-authority`:
+- exact 60-byte edit;
+- V1 Green;
+- completed/verified TaskState;
+- hidden acceptance Green;
+- 5 model calls;
+- 3 provider rounds;
+- zero intervention;
+- no exhaustion.
+
+State why it remains valid:
+- P1 did not change production structured execution, mutation authority, Gate A fixture, Gate A acceptance, provider/runtime policy, or stage limits.
+
+RUNTIME CONTROL FOR B2/C2
+
+Use exactly:
+
+`qwen3-coder-30b-a3b-instruct@q4_k_m`
+
+Use supported Node 26.
+
+Before live work:
+- print `MANUAL CHECK: LM Studio GPU Offload must show 26`;
+- capture REST-visible model ID, context length, eval batch, physical batch, parallel, Flash Attention, GPU KV cache, and experts;
+- do not silently change runtime/context/convergence/retry/correction/stage settings;
+- UI-only GPU Offload 26 unconfirmed remains a controlled-latency Evidence Gap, not a functional blocker.
+
+DETERMINISTIC PRE-GATE
+
+Require Green:
+- v1 immutability/digest tests;
+- v2 metadata/digest/semantic tests;
+- v2 runner tests;
+- Phase 9 integration;
+- inherited c9 production regression floor;
+- `npm run typecheck`;
+- `npm run test:runner`;
+- `git diff --check`.
+
+GATE B2 — GREENFIELD-EXPRESS-V2
+
+Run exactly one official attempt.
+
+Use:
+- `greenfield-express-v2`;
+- production `StructuredTaskStackApplicationService`;
+- unchanged dependency prerequisite: deliberate user-authorized network access and exact Express installation required by the instrument;
+- unchanged behavioral hidden acceptance version 1.
+
+Record:
+- v2 instrument version/taskStackSha256/acceptanceVersion;
+- exact dependency command/result;
+- task-by-task StackState progression;
+- each top-level INSPECT request/calls/completion;
+- provider rounds/attempts/retries;
+- model-requested/executed tools;
+- mutations;
+- declared validation attempts/results;
+- hidden acceptance;
+- context profiles/tokens/headroom;
+- task/stage/run budgets;
+- duplicate/no-progress events;
+- timing;
+- human coding intervention.
+
+B2 Green requires ALL:
+- P1/P2/P3 completed in strict order;
+- all declared validations Green;
+- final StackState completed;
+- hidden acceptance Green;
+- zero human coding intervention;
+- no task/stage/correction/run-budget exhaustion;
+- no instrument-authoring fallback/heuristic.
+
+If B2 is Not Green:
+- STOP;
+- do not run C2;
+- do not repair code or fixtures in P2;
+- do not rerun.
+
+GATE C2 — EXISTING-EXPRESS-FEATURE-V2
+
+Only after B2 Green.
+
+Run exactly one official attempt.
+
+Use:
+- `existing-express-feature-v2`;
+- exact v2 metadata but unchanged frozen fixture bytes/version 1;
+- production `StructuredTaskApplicationService`;
+- unchanged behavioral hidden acceptance version 1;
+- exact dependency/network prerequisite required by the instrument.
+
+Record:
+- instrument/task/fixture/acceptance versions and digests;
+- initial frozen fixture commit;
+- INSPECT calls/completion;
+- mutations/approvals;
+- focused and broad validation;
+- baseline preservation;
+- final TaskState;
+- hidden acceptance;
+- calls/rounds/tokens/context/budgets/timing/intervention.
+
+C2 Green requires ALL:
+- focused validation Green;
+- broad validation Green;
+- completed/verified TaskState;
+- baseline behavior preserved;
+- hidden acceptance Green;
+- zero human coding intervention;
+- no task/stage/correction/run-budget exhaustion.
+
+EVIDENCE
+
+Create:
+
+`docs/tasks/c9-greenfield-instrument-alignment/P2-live-evidence.md`
+
+Include:
+- exact candidate SHA/package;
+- inherited Gate A Green provenance;
+- runtime provenance for B2/C2;
+- deterministic pre-gate;
+- B2 result;
+- C2 only if reached;
+- v1 historical Not Green preserved;
+- v2 version/digest evidence;
+- raw calls/rounds/tokens/context/budgets/timing/intervention;
+- artifact paths;
+- Green / Not Green / Evidence Gap matrix.
+
+Do not:
+- rerun Gate A;
+- modify production code;
+- edit v1 instruments;
+- weaken hidden acceptance;
+- retune runtime/context/stage limits;
+- rerun a failed B2/C2 workload;
+- owner-close Phase 9;
+- open Phase 10.
+
+Package remains exactly `0.9.10`; no root lockfile; `git diff --check`.
