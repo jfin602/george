@@ -17,19 +17,19 @@ const SHA256_HEX = /^[a-f0-9]{64}$/;
 
 export const WORKSPACE_MUTATION_TOOL_DEFINITIONS = [
   {
-    name: 'write_file', description: 'Atomically write bounded text to a workspace file.', execution: { effect: 'workspace_mutation', replaySafety: 'not_replay_safe', source: { kind: 'builtin' } },
+    name: 'write_file', description: 'Atomically create or overwrite bounded workspace text. Overwriting an existing file requires expectedSha256 from the latest read_file.sha256; creation omits it.', execution: { effect: 'workspace_mutation', replaySafety: 'not_replay_safe', source: { kind: 'builtin' } },
     inputSchema: {
       type: 'object', properties: {
         path: { type: 'string', minLength: 1 }, content: { type: 'string', maxLength: 1024 * 1024 },
-        expectedSha256: { type: 'string', minLength: 64, maxLength: 64 },
+        expectedSha256: { type: 'string', minLength: 64, maxLength: 64, description: 'Latest observed read_file.sha256 for an existing target; omit only when creating a new file.' },
       }, required: ['path', 'content'], additionalProperties: false,
     },
   },
   {
-    name: 'apply_patch', description: 'Atomically apply bounded, unambiguous exact-text edits to a workspace text file.', execution: { effect: 'workspace_mutation', replaySafety: 'not_replay_safe', source: { kind: 'builtin' } },
+    name: 'apply_patch', description: 'Atomically apply bounded, unambiguous exact-text edits using expectedSha256 from the latest read_file.sha256.', execution: { effect: 'workspace_mutation', replaySafety: 'not_replay_safe', source: { kind: 'builtin' } },
     inputSchema: {
       type: 'object', properties: {
-        path: { type: 'string', minLength: 1 }, expectedSha256: { type: 'string', minLength: 64, maxLength: 64 },
+        path: { type: 'string', minLength: 1 }, expectedSha256: { type: 'string', minLength: 64, maxLength: 64, description: 'Latest observed read_file.sha256 for the current target.' },
         edits: {
           type: 'array', minItems: 1, maxItems: 128, items: {
             type: 'object', properties: {

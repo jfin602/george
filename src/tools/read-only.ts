@@ -1,5 +1,6 @@
 import { open, opendir, stat } from 'node:fs/promises';
 import { spawn } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { relative } from 'node:path';
 
 import {
@@ -14,7 +15,7 @@ import { ToolRegistry, type ToolDefinition } from './registry.ts';
 
 export const READ_ONLY_TOOL_DEFINITIONS = [
   {
-    name: 'read_file', description: 'Read a bounded text file from the workspace.', execution: { effect: 'local_read', replaySafety: 'replay_safe', source: { kind: 'builtin' } },
+    name: 'read_file', description: 'Read bounded text and the full current-file SHA-256 mutation precondition from a workspace file.', execution: { effect: 'local_read', replaySafety: 'replay_safe', source: { kind: 'builtin' } },
     inputSchema: { type: 'object', properties: { path: { type: 'string', minLength: 1 } }, required: ['path'], additionalProperties: false },
   },
   {
@@ -46,7 +47,7 @@ export type ReadOnlyToolCall =
   | Readonly<{ name: 'git_diff' }>;
 
 export type ReadOnlyToolResult =
-  | Readonly<{ name: 'read_file'; path: string; text: string; bytes: number; truncated: boolean }>
+  | Readonly<{ name: 'read_file'; path: string; text: string; bytes: number; truncated: boolean; sha256: string }>
   | Readonly<{
       name: 'list_directory';
       path: string;
@@ -127,6 +128,28 @@ async function boundedRead(path: string, maxBytes: number): Promise<{ text: stri
   }
 }
 
+async function boundedReadWithHash(path: string, maxBytes: number, signal?: AbortSignal): Promise<{ text: string; bytes: number; truncated: boolean; sha256: string }> {
+  const handle = await open(path, 'r');
+  try {
+    const prefix = Buffer.alloc(maxBytes);
+    const chunk = Buffer.alloc(64 * 1024);
+    const hash = createHash('sha256');
+    let total = 0;
+    for (;;) {
+      if (signal?.aborted) throw cancellationError(signal);
+      const { bytesRead } = await handle.read(chunk, 0, chunk.length, null);
+      if (bytesRead === 0) break;
+      hash.update(chunk.subarray(0, bytesRead));
+      if (total < maxBytes) chunk.copy(prefix, total, 0, Math.min(bytesRead, maxBytes - total));
+      total += bytesRead;
+    }
+    const bytes = Math.min(total, maxBytes);
+    return { text: prefix.subarray(0, bytes).toString('utf8'), bytes, truncated: total > maxBytes, sha256: hash.digest('hex') };
+  } finally {
+    await handle.close();
+  }
+}
+
 function relativePath(workspace: Workspace, path: string): string {
   return relative(workspace.root, path) || '.';
 }
@@ -199,7 +222,7 @@ export function createReadOnlyToolExecutor(
       case 'read_file': {
         const path = await resolveWorkspacePath(workspace, call.path);
         if (!(await stat(path)).isFile()) throw new GeorgeError('validation', 'Path must name a file.');
-        return { name: call.name, path: relativePath(workspace, path), ...await boundedRead(path, bounded.maxReadBytes) };
+        return { name: call.name, path: relativePath(workspace, path), ...await boundedReadWithHash(path, bounded.maxReadBytes, options.signal) };
       }
       case 'list_directory': {
         const path = await resolveWorkspacePath(workspace, call.path === '' ? '.' : call.path ?? '.');

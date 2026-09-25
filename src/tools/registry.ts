@@ -23,7 +23,7 @@ export type ToolInputSchema =
       additionalProperties: false;
     }>
   | Readonly<{ type: 'array'; items: ToolInputSchema; minItems?: number; maxItems?: number }>
-  | Readonly<{ type: 'string'; minLength?: number; maxLength?: number }>
+  | Readonly<{ type: 'string'; minLength?: number; maxLength?: number; description?: string }>
   | Readonly<{ type: 'number'; minimum?: number; maximum?: number }>
   | Readonly<{ type: 'integer'; minimum?: number; maximum?: number }>
   | Readonly<{ type: 'boolean' }>

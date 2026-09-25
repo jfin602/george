@@ -7,7 +7,7 @@ import { join } from 'node:path';
 import test from 'node:test';
 
 import { GeorgeError, resolveWorkspaceRoot } from '../../../src/core/index.ts';
-import { captureGitWorkingTreeSnapshot, createWorkspaceMutationToolExecutor } from '../../../src/tools/index.ts';
+import { captureGitWorkingTreeSnapshot, createReadOnlyToolExecutor, createWorkspaceMutationToolExecutor } from '../../../src/tools/index.ts';
 
 const hash = (text: string) => createHash('sha256').update(text).digest('hex');
 
@@ -22,22 +22,29 @@ async function tempArtifacts(root: string): Promise<string[]> {
 test('workspace mutation creates safely and overwrites only with an exact precondition', async (t) => {
   const root = await fixture();
   t.after(() => rm(root, { recursive: true, force: true }));
-  const executor = createWorkspaceMutationToolExecutor(await resolveWorkspaceRoot(root));
+  const workspace = await resolveWorkspaceRoot(root);
+  const executor = createWorkspaceMutationToolExecutor(workspace);
+  const reader = createReadOnlyToolExecutor(workspace);
   assert.deepEqual(executor.registry.registrations.map(({ name, execution }) => ({ name, effect: execution.effect })), [
     { name: 'write_file', effect: 'workspace_mutation' }, { name: 'apply_patch', effect: 'workspace_mutation' },
   ]);
+  assert.match(executor.definitions[0]!.description, /latest read_file\.sha256/);
+  assert.match(executor.definitions[1]!.description, /latest read_file\.sha256/);
+  assert.match(JSON.stringify(executor.definitions.map((definition) => definition.inputSchema)), /Latest observed read_file\.sha256/);
 
   const created = await executor.execute({ name: 'write_file', path: 'new.txt', content: 'first' });
   assert.equal(await readFile(join(root, 'new.txt'), 'utf8'), 'first');
   assert.equal(created.sha256, hash('first'));
   await chmod(join(root, 'new.txt'), 0o640);
-  const replaced = await executor.execute({ name: 'write_file', path: 'new.txt', content: 'second', expectedSha256: hash('first') });
+  const observed = await reader.execute({ name: 'read_file', path: 'new.txt' });
+  if (observed.name !== 'read_file') throw new Error('Expected read_file output.');
+  const replaced = await executor.execute({ name: 'write_file', path: 'new.txt', content: 'second', expectedSha256: observed.sha256 });
   assert.equal(await readFile(join(root, 'new.txt'), 'utf8'), 'second');
   assert.equal((await lstat(join(root, 'new.txt'))).mode & 0o777, 0o640);
   assert.equal(replaced.path, 'new.txt');
 
   await assert.rejects(
-    () => executor.execute({ name: 'write_file', path: 'new.txt', content: 'stale', expectedSha256: hash('first') }),
+    () => executor.execute({ name: 'write_file', path: 'new.txt', content: 'stale', expectedSha256: observed.sha256 }),
     (error: unknown) => error instanceof GeorgeError && error.code === 'validation',
   );
   await assert.rejects(
@@ -52,10 +59,14 @@ test('patches validate all exact edits before one atomic replacement', async (t)
   const root = await fixture();
   t.after(() => rm(root, { recursive: true, force: true }));
   await writeFile(join(root, 'patch.txt'), 'alpha beta');
-  const executor = createWorkspaceMutationToolExecutor(await resolveWorkspaceRoot(root));
+  const workspace = await resolveWorkspaceRoot(root);
+  const executor = createWorkspaceMutationToolExecutor(workspace);
+  const reader = createReadOnlyToolExecutor(workspace);
+  const observed = await reader.execute({ name: 'read_file', path: 'patch.txt' });
+  if (observed.name !== 'read_file') throw new Error('Expected read_file output.');
 
   const applied = await executor.execute({
-    name: 'apply_patch', path: 'patch.txt', expectedSha256: hash('alpha beta'),
+    name: 'apply_patch', path: 'patch.txt', expectedSha256: observed.sha256,
     edits: [{ oldText: 'alpha', newText: 'A' }, { oldText: 'beta', newText: 'B' }],
   });
   assert.equal(await readFile(join(root, 'patch.txt'), 'utf8'), 'A B');

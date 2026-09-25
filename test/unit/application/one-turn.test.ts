@@ -597,7 +597,7 @@ test('a bounded service advertises and executes only its selected canonical tool
 
   assert.deepEqual(provider.calls[0]?.request.tools.map((tool) => tool.name), ['read_file']);
   assert.deepEqual(provider.calls[1]?.request.continuation?.toolResults[0]?.result, {
-    ok: true, value: { name: 'read_file', path: 'BOOT.md', text: 'Repository boot.', bytes: 16, truncated: false },
+    ok: true, value: { name: 'read_file', path: 'BOOT.md', text: 'Repository boot.', bytes: 16, truncated: false, sha256: '895902b09706cb56ee094198f92ab50ba012e5ec5924ff25ae1322a547f977f9' },
   });
   assert.equal(events.some((event) => event.type === 'tool.completed' && event.name === 'read_file'), true);
   assert.equal(events.some((event) => event.type === 'turn.completed'), true);

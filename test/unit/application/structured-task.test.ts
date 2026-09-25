@@ -326,6 +326,7 @@ STOP CONDITIONS
   assert.equal(provider.requests[1]?.continuation?.toolResults[0]?.result.ok, true);
   assert.match(JSON.stringify(provider.requests[1]?.continuation), /INSPECTION_PAYLOAD_ONLY_9E7C/);
   assert.match(provider.requests[2]?.input ?? '', /inspection result read_file:inspect-read/);
+  assert.match(provider.requests[2]?.input ?? '', /"sha256":"[a-f0-9]{64}"/);
   assert.match(JSON.stringify(provider.requests[2]), /INSPECTION_PAYLOAD_ONLY_9E7C/);
   assert.match(JSON.stringify(provider.requests[2]), /API_TOKEN=\[redacted\]/);
   assert.doesNotMatch(JSON.stringify(provider.requests[2]), /RAW_INSPECTION_SECRET/);

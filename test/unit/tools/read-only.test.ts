@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { chmod, mkdir, mkdtemp, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -32,7 +33,10 @@ test('read-only filesystem tools bound reads, listings, and search work', async 
   });
 
   const read = await executor.execute({ name: 'read_file', path: 'long.txt' });
-  assert.deepEqual(read, { name: 'read_file', path: 'long.txt', text: '01234', bytes: 5, truncated: true });
+  assert.deepEqual(read, { name: 'read_file', path: 'long.txt', text: '01234', bytes: 5, truncated: true, sha256: createHash('sha256').update('0123456789abcdefghij').digest('hex') });
+  const normal = await executor.execute({ name: 'read_file', path: 'first.txt' });
+  assert.equal(normal.name === 'read_file' && normal.sha256, createHash('sha256').update('needle one\n').digest('hex'));
+  assert.match(executor.definitions[0]!.description, /full current-file SHA-256 mutation precondition/);
   const listing = await executor.execute({ name: 'list_directory', path: '.' });
   assert.equal(listing.name, 'list_directory');
   assert.equal(listing.entries.length, 1);
