@@ -262,6 +262,31 @@ Ordinary/medium profile pressure promotes before provider-backed semantic histor
 
 Final context diagnostics should expose adaptive/fixed mode, selected profile identity, selected budgets/headroom, final estimated provider-facing size, and bounded promotion evidence. Diagnostics remain derived observability only.
 
+### Phase 8 correction: effective agentic working set
+
+The `c8-agentic-context` correction distinguishes three different notions that must not be conflated:
+
+1. **physical context capacity** — the model/runtime window available to LM Studio;
+2. **hard provider/context safety ceilings** — George's bounded limits that prevent uncontrolled growth;
+3. **effective agentic working set** — the smaller high-signal context in which the pinned local model remains a competent, reliable coding agent.
+
+The 32,768 physical target remains valid headroom. It is not a prompt-size objective.
+
+Production profile boundaries must be justified by real coding-agent evidence rather than synthetic long-context retrieval alone. A model accepting a prompt does not establish that it can reason, plan tools, preserve instructions, and complete repository work at that size with acceptable latency/reliability.
+
+The correction therefore makes agentic competence the operating criterion:
+- preserve George invariants, current user/task intent, required tool context, and authoritative unresolved/recovery state first;
+- prefer immediate task/repository evidence over broad background material;
+- route/defer lower-value project documentation and optional defaults rather than injecting them merely because a larger profile can fit them;
+- preserve whole-source provenance and fail/defer explicitly rather than silently truncating critical text;
+- use larger envelopes only when the task genuinely requires them and the envelope has been empirically qualified;
+- retain Phase 5 semantic compaction only where its existing authority permits it;
+- retain P7's frozen-turn continuation-pressure stop before an unsafe provider request.
+
+The currently implemented ordinary/medium/large values remain historical/current `0.8.8` operating values until the correction benchmark establishes replacement evidence. The correction must not guess new values.
+
+The agentic benchmark becomes the authority for profile/routing decisions and must use real George-shaped requests: normal instructions, realistic project guidance, normal tool schemas, repository reads/searches, multi-round investigation, and edit/validation workflows. Synthetic long-context cases remain useful for raw prefill/runtime characterization but are not profile-boundary authority.
+
 
 Human-readable Markdown remains an authoring format, not a requirement that every byte be permanently injected. LLM-based summarization is not required for Phase 3 instruction assembly; any later compaction/summarization must preserve critical instructions and remain independently testable.
 
