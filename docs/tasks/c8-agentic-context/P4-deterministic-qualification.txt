@@ -1,0 +1,44 @@
+TASK: Correction 8 / P4 — Deterministic agentic-context correction qualification
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Terra High`.
+- Browser required: no.
+
+VERSIONING
+- Required unchanged project version: `0.8.8`.
+
+GOAL
+
+Qualify the exact P3 correction state deterministically and install permanent regression coverage for the defect class that motivated c8-agentic-context.
+
+Read BOOT/current contracts, c8 assessment/plan, P2 measurement evidence, P3 policy decision, and exact current benchmark/context/application/provider source/tests.
+
+Create/run deterministic qualification proving:
+
+- the agentic-context suite is distinct from the synthetic context suite;
+- configurable agentic bands and all three task families are stable and bounded;
+- benchmark records expose real context-selection/tool/timing evidence without raw source-body leakage;
+- old quick/full/context selection behavior remains intact;
+- any P3 agentic operating-limit field/policy validates and is observable;
+- adaptive selection stays deterministic and provider/tool/session neutral;
+- fixed mode remains explicit and does not silently inherit adaptive limits beyond its documented safety contract;
+- required George/current-user/tool/recovery context remains protected;
+- lower-value optional omit/defer remains explicit;
+- applicable selected project/routed/skill material is never silently lost;
+- if selected correctness-critical material exceeds the largest qualified adaptive envelope, George fails/degrades explicitly before provider execution;
+- no model call is added merely to choose/stay within an adaptive envelope;
+- Phase-3 precedence/source identity/whole-source integrity remain;
+- ordinary/medium do not use provider-backed semantic compaction as a squeeze mechanism;
+- large/fixed Phase-5 compaction/recovery remains truthful;
+- P7 frozen-turn continuation-pressure protection remains Green;
+- tool permission, canonical session, Git/user-work, and TUI authority boundaries are unchanged.
+
+If P3 preserved the old runtime policy because P2 evidence was insufficient, qualify that no unsupported policy change occurred and classify the missing operating-envelope conclusion as Evidence Gap rather than manufacturing a pass.
+
+Create `docs/tasks/c8-agentic-context/P4-deterministic-qualification-evidence.md` tied to the exact candidate with Green / Not Green / Evidence Gap per layer.
+
+Every confirmed correction defect must receive a lowest-layer executable regression guard before this prompt completes.
+
+Run focused benchmark/context/config/application/provider/recovery tests, `npm run typecheck`, `npm run test:runner`, affected broad tests, `git diff --check`, and verify no `package-lock.json`. Package version remains exactly `0.8.8`.
+
+Do not run a new production optimization experiment inside P4.
