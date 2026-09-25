@@ -1,0 +1,123 @@
+GEORGE TASK FORMAT: 1
+
+STACK: p9
+TASK: Phase 9 / P10 — Phase 9 closeout
+KIND: closeout
+
+VERSIONING
+
+The assigned project version is `0.9.10`.
+
+- Recommended configuration: `Terra Medium`.
+- Browser required: no.
+
+GOAL
+
+Perform an evidence-only formal closeout of Phase 9 from the exact P9 candidate. Reconcile implementation, deterministic qualification, mandatory Phase 8 regression replay, native/live evidence, Workspace Autonomous containment, and frozen live-work results without repairing code or relabeling gaps.
+
+READ FIRST
+
+- REQUIRED: BOOT.md
+- REQUIRED: AGENTS.md
+- REQUIRED: docs/project-overview.md
+- REQUIRED: docs/architecture.md
+- REQUIRED: docs/workflow.md
+- REQUIRED: docs/stability-contract.md
+- REQUIRED: docs/roadmap/mvp-roadmap.md
+- REQUIRED: docs/planning/p9-structured-task-execution/decision-record.md
+- REQUIRED: docs/planning/p9-structured-task-execution/task-format-v1.md
+- REQUIRED: docs/planning/p9-structured-task-execution/qualification-plan.md
+- REQUIRED: docs/phase-8-owner-closeout.md
+- REQUIRED: docs/tasks/p9/P4-phase8-regression-evidence.md
+- REQUIRED: docs/tasks/p9/P9-qualification-evidence.md
+
+INSPECT
+
+- exact current P1-P9 source and tests
+- package/version/Git candidate truth
+- TaskState/session persistence schema
+- structured orchestration/task slices/correction
+- TUI Task/Transcript state
+- effective execution/outside policy
+- bwrap sandbox path and qualification
+- frozen live-work fixtures/artifacts
+
+REQUIREMENTS
+
+- R1: Create docs/phase-9-closeout.md tied to the exact accepted implementation/qualification candidate and package 0.9.10.
+- R2: Audit Task Prompt v1 parser/fail-closed behavior, TaskState authority, durable persistence/migration, bounded provider slices, READ FIRST/INSPECT/work-unit orchestration, validation/correction/stack/resume truth.
+- R3: Preserve and compare the mandatory Phase 8 edit-plus-validation historical Not Green result and Phase 9 structured replay without erasing either.
+- R4: Audit Transcript/Task TUI deterministic/native evidence and retain Node-26/real-TTY Evidence Gap where applicable.
+- R5: Audit standard/workspace-autonomous policy, exact outside reject/ask scope, task-permission intersection, and host-process non-sandboxed fallback truth.
+- R6: Audit bwrap process containment and distinguish deterministic command construction/fail-closed behavior from actual OS-containment Green evidence.
+- R7: Audit greenfield-express-v1 and existing-express-feature-v1 raw live-work dimensions and hidden acceptance results without producing an opaque score.
+- R8: Audit inherited Phase 2-8 contracts including Phase 3 context/source integrity, Phase 5 recovery/replay safety, Phase 6 external effect boundaries, and Phase 8 P7 continuation-pressure safety.
+- R9: Record every remaining Not Green and Evidence Gap explicitly; owner acceptance is not part of this prompt.
+- R10: Do not implement fixes, retune context/runtime, open Phase 10, or alter Phase 9 planning history.
+- R11: Set package version to 0.9.10, verify diff hygiene, and keep root package-lock.json absent.
+
+INVARIANTS
+
+- I1: Closeout is evidence-only.
+- I2: A missing live/native/sandbox proof remains Evidence Gap or Not Green.
+- I3: Historical Phase 8 failures remain historical truth.
+- I4: Phase 10 cannot begin from this prompt alone.
+- I5: No package-lock.json is created.
+
+WORKFLOW
+
+W1 — Audit exact candidate and deterministic qualification
+Covers: R1, R2, R5, R6, R8
+Depends on: none
+
+W2 — Audit live/regression/longitudinal evidence
+Covers: R3, R4, R7, R9
+Depends on: W1
+
+W3 — Write formal closeout and version boundary
+Covers: R1, R9, R10, R11
+Depends on: W1, W2
+
+VALIDATION
+
+V1 — TypeScript
+Covers: R2, R5, R6, R8
+Run: npm run typecheck
+
+V2 — Runner regression
+Covers: R11
+Run: npm run test:runner
+
+V3 — Integrated Phase 9 qualification
+Covers: R2, R5, R6, R8
+Run: node --test test/integration/phase9-qualification.test.ts
+
+V4 — Diff hygiene
+Covers: R11
+Run: git diff --check
+
+STOP CONDITIONS
+
+- S1: Do not repair implementation in closeout; record any discovered defect as Not Green with the exact affected layer.
+- S2: Do not owner-close Phase 9.
+- S3: Do not open Phase 10 or change BOOT/roadmap to Phase 10.
+- S4: Do not describe provisional Phase 8 context profiles as empirically optimal.
+- S5: Do not claim completion while closeout evidence is internally inconsistent or diff/version checks fail.
+
+DELIVERABLES
+
+- D1: docs/phase-9-closeout.md.
+- D2: package.json at 0.9.10.
+- D3: Explicit Green / Not Green / Evidence Gap matrix.
+
+NON-GOALS
+
+- Implementation fixes.
+- Owner acceptance.
+- Phase 10 planning/implementation.
+- New performance experiments.
+
+EVIDENCE
+
+- Cite exact commits/artifacts/test commands in the closeout record.
+- Verify root package-lock.json is absent.
