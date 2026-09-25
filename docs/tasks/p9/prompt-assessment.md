@@ -280,7 +280,7 @@ Not Phase 9:
 ## Model policy
 
 - P1-P7: Terra High.
-- P8 security-critical containment: Terra Ultra.
+- P8 security-critical containment: Sol Medium.
 - P9 integrated/live qualification: Terra High.
 - P10 closeout: Terra Medium.
 - Browser required: no for every prompt.
