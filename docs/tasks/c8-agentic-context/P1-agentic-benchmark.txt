@@ -1,0 +1,51 @@
+TASK: Correction 8 / P1 — Agentic context benchmark instrument
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Terra High`.
+- Browser required: no.
+
+VERSIONING
+- Required unchanged project version: `0.8.8`.
+
+GOAL
+
+Add the benchmark instrument required to measure Qwen's real coding-agent working set without changing production context policy.
+
+Read `BOOT.md`, `AGENTS.md`, current product/architecture/workflow/stability/roadmap contracts, `docs/planning/c8-agentic-context/{decision-record,qualification-plan}.md`, and `docs/tasks/c8-agentic-context/{prompt-assessment,implementation-plan}.md`. Inspect exact benchmark, context, application, tool-registry, approval, validation, and benchmark-test code before editing.
+
+Keep the existing `quick`, `full`, and synthetic `context` suites behaviorally intact.
+
+Add a distinct `agentic-context` suite and a dedicated band option such as:
+
+`--agentic-context-bands 2048,4096,6144,8192,10240,12288`
+
+The option must be valid only for the agentic-context suite. Do not repurpose `--context-bands`.
+
+For each requested agentic band, generate three stable deterministic coding-agent cases:
+
+1. repository inspection — applicable project guidance, real repository read behavior, deterministic final fact;
+2. multi-round investigation — several sequential repository reads/searches where each artifact reveals the next evidence source;
+3. edit plus validation — bounded inspection, one deterministic workspace repair, and one validation command.
+
+Use real George application/provider/tool boundaries. Expose the normal built-in coding tool-schema shape used by ordinary George startup, including the ordinary Parallel Search schema if normal startup exposes it, but no benchmark case may require network access. Disable MCP/Chrome/user-plugin variability for these deterministic fixtures. Unexpected external/mutating/process calls outside the case expectation must remain visible failure evidence.
+
+Build band pressure from meaningful, distinct, deterministic George-shaped context. Do not create one giant repeated filler instruction source. Distribute context across realistic compact project guidance, routed/task-relevant material, bounded prior/history evidence, and repository facts as appropriate. Use the real assembler/application event as authority for actual assembled size; requested bands are approximate targets, not a second token calculator.
+
+Extend benchmark records/reporting with bounded context-selection evidence needed by the correction, including at least mode, selected profile, attempted profile IDs, promotion reasons, estimated tokens, provider-input budget/headroom, and a bounded category/disposition summary. Preserve existing provider usage, first output, elapsed/provider/tool/approval timing, attempts/rounds/retries, tool calls, validations, and deterministic pass/fail.
+
+If the persisted benchmark result schema changes, bump its schema version deliberately and update parser/comparison/tests without breaking prior-artifact handling unnecessarily.
+
+Do not change `src/core/config.ts` profile values, normal selector thresholds, routing policy, provider timeout, or application context behavior in P1.
+
+Required permanent regression coverage:
+- agentic suite/band CLI validation;
+- stable case generation/order;
+- fixture/source bounds;
+- normal tool-schema exposure;
+- deterministic scripted-provider execution for all three task families;
+- correct new context evidence in records/reports;
+- existing quick/full/context suite selection and behavior unchanged.
+
+Run focused benchmark/context/application tests, `npm run typecheck`, `npm run test:runner`, affected broad tests, `git diff --check`, and verify no `package-lock.json`. Package version must remain exactly `0.8.8`.
+
+If the approved correction cannot be implemented without changing the production context policy in P1, stop with `Planning needed` rather than silently broadening scope.
