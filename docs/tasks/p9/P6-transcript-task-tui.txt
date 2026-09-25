@@ -1,0 +1,123 @@
+GEORGE TASK FORMAT: 1
+
+STACK: p9
+TASK: Phase 9 / P6 — Transcript and Task OpenTUI split
+KIND: implementation
+
+VERSIONING
+
+The assigned project version is `0.9.6`.
+
+- Recommended configuration: `Terra High`.
+- Browser required: no.
+
+GOAL
+
+Refactor the OpenTUI presentation into first-class Transcript and Task views over the same application-owned state, with a persistent current-task header and composer available on both, without moving task authority into the TUI.
+
+READ FIRST
+
+- REQUIRED: BOOT.md
+- REQUIRED: AGENTS.md
+- REQUIRED: docs/project-overview.md
+- REQUIRED: docs/architecture.md
+- REQUIRED: docs/planning/p9-structured-task-execution/decision-record.md
+- REQUIRED: docs/planning/p9-structured-task-execution/qualification-plan.md
+- REQUIRED: docs/tasks/p9/implementation-plan.md
+- REQUIRED: docs/tasks/p9/P4-phase8-regression-evidence.md
+
+INSPECT
+
+- current src/tui/app.ts layout/input/selection/approval/cancellation behavior
+- current progress/work projections
+- P2-P5 TaskState/task projection/event APIs
+- existing OpenTUI tests and native launch path
+- scroll/resize/clipboard/draft behavior
+
+REQUIREMENTS
+
+- R1: Add two first-class presentation views: Transcript and Task, with visible tab/page controls and keyboard switching; add pointer/click switching where OpenTUI supports it reliably.
+- R2: Keep a compact current task/work-unit/progress/state header visible on both views; include bounded model/context/effective-access status without raw task/provider bodies.
+- R3: Keep the composer available and functional on both views with draft text preserved across switches.
+- R4: Transcript is primarily user messages and committed assistant responses; routine structured-task work rows move to Task while bounded exceptional diagnostics/approval interaction remains usable.
+- R5: Task renders goal, current work unit, requirement state, workflow/dependencies, validation attempts/current state, blockers/correction state, recent work items, and effective permission policy from application-owned projections only.
+- R6: View switching must not mutate canonical session/TaskState, provider context, approval state, task execution, or work evidence.
+- R7: Preserve approvals, allow-once/deny, cancellation, Thinking/activity, resize, scrollback, selection, clipboard, progressive final reveal, and clean terminal restoration.
+- R8: Ordinary unstructured chat remains usable and gets a sensible empty/inactive Task view.
+- R9: Keep view-specific scroll/selection state stable where OpenTUI permits it and do not force Task rendering into canonical transcript.
+- R10: Add deterministic renderer/state regression coverage and a conditional Node-26 real-TTY smoke path/evidence; Node 24 or no-TTY remains Evidence Gap, not native Green.
+- R11: Set package version to 0.9.6 and preserve all inherited TUI/transcript truth.
+
+INVARIANTS
+
+- I1: OpenTUI never parses Task Prompt v1 or owns TaskState transitions.
+- I2: Visible TaskState/work text is not injected into provider context merely because it is rendered.
+- I3: Provider-round assistant commit truth remains unchanged.
+- I4: Cancellation and approval remain available from both views.
+- I5: No package-lock.json is created.
+
+WORKFLOW
+
+W1 — Add presentation view model and persistent header projection
+Covers: R1, R2, R5, R6, R8
+Depends on: none
+
+W2 — Refactor layout into Transcript/Task pages
+Covers: R1, R3, R4, R5, R9
+Depends on: W1
+
+W3 — Preserve interaction lifecycle
+Covers: R3, R6, R7
+Depends on: W2
+
+W4 — Add deterministic and conditional native qualification
+Covers: R10, R11
+Depends on: W1, W2, W3
+
+VALIDATION
+
+V1 — TUI unit coverage
+Covers: R1, R2, R3, R4, R5, R6, R7, R8, R9, R10, R11
+Run: npm run test:tui
+
+V2 — Progress/task projection coverage
+Covers: R2, R4, R5, R6
+Run: node --test test/unit/application/progress.test.ts test/unit/tasks/*.test.ts test/unit/application/structured-task.test.ts
+
+V3 — TypeScript
+Covers: R1, R5
+Run: npm run typecheck
+
+V4 — Runner regression
+Covers: R11
+Run: npm run test:runner
+
+V5 — Diff hygiene
+Covers: R11
+Run: git diff --check
+
+STOP CONDITIONS
+
+- S1: Return Planning needed if OpenTUI would need to become authoritative task state or parse structured prompts to implement the views.
+- S2: If Node 26 or a real TTY is unavailable, record native TUI Evidence Gap and continue deterministic qualification; do not infer Green.
+- S3: Do not implement Workspace Autonomous or sandbox behavior in P6.
+- S4: Do not claim completion while deterministic TUI/typecheck/runner/diff validation is failing.
+
+DELIVERABLES
+
+- D1: Transcript/Task page UI and persistent task header.
+- D2: Preserved composer/approval/cancellation/scroll/selection behavior.
+- D3: Deterministic TUI regression coverage and native-evidence record where available.
+- D4: package.json at 0.9.6.
+
+NON-GOALS
+
+- Task authority in UI.
+- Desktop/Tauri.
+- Workspace Autonomous execution.
+- Process sandbox.
+
+EVIDENCE
+
+- Native evidence must record Node version and TTY availability.
+- Verify no root package-lock.json.
