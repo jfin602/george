@@ -336,3 +336,13 @@ export async function runExistingExpressFeatureV1(options: Omit<Extract<LiveWork
   const prompt = await readFile(join(options.instrumentRoot, 'P1-tag-feature.task.txt'), 'utf8');
   return runLiveWorkInstrument({ ...options, kind: 'single', prompt });
 }
+
+export async function runGreenfieldExpressV2(options: Omit<Extract<LiveWorkSubmission, { kind: 'stack' }>, 'kind' | 'prompts'> & Readonly<{ instrumentRoot: string }>): Promise<LiveWorkResult> {
+  const prompts = await Promise.all(['P1-scaffold.task.txt', 'P2-api.task.txt', 'P3-tests-docs-closeout.task.txt'].map((name) => readFile(join(options.instrumentRoot, name), 'utf8')));
+  return runLiveWorkInstrument({ ...options, kind: 'stack', prompts });
+}
+
+export async function runExistingExpressFeatureV2(options: Omit<Extract<LiveWorkSubmission, { kind: 'single' }>, 'kind' | 'prompt'> & Readonly<{ instrumentRoot: string }>): Promise<LiveWorkResult> {
+  const prompt = await readFile(join(options.instrumentRoot, 'P1-tag-feature.task.txt'), 'utf8');
+  return runLiveWorkInstrument({ ...options, kind: 'single', prompt });
+}

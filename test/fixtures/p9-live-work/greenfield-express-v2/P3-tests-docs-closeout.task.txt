@@ -1,0 +1,51 @@
+GEORGE TASK FORMAT: 1
+
+STACK: greenfield-express-v2
+TASK: P3 — Test and document the service
+KIND: implementation
+
+GOAL
+
+Add focused tests and concise usage documentation.
+
+INSPECT
+
+- application routes and validation
+- existing tests
+- current documentation
+
+REQUIREMENTS
+
+- R1: Add node:test coverage for health, create/list, invalid title, and done update behavior.
+- R2: Add README.md with install, test, start, and API examples.
+
+WORKFLOW
+
+W1 — Add tests and documentation
+Covers: R1, R2
+Depends on: none
+
+Preserve the implemented behavior while adding focused tests and concise usage documentation.
+
+VALIDATION
+
+V1 — Focused service tests
+Covers: R1
+Run: npm test
+
+V2 — Broad package check
+Covers: R1, R2
+Run: npm run check
+
+STOP CONDITIONS
+
+- S1: Do not claim completion while V1 or V2 is failing or unexecuted.
+
+DELIVERABLES
+
+- D1: Tested Express task API.
+- D2: README.md.
+
+EVIDENCE
+
+After George runs V1 and V2, record the exact validation results, changed files, unmet prerequisites, and final stack and task state.

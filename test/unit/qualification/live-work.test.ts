@@ -6,7 +6,7 @@ import test from 'node:test';
 
 import { StructuredTaskApplicationService, StructuredTaskStackApplicationService, createCodingWorkflowApplicationService } from '../../../src/application/index.ts';
 import { createSession, type ApplicationEvent, type ApprovalDecision, type ApprovalPort, type ApprovalRequest, type ModelProvider, type ProviderEvent, type ProviderRequest } from '../../../src/core/index.ts';
-import { createFrozenEditQualificationApproval, extractLiveWorkTrace, runGreenfieldExpressV1, runLiveWorkInstrument, writeLiveWorkArtifacts, type LiveWorkResult } from '../../../src/qualification/index.ts';
+import { createFrozenEditQualificationApproval, extractLiveWorkTrace, runExistingExpressFeatureV1, runExistingExpressFeatureV2, runGreenfieldExpressV1, runGreenfieldExpressV2, runLiveWorkInstrument, writeLiveWorkArtifacts, type LiveWorkResult } from '../../../src/qualification/index.ts';
 import { createStackState, createTaskState, parseTaskPrompt } from '../../../src/tasks/index.ts';
 
 class Provider implements ModelProvider {
@@ -170,6 +170,35 @@ test('greenfield frozen runner loads the full instrument into the production sta
   });
   assert.equal(result.qualifying, true);
   assert.deepEqual(received.map((value) => value.match(/TASK: P(\d)/)?.[1]), ['1', '2', '3']);
+});
+
+test('versioned live-work runners load only matching instruments at the production boundaries', async (t) => {
+  const workspace = await mkdtemp(join(tmpdir(), 'george-versioned-live-runner-'));
+  t.after(() => rm(workspace, { recursive: true, force: true }));
+  const fixtures = join(process.cwd(), 'test/fixtures/p9-live-work');
+  const acceptance = join(process.cwd(), 'test/acceptance/p9-live-work');
+  const stackRuns: string[][] = [];
+  const stackService = { run: async (submission: { prompts: readonly string[] }) => {
+    stackRuns.push(submission.prompts.map((value) => `${value.match(/STACK: ([^\n]+)/)?.[1]}:${value.match(/TASK: P(\d+)/)?.[1]}`));
+    return { state: { status: 'completed' }, taskCompletions: [] };
+  } } as unknown as StructuredTaskStackApplicationService;
+  const common = { humanInterventions: 0, service: stackService, session: createSession({ workspace }), runHiddenAcceptance: async () => true };
+  await runGreenfieldExpressV1({ ...common, attemptId: 'greenfield-v1', instrumentRoot: join(fixtures, 'greenfield-express-v1'), acceptancePath: join(acceptance, 'greenfield-express-v1.test.mjs') });
+  await runGreenfieldExpressV2({ ...common, attemptId: 'greenfield-v2', instrumentRoot: join(fixtures, 'greenfield-express-v2'), acceptancePath: join(acceptance, 'greenfield-express-v1.test.mjs') });
+  assert.deepEqual(stackRuns, [
+    ['greenfield-express-v1:1', 'greenfield-express-v1:2', 'greenfield-express-v1:3'],
+    ['greenfield-express-v2:1', 'greenfield-express-v2:2', 'greenfield-express-v2:3'],
+  ]);
+
+  const singleRuns: string[] = [];
+  const singleService = { run: async (submission: { input: string }) => {
+    singleRuns.push(submission.input.match(/STACK: ([^\n]+)/)?.[1] ?? '');
+    throw new Error('captured fixture');
+  } } as unknown as StructuredTaskApplicationService;
+  const singleCommon = { humanInterventions: 0, service: singleService, runHiddenAcceptance: async () => true };
+  await runExistingExpressFeatureV1({ ...singleCommon, attemptId: 'existing-v1', session: createSession({ workspace }), instrumentRoot: join(fixtures, 'existing-express-feature-v1'), acceptancePath: join(acceptance, 'existing-express-feature-v1.test.mjs') });
+  await runExistingExpressFeatureV2({ ...singleCommon, attemptId: 'existing-v2', session: createSession({ workspace }), instrumentRoot: join(fixtures, 'existing-express-feature-v2'), acceptancePath: join(acceptance, 'existing-express-feature-v1.test.mjs') });
+  assert.deepEqual(singleRuns, ['existing-express-feature-v1', 'existing-express-feature-v2']);
 });
 
 test('live trace uses typed diagnostics, pairs tools, retains mutation and safe task projections, and tolerates missing or future evidence', () => {

@@ -1,0 +1,12 @@
+{
+  "instrument": "existing-express-feature-v2",
+  "version": 2,
+  "taskFormat": 1,
+  "taskStackSha256": "66f262fd8f73171cdf5fc023d2be3a5032569fee9ebd8041241abcaf1c0eb0e9",
+  "fixtureVersion": 1,
+  "fixtureSourceSha256": "45856b10bfe4ff3f14e1893da22b9a88b1c3334d3923d2417aee0c09e94a5aba",
+  "acceptance": "existing-express-feature-v1.test.mjs",
+  "acceptancePath": "test/acceptance/p9-live-work/existing-express-feature-v1.test.mjs",
+  "acceptanceVersion": 1,
+  "dependencyPrerequisite": "user-approved network access and npm install"
+}

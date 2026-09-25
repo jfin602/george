@@ -1,0 +1,10 @@
+{
+  "instrument": "greenfield-express-v2",
+  "version": 2,
+  "taskFormat": 1,
+  "taskStackSha256": "a8497efe8f26862c782bb8fb9a12201993df6175a30a5bf68a5149dc832c7618",
+  "acceptance": "greenfield-express-v1.test.mjs",
+  "acceptancePath": "test/acceptance/p9-live-work/greenfield-express-v1.test.mjs",
+  "acceptanceVersion": 1,
+  "dependencyPrerequisite": "user-approved network access and npm install express@5.1.0"
+}

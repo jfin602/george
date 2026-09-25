@@ -1,0 +1,49 @@
+GEORGE TASK FORMAT: 1
+
+STACK: greenfield-express-v2
+TASK: P1 — Scaffold the service
+KIND: implementation
+
+GOAL
+
+Create a small ESM Express task service in this clean repository.
+
+INSPECT
+
+- clean repository structure
+- package and dependency state
+- Git baseline
+
+REQUIREMENTS
+
+- R1: Create package.json using Express 5.1.0 and ESM with test and start scripts.
+- R2: Create src/app.js exporting createApp() and src/server.js that listens on PORT or 3000.
+- R3: Dependency installation is only allowed after the user explicitly approves network access.
+
+WORKFLOW
+
+W1 — Create the minimal application skeleton
+Covers: R1, R2, R3
+Depends on: none
+
+Create the application files without adding unrelated infrastructure.
+
+VALIDATION
+
+V1 — Package syntax
+Covers: R1, R2, R3
+Run: node --check src/app.js
+
+STOP CONDITIONS
+
+- S1: If network approval or npm registry access is unavailable, stop with Evidence Gap and do not substitute a fake Express implementation.
+- S2: Do not claim completion while V1 is failing or unexecuted.
+
+PERMISSIONS
+
+- Workspace: autonomous
+- Network: ask
+
+EVIDENCE
+
+Record the user network decision, dependency-install result, Git baseline, changed files, exact V1 result, unmet prerequisites, and final task state after George runs validation.

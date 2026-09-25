@@ -1,0 +1,11 @@
+{
+  "name": "existing-express-feature-v1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test test/*.test.js"
+  },
+  "dependencies": {
+    "express": "5.1.0"
+  }
+}
