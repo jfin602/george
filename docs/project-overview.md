@@ -50,9 +50,13 @@ Project documentation should be routed or retrieved when relevant instead of bei
 
 ### Structured task execution
 
-George's planned Phase 9 execution model uses versioned constrained-natural-language task prompts rather than relying on the coding model to infer requirements, workflow ordering, validation, and stop conditions from an unstructured implementation memo.
+Phase 9 is the current execution phase. It uses versioned constrained-natural-language task prompts rather than relying on the coding model to infer requirements, workflow ordering, validation, and stop conditions from an unstructured implementation memo.
 
 A structured task is parsed into application/core-owned requirements, work units, validation gates, stop conditions, correction state, and durable task progress. The model remains responsible for code understanding, implementation choices, and debugging inside the current bounded work unit. George remains responsible for deterministic orchestration and completion truth.
+
+The complete TaskState is canonical George state, not automatically model context. George should normally send only the smallest sufficient current-work-unit slice: applicable requirements/invariants, active validation/stop conditions, relevant repository evidence, and bounded correction evidence. Completed unrelated work and stale validation history remain durable without being repeated in every provider request.
+
+Phase 9 inherits Phase 8's unresolved agentic-context evidence: no healthy all-family envelope was established, so task slicing must not depend on a guessed new context threshold. The existing profile values remain provisional inherited policy until later evidence justifies a change.
 
 Structured task text cannot grant permissions or replace higher-precedence George/user policy. Invalid structured prompts fail closed rather than being silently reinterpreted.
 
@@ -100,7 +104,7 @@ George may constrain a process tool's working directory, arguments, runtime, out
 
 The product must not claim that `cwd` containment alone prevents an approved process from accessing files, processes, or networks available to that user.
 
-Phase 9 may introduce a separate OS-enforced process-containment path for Workspace Autonomous execution. Automatic process execution is permitted only when that sandbox is actually established and qualified. If sandbox initialization is unavailable/fails, George must fail closed or use the existing approval-required non-sandboxed host-process path; it must never relabel cwd-only execution as sandboxed.
+Phase 9 introduces a separate OS-enforced process-containment path for Workspace Autonomous execution. Automatic process execution is permitted only when that sandbox is actually established and qualified. It must not be implemented by simply auto-approving the existing non-sandboxed host `run_process` path. If sandbox initialization is unavailable/fails, George must fail closed or use the existing approval-required non-sandboxed host-process path; it must never relabel cwd-only execution as sandboxed.
 
 ### Recoverable agent loop
 
