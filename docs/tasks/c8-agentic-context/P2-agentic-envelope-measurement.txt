@@ -1,0 +1,78 @@
+TASK: Correction 8 / P2 — Empirical agentic working-set measurement
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Terra High`.
+- Browser required: no.
+
+VERSIONING
+- Required unchanged project version: `0.8.8`.
+
+GOAL
+
+Measure the pinned Qwen/LM Studio coding-agent envelope with the P1 agentic-context suite. This prompt produces evidence only; it must not change production context policy.
+
+Read BOOT/current contracts, the c8 decision/qualification records, P1 source/tests, and historical Phase-8 performance evidence.
+
+First verify the repository is clean and package version is `0.8.8`.
+
+Before the live series, run:
+
+```bash
+echo "MANUAL CHECK: LM Studio GPU Offload must show 26" && \
+curl -fsS http://127.0.0.1:1234/api/v1/models | jq '
+.models[]
+| select(.key == "qwen3-coder-30b-a3b-instruct@q4_k_m")
+| {
+    key,
+    loaded_instances: [
+      .loaded_instances[]
+      | {
+          id,
+          context_length: .config.context_length,
+          eval_batch_size: .config.eval_batch_size,
+          physical_batch_size: .config.physical_batch_size,
+          parallel: .config.parallel,
+          flash_attention: .config.flash_attention,
+          offload_kv_cache_to_gpu: .config.offload_kv_cache_to_gpu,
+          num_experts: .config.num_experts
+        }
+    ]
+  }
+'
+```
+
+Record GPU Offload 26 as confirmed only if independently observed in the LM Studio UI; otherwise record it as unconfirmed and do not call latency comparisons fully controlled.
+
+Expected REST-visible control is 32,768 context, eval batch 2,048, physical batch 512, parallel 1, Flash Attention enabled, GPU KV offload enabled, experts 8.
+
+Run the exploratory sweep ONE BAND AT A TIME with one repetition:
+
+```bash
+npm run benchmark -- --suite agentic-context --agentic-context-bands 2048 --repetitions 1 --label c8-agentic-explore-2k
+npm run benchmark -- --suite agentic-context --agentic-context-bands 4096 --repetitions 1 --label c8-agentic-explore-4k
+npm run benchmark -- --suite agentic-context --agentic-context-bands 6144 --repetitions 1 --label c8-agentic-explore-6k
+npm run benchmark -- --suite agentic-context --agentic-context-bands 8192 --repetitions 1 --label c8-agentic-explore-8k
+npm run benchmark -- --suite agentic-context --agentic-context-bands 10240 --repetitions 1 --label c8-agentic-explore-10k
+npm run benchmark -- --suite agentic-context --agentic-context-bands 12288 --repetitions 1 --label c8-agentic-explore-12k
+```
+
+Do not blindly run all six. Ascend only while the previous band produced usable controlled evidence. Stop after the first material capability/latency cliff or invalid LM Studio runtime state. Do not burn repeated 120-second timeouts just to complete a table.
+
+A material cliff includes repeated/clear timeout behavior, major first-useful-output degradation, deterministic task failure attributable to request shape/context, tool-plan collapse, materially worse duplicate/unrequested tool behavior, or failure to preserve required task/project facts. One LM Studio crash/disconnect is not by itself a context threshold.
+
+If a largest healthy candidate and next materially worse region are established, confirm each with at most two repetitions using the same suite and a clear confirmation label. Do not run large batches.
+
+Create `docs/tasks/c8-agentic-context/P2-agentic-envelope-evidence.md`.
+
+For every attempted run record exact artifact, runtime provenance, requested and actual estimated/provider input, task-family pass/fail, expected/observed tools, duplicate/unrequested calls, first useful output, provider/workflow timing, provider calls/retries/timeouts, profile/promotion/omission/defer/compaction evidence, and Green / Not Green / Evidence Gap truth.
+
+The evidence record must explicitly state:
+- largest empirically healthy working-set region, if any;
+- next materially worse/risk region, if any;
+- whether evidence is sufficient for P3 to change production policy.
+
+Do not change profile values, selector logic, context assembly, provider timeout, or production runtime behavior.
+
+Run `npm run typecheck`, `npm run test:runner`, focused benchmark tests, `git diff --check`, and verify no `package-lock.json`. Package version remains `0.8.8`.
+
+If live runtime evidence is unavailable or invalid, record the Evidence Gap truth. Do not invent replacement profile numbers.
