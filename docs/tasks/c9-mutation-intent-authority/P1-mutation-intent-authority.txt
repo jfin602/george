@@ -1,0 +1,198 @@
+TASK: Correction 9 / P1 — Mutation intent authority and fair Gate A approval
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Sol High`.
+- Browser required: no.
+
+VERSIONING
+- Required unchanged project version: `0.9.10`.
+
+GOAL
+
+Separate model-requested exceptional mutation intent from executable authority, and make the frozen Phase 9 Gate A approval envelope fair to both qualified mutation primitives without rewriting the historical benchmark.
+
+Read:
+- `BOOT.md`;
+- `AGENTS.md`;
+- current architecture/workflow/stability contracts;
+- current Phase 9 decision/qualification authority;
+- `docs/tasks/c9-text-file-edit-fidelity/{P2-live-evidence,closeout}.md`;
+- `docs/tasks/c9-mutation-intent-authority/{prompt-assessment,implementation-plan}.md`;
+- exact `ApprovalRequest` type and all approval consumers;
+- AgentLoop approval construction/execution;
+- mutation tool schemas/executor;
+- benchmark approval helper;
+- qualification live-work code;
+- affected tests.
+
+Preserve:
+- Task Prompt v1;
+- current mutation byte semantics;
+- text-framing classifier and fidelity guard;
+- SHA/current-content preconditions;
+- structured INSPECT and stage completion;
+- production StackState/task-stack behavior;
+- task-wide budgets/direct validation/convergence limits;
+- exception-safe live trace;
+- Bubblewrap/TUI/context/runtime behavior.
+
+MUTATION INTENT != AUTHORITY
+
+Keep the existing model-visible field:
+
+`allowTextFramingChange?: boolean`
+
+Do not rename or remove it in this correction.
+
+For model-originated calls through the canonical application loop, interpret:
+
+`allowTextFramingChange: true`
+
+as a request/acknowledgement of exceptional text-framing-change intent, NOT as executable permission.
+
+The low-level mutation executor may continue honoring the flag for already-authorized trusted direct callers. Do not move approval logic into the filesystem executor.
+
+APPROVAL REQUEST CONTRACT
+
+Extend `ApprovalRequest` with the smallest bounded optional mutation projection.
+
+Preferred shape:
+
+`mutation?: { intent: 'text_framing_change'; warning: string }`
+
+Requirements:
+- stable typed intent;
+- George-owned bounded warning;
+- no write body;
+- no patch edit body;
+- no raw generic argument JSON;
+- no secrets.
+
+Use a concise warning equivalent to:
+
+`Existing text framing will change if this mutation is allowed.`
+
+APPLICATION APPROVAL CONSTRUCTION
+
+After ToolRegistry validation, detect `write_file` / `apply_patch` calls whose validated arguments contain `allowTextFramingChange === true`.
+
+Inside the workspace:
+
+STANDARD MODE
+- preserve the existing mutation approval requirement;
+- include the bounded `mutation.intent=text_framing_change` projection in that approval request.
+
+WORKSPACE AUTONOMOUS
+- ordinary qualified workspace mutations remain auto-runnable exactly as today;
+- framing-change intent MUST produce an approval request instead of auto-running;
+- only `allow_once` may authorize dispatch.
+
+OUTSIDE WORKSPACE
+- preserve reject/ask semantics;
+- if an outside mutation approval is generated and the same exceptional intent is present, include the bounded mutation projection;
+- framing intent must not weaken outside-workspace authority.
+
+DENIAL
+
+If approval is denied:
+- do not dispatch the mutation executor;
+- do not emit successful mutation/recovery intent;
+- preserve target bytes/SHA;
+- emit normal `approval.denied` and `tool.failed code=denied`;
+- allow the provider continuation to recover normally.
+
+Do not treat model narration or Task Prompt text as approval.
+
+QUALIFICATION-SPECIFIC GATE A APPROVAL
+
+Do NOT broaden the historical agentic benchmark definition or expected tool set.
+
+Add a repository-owned Phase 9 frozen-edit qualification approval helper in the qualification layer.
+
+Preferred API shape:
+
+`createFrozenEditQualificationApproval({ targetPath, validation })`
+
+or a comparably narrow name.
+
+It must return an `ApprovalPort` that:
+
+- allows `write_file` on exactly the approved target ONLY when no exceptional mutation intent is present;
+- allows `apply_patch` on exactly the approved target ONLY when no exceptional mutation intent is present;
+- denies unrelated mutation targets;
+- denies any `text_framing_change` intent;
+- allows only the exact expected validation executable/argv;
+- denies every other request.
+
+Do not rely on model-visible file content to decide approval.
+
+If `createBenchmarkApproval` is changed at all:
+- it may be hardened to deny exceptional mutation intent;
+- it must NOT start allowing `apply_patch`;
+- historical benchmark expected tools/cases remain unchanged.
+
+PERMANENT REGRESSION COVERAGE
+
+Add executable tests proving at least:
+
+APPROVAL CONTRACT
+1. ordinary Standard write request remains unchanged except optional field absence;
+2. Standard framing-change write includes bounded mutation intent;
+3. Standard framing-change patch includes bounded mutation intent;
+4. ApprovalRequest contains no write/patch body;
+5. Workspace Autonomous ordinary write still runs without approval;
+6. Workspace Autonomous ordinary patch still runs without approval;
+7. Workspace Autonomous framing-change write requires approval;
+8. Workspace Autonomous framing-change patch requires approval;
+9. denial under autonomous leaves target unchanged and returns denied tool evidence;
+10. allow-once under autonomous permits the exact requested acknowledged change;
+11. outside reject remains reject;
+12. outside ask carries mutation intent without broadening target authority;
+13. repository/task/model instructions cannot suppress the exceptional approval.
+
+QUALIFICATION HELPER
+14. exact-target ordinary `write_file` is allowed;
+15. exact-target ordinary `apply_patch` is allowed;
+16. unrelated target write/patch is denied;
+17. framing-change intent is denied regardless of tool;
+18. exact validation process is allowed;
+19. unrelated process/tool is denied.
+
+EXACT LATEST FAILURE REPLAY
+20. first 59-byte write reaches normal approval then fails at framing guard;
+21. file/SHA remain unchanged;
+22. model rereads;
+23. exact same-target `apply_patch` is approval-allowed;
+24. patch produces exact required 60-byte content;
+25. George-owned V1 passes;
+26. TaskState completes;
+27. hidden/exact fixture acceptance matches.
+
+AUTHORITY NEGATIVE
+28. if the scripted model requests `allowTextFramingChange: true`, qualification approval denies it before dispatch;
+29. file remains unchanged after that denial;
+30. model can subsequently recover with the safe patch.
+
+Run all relevant existing permission/approval/Workspace Autonomous/Bubblewrap regressions.
+
+VALIDATION
+
+Run:
+- focused approval/application tests;
+- qualification/live-work tests;
+- benchmark helper regressions;
+- mutation/framing tests;
+- frozen deterministic Phase 8 structured replay;
+- Phase 9 integration;
+- inherited c9 structured/stack/state/budget/recovery tests;
+- `npm run typecheck`;
+- `npm run test:runner`;
+- `git diff --check`.
+
+Verify:
+- package remains exactly `0.9.10`;
+- no root `package-lock.json`.
+
+Do not run official live Gate A in P1.
+
+If the change would require weakening Workspace Autonomous broadly, exposing raw mutation bodies in approval state, or changing historical benchmark semantics, stop with `Planning needed`.

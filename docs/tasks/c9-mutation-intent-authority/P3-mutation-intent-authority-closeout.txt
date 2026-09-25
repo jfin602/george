@@ -1,0 +1,133 @@
+TASK: Correction 9 / P3 — Mutation intent authority correction closeout
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Sol Medium`.
+- Browser required: no.
+
+VERSIONING
+- Required unchanged project version: `0.9.10`.
+
+GOAL
+
+Perform an evidence-only closeout of `c9-mutation-intent-authority` from the exact P2 candidate and determine whether Phase 9 is ready for separate owner closeout.
+
+Read:
+- `BOOT.md`;
+- current architecture/workflow/stability/roadmap contracts;
+- current Phase 9 authority and closeout;
+- all prior c9 correction closeouts;
+- `docs/tasks/c9-mutation-intent-authority/{prompt-assessment,implementation-plan,P2-live-evidence}.md`;
+- exact current source/tests.
+
+Audit separately:
+
+MUTATION INTENT AUTHORITY
+- model framing acknowledgement is intent, not authority;
+- bounded ApprovalRequest mutation projection;
+- no mutation body leakage;
+- Standard approval behavior;
+- Workspace Autonomous exceptional-intent approval;
+- denial before dispatch;
+- unchanged target after denial;
+- allow-once semantics;
+- outside-workspace policy preservation;
+- direct trusted executor boundary.
+
+FAIR FROZEN GATE A APPROVAL
+- separate qualification helper exists;
+- exact target write allowed;
+- exact target patch allowed;
+- unrelated target denied;
+- framing-change intent denied;
+- only exact expected validation process allowed;
+- historical benchmark case/tool expectations unchanged.
+
+LIVE GATE A
+- approval sequence;
+- safe patch/write recovery;
+- exact 60-byte result;
+- V1;
+- TaskState;
+- hidden acceptance;
+- calls/rounds/tokens/context/budgets/timing/intervention.
+
+LIVE GATE B
+- only if A permitted it;
+- production StackState/task order;
+- validations;
+- dependency/network authorization;
+- hidden acceptance;
+- intervention/exhaustion truth.
+
+LIVE GATE C
+- only if B permitted it;
+- focused/broad validation;
+- baseline preservation;
+- TaskState;
+- hidden acceptance;
+- intervention/exhaustion truth.
+
+INHERITED QUALIFIED BOUNDARIES
+- production task-stack execution;
+- structured evidence/convergence/budget/direct validation;
+- SHA mutation preconditions;
+- mandatory INSPECT execution;
+- successful-tool-round INSPECT completion;
+- exception-safe live trace;
+- text-framing evidence;
+- mutation fidelity guard;
+- Bubblewrap containment;
+- unchanged context/runtime policy;
+- native TUI Evidence Gap unless independently resolved.
+
+Create:
+
+`docs/tasks/c9-mutation-intent-authority/closeout.md`
+
+Report separately:
+- Implementation Complete: yes/no;
+- Mutation Intent Authority Qualified: yes/no;
+- Fair Gate A Approval Qualified: yes/no;
+- Gate A Qwen Work-Unit Convergence Qualified: yes/no;
+- Gate B Greenfield Qualified / Not Run;
+- Gate C Existing-App Qualified / Not Run;
+- Overall c9-mutation-intent-authority Qualified: yes/no;
+- Phase 9 Ready For Owner Closeout: yes/no.
+
+QUALIFICATION RULES
+
+Mutation Intent Authority Qualified requires deterministic proof that model-originated framing-change intent cannot self-authorize and Workspace Autonomous still asks.
+
+Fair Gate A Approval Qualified requires deterministic proof that the Phase 9 qualification helper allows safe same-target write/patch, denies unrelated targets and framing overrides, and leaves the historical benchmark semantics unchanged.
+
+Gate A Qualified requires all existing locked exact-edit/call/round/intervention/state criteria Green.
+
+Phase 9 Ready For Owner Closeout is Yes only if:
+- Gate A Green;
+- Gate B Green;
+- Gate C Green;
+- no new blocking regression was observed.
+
+Do not waive A/B/C.
+
+Do not:
+- repair implementation;
+- rerun live workloads;
+- rewrite historical failures;
+- owner-close Phase 9;
+- open Phase 10;
+- change package version.
+
+Required proof:
+- focused P1 regressions;
+- frozen deterministic replay;
+- Phase 9 integration;
+- inherited c9 affected floor;
+- `npm run typecheck`;
+- `npm run test:runner`;
+- appropriate broad characterization with unrelated evidence gaps retained truthfully;
+- `git diff --check`;
+- package exactly `0.9.10`;
+- no root `package-lock.json`.
+
+Owner acceptance and `/closeout phase 9` remain separate actions.
