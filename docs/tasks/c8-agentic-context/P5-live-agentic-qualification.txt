@@ -1,0 +1,74 @@
+TASK: Correction 8 / P5 — Real George agentic-context qualification
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Terra High`.
+- Browser required: no.
+
+VERSIONING
+- Required unchanged project version: `0.8.8`.
+
+GOAL
+
+Qualify the exact P4 candidate with real LM Studio/Qwen coding-agent workloads. Do not introduce another optimization variable.
+
+Read BOOT/current contracts, c8 decision/qualification records, P2-P4 evidence, exact current source/tests, and historical Phase-8 live evidence.
+
+Before live work run:
+
+```bash
+echo "MANUAL CHECK: LM Studio GPU Offload must show 26" && \
+curl -fsS http://127.0.0.1:1234/api/v1/models | jq '
+.models[]
+| select(.key == "qwen3-coder-30b-a3b-instruct@q4_k_m")
+| {
+    key,
+    loaded_instances: [
+      .loaded_instances[]
+      | {
+          id,
+          context_length: .config.context_length,
+          eval_batch_size: .config.eval_batch_size,
+          physical_batch_size: .config.physical_batch_size,
+          parallel: .config.parallel,
+          flash_attention: .config.flash_attention,
+          offload_kv_cache_to_gpu: .config.offload_kv_cache_to_gpu,
+          num_experts: .config.num_experts
+        }
+    ]
+  }
+'
+```
+
+Expected REST-visible control: context 32,768; eval batch 2,048; physical batch 512; parallel 1; Flash Attention true; GPU KV offload true; experts 8. Record main GPU Offload 26 as confirmed only with independent UI observation.
+
+Use the P1 agentic-context benchmark, not the synthetic context suite, as the primary live capability instrument.
+
+If P2/P3 established an accepted healthy region:
+- run one representative smaller/ordinary band;
+- run the accepted healthy band;
+- run the next risk band only if runtime control is healthy and the comparison is useful;
+- use at least inspection, multi-round investigation, and edit+validation evidence;
+- use at most two repetitions at a confirmation point.
+
+If P2/P3 did not establish an accepted envelope, do not invent one. Run only the smallest bounded diagnostic live work needed to clarify the outstanding Evidence Gap and preserve the policy-decision truth.
+
+Record deterministic task correctness, expected/observed tool names/counts, duplicate/unrequested tools, first useful output, provider/workflow latency, provider attempts/rounds/retries/timeouts, provider usage, selected context/profile/promotion/omission/defer/compaction evidence.
+
+When a usable real TTY and Node 26 are available, also run a bounded real George/OpenTUI smoke against a disposable fixture workspace:
+- launch the supported `npm run start -- <workspace>` path;
+- submit a small read-only repository task;
+- observe context/activity/work/final output/Ready;
+- exit with Escape while idle;
+- verify terminal restoration and unchanged George worktree.
+
+Use isolated temporary HOME/XDG state for TUI evidence. Do not mutate the user's normal George session state.
+
+Re-exercise a live frozen-turn continuation-pressure scenario only if the provider remains healthy enough to produce meaningful multi-round evidence. A broken/stalled runtime is not a context-policy threshold.
+
+Create `docs/tasks/c8-agentic-context/P5-live-qualification-evidence.md` with exact candidate/runtime/artifact provenance and Green / Not Green / Evidence Gap truth.
+
+Do not rerun failures until they disappear. Preserve every meaningful failed/invalid observation and distinguish runtime failure from context-policy failure.
+
+Run `npm run typecheck`, `npm run test:runner`, focused affected tests, `git diff --check`, and verify no `package-lock.json`. Package version remains `0.8.8`.
+
+Do not owner-close Phase 8 or advance Phase 9.
