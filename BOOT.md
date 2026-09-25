@@ -72,42 +72,38 @@ Phase 8 package transition: `cc7fd7a16d95e3057598c8fd8152979e8a25d79c` at packag
 
 The owner explicitly accepts the recorded Phase 7 final restored-runtime Not Green verification for roadmap progression. It remains Not Green and is not retroactively treated as Green. The accepted Phase 7 steady-state control is the separately Green `parallel=1` warm verification at approximately 1.83 s average provider round.
 
-**Phase 8 — Context Throughput Optimization — remains the current gate under correction `c8-agentic-context`.**
+**Phase 8 — Context Throughput Optimization — is owner-closed.**
 
-Phase 8 implementation reached package `0.8.8` and is deterministically qualified for adaptive/fixed selection, precedence/routing preservation, large-profile compaction/recovery, diagnostics, and frozen-turn continuation-pressure safety. Phase 8 is **not owner-closed**.
+Accepted Phase 8 implementation package: `0.8.8`.  
+Original Phase 8 implementation closeout candidate: `07241c94ed3cbc0dafc969f0a59676b39e232fb0`.  
+Agentic-context correction closeout marker: `398b888f6b76b6a67b9a22a9137cf27fd20ab129`.  
+Phase 8 owner closeout: `docs/phase-8-owner-closeout.md`.  
+Phase 9 baseline transition: `d7c18231ac4edfa7e58618453f8eff20be1fe0db` at package `0.9.0`.
 
-The live follow-up exposed that the synthetic long-context ladder is not sufficient authority for real coding-agent profile boundaries. Real George request shapes with substantial instruction-channel material and normal tool schemas showed much worse latency than similarly sized synthetic long-context cases, while the exact cause remained unresolved because later direct controls lost a healthy LM Studio runtime.
+The owner explicitly accepts the recorded Phase 8 `c8-agentic-context` Not Green / Evidence Gap state for roadmap progression. That acceptance does not rewrite the failed edit-plus-validation workload, missing healthy agentic envelope, missing adjacent risk/cliff region, unconfirmed GPU Offload 26 control, or correction-time Node-26/native-TTY gaps into Green.
 
-Current correction authority:
-- correction decision: `docs/planning/c8-agentic-context/decision-record.md`;
-- correction qualification: `docs/planning/c8-agentic-context/qualification-plan.md`;
-- original Phase 8 decision/history: `docs/planning/p8-context-throughput-optimization/decision-record.md`;
-- measurement/evidence baseline: `docs/planning/p8-context-throughput-optimization/initial-baseline.md`;
-- formal `0.8.8` evidence closeout: `docs/phase-8-closeout.md`;
-- performance campaign worksheet: `docs/planning/performance-benchmarking-worksheet.md`.
+Phase 8 carries forward:
+- deterministic adaptive/fixed context selection and diagnostics;
+- Phase 3 precedence/provenance/source-integrity rules;
+- Phase 5 compaction/recovery authority;
+- P7 frozen-turn continuation-pressure safety;
+- the `agentic-context` benchmark as the real coding-agent measurement instrument;
+- the existing ordinary/medium/large profile values as provisional inherited operating policy rather than empirically optimal agentic envelopes.
 
-The current gate is **effective agentic working-set measurement and correction**. George must optimize for coding-task correctness, tool-use reliability, and reasonable latency inside the smallest high-signal working set the pinned local model can use competently. Physical 32k context remains headroom/emergency capacity, not a fill target.
-
-Do not guess replacement ordinary/medium/large values before the real agentic benchmark establishes a healthy operating envelope. Preserve the qualified Phase 8 adaptive/fixed, precedence, recovery, and continuation-pressure mechanisms while correcting measurement and routing/profile policy.
-
-Continue the benchmark-gated optimization loop:
-
-`last accepted baseline -> one bounded context optimization -> agentic benchmark -> accept/revise/revert -> new baseline`
-
-Do not stack multiple unmeasured context changes.
-
-## Next planned phase
-
-**Phase 9 — Structured Task Execution + Workspace Autonomy** is the approved next phase after Phase 8 closes. It must not begin implementation until `c8-agentic-context` is implemented, qualified, and Phase 8 is formally owner-closed/accepted.
+**Phase 9 — Structured Task Execution + Workspace Autonomy — is the current roadmap gate.**
 
 Phase 9 authority:
 - decision record: `docs/planning/p9-structured-task-execution/decision-record.md`;
 - task grammar: `docs/planning/p9-structured-task-execution/task-format-v1.md`;
 - qualification plan: `docs/planning/p9-structured-task-execution/qualification-plan.md`.
 
-Phase 9 introduces George Task Prompt v1, application-owned structured task/validation/correction state, Transcript/Task TUI separation, and sandbox-backed Workspace Autonomous execution with outside-workspace `reject | ask` policy. The previously planned Agent Loop Throughput phase moves to Phase 10; later roadmap phases shift by one.
+Phase 9 begins from package baseline `0.9.0`.
 
-Historical Phase 1-8 prompts/evidence are not renumbered or rewritten because of this forward roadmap change.
+Phase 9 moves deterministic requirements, work-unit/dependency state, validation truth, stop/correction semantics, durable task-stack state, Transcript/Task presentation, and Workspace Autonomous policy into George-owned application/core behavior while preserving Phase 2-8 trust, permission, context, recovery, and evidence contracts.
+
+The failed Phase 8 agentic edit/validation workload must remain visible longitudinal evidence. Phase 9 must not claim that structured execution fixes it until the Phase 9 live-work instruments and qualification evidence actually demonstrate improvement.
+
+Historical Phase 1-8 prompts/evidence are not renumbered or rewritten.
 
 ## Core premise
 
@@ -144,8 +140,8 @@ Read:
 - stability/testing: `docs/stability-contract.md`;
 - roadmap: `docs/roadmap/mvp-roadmap.md`;
 - Living Project Map / Software Graph, when relevant: `docs/planning/living-project-map/decision-record.md` (then its graph, interaction, and qualification companions as needed);
-- Phase 8 correction authority: `docs/planning/c8-agentic-context/decision-record.md`, `docs/planning/c8-agentic-context/qualification-plan.md`, plus historical `docs/planning/p8-context-throughput-optimization/decision-record.md`, `docs/planning/p8-context-throughput-optimization/initial-baseline.md`, `docs/phase-8-closeout.md`, `docs/planning/performance-benchmarking-worksheet.md`, and `docs/roadmap/mvp-roadmap.md`;
-- planned Phase 9 authority: `docs/planning/p9-structured-task-execution/decision-record.md`, `docs/planning/p9-structured-task-execution/task-format-v1.md`, and `docs/planning/p9-structured-task-execution/qualification-plan.md`;
+- current Phase 9 authority: `docs/planning/p9-structured-task-execution/decision-record.md`, `docs/planning/p9-structured-task-execution/task-format-v1.md`, and `docs/planning/p9-structured-task-execution/qualification-plan.md`;
+- Phase 8 closeout/history when needed: `docs/phase-8-closeout.md`, `docs/phase-8-owner-closeout.md`, `docs/tasks/c8-agentic-context/closeout.md`, `docs/planning/c8-agentic-context/decision-record.md`, `docs/planning/c8-agentic-context/qualification-plan.md`, `docs/planning/p8-context-throughput-optimization/decision-record.md`, `docs/planning/p8-context-throughput-optimization/initial-baseline.md`, and `docs/planning/performance-benchmarking-worksheet.md`;
 - Phase 7 closeout/history when needed: `docs/phase-7-closeout.md`, `docs/phase-7-owner-closeout.md`, `docs/planning/p7-inference-runtime-optimization/initial-baseline.md`;
 - Phase 6 closeout/history when needed: `docs/phase-6-closeout.md`, `docs/phase-6-owner-closeout.md`, `docs/planning/p6-plugins-external-adapters/decision-record.md`;
 - Phase 5 closeout/history when needed: `docs/phase-5-closeout.md`, `docs/phase-5-owner-closeout.md`, `docs/planning/p5-reliability-long-runs/decision-record.md`;
