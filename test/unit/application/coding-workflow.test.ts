@@ -102,6 +102,26 @@ test('workflow completion takes only the final tool-free provider round', async 
   assert.deepEqual((await new LocalSessionStore({ root: state }).open('buffered-workflow', root)).transcript, session.transcript);
 });
 
+test('workflow completion accepts a successful bounded tool round without fabricated assistant text', async (t) => {
+  const root = await fixture();
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const provider = new ScriptedProvider([[
+    { type: 'provider.response.started', responseId: 'inspect' },
+    { type: 'provider.text.delta', delta: 'provisional' },
+    { type: 'provider.tool.call', callId: 'read', name: 'read_file', arguments: '{"path":"BOOT.md"}' },
+    { type: 'provider.response.completed' },
+  ]]);
+  const workflow = await createCodingWorkflowApplicationService({ provider, workspace: root });
+  const session = createSession({ workspace: root });
+  const completion = await workflow.run({ session, input: 'Inspect.', completeAfterSuccessfulToolRound: true });
+
+  assert.equal(provider.calls, 1);
+  assert.equal(completion.terminalState, 'completed');
+  assert.equal(completion.finalAssistantResponse, '');
+  assert.deepEqual(session.transcript, [{ role: 'user', text: 'Inspect.' }]);
+  assert.equal(session.events.some((event) => event.type === 'workflow.completed' && event.completion.terminalState === 'completed'), true);
+});
+
 test('ordinary workflow runs still create independent budgets when none is supplied', async (t) => {
   const root = await fixture();
   t.after(() => rm(root, { recursive: true, force: true }));

@@ -20,19 +20,17 @@ class ObservedHashProvider implements ModelProvider {
   async *stream(request: ProviderRequest): AsyncGenerator<ProviderEvent> {
     this.requests.push(request);
     const round = this.requests.length;
-    if (round === 1 || round === 3) {
+    if (round === 1 || round === 2) {
       yield { type: 'provider.response.started', responseId: round === 1 ? 'inspect' : 'repair-read' };
       yield { type: 'provider.tool.call', callId: round === 1 ? 'inspect-read' : 'repair-read', name: 'read_file', arguments: JSON.stringify({ path: this.path }) };
-    } else if (round === 2) {
-      yield { type: 'provider.text.delta', delta: 'inspected' };
-    } else if (round === 4) {
+    } else if (round === 3) {
       const result = request.continuation?.toolResults[0]?.result;
       const value = result?.ok && result.value && typeof result.value === 'object' && !Array.isArray(result.value) ? result.value : undefined;
       if (!value || typeof value.sha256 !== 'string') throw new Error('George did not expose read_file.sha256 to the provider continuation.');
       this.observedSha256 = value.sha256;
       yield { type: 'provider.response.started', responseId: 'repair-write' };
       yield { type: 'provider.tool.call', callId: 'repair-write', name: 'write_file', arguments: JSON.stringify({ path: this.path, content: this.content, expectedSha256: value.sha256 }) };
-    } else if (round === 5) {
+    } else if (round === 4) {
       yield { type: 'provider.text.delta', delta: 'repaired' };
     }
     yield { type: 'provider.response.completed' };
@@ -64,12 +62,11 @@ test('frozen structured Phase 8 counterpart repairs the exact fixture and leaves
   assert.deepEqual(events.filter((event): event is Extract<ApplicationEvent, { type: 'tool.requested' }> => event.type === 'tool.requested').map((event) => event.name), ['read_file', 'read_file', 'write_file', 'run_process']);
   assert.deepEqual(provider.requests.map((request) => request.tools.map((tool) => tool.name)), [
     ['read_file', 'list_directory', 'search_text', 'git_status', 'git_diff'],
-    ['read_file', 'list_directory', 'search_text', 'git_status', 'git_diff'],
     ['read_file', 'list_directory', 'search_text', 'git_status', 'git_diff', 'write_file', 'apply_patch'],
     ['read_file', 'list_directory', 'search_text', 'git_status', 'git_diff', 'write_file', 'apply_patch'],
     ['read_file', 'list_directory', 'search_text', 'git_status', 'git_diff', 'write_file', 'apply_patch'],
   ]);
-  assert.deepEqual(provider.requests.map((request) => request.toolChoice), ['required', undefined, undefined, undefined, undefined]);
-  assert.equal(provider.requests.length, 5);
+  assert.deepEqual(provider.requests.map((request) => request.toolChoice), ['required', undefined, undefined, undefined]);
+  assert.equal(provider.requests.length, 4);
   assert.equal(events.filter((event) => event.type === 'validation.started').length, 1);
 });

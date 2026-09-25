@@ -109,7 +109,7 @@ test('structured service preflights with local reads, progresses task state, and
   const root = await workspace();
   t.after(() => rm(root, { recursive: true, force: true }));
   const provider = new Provider([
-    [{ type: 'provider.response.started', responseId: 'inspect' }, { type: 'provider.tool.call', callId: 'read', name: 'read_file', arguments: '{"path":"target.txt"}' }, { type: 'provider.response.completed' }],
+    [{ type: 'provider.response.started', responseId: 'inspect' }, { type: 'provider.tool.call', callId: 'read', name: 'read_file', arguments: '{"path":"target.txt"}' }, { type: 'provider.tool.call', callId: 'list', name: 'list_directory', arguments: '{"path":"."}' }, { type: 'provider.response.completed' }],
     [{ type: 'provider.text.delta', delta: 'inspected' }, { type: 'provider.response.completed' }],
     [{ type: 'provider.text.delta', delta: 'w1' }, { type: 'provider.response.completed' }],
     [{ type: 'provider.text.delta', delta: 'w2' }, { type: 'provider.response.completed' }],
@@ -119,7 +119,8 @@ test('structured service preflights with local reads, progresses task state, and
   const workflow = await createCodingWorkflowApplicationService({ provider, workspace: root, approvalPort: new Allow() });
   const service = new StructuredTaskApplicationService(workflow.agent);
   const session = createSession({ workspace: root });
-  await service.run({ session, input: task, turnId: 'structured' });
+  const events: ApplicationEvent[] = [];
+  await service.run({ session, input: task, turnId: 'structured', onEvent: (event) => { events.push(event); } });
   assert.equal(session.taskState?.status, 'completed');
   assert.equal(session.taskState?.requirements.R1, 'verified');
   assert.equal(session.taskState?.validations.V1?.status, 'passed');
@@ -127,11 +128,15 @@ test('structured service preflights with local reads, progresses task state, and
   assert.equal(provider.requests[0]?.toolChoice, 'required');
   assert.equal(provider.requests[1]?.toolChoice, undefined);
   assert.equal(provider.requests[2]?.toolChoice, undefined);
+  assert.equal(provider.requests.length, 3);
+  assert.deepEqual(events.filter((event) => event.type === 'tool.completed' && event.execution?.effect === 'local_read').map((event) => event.callId), ['read', 'list']);
   assert.match(provider.requests[0]?.input ?? '', /W1 — First work/);
   assert.doesNotMatch(provider.requests[0]?.input ?? '', /UNRELATED_COMPLETED_LEDGER/);
   assert.doesNotMatch(provider.requests[0]?.input ?? '', /W2 — Second work/);
-  assert.match(provider.requests[3]?.input ?? '', /W2 — Second work/);
-  assert.doesNotMatch(provider.requests[3]?.input ?? '', /W1 — First work|First work is bounded/);
+  assert.match(provider.requests[1]?.input ?? '', /inspection result read_file:read/);
+  assert.match(provider.requests[1]?.input ?? '', /inspection result list_directory:list/);
+  assert.match(provider.requests[2]?.input ?? '', /W2 — Second work/);
+  assert.doesNotMatch(provider.requests[2]?.input ?? '', /W1 — First work|First work is bounded/);
 });
 
 test('text-only structured INSPECT fails without evidence despite required first-round choice', async (t) => {
@@ -180,7 +185,6 @@ test('DISCOVER validation accepts only an explicit executable/argv proposal and 
     [{ type: 'provider.response.started', responseId: 'inspect' }, { type: 'provider.tool.call', callId: 'read', name: 'read_file', arguments: '{"path":"target.txt"}' }, { type: 'provider.response.completed' }],
     [{ type: 'provider.response.completed' }],
     [{ type: 'provider.response.completed' }],
-    [{ type: 'provider.response.completed' }],
     [{ type: 'provider.text.delta', delta: '{"executable":"node","arguments":["--version"]}' }, { type: 'provider.response.completed' }],
     [{ type: 'provider.response.completed' }],
     [{ type: 'provider.response.completed' }],
@@ -190,8 +194,8 @@ test('DISCOVER validation accepts only an explicit executable/argv proposal and 
   const input = task.replace('Run: node --version\n\nV2 — Second check\nCovers: R2\nRun: node --version', 'Run: DISCOVER\nScope: focused local check for first work\n\nV2 — Second check\nCovers: R2\nRun: node --version');
   const events: ApplicationEvent[] = [];
   await service.run({ session: createSession({ workspace: root }), input, budget: new RunBudget('discover-task-wide'), onEvent: (event) => { events.push(event); } });
-  assert.match(provider.requests[4]?.input ?? '', /focused local check/);
-  assert.equal(provider.requests.length, 5);
+  assert.match(provider.requests[3]?.input ?? '', /focused local check/);
+  assert.equal(provider.requests.length, 4);
   assert.equal(events.filter((event) => event.type === 'validation.started').length, 2);
   assert.deepEqual([...new Set(events.filter((event): event is Extract<ApplicationEvent, { type: 'reliability.run.started' }> => event.type === 'reliability.run.started').map((event) => event.runId))], ['discover-task-wide']);
 });
@@ -341,26 +345,25 @@ STOP CONDITIONS
   const budget = new RunBudget('task-wide-test');
   await new StructuredTaskApplicationService(workflow.agent, undefined, undefined, 1).run({ session, input, turnId: 'diagnostic', budget, onEvent: (event) => { events.push(event); } });
 
-  assert.equal(provider.requests[1]?.continuation?.toolResults[0]?.result.ok, true);
   assert.equal(provider.requests[0]?.toolChoice, 'required');
   assert.equal(provider.requests[1]?.toolChoice, undefined);
   assert.equal(provider.requests[2]?.toolChoice, undefined);
-  assert.match(JSON.stringify(provider.requests[1]?.continuation), /INSPECTION_PAYLOAD_ONLY_9E7C/);
-  assert.match(provider.requests[2]?.input ?? '', /inspection result read_file:inspect-read/);
-  assert.match(provider.requests[2]?.input ?? '', /"sha256":"[a-f0-9]{64}"/);
-  assert.match(JSON.stringify(provider.requests[2]), /INSPECTION_PAYLOAD_ONLY_9E7C/);
-  assert.match(JSON.stringify(provider.requests[2]), /API_TOKEN=\[redacted\]/);
-  assert.doesNotMatch(JSON.stringify(provider.requests[2]), /RAW_INSPECTION_SECRET/);
-  assert.match(provider.requests[2]?.input ?? '', /"truncated":true/);
+  assert.equal(provider.requests[0]?.continuation, undefined);
+  assert.match(provider.requests[1]?.input ?? '', /inspection result read_file:inspect-read/);
+  assert.match(provider.requests[1]?.input ?? '', /"sha256":"[a-f0-9]{64}"/);
+  assert.match(JSON.stringify(provider.requests[1]), /INSPECTION_PAYLOAD_ONLY_9E7C/);
+  assert.match(JSON.stringify(provider.requests[1]), /API_TOKEN=\[redacted\]/);
+  assert.doesNotMatch(JSON.stringify(provider.requests[1]), /RAW_INSPECTION_SECRET/);
+  assert.match(provider.requests[1]?.input ?? '', /"truncated":true/);
 
   const failedValidation = events.find((event) => event.type === 'workflow.completed' && event.completion.validations[0]?.status === 'failed');
   assert.ok(failedValidation?.type === 'workflow.completed');
   assert.match(failedValidation.completion.validations[0]?.stderr ?? '', /CORRECTION_DIAGNOSTIC_4B2A/);
-  assert.match(provider.requests[3]?.input ?? '', /validation V1: failed outcome=failed exit=1/);
-  assert.match(JSON.stringify(provider.requests[3]), /CORRECTION_DIAGNOSTIC_4B2A/);
+  assert.match(provider.requests[2]?.input ?? '', /validation V1: failed outcome=failed exit=1/);
+  assert.match(JSON.stringify(provider.requests[2]), /CORRECTION_DIAGNOSTIC_4B2A/);
   assert.match(JSON.stringify(session.taskState), /CORRECTION_DIAGNOSTIC_4B2A/);
 
-  assert.equal(provider.requests.length, 4);
+  assert.equal(provider.requests.length, 3);
   const runIds = events.filter((event): event is Extract<typeof event, { type: 'reliability.run.started' }> => event.type === 'reliability.run.started').map((event) => event.runId);
   assert.equal(runIds.length, 3);
   assert.deepEqual([...new Set(runIds)], ['task-wide-test']);
@@ -475,21 +478,19 @@ STOP CONDITIONS
 `;
   const provider = new Provider([
     [{ type: 'provider.response.started', responseId: 'inspect-old' }, { type: 'provider.tool.call', callId: 'read-old', name: 'read_file', arguments: '{"path":"target.txt"}' }, { type: 'provider.response.completed' }],
-    [{ type: 'provider.response.completed' }],
     [{ type: 'provider.response.started', responseId: 'mutate' }, { type: 'provider.tool.call', callId: 'write-new', name: 'write_file', arguments: '{"path":"new.txt","content":"CURRENT_STAGE_EVIDENCE"}' }, { type: 'provider.response.completed' }],
     [{ type: 'provider.response.completed' }],
     [{ type: 'provider.response.started', responseId: 'inspect-new' }, { type: 'provider.tool.call', callId: 'read-new', name: 'read_file', arguments: '{"path":"new.txt"}' }, { type: 'provider.response.completed' }],
-    [{ type: 'provider.response.completed' }],
     [{ type: 'provider.response.completed' }],
     [{ type: 'provider.response.completed' }],
   ]);
   const workflow = await createCodingWorkflowApplicationService({ provider, workspace: root, approvalPort: new Allow() });
   await new StructuredTaskApplicationService(workflow.agent).run({ session: createSession({ workspace: root }), input });
 
-  assert.match(provider.requests[4]?.input ?? '', /Structured task inspection stage/);
+  assert.match(provider.requests[3]?.input ?? '', /Structured task inspection stage/);
+  assert.doesNotMatch(provider.requests[3]?.input ?? '', /STALE_STAGE_EVIDENCE/);
+  assert.match(provider.requests[4]?.input ?? '', /CURRENT_STAGE_EVIDENCE/);
   assert.doesNotMatch(provider.requests[4]?.input ?? '', /STALE_STAGE_EVIDENCE/);
-  assert.match(provider.requests[6]?.input ?? '', /CURRENT_STAGE_EVIDENCE/);
-  assert.doesNotMatch(provider.requests[6]?.input ?? '', /STALE_STAGE_EVIDENCE/);
 });
 
 test('reopened structured work without ephemeral evidence re-inspects', async (t) => {
@@ -543,5 +544,5 @@ STOP CONDITIONS
   await new StructuredTaskApplicationService(workflow.agent).run({ session, input });
 
   assert.match(provider.requests[0]?.input ?? '', /Structured task inspection stage/);
-  assert.match(provider.requests[2]?.input ?? '', /REOPENED_CURRENT_EVIDENCE/);
+  assert.match(provider.requests[1]?.input ?? '', /REOPENED_CURRENT_EVIDENCE/);
 });

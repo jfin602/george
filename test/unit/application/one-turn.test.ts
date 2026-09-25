@@ -578,6 +578,72 @@ test('compatibility factory delegates to the canonical tool loop', async (t) => 
   assert.equal(events.some((event) => event.type === 'turn.completed'), true);
 });
 
+test('successful-tool-round completion executes the full round, retains evidence, and commits no provisional text', async (t) => {
+  const root = await workspace();
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const provider = new class implements ModelProvider {
+    calls = 0;
+    async *stream(): AsyncGenerator<ProviderEvent> {
+      this.calls += 1;
+      yield { type: 'provider.response.started', responseId: 'inspection' };
+      yield { type: 'provider.text.delta', delta: 'provisional' };
+      yield { type: 'provider.tool.call', callId: 'boot', name: 'read_file', arguments: '{"path":"BOOT.md"}' };
+      yield { type: 'provider.tool.call', callId: 'agents', name: 'read_file', arguments: '{"path":"AGENTS.md"}' };
+      yield { type: 'provider.response.completed' };
+    }
+  }();
+  const service = await createOneTurnApplicationService({
+    provider, workspace: root, approvalPort: { request: async () => 'allow_once' },
+    hooks: [{ id: 'completed', event: 'turn.completed', kind: 'process', executable: 'node', arguments: ['-e', 'process.exit(0)'] }],
+  });
+  const session = createSession({ workspace: root });
+  const events = await collect(service.run({ session, input: 'inspect', completeAfterSuccessfulToolRound: true }));
+
+  assert.equal(provider.calls, 1);
+  assert.deepEqual(events.filter((event) => event.type === 'tool.started' && event.name === 'read_file').map((event) => event.callId), ['boot', 'agents']);
+  assert.deepEqual(events.filter((event) => event.type === 'tool.completed' && event.name === 'read_file').map((event) => event.callId), ['boot', 'agents']);
+  assert.equal(events.some((event) => event.type === 'assistant.response.completed'), false);
+  assert.equal(events.some((event) => event.type === 'hook.completed' && event.hookId === 'completed' && event.status === 'succeeded'), true);
+  assert.equal(events.at(-1)?.type, 'turn.completed');
+  assert.deepEqual(session.transcript, [{ role: 'user', text: 'inspect' }]);
+});
+
+test('successful-tool-round completion continues after an all-failed round and cannot bypass the stage ceiling', async (t) => {
+  const root = await workspace();
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const continuing = new class implements ModelProvider {
+    calls = 0;
+    async *stream(): AsyncGenerator<ProviderEvent> {
+      this.calls += 1;
+      if (this.calls === 1) {
+        yield { type: 'provider.response.started', responseId: 'failed' };
+        yield { type: 'provider.tool.call', callId: 'missing', name: 'read_file', arguments: '{"path":"missing.txt"}' };
+        yield { type: 'provider.tool.call', callId: 'denied', name: 'write_file', arguments: '{"path":"denied.txt","content":"no"}' };
+      } else yield { type: 'provider.text.delta', delta: 'bounded fallback' };
+      yield { type: 'provider.response.completed' };
+    }
+  }();
+  const service = await createOneTurnApplicationService({ provider: continuing, workspace: root });
+  const continued = await collect(service.run({ session: createSession({ workspace: root }), input: 'inspect', completeAfterSuccessfulToolRound: true }));
+  assert.equal(continuing.calls, 2);
+  assert.equal(continued.some((event) => event.type === 'tool.failed' && event.callId === 'denied' && event.result.error.code === 'denied'), true);
+  assert.equal(continued.some((event) => event.type === 'assistant.response.completed' && event.text === 'bounded fallback'), true);
+
+  const overflowing = new class implements ModelProvider {
+    async *stream(): AsyncGenerator<ProviderEvent> {
+      yield { type: 'provider.response.started', responseId: 'overflow' };
+      yield { type: 'provider.tool.call', callId: 'first', name: 'read_file', arguments: '{"path":"BOOT.md"}' };
+      yield { type: 'provider.tool.call', callId: 'second', name: 'read_file', arguments: '{"path":"AGENTS.md"}' };
+      yield { type: 'provider.response.completed' };
+    }
+  }();
+  const limited = await createOneTurnApplicationService({ provider: overflowing, workspace: root });
+  const failed = await collect(limited.run({ session: createSession({ workspace: root }), input: 'inspect', completeAfterSuccessfulToolRound: true, limits: { maxToolCalls: 1 } }));
+  assert.equal(failed.some((event) => event.type === 'tool.completed' && event.callId === 'first'), true);
+  assert.equal(failed.some((event) => event.type === 'tool.started' && event.callId === 'second'), false);
+  assert.equal(failed.at(-1)?.type === 'turn.failed' && failed.at(-1).error.code, 'budget');
+});
+
 test('a bounded service advertises and executes only its selected canonical tool', async (t) => {
   const root = await workspace();
   t.after(() => rm(root, { recursive: true, force: true }));

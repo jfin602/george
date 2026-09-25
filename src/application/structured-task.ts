@@ -229,7 +229,7 @@ export class StructuredTaskApplicationService extends CodingWorkflowApplicationS
       const slice = projectStructuredTaskSlice(state, unit.id);
       if (definition.inspect.length && stageEvidence.length === 0) {
         const events: ApplicationEvent[] = [];
-        for await (const event of this.agent.run({ session: submission.session, input: renderSlice(slice, 'inspection'), turnId: `${submission.turnId ?? randomUUID()}-inspect`, routedDocuments: routed, toolNames: INSPECTION_TOOLS, initialToolChoice: 'required', omitHistory: true, signal: submission.signal, executionPolicy, budget, limits: STAGE_LIMITS.inspection })) {
+        for await (const event of this.agent.run({ session: submission.session, input: renderSlice(slice, 'inspection'), turnId: `${submission.turnId ?? randomUUID()}-inspect`, routedDocuments: routed, toolNames: INSPECTION_TOOLS, initialToolChoice: 'required', completeAfterSuccessfulToolRound: true, omitHistory: true, signal: submission.signal, executionPolicy, budget, limits: STAGE_LIMITS.inspection })) {
           events.push(event); await submission.onEvent?.(event);
         }
         const observed = observedInspection(events);

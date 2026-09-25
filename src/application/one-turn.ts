@@ -169,6 +169,8 @@ export type OneTurnSubmission = Readonly<{
   toolNames?: readonly string[];
   /** Optional provider tool-choice override for the initial round only. */
   initialToolChoice?: ProviderToolChoice;
+  /** Finish this bounded turn after a complete tool round produces any successful result. */
+  completeAfterSuccessfulToolRound?: boolean;
   /** Application-owned bounded turns may omit transcript history when it would leak unrelated durable state. */
   omitHistory?: boolean;
   /** An application-owned, capability-reducing policy projection. */
@@ -837,6 +839,7 @@ export class AgentLoopApplicationService {
           if (next.value.result.ok && execution?.effect === 'workspace_mutation') mutationEpoch += 1;
           if (next.value.result.ok && fingerprint !== undefined) successfulReads.set(fingerprint, mutationEpoch);
         }
+        if (submission.completeAfterSuccessfulToolRound && results.some((result) => result.result.ok)) break;
         continuationTokens += Math.ceil(JSON.stringify(results).length / 4);
         const continuationEstimate = context.estimatedTokens + continuationTokens;
         if (continuationEstimate > selection.profile.providerInputTokens) {
