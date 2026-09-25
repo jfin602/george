@@ -1,0 +1,129 @@
+GEORGE TASK FORMAT: 1
+
+STACK: p9
+TASK: Phase 9 / P4 — Phase 8 edit-validation regression replay and hardening
+KIND: qualification
+
+VERSIONING
+
+The assigned project version is `0.9.4`.
+
+- Recommended configuration: `Terra High`.
+- Browser required: no.
+
+GOAL
+
+Replay the owner-accepted Phase 8 agentic edit-plus-validation failure as an equivalent structured task, record a truthful before/after comparison, and fix only bounded Phase 9 orchestration defects directly exposed by this replay.
+
+READ FIRST
+
+- REQUIRED: BOOT.md
+- REQUIRED: AGENTS.md
+- REQUIRED: docs/phase-8-owner-closeout.md
+- REQUIRED: docs/tasks/c8-agentic-context/P5-live-qualification-evidence.md
+- REQUIRED: docs/tasks/c8-agentic-context/closeout.md
+- REQUIRED: docs/planning/p9-structured-task-execution/qualification-plan.md
+- REQUIRED: docs/tasks/p9/implementation-plan.md
+
+INSPECT
+
+- exact Phase 8 agentic-edit fixture and expected edit/validation behavior
+- P3 structured task service, task slicing, tool exposure, and validation path
+- benchmark/provider event metrics needed for comparable evidence
+- current LM Studio runtime configuration
+
+REQUIREMENTS
+
+- R1: Freeze an equivalent structured Task Prompt v1 fixture for the exact Phase 8 edit-plus-validation functional target without overwriting the historical Phase 8 artifact/evidence.
+- R2: Before live execution, record the pinned model and REST-visible LM Studio settings and print a manual reminder that GPU Offload must show 26; unconfirmed UI-only offload prevents controlled latency claims but not functional evidence.
+- R3: Run the structured replay once under the healthy available runtime and record edit correctness, validation, tool names/calls, duplicate/redundant/unrequested calls, provider rounds/attempts/retries, context/profile/tokens, wall time, intervention, and final TaskState ledger.
+- R4: Compare the structured result side-by-side with the preserved Phase 8 Not Green result without converting either result into a score or deleting a failure.
+- R5: If the replay exposes a bounded P1-P3 orchestration/slicing/tool-surface defect within the approved architecture, repair the smallest cause, add a permanent deterministic guard, and rerun the structured replay at most once.
+- R6: Do not tune LM Studio/runtime/context-profile values, increase retries to hide failure, or repeatedly rerun until pass.
+- R7: Create docs/tasks/p9/P4-phase8-regression-evidence.md with Green / Not Green / Evidence Gap truth and exact artifact/runtime provenance.
+- R8: Set package version to 0.9.4 and preserve all inherited Phase 2-8 regression boundaries.
+
+INVARIANTS
+
+- I1: The original Phase 8 edit-plus-validation result remains Not Green historical evidence.
+- I2: A structured pass is improvement evidence, not proof of a context envelope or deletion of prior failure.
+- I3: Functional evidence and controlled performance evidence are classified separately.
+- I4: No package-lock.json is created.
+
+WORKFLOW
+
+W1 — Freeze comparable structured fixture and deterministic guard
+Covers: R1, R4
+Depends on: none
+
+W2 — Verify live runtime control
+Covers: R2
+Depends on: W1
+
+Run exactly this control before the live replay:
+
+echo "MANUAL CHECK: LM Studio GPU Offload must show 26" && curl -fsS http://127.0.0.1:1234/api/v1/models | jq '.models[] | select(.key == "qwen3-coder-30b-a3b-instruct@q4_k_m") | {key, loaded_instances: [.loaded_instances[] | {id, context_length: .config.context_length, eval_batch_size: .config.eval_batch_size, physical_batch_size: .config.physical_batch_size, parallel: .config.parallel, flash_attention: .config.flash_attention, offload_kv_cache_to_gpu: .config.offload_kv_cache_to_gpu, num_experts: .config.num_experts}]}'
+
+W3 — Run structured replay and classify
+Covers: R3, R4, R6, R7
+Depends on: W2
+
+W4 — Bounded hardening only if directly justified
+Covers: R5, R8
+Depends on: W3
+
+If no bounded Phase 9 defect is established, make no speculative runtime change.
+
+W5 — Final validation/version boundary
+Covers: R8
+Depends on: W3, W4
+
+VALIDATION
+
+V1 — Structured replay deterministic fixture coverage
+Covers: R1, R4, R5
+Run: DISCOVER
+Scope: focused tests for the frozen structured counterpart of the Phase 8 agentic edit-plus-validation fixture
+
+V2 — Structured application regressions
+Covers: R5, R8
+Run: node --test test/unit/application/structured-task.test.ts test/unit/tasks/*.test.ts
+
+V3 — TypeScript
+Covers: R5, R8
+Run: npm run typecheck
+
+V4 — Runner regression
+Covers: R8
+Run: npm run test:runner
+
+V5 — Diff hygiene
+Covers: R8
+Run: git diff --check
+
+STOP CONDITIONS
+
+- S1: If LM Studio is unavailable or the runtime becomes invalid, record Evidence Gap and do not manufacture live results.
+- S2: Do not run larger context sweeps or unrelated performance experiments.
+- S3: Do not perform more than one post-fix replay.
+- S4: Do not claim Phase 9 usefulness solely from parser/unit tests if the structured replay remains Not Green.
+
+DELIVERABLES
+
+- D1: Frozen structured Phase 8 regression fixture.
+- D2: P4-phase8-regression-evidence.md.
+- D3: Permanent guard for any confirmed structured-orchestration defect.
+- D4: package.json at 0.9.4.
+
+NON-GOALS
+
+- Full correction/recovery state machine.
+- TUI.
+- Workspace Autonomous mode.
+- Sandbox.
+- Greenfield/existing-app live-work.
+
+EVIDENCE
+
+- Preserve all attempted live results and classify runtime invalidity separately.
+- Verify no root package-lock.json.
