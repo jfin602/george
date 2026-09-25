@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import test from 'node:test';
 
 import { StructuredTaskApplicationService, createCodingWorkflowApplicationService } from '../../../src/application/index.ts';
-import { createSession, type ApprovalDecision, type ApprovalPort, type ApprovalRequest, type ModelProvider, type ProviderEvent, type ProviderRequest } from '../../../src/core/index.ts';
+import { createSession, type ApplicationEvent, type ApprovalDecision, type ApprovalPort, type ApprovalRequest, type ModelProvider, type ProviderEvent, type ProviderRequest } from '../../../src/core/index.ts';
 import { addressTaskWorkUnit, beginTaskCorrection, beginTaskWorkUnit, createTaskState, parseTaskPrompt, recordTaskValidationAttempt } from '../../../src/tasks/index.ts';
 
 class Provider implements ModelProvider {
@@ -190,4 +190,76 @@ STOP CONDITIONS
   assert.equal(session.taskState?.status, 'completed');
   assert.deepEqual(session.taskState?.validations.V1?.attempts.map((attempt) => attempt.status), ['failed', 'passed']);
   assert.deepEqual(session.taskState?.corrections.map((correction) => correction.status), ['completed']);
+});
+
+test('structured convergence diagnostic boundary remains executable without repairing it', async (t) => {
+  const root = await workspace();
+  t.after(() => rm(root, { recursive: true, force: true }));
+  await writeFile(join(root, 'target.txt'), 'INSPECTION_PAYLOAD_ONLY_9E7C');
+  const input = `GEORGE TASK FORMAT: 1
+
+TASK: P1 — Diagnostic
+KIND: implementation
+
+GOAL
+
+Expose the current structured convergence boundary.
+
+INSPECT
+
+- diagnostic target
+
+REQUIREMENTS
+
+- R1: Observe the current boundary.
+
+WORKFLOW
+
+W1 — Diagnostic work
+Covers: R1
+Depends on: none
+
+VALIDATION
+
+V1 — Deliberate failure
+Covers: R1
+Run: node -e "process.stderr.write(['CORRECTION','DIAGNOSTIC','4B2A'].join('_')); process.exit(1)"
+
+STOP CONDITIONS
+
+- S1: Stop truthfully.
+`;
+  const provider = new Provider([
+    [{ type: 'provider.response.started', responseId: 'inspect' }, { type: 'provider.tool.call', callId: 'inspect-read', name: 'read_file', arguments: '{"path":"target.txt"}' }, { type: 'provider.response.completed' }],
+    [{ type: 'provider.response.completed' }],
+    [{ type: 'provider.response.completed' }],
+    [{ type: 'provider.response.completed' }],
+    [{ type: 'provider.response.completed' }],
+    [{ type: 'provider.response.completed' }],
+  ]);
+  const workflow = await createCodingWorkflowApplicationService({ provider, workspace: root, approvalPort: new Allow() });
+  const session = createSession({ workspace: root });
+  const events: ApplicationEvent[] = [];
+  await new StructuredTaskApplicationService(workflow.agent, undefined, undefined, 1).run({ session, input, turnId: 'diagnostic', onEvent: (event) => { events.push(event); } });
+
+  assert.equal(provider.requests[1]?.continuation?.toolResults[0]?.result.ok, true);
+  assert.match(JSON.stringify(provider.requests[1]?.continuation), /INSPECTION_PAYLOAD_ONLY_9E7C/);
+  assert.match(provider.requests[2]?.input ?? '', /inspection: diagnostic target \(read_file:inspect-read\)/);
+  assert.doesNotMatch(JSON.stringify(provider.requests[2]), /INSPECTION_PAYLOAD_ONLY_9E7C/);
+
+  const failedValidation = events.find((event) => event.type === 'workflow.completed' && event.completion.validations[0]?.status === 'failed');
+  assert.ok(failedValidation?.type === 'workflow.completed');
+  assert.match(failedValidation.completion.validations[0]?.stderr ?? '', /CORRECTION_DIAGNOSTIC_4B2A/);
+  assert.match(provider.requests[4]?.input ?? '', /validation V1: failed \(1\)/);
+  assert.doesNotMatch(JSON.stringify(provider.requests[4]), /CORRECTION_DIAGNOSTIC_4B2A/);
+  assert.doesNotMatch(JSON.stringify(session.taskState), /CORRECTION_DIAGNOSTIC_4B2A/);
+
+  for (const request of [provider.requests[3], provider.requests[5]]) {
+    assert.match(request?.input ?? '', /Run no provider-owned validation\. George will execute V1\./);
+    assert.equal(request?.tools.length, 0);
+  }
+  const runIds = events.filter((event): event is Extract<typeof event, { type: 'reliability.run.started' }> => event.type === 'reliability.run.started').map((event) => event.runId);
+  assert.equal(runIds.length, 5);
+  assert.equal(new Set(runIds).size, 5);
+  assert.equal(session.taskState?.status, 'failed');
 });
