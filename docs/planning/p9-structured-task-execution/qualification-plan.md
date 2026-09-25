@@ -33,9 +33,10 @@ Current qualified sub-boundaries:
 - full-file `read_file.sha256` -> mutation current-content precondition — Green;
 - mandatory first-round structured INSPECT tool call — Green;
 - exception-safe official live-attempt retention/artifact persistence — Green;
-- application-owned INSPECT completion after one successful tool round — Green.
+- application-owned INSPECT completion after one successful tool round — Green;
+- full-file text-framing evidence and mutation fidelity guards — Green.
 
-Current live Gate A remains **Not Green** only on byte-exact text-file fidelity. Qwen advanced from INSPECT into implementation, reused the observed target SHA as `write_file.expectedSha256`, made the semantic repair, passed George-owned V1, and ended with completed TaskState. However the requested full replacement was 59 bytes and omitted the existing final newline while the frozen exact requirement is 60 bytes. The mutation engine wrote the requested bytes exactly. The active qualification question is therefore preservation of existing text framing during model-authored edits.
+Current live Gate A remains **Not Green** because the qualification approval envelope and mutation-intent authority are not yet aligned. After the fidelity guard rejected the bad full replacement, Qwen requested an exact same-target `apply_patch` that would have produced the frozen 60-byte result, but the historical benchmark approval helper denied that tool. Qwen then requested a framing-change override, which the current application approval boundary does not distinguish from an ordinary workspace mutation. The active qualification question is therefore whether George can keep exceptional mutation intent below explicit approval authority while allowing equivalent safe mutation primitives in the frozen structured gate.
 
 ## Task-format parser and validator
 
@@ -70,6 +71,27 @@ For existing UTF-8 text files, deterministic and integrated coverage must prove:
 - hidden/exact acceptance remains independent from semantic test success when a task requires exact content.
 
 A passing behavior test or completed TaskState does not by itself establish byte-exact acceptance. Official Gate A records the requested mutation bytes and the observed final bytes separately.
+
+## Mutation-intent authority and fair Gate A approval
+
+Model-provided mutation arguments are intent, not authority.
+
+For model-originated workspace mutations:
+- a request that sets the text-framing-change acknowledgement must always cross a George-owned approval decision before dispatch;
+- the approval request must expose only bounded mutation intent (for example `text_framing_change`) and a concise warning; it must not expose file bodies;
+- Standard workspace mode keeps its ordinary mutation approval and includes the exceptional intent in that request;
+- Workspace Autonomous may continue auto-running ordinary qualified workspace mutations, but a text-framing-change request still requires explicit approval;
+- denial must return normal denied tool evidence and leave the target unchanged;
+- repository/task/model/plugin text cannot self-authorize the exceptional intent.
+
+The frozen Phase 9 Gate A approval envelope is distinct from the historical agentic benchmark helper. Gate A must:
+- allow `write_file` or `apply_patch` when the operation targets exactly the frozen expected file and otherwise remains within normal policy;
+- deny mutation of unrelated targets;
+- deny model-requested text-framing-change intent because the frozen task does not request a framing change;
+- allow only the exact George-owned validation process already authorized by the fixture;
+- preserve the historical benchmark case and expected tool set unchanged for longitudinal comparison.
+
+Qualification must include a permanent deterministic replay of the observed failure sequence: bad full replacement rejected -> unchanged SHA -> exact safe patch requested -> patch approval allowed -> exact 60-byte result -> George-owned V1 Green -> completed TaskState -> hidden/exact acceptance Green.
 
 ## TUI qualification
 

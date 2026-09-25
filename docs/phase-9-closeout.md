@@ -21,27 +21,27 @@ The subsequent correction chain materially narrowed the remaining blocker:
 1. **`c9-structured-task-convergence`** — qualified the production task-stack boundary and implemented bounded stage evidence continuity, task-wide budgeting, direct literal validation, convergence ceilings, and no-progress guards.
 2. **`c9-qwen-workunit-convergence`** — qualified full-file `read_file.sha256` -> existing-file mutation preconditions and added repository-owned live trace extraction.
 3. **`c9-inspection-execution`** — qualified mandatory first-round structured INSPECT tool execution and exception-safe live attempt retention.
-4. **`c9-inspection-stage-completion`** — qualified application-owned INSPECT completion after one successful tool round. The latest Gate A now reaches implementation, safe mutation, George-owned V1, and completed TaskState without inspection continuation or stage exhaustion.
+4. **`c9-inspection-stage-completion`** — qualified application-owned INSPECT completion after one successful tool round.
+5. **`c9-text-file-edit-fidelity`** — qualified full-file text-framing evidence and recoverable preservation guards for existing UTF-8 text mutations.
 
-Latest official Gate A evidence:
-- INSPECT: one successful provider tool round, four ordered local reads, then direct transition to implementation;
-- target read SHA-256: `4cd4635c7d8ef07c10bf7a2296d0f4d79cd3e753c1794774656eac5e764d4352`;
-- implementation used that exact SHA as `write_file.expectedSha256`;
-- Qwen requested a 59-byte replacement containing the semantic `.toUpperCase()` repair;
-- George wrote exactly those 59 bytes and returned resulting SHA `4d4442213eef8109d7df78a656145a263976e6fde1476e281a6368c036c38861`;
-- the frozen required file is 60 bytes because it preserves the existing final `\n`;
-- George-owned V1 passed once; TaskState ended `completed`; R1/R2 were verified; W1 addressed; zero corrections;
-- model-requested tool calls: 5; provider rounds / attempts / retries: `3 / 3 / 0`; provider tokens: `7,567 / 276`; zero human coding intervention; no stage/task/run-budget exhaustion.
+Latest official Gate A then exposed a final authority mismatch rather than a broad convergence failure:
+- the first 59-byte full replacement was rejected correctly and left the original file/SHA unchanged;
+- Qwen reread the target and then requested an exact `apply_patch` that would have produced the required 60-byte content while preserving framing;
+- the frozen qualification approval policy denied that `apply_patch` solely because the historical benchmark helper only approves `write_file` on the target;
+- Qwen next requested the same 59-byte full replacement with a framing-change acknowledgement;
+- the application approval boundary did not independently represent that exceptional mutation intent, so the qualification approval port treated the call like an ordinary target write and allowed it;
+- George then correctly wrote the exact acknowledged 59 bytes; V1 passed and TaskState completed, but exact/hidden acceptance failed.
 
-Gate A therefore remains **Not Green** solely because byte-exact acceptance failed on the missing final newline. This is not a mutation-engine transformation defect: `write_file` is full replacement and wrote exactly the caller-supplied content.
+The active Phase 9 blocker is therefore **mutation intent authority and qualification fairness**. Model arguments may express intent, but they must not grant executable authority. A model-requested text-framing change must cross a distinct George-owned approval boundary, including in Workspace Autonomous mode. Separately, the structured Gate A approval envelope must allow equivalent safe mutation primitives (`write_file` or `apply_patch`) on the exact frozen target while denying unrelated targets and framing-change overrides.
 
-The active Phase 9 blocker is **text-file edit fidelity**: existing text framing such as final-newline state and line-ending convention must be preserved by default unless the task explicitly changes it. Localized edits should prefer exact patching so untouched bytes naturally survive. Full replacement must remain exact caller-supplied content; George must not silently append or normalize newlines.
+The historical benchmark case/expected tool set remains unchanged. The fair Phase 9 structured qualification policy is a separate authority.
 
 Correction evidence:
 - [`c9-structured-task-convergence`](tasks/c9-structured-task-convergence/closeout.md);
 - [`c9-qwen-workunit-convergence`](tasks/c9-qwen-workunit-convergence/closeout.md);
 - [`c9-inspection-execution`](tasks/c9-inspection-execution/closeout.md);
-- [`c9-inspection-stage-completion`](tasks/c9-inspection-stage-completion/closeout.md).
+- [`c9-inspection-stage-completion`](tasks/c9-inspection-stage-completion/closeout.md);
+- [`c9-text-file-edit-fidelity`](tasks/c9-text-file-edit-fidelity/closeout.md).
 
 Phase 10 remains gated on Phase 9 owner closeout.
 

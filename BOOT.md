@@ -111,15 +111,17 @@ Post-closeout correction evidence now establishes:
 - `c9-structured-task-convergence`: production `StackState` / ordered fail-stop task-stack execution is implemented and deterministically qualified; structured stage evidence handoff, task-wide budgeting, direct George-owned validation, and bounded convergence controls are implemented;
 - `c9-qwen-workunit-convergence`: full-file `read_file.sha256` -> mutation `expectedSha256` is qualified, so a model can obtain the safe precondition required to modify an existing file;
 - `c9-inspection-execution`: provider-neutral first-round required tool choice for structured INSPECT and exception-safe live-attempt retention are qualified;
-- `c9-inspection-stage-completion`: application-owned completion after one successful INSPECT tool round is qualified, so live Gate A now reaches implementation, safe mutation, George-owned validation, and completed TaskState without inspection continuation/exhaustion.
+- `c9-inspection-stage-completion`: application-owned completion after one successful INSPECT tool round is qualified, so live Gate A now reaches implementation, safe mutation, George-owned validation, and completed TaskState without inspection continuation/exhaustion;
+- `c9-text-file-edit-fidelity`: full-file text-framing evidence and recoverable existing-text framing preservation guards are qualified. The latest live Gate A proved the guard rejects the bad 59-byte replacement without mutation and preserves the original SHA.
 
-The current live Gate A remains **Not Green** only on byte-exact text-file fidelity. Qwen used the inspected SHA correctly and made the semantic `.toUpperCase()` repair; George-owned V1 passed and TaskState completed. However Qwen supplied a 59-byte `write_file` replacement without the existing final newline, while the frozen required file is 60 bytes and ends in `\n`. George wrote exactly the requested bytes. The active Phase 9 blocker is therefore preservation of existing text framing during model-authored edits, not inspection, stack execution, mutation preconditions, validation, or trace retention.
+The current live Gate A remains **Not Green** because mutation intent and executable authority are still conflated at one narrow edge. After the fidelity rejection, Qwen selected the exact safe `apply_patch` that would have produced the required 60-byte file, but the frozen qualification approval policy denied `apply_patch`. Qwen then set `allowTextFramingChange: true`; because that model argument currently acts as sufficient executor acknowledgement and is not independently represented in the approval boundary, the qualification approval allowed the same wrong 59-byte full replacement. The active Phase 9 blocker is therefore mutation-intent authority plus a qualification-policy mismatch, not inspection, stack execution, mutation preconditions, framing detection, validation, or trace retention.
 
 Current correction evidence:
 - `docs/tasks/c9-structured-task-convergence/closeout.md`;
 - `docs/tasks/c9-qwen-workunit-convergence/closeout.md`;
 - `docs/tasks/c9-inspection-execution/closeout.md`;
-- `docs/tasks/c9-inspection-stage-completion/closeout.md`.
+- `docs/tasks/c9-inspection-stage-completion/closeout.md`;
+- `docs/tasks/c9-text-file-edit-fidelity/closeout.md`.
 
 Historical Phase 1-8 prompts/evidence are not renumbered or rewritten.
 
@@ -158,7 +160,7 @@ Read:
 - stability/testing: `docs/stability-contract.md`;
 - roadmap: `docs/roadmap/mvp-roadmap.md`;
 - Living Project Map / Software Graph, when relevant: `docs/planning/living-project-map/decision-record.md` (then its graph, interaction, and qualification companions as needed);
-- current Phase 9 authority: `docs/planning/p9-structured-task-execution/decision-record.md`, `docs/planning/p9-structured-task-execution/task-format-v1.md`, and `docs/planning/p9-structured-task-execution/qualification-plan.md`; latest correction truth: `docs/tasks/c9-structured-task-convergence/closeout.md`, `docs/tasks/c9-qwen-workunit-convergence/closeout.md`, and `docs/tasks/c9-inspection-execution/closeout.md`, plus `docs/tasks/c9-inspection-stage-completion/closeout.md`;
+- current Phase 9 authority: `docs/planning/p9-structured-task-execution/decision-record.md`, `docs/planning/p9-structured-task-execution/task-format-v1.md`, and `docs/planning/p9-structured-task-execution/qualification-plan.md`; latest correction truth: `docs/tasks/c9-structured-task-convergence/closeout.md`, `docs/tasks/c9-qwen-workunit-convergence/closeout.md`, and `docs/tasks/c9-inspection-execution/closeout.md`, plus `docs/tasks/c9-inspection-stage-completion/closeout.md` and `docs/tasks/c9-text-file-edit-fidelity/closeout.md`;
 - Phase 8 closeout/history when needed: `docs/phase-8-closeout.md`, `docs/phase-8-owner-closeout.md`, `docs/tasks/c8-agentic-context/closeout.md`, `docs/planning/c8-agentic-context/decision-record.md`, `docs/planning/c8-agentic-context/qualification-plan.md`, `docs/planning/p8-context-throughput-optimization/decision-record.md`, `docs/planning/p8-context-throughput-optimization/initial-baseline.md`, and `docs/planning/performance-benchmarking-worksheet.md`;
 - Phase 7 closeout/history when needed: `docs/phase-7-closeout.md`, `docs/phase-7-owner-closeout.md`, `docs/planning/p7-inference-runtime-optimization/initial-baseline.md`;
 - Phase 6 closeout/history when needed: `docs/phase-6-closeout.md`, `docs/phase-6-owner-closeout.md`, `docs/planning/p6-plugins-external-adapters/decision-record.md`;

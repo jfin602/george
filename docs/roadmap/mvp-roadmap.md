@@ -430,7 +430,8 @@ Current evidence after Phase 9 corrections:
 - structured INSPECT now requires a read-only tool on its first provider round;
 - structured INSPECT now completes after the first successful tool round and live Gate A reaches implementation without an inspection continuation;
 - official live-attempt evidence survives production-service exceptions;
-- the current mandatory live replay is still Not Green only on byte-exact text-file fidelity: Qwen made the semantic edit and passed George-owned validation, but its full-file replacement omitted the existing final newline (59 observed bytes versus 60 required);
+- full-file text-framing evidence and recoverable framing-preservation guards are qualified;
+- the current mandatory live replay is still Not Green because the qualification approval policy denied Qwen's correct same-target patch, then a model-requested framing-change acknowledgement was treated as sufficient authority to publish the same non-exact replacement;
 - native Node-26 real-TTY/OpenTUI behavior remains an Evidence Gap;
 - Phase 9 is not owner-closed and Phase 10 remains unopened.
 

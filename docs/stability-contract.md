@@ -416,6 +416,21 @@ Deterministic coverage must prove:
 
 Live exact-edit evidence should record requested content byte count, resulting byte count/SHA, and final-newline/line-ending state where relevant so model-request defects remain distinguishable from executor transformations.
 
+## Mutation intent authority qualification
+
+Model-provided tool arguments cannot raise executable authority.
+
+Deterministic coverage for exceptional mutation intent must prove:
+- a model-originated text-framing-change acknowledgement is projected into a bounded approval request rather than treated as self-authorization;
+- the approval request identifies the exceptional mutation intent without exposing raw file or patch bodies;
+- Standard workspace mode preserves normal mutation approval behavior and surfaces the exceptional intent;
+- Workspace Autonomous still requires explicit approval for text-framing-change intent while ordinary qualified workspace mutations remain automatic;
+- approval denial leaves the target bytes/SHA unchanged and returns normal denied tool evidence;
+- direct trusted executor tests remain distinguishable from model-originated application authority;
+- qualification helpers cannot silently broaden mutation targets or validation processes.
+
+Frozen structured qualification must also avoid artificial tool bias. When multiple already-qualified mutation primitives can satisfy the same approved target envelope, the Gate A approval policy may allow those equivalent primitives while retaining exact target, validation, permission, and hidden-acceptance constraints. Historical benchmark definitions and expected tool sets remain unchanged.
+
 ## Regression permanence
 
 Every confirmed regression must leave a permanent detector at the lowest reliable reproduction layer or justified combination of layers.
