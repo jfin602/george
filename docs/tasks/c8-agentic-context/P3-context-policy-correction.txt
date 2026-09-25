@@ -1,0 +1,61 @@
+TASK: Correction 8 / P3 — Evidence-backed agentic context policy correction
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Terra High`.
+- Browser required: no.
+
+VERSIONING
+- Required unchanged project version: `0.8.8`.
+
+GOAL
+
+Use P2's measured agentic evidence to make the smallest justified production context-policy correction. Never guess operating limits.
+
+Read BOOT/current contracts, c8 decision/qualification records, P1-P2 implementation/evidence, historical Phase-8 contracts, and exact context/config/application/tests before editing.
+
+First classify P2 evidence.
+
+IF P2 ESTABLISHES A CREDIBLE HEALTHY AGENTIC ENVELOPE:
+
+Implement the smallest production policy that keeps normal adaptive George inside the empirically qualified high-signal region while preserving physical/safety capacity.
+
+Locked laws:
+- physical context stays 32,768;
+- hard provider-input capacity remains a safety boundary unless P2 directly supports changing it;
+- effective agentic working-set policy must be distinguishable from hard capacity;
+- fixed mode remains an explicit operator override using its concrete profile;
+- adaptive selection remains provider-free, tool-free, session-neutral, monotonic, and finalized before first inference;
+- selected profile stays frozen through the turn;
+- Phase-3 trust/precedence/source identity and whole-source integrity remain;
+- Phase-5 recovery/compaction authority remains;
+- P7 frozen-turn continuation-pressure stop remains.
+
+If current `preferredWorkingSetTokens` / `softPressureTokens` semantics can represent the measured agentic envelope without conflating it with hard safety capacity, reuse them consistently. If they cannot, introduce the smallest explicit validated agentic operating-limit field/type and expose it in bounded diagnostics. Do not create a second profile hierarchy.
+
+Adaptive source-pressure behavior should prefer, in order:
+1. George invariants/current user/current task;
+2. required tool definitions and authoritative unresolved/recovery state;
+3. immediate task/repository evidence;
+4. explicitly needed routed/skill/project material;
+5. bounded useful history;
+6. lower-value optional defaults.
+
+Lower-value optional sources may omit/defer deterministically.
+
+Explicitly selected/applicable project/routed/skill context may promote only through empirically qualified adaptive envelopes. If correctness-critical selected material cannot fit the largest qualified adaptive envelope, fail/degrade explicitly BEFORE provider execution rather than silently dropping it or sending an unqualified giant request.
+
+Do not silently truncate source text. Do not add model-generated relevance routing. Do not add helper-model summarization.
+
+Update diagnostics/tests/docs narrowly where required by the code contract. Record the accepted policy and exact evidence mapping in `docs/tasks/c8-agentic-context/P3-policy-decision.md`.
+
+IF P2 EVIDENCE IS INSUFFICIENT:
+
+Do not change runtime profile values or selector/context policy.
+
+Create `docs/tasks/c8-agentic-context/P3-policy-decision.md` recording the Evidence Gap, why production values remain unchanged, and what evidence is still missing.
+
+In either branch, install permanent regression guards for every changed behavior and keep package version exactly `0.8.8`.
+
+Required validation: focused config/context/profile-selector/application tests, Phase-5 compaction/recovery affected tests, P7 continuation-pressure guards, `npm run typecheck`, `npm run test:runner`, affected broad tests, `git diff --check`, and no `package-lock.json`.
+
+Do not modify benchmark evidence to make P2 look stronger than it was.
