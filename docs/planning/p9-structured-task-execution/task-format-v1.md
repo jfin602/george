@@ -88,6 +88,8 @@ Example:
 
 George records inspection progress from actual tool/evidence events. Model narration alone does not satisfy inspection.
 
+INSPECT is the application-owned preflight mechanism for repository observation required before dependent implementation work. Authors should not duplicate the same preflight as an ordinary WORKFLOW unit merely by naming that unit `Inspect ...`. George does not infer stage semantics from work-unit titles or prose.
+
 ## REQUIREMENTS
 
 Requirements use stable IDs:
@@ -126,6 +128,9 @@ Rules:
 - dependency cycles are invalid;
 - Depends on: none is valid;
 - completion criteria remain natural language tied to observed task/evidence state;
+- WORKFLOW represents actual task progression; preflight repository observation belongs in top-level INSPECT when that is its sole purpose;
+- George never infers special execution semantics from titles such as `Inspect`, `Validate`, or `Report`;
+- validation result reporting that depends on George-owned VALIDATION belongs in EVIDENCE/closeout state after validation, not in a pre-validation work unit;
 - the model decides implementation details unless deliberately constrained.
 
 George does not begin a work unit whose dependencies are incomplete except through an explicit correction/recovery transition permitted by the task state machine.
@@ -203,7 +208,7 @@ EVIDENCE may name required evidence artifacts/layers. Model-authored claims neve
 
     INSPECT
 
-    - task domain model
+    - current task behavior
     - HTTP routes
     - existing tests
 
@@ -217,13 +222,17 @@ EVIDENCE may name required evidence artifacts/layers. Model-authored claims neve
 
     WORKFLOW
 
-    W1 — Inspect current task behavior
-    Covers: R1, R2, R3, R4, R5
+    W1 — Implement priority behavior
+    Covers: R1, R2, R3, R4
     Depends on: none
 
-    W2 — Implement priority behavior
-    Covers: R1, R2, R3, R4
+    Make the smallest route/domain changes needed using the observed preflight evidence.
+
+    W2 — Preserve and extend focused tests
+    Covers: R1, R2, R3, R4, R5
     Depends on: W1
+
+    Add focused coverage without deleting baseline regression behavior.
 
     VALIDATION
 
@@ -239,6 +248,10 @@ EVIDENCE may name required evidence artifacts/layers. Model-authored claims neve
     STOP CONDITIONS
 
     - S1: Do not claim completion while V1 or V2 is failing or unexecuted.
+
+    EVIDENCE
+
+    Record exact validation outcomes after George runs V1 and V2.
 
 ## Grammar versioning
 

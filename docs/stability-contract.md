@@ -431,6 +431,22 @@ Deterministic coverage for exceptional mutation intent must prove:
 
 Frozen structured qualification must also avoid artificial tool bias. When multiple already-qualified mutation primitives can satisfy the same approved target envelope, the Gate A approval policy may allow those equivalent primitives while retaining exact target, validation, permission, and hidden-acceptance constraints. Historical benchmark definitions and expected tool sets remain unchanged.
 
+## Qualification instrument versioning
+
+Official live-work instruments are immutable evidence once exercised.
+
+Deterministic coverage must prove:
+- an instrument's task files and recorded digest continue matching its version metadata;
+- structural authoring fixes after an official attempt create a new instrument version rather than modifying the exercised version in place;
+- old instrument runners/fixtures remain runnable for historical reproduction where supported;
+- newer runners select only their matching versioned fixture names and do not silently redirect v1 calls to v2 content;
+- acceptance versions remain independently identified from task-stack versions, so a task-authoring correction may reuse unchanged behavioral acceptance without pretending the task stack is unchanged;
+- instrument authors do not encode application-owned preflight semantics solely in WORKFLOW titles/prose when top-level `INSPECT` is the authoritative mechanism;
+- workflow units that occur before George-owned VALIDATION do not claim exact validation results that do not yet exist;
+- prior Not Green results remain Not Green after an aligned successor instrument passes.
+
+Qualification-only instrument alignment must not change production agent-loop behavior merely to accommodate a malformed or semantically stale fixture.
+
 ## Regression permanence
 
 Every confirmed regression must leave a permanent detector at the lowest reliable reproduction layer or justified combination of layers.

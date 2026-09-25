@@ -121,6 +121,10 @@ Phase 9 correction evidence makes several originally directional decisions concr
 
 **INSPECT completion boundary.** Mandatory first tool use and application-owned completion after the first successful inspection tool round are now qualified. The latest live replay advances directly into implementation without inspection continuation or stage exhaustion. The active correction boundary has moved to byte-exact text-file edit fidelity.
 
+**Instrument stage semantics.** Qualification/task authors must express preflight repository observation through top-level `INSPECT`, not by relying on a WORKFLOW title such as `Inspect ...` to create special completion behavior. WORKFLOW units represent actual task progression under the normal implementation stage. Likewise, a work unit named `Validate` or `Report` does not own George-run validation that occurs later in the state machine. Validation-dependent reporting belongs in George-owned validation/evidence/closeout projections after the validation results exist. George must never infer execution semantics from work-unit titles or natural-language labels.
+
+**Versioned qualification instruments.** Once a live-work instrument version has been exercised officially, structural task-stack corrections create a new instrument version rather than rewriting the old fixture. Historical v1 inputs/results remain immutable longitudinal evidence. A newer instrument may reuse the same product behavior acceptance suite when the required software behavior is unchanged; its metadata must record the new task-stack version/digest separately.
+
 ### Transcript and Task TUI pages
 
 Phase 9 supersedes the earlier presentation direction that permanently interleaved routine work-log rows into the conversation surface.

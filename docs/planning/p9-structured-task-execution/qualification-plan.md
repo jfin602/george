@@ -12,31 +12,31 @@ Qualification is split into deterministic correctness, bounded task-slice correc
 
 ## Current post-correction qualification authority
 
-The original qualification sequence remains historical authority, but current Phase 9 acceptance uses the following strict live gates after deterministic regression floors pass:
+The original qualification sequence remains historical authority. Current Phase 9 acceptance now has one inherited Green core gate plus two aligned larger-work gates:
 
 1. **Gate A — frozen Phase 8 structured edit-plus-validation replay.**
-   - Must make the exact edit, pass George-owned validation, finish with completed/verified TaskState, use zero human coding intervention, avoid task/stage/correction exhaustion, and remain within the currently locked `<=10` model-requested tool calls and `<=10` logical provider rounds.
-   - Must retain bounded attempt/trace artifacts even when production execution throws.
-   - Record first INSPECT tool-choice mode, selected inspection tools, read SHA/mutation-precondition provenance, mutation tool and requested/result byte counts, pre/post SHA, final-newline state, recognized line-ending convention where applicable, validation/correction state, provider rounds/attempts/retries/tokens, context profile/estimated input, task/stage/run budgets, and timing where observable.
-2. **Gate B — `greenfield-express-v1`.**
-   - Runs only after Gate A Green.
-   - Must execute through the production structured task-stack service, preserve strict fail-stop ordering, complete declared validations, and pass hidden acceptance.
-3. **Gate C — `existing-express-feature-v1`.**
-   - Runs only after Gate B Green.
-   - Must preserve baseline behavior, pass focused/broad validation and hidden acceptance.
+   - **Green and inherited** from `c9-mutation-intent-authority` so long as the production structured execution path, mutation authority, or exact Gate A fixture/acceptance does not change.
+   - The qualifying attempt produced the exact required 60-byte edit, passed George-owned V1, completed/verified TaskState, passed hidden acceptance, used zero human coding intervention, avoided exhaustion, and stayed within the locked `<=10` model-requested tool calls / `<=10` logical provider rounds.
+   - Do not respent Gate A solely because qualification instruments B/C are structurally versioned.
+2. **Gate B2 — `greenfield-express-v2`.**
+   - Runs once after deterministic v2 instrument qualification.
+   - Must execute through the production structured task-stack service, preserve strict fail-stop ordering, complete all declared validations, finish with completed StackState, pass hidden acceptance, use zero human coding intervention, and avoid task/stage exhaustion.
+3. **Gate C2 — `existing-express-feature-v2`.**
+   - Runs once only after Gate B2 Green.
+   - Must preserve baseline behavior, pass focused/broad validation and hidden acceptance, finish with completed TaskState, use zero human coding intervention, and avoid task/stage exhaustion.
 
-An official Not Green workload is not immediately rerun merely to obtain a pass. The failed attempt remains evidence; implementation must change under an approved correction before a new official attempt is spent.
+Historical `greenfield-express-v1` / `existing-express-feature-v1` remain immutable evidence. `greenfield-express-v1` is Not Green because its task-stack authoring duplicates preflight inspection as ordinary workflow and exhausted the duplicate/no-progress guard before implementation. That result is not reclassified or erased.
 
-Current qualified sub-boundaries:
-- production StackState/task-stack validation, ordering, fail-stop, history, and durable resume — Green deterministically;
-- Bubblewrap Workspace Autonomous containment — Green;
-- full-file `read_file.sha256` -> mutation current-content precondition — Green;
-- mandatory first-round structured INSPECT tool call — Green;
-- exception-safe official live-attempt retention/artifact persistence — Green;
-- application-owned INSPECT completion after one successful tool round — Green;
-- full-file text-framing evidence and mutation fidelity guards — Green.
+Instrument alignment rules:
+- top-level `INSPECT` owns application-controlled preflight observation;
+- WORKFLOW units represent actual task progression and do not gain special semantics from titles such as `Inspect`, `Validate`, or `Report`;
+- validation-dependent completion reporting belongs in EVIDENCE/qualification closeout after George-owned validations run;
+- structural fixes after an official instrument attempt require a new instrument version/digest;
+- acceptance behavior may remain at version 1 when the product requirements are unchanged.
 
-Current live Gate A remains **Not Green** because the qualification approval envelope and mutation-intent authority are not yet aligned. After the fidelity guard rejected the bad full replacement, Qwen requested an exact same-target `apply_patch` that would have produced the frozen 60-byte result, but the historical benchmark approval helper denied that tool. Qwen then requested a framing-change override, which the current application approval boundary does not distinguish from an ordinary workspace mutation. The active qualification question is therefore whether George can keep exceptional mutation intent below explicit approval authority while allowing equivalent safe mutation primitives in the frozen structured gate.
+Current qualified sub-boundaries remain Green: production StackState/task-stack execution; Bubblewrap containment; read SHA/mutation preconditions; mandatory first-round INSPECT; application-owned INSPECT completion; exception-safe live evidence; text-framing evidence/guard; mutation-intent authority; and fair frozen-edit approval.
+
+Phase 9 is ready for owner closeout only if Gate B2 and Gate C2 are both Green and no new blocking regression appears.
 
 ## Task-format parser and validator
 
@@ -151,28 +151,48 @@ Use this order so the central structured-execution hypothesis is tested early:
 4. validation/correction/resume orchestration;
 5. Transcript/Task TUI;
 6. Workspace Autonomous policy and process containment;
-7. `greenfield-express-v1`;
-8. `existing-express-feature-v1`.
+7. aligned `greenfield-express-v2`;
+8. aligned `existing-express-feature-v2`.
 
 A later layer does not erase an earlier Not Green result.
 
 ## Frozen live-work instruments
 
-### greenfield-express-v1
+### Historical v1 instruments
 
-Controlled clean Git repository, fixed Node/runtime/environment assumptions, fixed Task Prompt v1 stack, fixed user policy. The stack builds a small Node/Express application with meaningful API behavior, validation, tests, docs, and closeout.
+`greenfield-express-v1` and `existing-express-feature-v1` remain frozen exactly as previously exercised. Their task files, metadata, digests, acceptance references, and live outcomes are immutable longitudinal evidence.
 
-### existing-express-feature-v1
+The current greenfield v1 failure is specifically retained: P1 encoded clean-repository preflight as an ordinary workflow unit, so Qwen performed repeated reads until the duplicate/no-progress guard exhausted the stage before mutation/validation. Later v1 tasks also duplicate top-level INSPECT with workflow inspection units, and greenfield P3 places `Validate and report` before George-owned validation results exist.
 
-One frozen fixture repository commit, one fixed structured feature stack, and hidden acceptance tests outside the model-visible workspace. The feature requires inspection, multiple edits, regression preservation, focused tests, broad validation, and completion reporting.
+### greenfield-express-v2
+
+Controlled clean Git repository, same Node/runtime/environment/dependency prerequisite, and same required Express task-service behavior/hidden acceptance as v1 unless the v2 metadata explicitly records otherwise.
+
+Authoring alignment requirements:
+- P1 uses top-level `INSPECT` for clean repository/package/Git preflight and begins WORKFLOW with creation of the application skeleton;
+- P2 uses top-level `INSPECT` for current source/package observation and does not repeat that preflight as a workflow unit;
+- P3 uses top-level `INSPECT` for routes/tests/docs observation, WORKFLOW only for tests/documentation changes, and leaves exact validation/completion reporting to George-owned evidence after V1/V2 execute;
+- task stack/digest/version are new and immutable once exercised;
+- acceptance may reuse acceptance version 1 because application behavior is unchanged.
+
+### existing-express-feature-v2
+
+Use the same frozen fixture source and behavioral hidden acceptance as v1 unless metadata explicitly records a changed fixture/acceptance version.
+
+Authoring alignment requirements:
+- retain top-level `INSPECT` for baseline source/tests/docs/Git observation;
+- remove the redundant workflow inspection unit;
+- keep implementation and tests/docs as actual workflow units;
+- split documentation implementation requirements from post-validation completion/evidence reporting;
+- version the task/instrument metadata independently while preserving the v1 fixture/result history.
 
 ### Recorded dimensions
 
-Record exact George commit/version; model/provider/runtime/context configuration; task-format/fixture/acceptance-suite versions; Green/Not Green/Evidence Gap; hidden acceptance; required validation; human interventions; defects detected/self-repaired; provider rounds/attempts/retries; tool calls/duplicates; context/profile/token evidence; wall time; sandbox/permission events; and final task ledger state.
+Record exact George commit/version; model/provider/runtime/context configuration; instrument/task-stack/fixture/acceptance versions and digests; Green/Not Green/Evidence Gap; hidden acceptance; required validation; human interventions; defects detected/self-repaired; provider rounds/attempts/retries; tool calls/duplicates; context/profile/token evidence; wall time; sandbox/permission events; and final task/stack ledger state.
 
 Do not collapse these dimensions into one score.
 
-After Phase 9, rerun both v1 instruments at every later phase closeout when available.
+After Phase 9, prefer the latest accepted instrument version for regression qualification while retaining v1 outcomes as historical comparisons.
 
 ## Regression inheritance
 

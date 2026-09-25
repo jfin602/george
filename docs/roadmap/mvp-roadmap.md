@@ -431,7 +431,9 @@ Current evidence after Phase 9 corrections:
 - structured INSPECT now completes after the first successful tool round and live Gate A reaches implementation without an inspection continuation;
 - official live-attempt evidence survives production-service exceptions;
 - full-file text-framing evidence and recoverable framing-preservation guards are qualified;
-- the current mandatory live replay is still Not Green because the qualification approval policy denied Qwen's correct same-target patch, then a model-requested framing-change acknowledgement was treated as sufficient authority to publish the same non-exact replacement;
+- mutation-intent authority and fair frozen-edit approval are qualified;
+- the mandatory frozen edit-plus-validation Gate A is now Green on the corrected architecture;
+- `greenfield-express-v1` remains historically Not Green because its task stack duplicates application-owned preflight inspection inside ordinary workflow units, causing P1 to exhaust duplicate/no-progress before implementation; the remaining Phase 9 live work is v2 instrument alignment rather than production-loop repair;
 - native Node-26 real-TTY/OpenTUI behavior remains an Evidence Gap;
 - Phase 9 is not owner-closed and Phase 10 remains unopened.
 
@@ -452,7 +454,7 @@ Scope:
 - auto-run ordinary development processes only through an actually OS-enforced, qualified workspace containment path;
 - preserve existing approval-required non-sandboxed host-process behavior as a separate path/fallback;
 - keep network, remote mutation, browser interaction, credentials, and environment authority separate from workspace filesystem autonomy;
-- freeze `greenfield-express-v1` and `existing-express-feature-v1` live-work task-stack instruments;
+- preserve `greenfield-express-v1` and `existing-express-feature-v1` as immutable historical live-work instruments; version structural authoring corrections as `greenfield-express-v2` / `existing-express-feature-v2` rather than rewriting v1;
 - preserve the Phase 8 `agentic-context` benchmark and failed edit/validation result as longitudinal evidence rather than erasing it.
 
 Success condition:
@@ -462,7 +464,7 @@ Success condition:
 - Transcript/Task UI separation is usable without losing cancellation/approval/scrollback/draft behavior;
 - workspace-autonomous processes are demonstrably contained from disallowed host filesystem resources or the mode fails closed;
 - outside reject/ask behave exactly as configured and prompts cannot elevate policy;
-- both frozen v1 live-work baselines are recorded with raw outcome/performance/intervention dimensions;
+- both frozen v1 live-work baselines remain recorded with raw outcome/performance/intervention dimensions, and the aligned v2 instruments complete their final Phase 9 qualification gates;
 - inherited Phase 2-8 contracts remain Green or their accepted Not Green/Evidence Gap states remain explicitly classified.
 
 Non-goals:

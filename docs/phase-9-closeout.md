@@ -16,32 +16,37 @@ This document's original P1-P9 candidate audit and the 2026-09-25 live closeout 
 
 Current package remains `0.9.10`; Phase 9 is still open and has not received owner acceptance.
 
-The subsequent correction chain materially narrowed the remaining blocker:
+The subsequent correction chain materially narrowed and then qualified the core structured edit path:
 
-1. **`c9-structured-task-convergence`** — qualified the production task-stack boundary and implemented bounded stage evidence continuity, task-wide budgeting, direct literal validation, convergence ceilings, and no-progress guards.
-2. **`c9-qwen-workunit-convergence`** — qualified full-file `read_file.sha256` -> existing-file mutation preconditions and added repository-owned live trace extraction.
-3. **`c9-inspection-execution`** — qualified mandatory first-round structured INSPECT tool execution and exception-safe live attempt retention.
+1. **`c9-structured-task-convergence`** — qualified production stack authority and bounded stage evidence/budget/convergence behavior.
+2. **`c9-qwen-workunit-convergence`** — qualified full-file `read_file.sha256` -> safe existing-file mutation preconditions and typed live tracing.
+3. **`c9-inspection-execution`** — qualified mandatory first-round structured INSPECT tool execution and exception-safe attempt retention.
 4. **`c9-inspection-stage-completion`** — qualified application-owned INSPECT completion after one successful tool round.
-5. **`c9-text-file-edit-fidelity`** — qualified full-file text-framing evidence and recoverable preservation guards for existing UTF-8 text mutations.
+5. **`c9-text-file-edit-fidelity`** — qualified full-file text-framing evidence and recoverable framing-preservation guards.
+6. **`c9-mutation-intent-authority`** — qualified model-intent/approval separation and a fair frozen-edit approval envelope. The exact frozen Gate A is now **Green**: Qwen selected an ordinary same-target `apply_patch`, produced the required 60-byte file, George-owned V1 passed, TaskState completed/verified, hidden acceptance passed, there was zero human coding intervention, and no stage/task/run-budget exhaustion occurred.
 
-Latest official Gate A then exposed a final authority mismatch rather than a broad convergence failure:
-- the first 59-byte full replacement was rejected correctly and left the original file/SHA unchanged;
-- Qwen reread the target and then requested an exact `apply_patch` that would have produced the required 60-byte content while preserving framing;
-- the frozen qualification approval policy denied that `apply_patch` solely because the historical benchmark helper only approves `write_file` on the target;
-- Qwen next requested the same 59-byte full replacement with a framing-change acknowledgement;
-- the application approval boundary did not independently represent that exceptional mutation intent, so the qualification approval port treated the call like an ordinary target write and allowed it;
-- George then correctly wrote the exact acknowledged 59 bytes; V1 passed and TaskState completed, but exact/hidden acceptance failed.
+After Gate A Green, the current `greenfield-express-v1` Gate B remained **Not Green**, but for a qualification-instrument authoring defect rather than a newly observed production-loop defect. Its P1 encodes preflight repository inspection as an ordinary workflow unit (`W1 — Inspect the clean repository`) instead of using the dedicated top-level `INSPECT` phase. Qwen therefore continued read-only implementation-stage work until the structured duplicate/no-progress guard correctly terminated the stage. No mutation or validation ran.
 
-The active Phase 9 blocker is therefore **mutation intent authority and qualification fairness**. Model arguments may express intent, but they must not grant executable authority. A model-requested text-framing change must cross a distinct George-owned approval boundary, including in Workspace Autonomous mode. Separately, the structured Gate A approval envelope must allow equivalent safe mutation primitives (`write_file` or `apply_patch`) on the exact frozen target while denying unrelated targets and framing-change overrides.
+Audit of the v1 instruments found the same semantic drift elsewhere:
+- greenfield P2 and P3 contain top-level `INSPECT` plus redundant workflow units named as inspection;
+- greenfield P3 contains `W3 — Validate and report` even though George-owned validation executes after workflow units, so that work unit cannot truthfully own exact validation results;
+- existing-app v1 likewise duplicates top-level `INSPECT` with `W1 — Inspect frozen baseline`, and its completion-reporting requirement mixes model work with George-owned post-validation evidence.
 
-The historical benchmark case/expected tool set remains unchanged. The fair Phase 9 structured qualification policy is a separate authority.
+The v1 instruments and their Not Green outcomes remain immutable evidence. Phase 9 will not teach George to infer stage semantics from titles such as `Inspect`, `Validate`, or `Report`. Instead, structural instrument fixes are versioned as v2 qualification instruments that use top-level `INSPECT` for preflight observation and reserve `WORKFLOW` for actual task progression.
+
+Final Phase 9 qualification from here:
+- Gate A: inherited Green from `c9-mutation-intent-authority`; do not respent it unless production execution behavior changes;
+- Gate B2: one official `greenfield-express-v2` attempt;
+- Gate C2: one official `existing-express-feature-v2` attempt only after B2 Green;
+- Phase 9 is ready for owner closeout only after B2 and C2 are Green and no new blocking regression appears.
 
 Correction evidence:
 - [`c9-structured-task-convergence`](tasks/c9-structured-task-convergence/closeout.md);
 - [`c9-qwen-workunit-convergence`](tasks/c9-qwen-workunit-convergence/closeout.md);
 - [`c9-inspection-execution`](tasks/c9-inspection-execution/closeout.md);
 - [`c9-inspection-stage-completion`](tasks/c9-inspection-stage-completion/closeout.md);
-- [`c9-text-file-edit-fidelity`](tasks/c9-text-file-edit-fidelity/closeout.md).
+- [`c9-text-file-edit-fidelity`](tasks/c9-text-file-edit-fidelity/closeout.md);
+- [`c9-mutation-intent-authority`](tasks/c9-mutation-intent-authority/closeout.md).
 
 Phase 10 remains gated on Phase 9 owner closeout.
 
