@@ -1,0 +1,79 @@
+TASK: Correction 9 / P3 — Direct validation and structured convergence guards
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Sol Medium`.
+- Browser required: no.
+
+VERSIONING
+- Required unchanged project version: `0.9.10`.
+
+GOAL
+
+Make structured work units converge predictably by removing model calls that have no model decision, adding capability-reducing stage ceilings, and preventing repeated unchanged local-read loops without changing ordinary agent-loop behavior.
+
+Read `BOOT.md`, `AGENTS.md`, current Phase 9 authority, `docs/tasks/c9-structured-task-convergence/{prompt-assessment,implementation-plan,P1-diagnostic-evidence}.md`, exact P2 candidate source/tests, and current agent-loop/coding-workflow/run-budget/tool-registry/recovery contracts.
+
+DIRECT GEORGE-OWNED VALIDATION
+
+For a resolved literal validation executable/argv:
+- execute validation directly through George's canonical process/tool/approval/budget/event/recovery path;
+- do not make a provider request whose only purpose is to announce that George will run validation;
+- preserve WorkflowValidation evidence, timing, approval, process result, cancellation, timeout, and recovery truth;
+- DISCOVER may still use one bounded no-tool provider completion to propose executable/argv because that is a model decision;
+- once DISCOVER resolves executable/argv, execution is George-owned.
+
+PER-STAGE CAPABILITY-REDUCING LIMITS
+
+Add an application/submission seam that can reduce but never raise the configured agent-loop tool-call/tool-round ceiling for one structured stage.
+
+Use explicit Phase-9 correction defaults:
+- inspection: max 6 logical provider rounds and max 4 model-requested tool calls;
+- implementation: max 10 logical provider rounds and max 8 model-requested tool calls;
+- correction: max 8 logical provider rounds and max 6 model-requested tool calls;
+- DISCOVER proposal: no tools and one bounded provider completion.
+
+These are structured-stage convergence limits, not context-profile limits.
+
+Exhaustion must:
+- terminate the affected stage truthfully;
+- produce bounded observable evidence;
+- map into existing structured failed/blocked/budget state consistently;
+- never silently continue in a new fresh budget.
+
+EXACT REPEATED REPLAY-SAFE LOCAL-READ GUARD
+
+For structured stages only:
+- fingerprint normalized name + arguments for replay-safe local read/list/search/Git calls;
+- track a workspace-mutation epoch inside the stage;
+- if the exact same replay-safe local request is proposed again in the same epoch after it already succeeded, do not re-execute it indefinitely;
+- return a bounded normalized duplicate/no-progress result that states the equivalent unchanged request already succeeded and directs the model to use existing observed evidence or make progress;
+- a successful George workspace mutation advances the epoch and permits a fresh equivalent read afterward;
+- ambiguous/failed reads are not treated as successful cached evidence;
+- do not apply this guard to writes, processes, external/network/remote/browser tools, or ordinary unstructured chat.
+
+Add a small bounded duplicate/no-progress terminal guard so repeated duplicate responses cannot burn the full inherited loop ceiling.
+
+STRUCTURED COMPLETION GUIDANCE
+
+Keep the provider instruction compact:
+- use supplied observed evidence;
+- perform only the current work unit;
+- stop when its completion condition is satisfied;
+- do not run declared George-owned validation yourself.
+
+Do not inject the full TaskState or add verbose prompt policy.
+
+Permanent tests must prove:
+- literal validation executes with zero validation-only provider requests;
+- validation still uses canonical process/approval/budget/events;
+- DISCOVER still requires exactly the model decision and then George executes;
+- stage limits reduce only structured execution;
+- exact unchanged repeated local reads are not repeatedly executed;
+- a read after a successful workspace mutation is allowed again;
+- duplicate/no-progress exhaustion is truthful;
+- ordinary chat/tool-loop semantics remain unchanged;
+- the frozen deterministic P4 replay still reaches the exact edit and validation under the new boundaries.
+
+Run focused structured/agent/coding/recovery tests, `npm run typecheck`, `npm run test:runner`, affected broader tests, `git diff --check`, and verify package `0.9.10` / no root lockfile.
+
+Do not retune context, runtime, retries, correction count, Bubblewrap, or TUI.

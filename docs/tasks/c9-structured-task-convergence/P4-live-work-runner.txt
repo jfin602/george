@@ -1,0 +1,99 @@
+TASK: Correction 9 / P4 — Fail-stop frozen live-work runner
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Sol Medium`.
+- Browser required: no.
+
+VERSIONING
+- Required unchanged project version: `0.9.10`.
+
+GOAL
+
+Replace the ad-hoc Phase 9 live qualification orchestration with one reusable repository-owned runner that executes the frozen structured instruments through George's real current boundaries and stops truthfully at the first failed task.
+
+Read `BOOT.md`, `AGENTS.md`, current Phase 9 authority, `docs/tasks/c9-structured-task-convergence/{prompt-assessment,implementation-plan,P1-diagnostic-evidence}.md`, exact P2/P3 source/tests, frozen P4/greenfield/existing-app fixtures, hidden acceptance tests, provider/runtime/config code, and current benchmark/qualification artifact conventions.
+
+Do not create a second task parser, state machine, tool loop, permission system, or acceptance truth model.
+
+The runner must use:
+- canonical Task Prompt v1 parsing;
+- canonical `validateTaskStack`;
+- real `LmStudioResponsesProvider`;
+- real coding/structured application services;
+- real context/profile/tool/approval/recovery paths;
+- current execution policy and Bubblewrap selection where applicable;
+- hidden acceptance only from outside the model-visible workspace.
+
+SUPPORTED INSTRUMENTS
+
+At minimum:
+1. frozen Phase 8 structured edit-validation replay;
+2. `greenfield-express-v1`;
+3. `existing-express-feature-v1`.
+
+GREENFIELD FAIL-STOP
+
+For the frozen three-task greenfield stack:
+- validate the full stack before any model work;
+- execute P1 first;
+- if P1 ends failed/blocked/planning_needed/cancelled/budget_exhausted or does not reach required validation/completion truth, STOP;
+- P2 and P3 must not start;
+- preserve the failed P1 result;
+- do not represent later task attempts from the original temporary harness as qualifying evidence;
+- hidden acceptance is qualifying only after the full stack completed; if optionally run after an incomplete stack for diagnosis, label it non-qualifying/expected-failure evidence.
+
+Apply equivalent stop-on-first-non-completed semantics to every multi-task instrument.
+
+DEPENDENCY INSTALLATION
+
+The runner may support explicit harness-level dependency installation needed by the frozen instruments, but:
+- it requires a deliberate CLI flag/config that represents user authorization;
+- it is not a Qwen/model tool call;
+- it is scoped to the disposable fixture workspace;
+- it records exact command/outcome/version/lockfile state;
+- no flag means missing prerequisite -> Evidence Gap, not silent network use.
+
+HIDDEN ACCEPTANCE ISOLATION
+
+- never copy hidden acceptance into model-visible workspaces;
+- never include hidden assertion source/path in provider prompts;
+- invoke acceptance externally only after the relevant model run;
+- record result without feeding hidden assertions back to Qwen during the same official attempt.
+
+METRICS / ARTIFACTS
+
+Write bounded Git-ignored artifacts with:
+- exact George/package/model/runtime/context/task/fixture/acceptance versions;
+- per-task terminal state and TaskState projection;
+- provider attempts/logical rounds/retries;
+- model-requested tool calls and duplicate/no-progress events;
+- context profile/tokens;
+- stage budget consumption/exhaustion;
+- validations/corrections;
+- workspace/sandbox/approval events;
+- wall time;
+- human intervention count;
+- hidden acceptance outcome.
+
+Do not store secrets, raw environment dumps, unrestricted provider payloads, or hidden acceptance source.
+
+RUNNER CORRECTNESS TESTS
+
+Add deterministic tests proving:
+- stack validation occurs before execution;
+- P1 failure prevents P2/P3 provider calls;
+- P1 pass permits P2;
+- P2 failure prevents P3;
+- acceptance is qualifying only after full stack completion;
+- dependency install cannot occur without explicit harness authorization;
+- hidden acceptance path stays outside copied/model-visible workspace;
+- every attempted task remains in output artifacts;
+- a stopped stack cannot be summarized as Green.
+
+If P1 diagnostic proved that the **production** structured stack contract itself is materially missing and a proper product stack state/executor is required to satisfy the approved Phase 9 architecture, stop with `Planning needed` rather than burying that architecture work in a benchmark script.
+
+Otherwise keep this as qualification tooling over existing canonical task execution.
+
+Run focused runner/instrument tests, `node --test test/integration/phase9-qualification.test.ts`, `npm run typecheck`, `npm run test:runner`, `git diff --check`, and verify package remains `0.9.10` with no root lockfile.
+
+Do not run the official live qualification in P4; that is P5.

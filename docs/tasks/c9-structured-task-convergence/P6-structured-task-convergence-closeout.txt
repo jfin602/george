@@ -1,0 +1,76 @@
+TASK: Correction 9 / P6 — Structured task convergence correction closeout
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Sol Medium`.
+- Browser required: no.
+
+VERSIONING
+- Required unchanged project version: `0.9.10`.
+
+GOAL
+
+Perform an evidence-only closeout of correction `c9-structured-task-convergence` from the exact P5 candidate.
+
+Read `BOOT.md`, current product/architecture/workflow/stability/roadmap contracts, Phase 9 authority, latest Phase 9 evidence/closeout, all c9 assessment/plan/P1-P5 evidence, and exact current source/tests.
+
+Audit and report:
+
+DIAGNOSIS
+- confirmed live convergence failure shape;
+- confirmed/rejected P1 root causes;
+- preserved Phase 8 and first Phase 9 Not Green evidence.
+
+IMPLEMENTATION
+- inspection-to-implementation bounded evidence continuity;
+- correction validation-diagnostic continuity;
+- one task-wide run budget across structured subruns;
+- direct George-owned literal validation without validation-only provider round;
+- structured-stage call/round limits;
+- exact duplicate/no-progress replay-safe local-read handling;
+- ordinary chat/tool-loop non-regression;
+- fail-stop frozen live-work runner and hidden acceptance isolation.
+
+QUALIFICATION
+- focused deterministic correction coverage;
+- inherited Phase 9 structured/recovery/context/tool safety;
+- P4 live Gate A result;
+- greenfield Gate B only if Gate A permitted it;
+- existing-app Gate C only if Gate B permitted it;
+- call/round/token/time deltas versus both Phase 8 and first Phase 9;
+- Bubblewrap containment inherited truth;
+- native TUI inherited Evidence Gap unless independently resolved;
+- all remaining Not Green/Evidence Gap states.
+
+Create `docs/tasks/c9-structured-task-convergence/closeout.md` with:
+- exact candidate SHA/package;
+- Implementation Complete / Correction Qualified status separately;
+- Green / Not Green / Evidence Gap per layer;
+- explicit gate outcomes and why later live gates did/did not run;
+- permanent regression guards installed;
+- remaining risks.
+
+Correction Qualified requires Gate A Green under the locked functional/call/round criteria plus deterministic correction validation Green. If Gate A is Not Green or Evidence Gap, record the correction as Not Qualified; do not waive it.
+
+Greenfield/existing-app outcomes are additional Phase 9 usefulness evidence; do not fabricate them when earlier gates correctly prevented execution.
+
+Do not:
+- repair implementation;
+- alter structured limits;
+- rerun live workloads;
+- rewrite historical Phase 8 evidence;
+- owner-close Phase 9;
+- advance/open Phase 10;
+- change BOOT/roadmap phase state;
+- change package version.
+
+Required proof:
+- `npm run typecheck`;
+- `npm run test:runner`;
+- focused c9 regression suite;
+- `node --test test/integration/phase9-qualification.test.ts`;
+- appropriate affected broad tests;
+- `git diff --check`;
+- package remains exactly `0.9.10`;
+- no root `package-lock.json`.
+
+Owner acceptance and Phase 9 owner closeout remain separate actions after this correction.

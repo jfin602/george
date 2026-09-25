@@ -1,0 +1,140 @@
+TASK: Correction 9 / P5 — Gated live structured convergence qualification
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Sol Medium`.
+- Browser required: no.
+
+VERSIONING
+- Required unchanged project version: `0.9.10`.
+
+GOAL
+
+Qualify c9-structured-task-convergence against the pinned live Qwen path, spending larger live-work attempts only after the smallest frozen regression proves functional correctness and material convergence improvement.
+
+Read `BOOT.md`, `AGENTS.md`, current Phase 9/c9 authority and exact P1-P4 candidate source/tests, latest Phase 9 live artifacts/evidence, preserved Phase 8 historical evidence, and the repository-owned live-work runner before execution.
+
+RUNTIME CONTROL
+
+Use pinned model:
+`qwen3-coder-30b-a3b-instruct@q4_k_m`
+
+Before controlled live work:
+- print `MANUAL CHECK: LM Studio GPU Offload must show 26`;
+- capture REST-visible model/context/eval-batch/physical-batch/parallel/Flash-Attention/GPU-KV/experts settings;
+- do not silently change runtime/context settings;
+- unconfirmed UI-only GPU Offload 26 permits functional evidence but not controlled latency claims.
+
+Use supported Node 26.
+
+If LM Studio/provider is unavailable, record Evidence Gap and do not substitute another model.
+
+DETERMINISTIC PRE-GATE
+
+Run:
+- focused c9 P1-P4 tests;
+- frozen deterministic Phase 8 structured replay;
+- Phase 9 integrated qualification;
+- `npm run typecheck`;
+- `npm run test:runner`;
+- `git diff --check`.
+
+Unexpected failures remain visible.
+
+GATE A — EXACT FROZEN P4 STRUCTURED REPLAY
+
+Run exactly one official live attempt after the deterministic pre-gate.
+
+Green requires ALL:
+- exact required file repair;
+- George-owned V1 passes;
+- TaskState terminal status completed with covered requirements verified;
+- zero human coding intervention;
+- no correction-limit exhaustion;
+- no run/stage-budget exhaustion;
+- <=10 model-requested tool calls;
+- <=10 logical provider rounds.
+
+Also record:
+- provider attempts/retries;
+- context profile and estimated/reported tokens;
+- total provider input/output;
+- elapsed and stage timings;
+- exact model tool sequence;
+- duplicate/no-progress guard events;
+- inspection evidence handoff;
+- validation failure diagnostics if any;
+- task-wide and stage-budget snapshots.
+
+The 10-call ceiling is anchored to the preserved Phase 8 failed run; the 10-round ceiling requires at least a 50% reduction from the failed first Phase 9 20-round result while allowing bounded structured overhead.
+
+Provider input must be materially below the first failed Phase 9 63,253-token result; record the delta, but do not create a new production context threshold from one fixture.
+
+If Gate A is not Green:
+- STOP live qualification;
+- do not run greenfield;
+- do not run existing-app;
+- preserve the failure;
+- do not rerun until pass;
+- do not change production code in P5.
+
+GATE B — GREENFIELD
+
+Only if Gate A is Green.
+
+Use exact `greenfield-express-v1` frozen tasks/fixture/hidden acceptance.
+
+Dependency installation is harness-level and requires the explicit authorization flag defined in P4.
+
+Run one official stack attempt.
+
+Fail-stop:
+- if P1 is not completed/Green, P2/P3 must not run;
+- if P2 fails, P3 must not run;
+- hidden acceptance is qualifying only after all three tasks complete.
+
+Green requires:
+- P1/P2/P3 completed truthfully;
+- all declared validations Green;
+- hidden acceptance Green;
+- zero human coding intervention;
+- no unbounded duplicate/no-progress behavior;
+- no stage/task budget exhaustion.
+
+Record all raw call/round/token/time/correction/task-state dimensions.
+
+If Gate B is Not Green, STOP; do not run existing-app.
+
+GATE C — EXISTING APP
+
+Only if Gate B is Green.
+
+Run exactly one official `existing-express-feature-v1` attempt.
+
+Green requires:
+- focused validation Green;
+- broad validation Green;
+- completed TaskState;
+- preserved baseline tests;
+- hidden acceptance Green;
+- zero human coding intervention;
+- no stage/task budget exhaustion.
+
+Record raw metrics as above.
+
+EVIDENCE
+
+Create `docs/tasks/c9-structured-task-convergence/P5-live-evidence.md` containing:
+- exact candidate SHA/package;
+- runtime provenance;
+- deterministic pre-gate results;
+- Gate A comparison versus preserved Phase 8 and first Phase 9 live evidence;
+- Gate B/C results only if reached;
+- raw call/round/token/time/task/budget/duplicate/correction metrics;
+- Green / Not Green / Evidence Gap matrix;
+- exact Git-ignored artifact paths.
+
+Do not update Phase 9 owner/roadmap state.
+
+Do not repair implementation, alter limits, retune context/runtime, or rerun a Not Green official workload in P5.
+
+Package must remain `0.9.10`; `git diff --check`; no root lockfile.

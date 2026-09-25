@@ -1,0 +1,73 @@
+TASK: Correction 9 / P2 — Structured stage evidence continuity and task-wide budget
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Sol Medium`.
+- Browser required: no.
+
+VERSIONING
+- Required unchanged project version: `0.9.10`.
+
+GOAL
+
+Repair the confirmed structured-task information discontinuities and aggregate-budget reset without broadening provider context or weakening canonical TaskState authority.
+
+Read `BOOT.md`, `AGENTS.md`, current Phase 9 authority, `docs/tasks/c9-structured-task-convergence/{prompt-assessment,implementation-plan,P1-diagnostic-evidence}.md`, latest Phase 9 live evidence, and exact current structured-task/context/session/run-budget/tool-result source/tests before editing.
+
+Implement the smallest architecture-compatible correction.
+
+TASK-WIDE RUN BUDGET
+
+- At structured-task entry, use an explicitly supplied run budget when present; otherwise create exactly one task-wide run budget.
+- Thread that same budget through inspection, implementation, DISCOVER proposal, validation execution, correction, hooks, and every nested provider/tool run belonging to that structured task.
+- Do not silently reset provider/tool/context/process accounting at stage boundaries.
+- Ordinary unstructured turns retain their existing budget behavior.
+- Durable/session evidence remains truthful about budget pressure/exhaustion.
+
+INSPECTION -> IMPLEMENTATION HANDOFF
+
+Introduce a bounded, provider-facing derived stage-evidence projection from successful inspection tool results.
+
+Requirements:
+- implementation can consume the relevant evidence just observed instead of receiving only an inspection item/call ID;
+- use tool-specific normalized/sanitized results already produced by George where practical;
+- bound bytes/items and preserve deterministic order;
+- never dump unrestricted file/tool/provider bodies, secrets, environment state, or arbitrary JSON;
+- keep the evidence derived/non-authoritative;
+- do not persist raw file bodies into canonical TaskState merely for convenience;
+- after a successful workspace mutation, evidence that may now be stale must not be represented as current;
+- after interruption/reopen where ephemeral inspection evidence is unavailable, re-inspect rather than fabricate continuity.
+
+VALIDATION FAILURE -> CORRECTION HANDOFF
+
+Extend structured validation-attempt state with bounded safe failure diagnostics sufficient for a repair turn:
+- status/outcome/exit/signal;
+- bounded stdout/stderr or normalized error where applicable;
+- truncation/redaction evidence.
+
+Correction provider slices must include only the relevant current failed validation diagnostic plus current work context.
+
+A later pass must preserve prior failed attempts/diagnostics as durable history without injecting all history into every provider request.
+
+Do not add a helper-model summary.
+
+Required permanent tests:
+- implementation slice contains bounded successful inspection evidence from the immediately preceding preflight;
+- unrelated/raw inspection bodies remain excluded;
+- mutation invalidates stale stage evidence appropriately;
+- reopen without ephemeral evidence re-inspects;
+- failed validation stores bounded useful diagnostic evidence;
+- correction slice contains that failure evidence;
+- passing correction preserves old failed attempt;
+- all structured subruns consume the same task-wide RunBudget;
+- ordinary chat budget behavior remains unchanged.
+
+Run focused task/state/application/context/recovery tests, `npm run typecheck`, `npm run test:runner`, `git diff --check`, and verify no root lockfile.
+
+Do not:
+- change context profile thresholds;
+- increase task/retry/correction ceilings;
+- implement direct-validation/convergence guards reserved for P3;
+- modify Bubblewrap/TUI/live-work fixtures;
+- change package version.
+
+If safe bounded stage evidence would require making raw tool bodies canonical durable TaskState, stop with `Planning needed` rather than weakening the state boundary.

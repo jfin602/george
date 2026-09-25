@@ -1,0 +1,66 @@
+TASK: Correction 9 / P1 — Structured convergence diagnostic boundary
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Sol Medium`.
+- Browser required: no.
+
+VERSIONING
+- Required unchanged project version: `0.9.10`.
+
+GOAL
+
+Establish an executable, source-backed diagnosis of the Phase 9 live structured-task convergence failure before changing production convergence behavior.
+
+Read `BOOT.md`, `AGENTS.md`, current product/architecture/workflow/stability contracts, Phase 9 structured-task planning/qualification authority, current `docs/phase-9-closeout.md`, latest local `docs/tasks/p9/{P4-phase8-regression-evidence,P9-qualification-evidence}.md`, and `docs/tasks/c9-structured-task-convergence/{prompt-assessment,implementation-plan}.md`.
+
+When present, inspect the latest local `artifacts/phase9-live-qualification-*/live-results.json` and related bounded artifacts. Preserve those artifacts as evidence; do not rewrite or delete them.
+
+Inspect exact current source/tests for:
+- `StructuredTaskApplicationService`;
+- `CodingWorkflowApplicationService`;
+- `AgentLoopApplicationService`;
+- TaskState/validation-attempt persistence;
+- run-budget creation/consumption;
+- frozen Phase 8 structured replay;
+- Phase 9 live-work fixtures/acceptance;
+- any existing structured stack runner/qualification harness.
+
+Required diagnostic conclusions:
+
+1. Trace inspection -> implementation -> validation -> correction as actual nested application/provider calls, including where `omitHistory` is used.
+2. Prove exactly what successful inspection result data is available at the end of preflight and exactly what data reaches the next implementation provider request.
+3. Prove exactly what failed validation stdout/stderr/error evidence exists in workflow completion and what subset is persisted/rendered into correction TaskState/provider slices.
+4. Determine whether one structured task uses one aggregate run budget or silently creates fresh budgets across nested stages.
+5. Identify every provider request that exists only to orchestrate deterministic George-owned work, especially literal validation.
+6. Record the effective ordinary max tool-call/tool-round limits inherited by each structured stage and whether any structured-stage convergence/no-progress guard exists.
+7. Trace the greenfield live qualification sequencing and determine why P2/P3 were attempted after P1 failed.
+8. Verify whether production currently has an executable task-stack sequencing boundary beyond `validateTaskStack`; distinguish a production contract gap from a temporary qualification-harness bug.
+
+Create `docs/tasks/c9-structured-task-convergence/P1-diagnostic-evidence.md` with:
+- exact candidate SHA/package;
+- live trigger metrics from the latest Phase 9 qualification;
+- source-backed producer/consumer trace;
+- confirmed versus rejected root-cause hypotheses;
+- exact correction boundaries for P2-P4;
+- Green / Not Green / Evidence Gap truth.
+
+Add only the smallest deterministic regression/diagnostic fixture needed to make the confirmed defect shape permanently observable. Do not implement the convergence repair in P1.
+
+Preserve:
+- ordinary unstructured chat behavior;
+- Task Prompt v1 grammar;
+- context profile values;
+- correction limits/retry policy;
+- Workspace Autonomous/Bubblewrap behavior;
+- Transcript/Task UI;
+- historical Phase 8 and first Phase 9 Not Green evidence.
+
+Required proof:
+- focused diagnostic/regression test if added;
+- `npm run typecheck`;
+- `npm run test:runner`;
+- `git diff --check`;
+- package remains exactly `0.9.10`;
+- no root `package-lock.json`.
+
+If the live failures cannot be explained within the approved structured-task architecture and would require a material redesign, stop with `Planning needed` and record the exact contradiction rather than implementing speculative fixes.
