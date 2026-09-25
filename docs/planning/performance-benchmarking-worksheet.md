@@ -1,6 +1,6 @@
 # Performance + Benchmarking Worksheet
 
-Status: APPROVED PLANNING WORKSHEET — Phase 7 owner-closed; Phase 8 context throughput optimization active; Phase 9 structured task execution planned next
+Status: APPROVED PLANNING WORKSHEET — Phase 7 owner-closed; Phase 8 agentic-context correction active; Phase 9 structured task execution planned next
 
 Date: 2026-09-23
 
@@ -109,46 +109,70 @@ Keep provider-specific tuning behind the provider/runtime boundary.
 
 ### Phase 8 — Context Throughput Optimization
 
-Phase 8 now has an accepted runtime/context measurement control and a locked adaptive-profile design.
+Phase 8 reached package `0.8.8` with deterministic adaptive/fixed context behavior qualified, but its operating conclusion is under correction `c8-agentic-context`.
 
-Runtime control:
-- main-model GPU Offload 26;
+Historical runtime control:
+- main-model GPU Offload 26 when independently confirmed;
 - accepted sustained runtime: approximately 1.82 s average provider round over 123 provider rounds;
-- duplicate-tool-call stress failures remain separate behavioral Not Green evidence and are not relabeled as runtime/context Green.
+- duplicate-tool-call stress failures remain separate behavioral Not Green evidence.
 
-Accepted context-ladder baseline:
+Historical synthetic context-ladder baseline:
 - requested 2,048 -> actual provider input 1,466;
 - requested 4,096 -> actual provider input 2,746;
 - requested 8,192 -> actual provider input 5,306;
 - requested 16,384 -> actual provider input 10,428;
-- warm provider/model observations were approximately 1.15 s / 1.06 s / 1.46 s / 2.24 s respectively;
-- first-pass context-shape cost is tracked separately from warm-state context/prefill cost.
+- warm observations could complete in a few seconds, while first-shape behavior remained materially slower and occasional timeouts occurred.
 
-Adaptive profile policy:
+The synthetic ladder is now classified as **long-context prefill/retrieval characterization**. It is not sufficient authority for production coding-agent profile boundaries because it uses no normal tool surface and places most large material in ordinary user input rather than realistic project/instruction context.
+
+Implemented `0.8.8` profile policy remains current source truth pending correction:
 - ordinary: preferred 4,096-6,144; soft 7,168; provider-input ceiling 8,192;
 - medium: preferred 8,192-12,288; soft 14,336; provider-input ceiling 16,384;
 - large: preferred 12,000-18,000; soft 20,000; provider-input ceiling 24,576;
-- all three retain 32,768 physical context, at least 8,192 reserved headroom, and the 2,560 always-on instruction target;
-- large remains the Phase 3 backward-compatible fixed profile.
+- physical target remains 32,768.
 
-Current measured gate:
-- implement deterministic adaptive-versus-fixed selection;
-- select once per user turn before the first provider request;
-- promote monotonically ordinary -> medium -> large;
-- preserve required/deliberately selected context through promotion rather than silently dropping it because a smaller profile was tried;
-- promote ordinary/medium before provider-backed semantic history compaction;
-- preserve Phase 5 large-profile pressure/compaction/recovery semantics;
-- expose bounded selection/promotion diagnostics;
-- extend the context ladder to a requested ~24,576 band for qualification;
-- benchmark against the accepted context-ladder baseline.
+Post-`0.8.8` live evidence:
+- real ordinary selection completed a live read flow but also showed unrequested model write behavior and non-exact final formatting;
+- calibrated medium at approximately 11,429 estimated tokens and large at approximately 14,932 estimated tokens selected the expected profiles but timed out at 120 seconds before useful completion;
+- a captured medium-selected real George request at approximately 12,945 estimated tokens contained about 48,609 instruction bytes, 120 input bytes, nine tool schemas, about 3,108 serialized tool bytes, and about 52,220 total serialized request bytes;
+- that real request produced first useful output at about 88 seconds and completed at about 89 seconds;
+- direct raw/instruction/tools isolation controls became invalid after LM Studio stopped producing usable completions and then stopped listening, so the exact cause remains unresolved.
 
-Only after adaptive profiles qualify, separately benchmark:
-- stable prompt/context identities;
-- stable prefixes;
-- incremental/changed-context submission;
-- provider-native continuation/cache reuse where supported.
+Correction measurement authority:
+- `docs/planning/c8-agentic-context/decision-record.md`;
+- `docs/planning/c8-agentic-context/qualification-plan.md`.
 
-Preserve Phase 3 smallest-sufficient-working-set, precedence, provenance, whole-source budgeting, and Phase 5 recovery semantics.
+New optimization objective:
+
+> maximize coding-task correctness, tool-use reliability, and reasonable latency inside the smallest high-signal working set the pinned model can use competently.
+
+Agentic-context benchmark campaign:
+- exploratory provider-facing bands around 2k/4k/6k/8k/10k/12k;
+- normal George instructions;
+- realistic project guidance;
+- normal tool schemas;
+- real repository inspection/search;
+- multi-round investigation;
+- edit-plus-validation workflow;
+- stop ascending at a repeatable capability/latency cliff;
+- confirm the healthy envelope and next materially worse region with bounded repeats.
+
+Required acceptance metrics:
+- deterministic task correctness;
+- instruction/fact retention;
+- expected tool correctness and call counts;
+- duplicate/unrequested tool behavior;
+- response-start/first-useful-output latency;
+- full workflow latency;
+- provider calls/retries/timeouts;
+- provider-reported tokens where available;
+- selected profile and promotion/omission/defer/compaction evidence.
+
+Do not choose replacement ordinary/medium/large numbers before this benchmark establishes evidence.
+
+Preserve Phase 3 smallest-sufficient-working-set, precedence, provenance, whole-source budgeting, Phase 5 recovery/compaction authority, Phase 8 probe neutrality/per-turn freezing, and P7 continuation-pressure fail-closed behavior.
+
+The 32,768 physical context target remains safety/headroom capacity rather than a prompt-fill target.
 
 ### Phase 9 — Structured Task Execution + Workspace Autonomy
 
