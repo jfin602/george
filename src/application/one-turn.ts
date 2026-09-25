@@ -125,6 +125,13 @@ export type OneTurnServiceOptions = Readonly<{
 
 export type AgentLoopServiceOptions = OneTurnServiceOptions;
 export type AgentLoopSubmission = OneTurnSubmission;
+export type AgentLoopLimits = Readonly<{
+  /** Capability reductions only; configured service ceilings still win. */
+  maxToolCalls?: number;
+  maxProviderRounds?: number;
+  /** Structured-only exact replay guard. Omit to preserve ordinary loop semantics. */
+  maxDuplicateLocalReads?: number;
+}>;
 export type ProcessSubmission = Readonly<{
   session: Session;
   turnId: string;
@@ -164,7 +171,17 @@ export type OneTurnSubmission = Readonly<{
   /** An application-owned, capability-reducing policy projection. */
   executionPolicy?: Partial<ExecutionPolicy>;
   budget?: RunBudget;
+  limits?: AgentLoopLimits;
 }>;
+
+function stableJson(value: import('../core/index.ts').JsonValue): string {
+  if (Array.isArray(value)) return `[${value.map(stableJson).join(',')}]`;
+  if (value && typeof value === 'object') {
+    const object = value as import('../core/index.ts').JsonObject;
+    return `{${Object.keys(object).sort().map((key) => `${JSON.stringify(key)}:${stableJson(object[key]!)}`).join(',')}}`;
+  }
+  return JSON.stringify(value);
+}
 
 function conversation(transcript: readonly TranscriptEntry[]): string {
   return transcript
@@ -605,6 +622,10 @@ export class AgentLoopApplicationService {
     const turnId = submission.turnId ?? randomUUID();
     const budget = submission.budget ?? this.createRunBudget();
     const registry = submission.toolNames === undefined ? this.registry : this.registry.select(submission.toolNames);
+    const requestedLimits = submission.limits;
+    const stageToolLimit = requestedLimits?.maxToolCalls === undefined ? this.maxToolCalls : Math.min(this.maxToolCalls, positive(requestedLimits.maxToolCalls, this.maxToolCalls, 'limits.maxToolCalls'));
+    const stageRoundLimit = requestedLimits?.maxProviderRounds === undefined ? undefined : Math.min(this.maxToolRounds, positive(requestedLimits.maxProviderRounds, this.maxToolRounds, 'limits.maxProviderRounds'));
+    const duplicateLimit = requestedLimits?.maxDuplicateLocalReads === undefined ? undefined : positive(requestedLimits.maxDuplicateLocalReads, 1, 'limits.maxDuplicateLocalReads');
     const emit = (event: ApplicationEvent): readonly ApplicationEvent[] => this.record(submission.session, event);
     yield* emit({ type: 'turn.started', turnId });
     yield* emit({ type: 'reliability.run.started', turnId, runId: budget.id, budget: budget.snapshot() });
@@ -693,7 +714,12 @@ export class AgentLoopApplicationService {
       let continuationTokens = 0;
       let toolCalls = 0;
       let toolRounds = 0;
+      let providerRounds = 0;
+      let mutationEpoch = 0;
+      let duplicateReads = 0;
+      const successfulReads = new Map<string, number>();
       while (true) {
+        if (stageRoundLimit !== undefined && providerRounds >= stageRoundLimit) throw new GeorgeError('budget', `Structured stage provider round limit of ${stageRoundLimit} exhausted.`);
         let calls: Array<Extract<ApplicationEvent, { type: 'provider.tool.call' }>> = [];
         let text = '';
         let responseId: string | undefined;
@@ -731,6 +757,7 @@ export class AgentLoopApplicationService {
             }
             yield* this.consumeBudget(submission.session, turnId, budget, 'wallClockMs', 0, submission.signal);
             if (!completed) throw { code: 'provider', message: 'Provider stream ended without a completion event.' } satisfies GeorgeErrorShape;
+            providerRounds += 1;
             yield* this.invokeHooks(submission.session, { name: 'provider.responded', sessionId: submission.session.id, turnId, runId: budget.id, provider: { ...(responseId === undefined ? {} : { responseId }), completed, hadToolCalls: calls.length > 0 } }, budget, submission.signal);
             if (submission.signal?.aborted) throw cancellationError(submission.signal);
             break;
@@ -769,11 +796,26 @@ export class AgentLoopApplicationService {
         const results = [];
         for (const call of calls) {
           toolCalls += 1;
-          if (toolCalls > this.maxToolCalls) {
-            const result = { ok: false as const, error: { code: 'tool', message: `Tool call limit of ${this.maxToolCalls} exhausted.` } };
+          if (toolCalls > stageToolLimit) {
+            const code = requestedLimits === undefined ? 'tool' as const : 'budget' as const;
+            const result = { ok: false as const, error: { code, message: `${requestedLimits === undefined ? 'Tool call' : 'Structured stage tool call'} limit of ${stageToolLimit} exhausted.` } };
             yield* emit({ type: 'tool.requested', turnId, callId: call.callId, name: call.name, arguments: call.arguments });
             yield* emit({ type: 'tool.failed', turnId, callId: call.callId, name: call.name, result });
-            throw new GeorgeError('tool', result.error.message);
+            throw new GeorgeError(result.error.code, result.error.message);
+          }
+          const validated = duplicateLimit === undefined ? undefined : registry.validate(call);
+          const execution = validated && !('callId' in validated) ? validated.definition.execution : undefined;
+          const fingerprint = validated && !('callId' in validated) && execution?.effect === 'local_read' && execution.replaySafety === 'replay_safe'
+            ? `${call.name}:${stableJson(validated.arguments)}` : undefined;
+          if (duplicateLimit !== undefined && fingerprint !== undefined && successfulReads.get(fingerprint) === mutationEpoch) {
+            duplicateReads += 1;
+            const message = 'Equivalent unchanged replay-safe local request already succeeded; use the existing observed evidence or make progress.';
+            const result = { callId: call.callId, name: call.name, result: { ok: false as const, error: { code: 'tool', message } } };
+            yield* emit({ type: 'tool.requested', turnId, callId: call.callId, name: call.name, arguments: call.arguments, execution });
+            yield* emit({ type: 'tool.failed', turnId, callId: call.callId, name: call.name, result: result.result, execution });
+            if (duplicateReads >= duplicateLimit) throw new GeorgeError('budget', `Structured stage duplicate/no-progress limit of ${duplicateLimit} exhausted.`);
+            results.push(result);
+            continue;
           }
           const iterator = this.executeTool(submission.session, turnId, call, submission.signal, budget, undefined, undefined, registry, submission.executionPolicy);
           let next = await iterator.next();
@@ -782,6 +824,8 @@ export class AgentLoopApplicationService {
             next = await iterator.next();
           }
           results.push(next.value);
+          if (next.value.result.ok && execution?.effect === 'workspace_mutation') mutationEpoch += 1;
+          if (next.value.result.ok && fingerprint !== undefined) successfulReads.set(fingerprint, mutationEpoch);
         }
         continuationTokens += Math.ceil(JSON.stringify(results).length / 4);
         const continuationEstimate = context.estimatedTokens + continuationTokens;

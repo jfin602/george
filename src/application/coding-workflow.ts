@@ -145,6 +145,15 @@ export class CodingWorkflowApplicationService {
   }
 
   async run(submission: CodingWorkflowSubmission): Promise<CodingWorkflowCompletion> {
+    return this.execute(submission, true);
+  }
+
+  /** Executes George-owned validation without spending a provider round. */
+  async validate(submission: Omit<CodingWorkflowSubmission, 'validations'>, validation: ValidationRequest): Promise<CodingWorkflowCompletion> {
+    return this.execute({ ...submission, validations: [validation] }, false);
+  }
+
+  private async execute(submission: CodingWorkflowSubmission, runAgent: boolean): Promise<CodingWorkflowCompletion> {
     const timer = new WorkflowTimer(this.clock);
     const turnId = submission.turnId ?? randomUUID();
     const budget = submission.budget ?? this.agent.createRunBudget();
@@ -162,11 +171,13 @@ export class CodingWorkflowApplicationService {
       try { await this.store.save(submission.session); }
       catch (error) { persistenceFailure ??= bounded(asGeorgeError(error).message); }
     };
-    for await (const event of this.agent.run({ ...submission, turnId, budget })) {
-      events.push(event);
-      const mutation = directMutation(event);
-      if (mutation) directMutations.push(mutation);
-      await observe([event]);
+    if (runAgent) {
+      for await (const event of this.agent.run({ ...submission, turnId, budget })) {
+        events.push(event);
+        const mutation = directMutation(event);
+        if (mutation) directMutations.push(mutation);
+        await observe([event]);
+      }
     }
 
     const validations: WorkflowValidation[] = [];
@@ -201,6 +212,7 @@ export class CodingWorkflowApplicationService {
     const terminalEvent = events.at(-1);
     const terminalState = terminalEvent?.type === 'turn.cancelled' || validations.some((validation) => validation.status === 'cancelled')
       ? 'cancelled' : terminalEvent?.type === 'turn.failed' && terminalEvent.error.code === 'budget' ? 'budget_exhausted'
+        : validations.some((validation) => validation.error?.code === 'budget') ? 'budget_exhausted'
         : terminalEvent?.type === 'turn.failed' || validations.some((validation) => validation.status !== 'passed') ? 'failed' : 'completed';
     const completion: CodingWorkflowCompletion = {
       turnId, baseline, finalState, baselineAvailable: baseline !== undefined, finalStateAvailable: finalState !== undefined,

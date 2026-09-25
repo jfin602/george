@@ -205,6 +205,31 @@ test('executor failures recover, while every proposed call consumes the determin
   assert.equal(roundEvents.at(-1)?.type, 'turn.failed');
 });
 
+test('submission convergence limits can reduce but never raise configured loop ceilings', async (t) => {
+  const root = await fixture();
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const configured = new ScriptedProvider([[
+    { type: 'provider.response.started', responseId: 'configured' },
+    { type: 'provider.tool.call', callId: 'first', name: 'read_file', arguments: '{"path":"BOOT.md"}' },
+    { type: 'provider.tool.call', callId: 'second', name: 'read_file', arguments: '{"path":"two.txt"}' },
+    { type: 'provider.response.completed' },
+  ]]);
+  const configuredService = await createAgentLoopApplicationService({ provider: configured, workspace: root, maxToolCalls: 1 });
+  const configuredEvents = await collect(configuredService.run({ session: createSession({ workspace: root }), input: 'Inspect.', limits: { maxToolCalls: 8 } }));
+  assert.equal(configuredEvents.filter((event) => event.type === 'tool.started').length, 1);
+  assert.equal(configuredEvents.at(-1)?.type, 'turn.failed');
+
+  const rounds = new ScriptedProvider([
+    [{ type: 'provider.response.started', responseId: 'one' }, { type: 'provider.tool.call', callId: 'read', name: 'read_file', arguments: '{"path":"BOOT.md"}' }, { type: 'provider.response.completed' }],
+    [{ type: 'provider.response.completed' }],
+  ]);
+  const roundService = await createAgentLoopApplicationService({ provider: rounds, workspace: root });
+  const roundEvents = await collect(roundService.run({ session: createSession({ workspace: root }), input: 'Inspect.', limits: { maxProviderRounds: 1 } }));
+  assert.equal(rounds.calls.length, 1);
+  assert.equal(roundEvents.at(-1)?.type, 'turn.failed');
+  assert.equal(roundEvents.at(-1)?.type === 'turn.failed' ? roundEvents.at(-1)?.error.code : undefined, 'budget');
+});
+
 test('cancellation during a read-only tool execution terminates the turn cleanly', async (t) => {
   const root = await fixture();
   const bin = join(root, 'bin');

@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import test from 'node:test';
 
 import { StructuredTaskApplicationService, createCodingWorkflowApplicationService } from '../../../src/application/index.ts';
-import { createSession, RunBudget, type ApplicationEvent, type ApprovalDecision, type ApprovalPort, type ApprovalRequest, type ModelProvider, type ProviderEvent, type ProviderRequest } from '../../../src/core/index.ts';
+import { createSession, DEFAULT_RUN_BUDGET, RunBudget, type ApplicationEvent, type ApprovalDecision, type ApprovalPort, type ApprovalRequest, type ModelProvider, type ProviderEvent, type ProviderRequest } from '../../../src/core/index.ts';
 import { addressTaskWorkUnit, beginTaskCorrection, beginTaskWorkUnit, createTaskState, parseTaskPrompt, recordTaskInspection, recordTaskValidationAttempt } from '../../../src/tasks/index.ts';
 
 class Provider implements ModelProvider {
@@ -16,6 +16,11 @@ class Provider implements ModelProvider {
 }
 
 class Allow implements ApprovalPort { async request(_request: ApprovalRequest): Promise<ApprovalDecision> { return 'allow_once'; } }
+
+class RecordingApproval implements ApprovalPort {
+  readonly requests: ApprovalRequest[] = [];
+  async request(request: ApprovalRequest): Promise<ApprovalDecision> { this.requests.push(request); return 'allow_once'; }
+}
 
 async function workspace(): Promise<string> {
   const root = await mkdtemp(join(tmpdir(), 'george-structured-'));
@@ -68,6 +73,36 @@ Run: node --version
 STOP CONDITIONS
 
 - S1: Stop on validation failure.
+`;
+
+const singleWorkTask = (title: string) => `GEORGE TASK FORMAT: 1
+
+TASK: P3 — ${title}
+KIND: implementation
+
+GOAL
+
+Complete one bounded work unit.
+
+REQUIREMENTS
+
+- R1: Work is complete.
+
+WORKFLOW
+
+W1 — Work
+Covers: R1
+Depends on: none
+
+VALIDATION
+
+V1 — Node check
+Covers: R1
+Run: node --version
+
+STOP CONDITIONS
+
+- S1: Stop truthfully.
 `;
 
 test('structured service preflights with local reads, progresses task state, and omits unrelated ledger text', async (t) => {
@@ -139,7 +174,49 @@ test('DISCOVER validation accepts only an explicit executable/argv proposal and 
   const events: ApplicationEvent[] = [];
   await service.run({ session: createSession({ workspace: root }), input, budget: new RunBudget('discover-task-wide'), onEvent: (event) => { events.push(event); } });
   assert.match(provider.requests[4]?.input ?? '', /focused local check/);
+  assert.equal(provider.requests.length, 5);
+  assert.equal(events.filter((event) => event.type === 'validation.started').length, 2);
   assert.deepEqual([...new Set(events.filter((event): event is Extract<ApplicationEvent, { type: 'reliability.run.started' }> => event.type === 'reliability.run.started').map((event) => event.runId))], ['discover-task-wide']);
+});
+
+test('literal validation skips provider orchestration and retains canonical process, approval, budget, and events', async (t) => {
+  const root = await workspace();
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const input = singleWorkTask('Direct validation');
+  const provider = new Provider([[{ type: 'provider.response.completed' }]]);
+  const approval = new RecordingApproval();
+  const workflow = await createCodingWorkflowApplicationService({ provider, workspace: root, approvalPort: approval });
+  const events: ApplicationEvent[] = [];
+  const budget = new RunBudget('direct-validation');
+  const session = createSession({ workspace: root });
+  await new StructuredTaskApplicationService(workflow.agent).run({ session, input, budget, onEvent: (event) => { events.push(event); } });
+
+  assert.equal(provider.requests.length, 1);
+  assert.equal(approval.requests.length, 1);
+  assert.equal(approval.requests[0]?.toolName, 'run_process');
+  assert.deepEqual(events.filter((event) => event.type === 'validation.started' || event.type === 'tool.requested' || event.type === 'tool.started' || event.type === 'tool.completed' || event.type === 'validation.completed').map((event) => event.type), [
+    'validation.started', 'tool.requested', 'tool.started', 'tool.completed', 'validation.completed',
+  ]);
+  assert.ok(events.some((event) => event.type === 'budget.state' && event.runId === 'direct-validation' && event.budget.consumed.processExecutions === 1));
+  assert.equal(session.taskState?.validations.V1?.status, 'passed');
+});
+
+test('direct validation budget exhaustion terminates the structured task without correction', async (t) => {
+  const root = await workspace();
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const input = singleWorkTask('Validation budget');
+  const provider = new Provider([[{ type: 'provider.response.completed' }]]);
+  const workflow = await createCodingWorkflowApplicationService({ provider, workspace: root, approvalPort: new Allow() });
+  const budget = new RunBudget('validation-exhausted');
+  budget.consume('processExecutions', DEFAULT_RUN_BUDGET.processExecutions);
+  const session = createSession({ workspace: root });
+  const completion = await new StructuredTaskApplicationService(workflow.agent).run({ session, input, budget });
+
+  assert.equal(provider.requests.length, 1);
+  assert.equal(completion.terminalState, 'budget_exhausted');
+  assert.equal(session.taskState?.status, 'budget_exhausted');
+  assert.equal(session.taskState?.corrections.length, 0);
+  assert.equal(session.taskState?.validations.V1?.attempts[0]?.error?.code, 'budget');
 });
 
 test('failed validation is retained through a bounded normal-tool correction and safe resume', async (t) => {
@@ -257,18 +334,79 @@ STOP CONDITIONS
   const failedValidation = events.find((event) => event.type === 'workflow.completed' && event.completion.validations[0]?.status === 'failed');
   assert.ok(failedValidation?.type === 'workflow.completed');
   assert.match(failedValidation.completion.validations[0]?.stderr ?? '', /CORRECTION_DIAGNOSTIC_4B2A/);
-  assert.match(provider.requests[4]?.input ?? '', /validation V1: failed outcome=failed exit=1/);
-  assert.match(JSON.stringify(provider.requests[4]), /CORRECTION_DIAGNOSTIC_4B2A/);
+  assert.match(provider.requests[3]?.input ?? '', /validation V1: failed outcome=failed exit=1/);
+  assert.match(JSON.stringify(provider.requests[3]), /CORRECTION_DIAGNOSTIC_4B2A/);
   assert.match(JSON.stringify(session.taskState), /CORRECTION_DIAGNOSTIC_4B2A/);
 
-  for (const request of [provider.requests[3], provider.requests[5]]) {
-    assert.match(request?.input ?? '', /Run no provider-owned validation\. George will execute V1\./);
-    assert.equal(request?.tools.length, 0);
-  }
+  assert.equal(provider.requests.length, 4);
   const runIds = events.filter((event): event is Extract<typeof event, { type: 'reliability.run.started' }> => event.type === 'reliability.run.started').map((event) => event.runId);
-  assert.equal(runIds.length, 5);
+  assert.equal(runIds.length, 3);
   assert.deepEqual([...new Set(runIds)], ['task-wide-test']);
   assert.equal(session.taskState?.status, 'failed');
+});
+
+test('structured duplicate local reads execute once and terminate truthfully before inherited limits', async (t) => {
+  const root = await workspace();
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const input = singleWorkTask('Duplicate guard');
+  const provider = new Provider([
+    [{ type: 'provider.response.started', responseId: 'one' }, { type: 'provider.tool.call', callId: 'read-1', name: 'search_text', arguments: '{"query":"target","path":"."}' }, { type: 'provider.response.completed' }],
+    [{ type: 'provider.response.started', responseId: 'two' }, { type: 'provider.tool.call', callId: 'read-2', name: 'search_text', arguments: '{"path":".","query":"target"}' }, { type: 'provider.response.completed' }],
+    [{ type: 'provider.response.started', responseId: 'three' }, { type: 'provider.tool.call', callId: 'read-3', name: 'search_text', arguments: '{"query":"target","path":"."}' }, { type: 'provider.response.completed' }],
+  ]);
+  const workflow = await createCodingWorkflowApplicationService({ provider, workspace: root });
+  const session = createSession({ workspace: root });
+  const events: ApplicationEvent[] = [];
+  const completion = await new StructuredTaskApplicationService(workflow.agent).run({ session, input, onEvent: (event) => { events.push(event); } });
+
+  assert.equal(events.filter((event) => event.type === 'tool.started' && event.name === 'search_text').length, 1);
+  assert.equal(events.filter((event) => event.type === 'tool.failed' && /Equivalent unchanged/.test(event.result.error.message)).length, 2);
+  assert.equal(provider.requests.length, 3);
+  assert.equal(completion.terminalState, 'budget_exhausted');
+  assert.equal(session.taskState?.status, 'budget_exhausted');
+  assert.match(session.taskState?.blockers.at(-1) ?? '', /did not complete/);
+});
+
+test('successful workspace mutation advances the structured read epoch', async (t) => {
+  const root = await workspace();
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const input = singleWorkTask('Mutation epoch');
+  const provider = new Provider([
+    [{ type: 'provider.response.started', responseId: 'one' }, { type: 'provider.tool.call', callId: 'read-before', name: 'read_file', arguments: '{"path":"target.txt"}' }, { type: 'provider.response.completed' }],
+    [{ type: 'provider.response.started', responseId: 'two' }, { type: 'provider.tool.call', callId: 'write', name: 'write_file', arguments: '{"path":"new.txt","content":"new"}' }, { type: 'provider.response.completed' }],
+    [{ type: 'provider.response.started', responseId: 'three' }, { type: 'provider.tool.call', callId: 'read-after', name: 'read_file', arguments: '{"path":"target.txt"}' }, { type: 'provider.response.completed' }],
+    [{ type: 'provider.response.completed' }],
+  ]);
+  const workflow = await createCodingWorkflowApplicationService({ provider, workspace: root, approvalPort: new Allow() });
+  const session = createSession({ workspace: root });
+  const events: ApplicationEvent[] = [];
+  await new StructuredTaskApplicationService(workflow.agent).run({ session, input, onEvent: (event) => { events.push(event); } });
+
+  assert.deepEqual(events.filter((event) => event.type === 'tool.started' && event.name !== 'run_process').map((event) => event.callId), ['read-before', 'write', 'read-after']);
+  assert.equal(events.filter((event) => event.type === 'tool.started' && event.name === 'run_process').length, 1);
+  assert.equal(events.some((event) => event.type === 'tool.failed' && /Equivalent unchanged/.test(event.result.error.message)), false);
+  assert.equal(session.taskState?.status, 'completed');
+});
+
+test('structured stage tool ceiling reduces execution without changing ordinary loop defaults', async (t) => {
+  const root = await workspace();
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const calls = Array.from({ length: 9 }, (_, index) => ({ type: 'provider.tool.call' as const, callId: `read-${index}`, name: 'read_file', arguments: JSON.stringify({ path: `missing-${index}.txt` }) }));
+  const round = [{ type: 'provider.response.started' as const, responseId: 'many' }, ...calls, { type: 'provider.response.completed' as const }];
+  const input = singleWorkTask('Stage ceiling');
+  const structuredProvider = new Provider([round]);
+  const structuredWorkflow = await createCodingWorkflowApplicationService({ provider: structuredProvider, workspace: root });
+  const structuredSession = createSession({ workspace: root });
+  const structuredEvents: ApplicationEvent[] = [];
+  await new StructuredTaskApplicationService(structuredWorkflow.agent).run({ session: structuredSession, input, onEvent: (event) => { structuredEvents.push(event); } });
+  assert.equal(structuredEvents.filter((event) => event.type === 'tool.started').length, 8);
+  assert.equal(structuredSession.taskState?.status, 'budget_exhausted');
+
+  const ordinaryProvider = new Provider([round, [{ type: 'provider.response.completed' }]]);
+  const ordinary = await createCodingWorkflowApplicationService({ provider: ordinaryProvider, workspace: root });
+  const ordinaryCompletion = await ordinary.run({ session: createSession({ workspace: root }), input: 'Read these paths.' });
+  assert.equal(ordinaryCompletion.terminalState, 'completed');
+  assert.equal(ordinaryProvider.requests.length, 2);
 });
 
 test('workspace mutation invalidates inspection evidence before the next work unit', async (t) => {

@@ -13,6 +13,12 @@ const INSPECTION_TOOLS = ['read_file', 'list_directory', 'search_text', 'git_sta
 const CODING_TOOLS = [...INSPECTION_TOOLS, 'write_file', 'apply_patch'] as const;
 const MAX_SLICE_EVIDENCE = 8;
 const MAX_STAGE_EVIDENCE_BYTES = 8 * 1024;
+const STAGE_LIMITS = Object.freeze({
+  inspection: Object.freeze({ maxProviderRounds: 6, maxToolCalls: 4, maxDuplicateLocalReads: 2 }),
+  implementation: Object.freeze({ maxProviderRounds: 10, maxToolCalls: 8, maxDuplicateLocalReads: 2 }),
+  correction: Object.freeze({ maxProviderRounds: 8, maxToolCalls: 6, maxDuplicateLocalReads: 2 }),
+  discover: Object.freeze({ maxProviderRounds: 1, maxToolCalls: 1 }),
+});
 
 export type StructuredTaskSlice = Readonly<{
   workUnit: string;
@@ -70,6 +76,7 @@ function renderSlice(slice: StructuredTaskSlice, stage: 'inspection' | 'implemen
     ...(slice.evidence.length ? [`OBSERVED EVIDENCE\n${slice.evidence.join('\n')}`] : []),
     ...(stage === 'inspection' ? ['Use a local read/list/search/Git tool before responding. Do not mutate files or run processes.'] : []),
     ...(stage === 'correction' ? ['Repair only the observed validation failure using the normal tool and permission policy. Do not claim validation passed; George reruns it.'] : []),
+    ...(stage === 'inspection' ? [] : ['Use supplied observed evidence. Perform only the current work unit. Stop when its completion condition is satisfied. Do not run declared George-owned validation yourself.']),
   ].join('\n\n');
 }
 
@@ -221,13 +228,14 @@ export class StructuredTaskApplicationService extends CodingWorkflowApplicationS
       const slice = projectStructuredTaskSlice(state, unit.id);
       if (definition.inspect.length && stageEvidence.length === 0) {
         const events: ApplicationEvent[] = [];
-        for await (const event of this.agent.run({ session: submission.session, input: renderSlice(slice, 'inspection'), turnId: `${submission.turnId ?? randomUUID()}-inspect`, routedDocuments: routed, toolNames: INSPECTION_TOOLS, omitHistory: true, signal: submission.signal, executionPolicy, budget })) {
+        for await (const event of this.agent.run({ session: submission.session, input: renderSlice(slice, 'inspection'), turnId: `${submission.turnId ?? randomUUID()}-inspect`, routedDocuments: routed, toolNames: INSPECTION_TOOLS, omitHistory: true, signal: submission.signal, executionPolicy, budget, limits: STAGE_LIMITS.inspection })) {
           events.push(event); await submission.onEvent?.(event);
         }
         const observed = observedInspection(events);
-        if (!observed.source || observed.evidence.length === 0) {
-          const exhausted = events.some((event) => event.type === 'turn.failed' && event.error.code === 'budget');
-          state = blockTask(state, exhausted ? 'budget_exhausted' : 'blocked', exhausted ? 'Structured inspection exhausted the task-wide run budget.' : 'INSPECT requires observed local read/list/search/Git evidence.');
+        const failure = events.findLast((event): event is Extract<ApplicationEvent, { type: 'turn.failed' | 'turn.cancelled' }> => event.type === 'turn.failed' || event.type === 'turn.cancelled');
+        if (failure || !observed.source || observed.evidence.length === 0) {
+          const exhausted = failure?.type === 'turn.failed' && failure.error.code === 'budget';
+          state = blockTask(state, exhausted ? 'budget_exhausted' : 'blocked', exhausted ? 'Structured inspection exhausted its convergence or task-wide run budget.' : 'INSPECT requires observed local read/list/search/Git evidence.');
           submission.session.taskState = state;
           await this.lifecycle(submission, state, 'Structured task blocked: inspection evidence is missing.');
           throw new GeorgeError('validation', 'Structured INSPECT preflight produced no read-only evidence.');
@@ -236,7 +244,7 @@ export class StructuredTaskApplicationService extends CodingWorkflowApplicationS
         for (const item of definition.inspect) state = recordTaskInspection(state, { item, source: observed.source });
         submission.session.taskState = state;
       }
-      last = await super.run({ ...submission, input: renderSlice(projectStructuredTaskSlice(state, unit.id, stageEvidence), 'implementation'), routedDocuments: routed, toolNames: CODING_TOOLS, omitHistory: true, validations: [], executionPolicy, budget });
+      last = await super.run({ ...submission, input: renderSlice(projectStructuredTaskSlice(state, unit.id, stageEvidence), 'implementation'), routedDocuments: routed, toolNames: CODING_TOOLS, omitHistory: true, validations: [], executionPolicy, budget, limits: STAGE_LIMITS.implementation });
       if (last.directMutations.length > 0) stageEvidence = [];
       if (last.terminalState !== 'completed') {
         state = blockTask(state, outcomeFor(last), `Work unit ${unit.id} did not complete.`);
@@ -253,7 +261,7 @@ export class StructuredTaskApplicationService extends CodingWorkflowApplicationS
       let literal = request(validation);
       if (!literal) {
         if (validation.command.kind !== 'discover') throw new GeorgeError('validation', `Validation ${validation.id} has an invalid command.`);
-        const proposal = await super.run({ ...submission, input: `For validation ${validation.id}, scope: ${validation.command.scope}\nReturn only JSON: {"executable":"...","arguments":["..."]}. Propose a bounded local test command; do not execute tools.`, routedDocuments: routed, toolNames: [], omitHistory: true, validations: [], executionPolicy, budget });
+        const proposal = await super.run({ ...submission, input: `For validation ${validation.id}, scope: ${validation.command.scope}\nReturn only JSON: {"executable":"...","arguments":["..."]}. Propose a bounded local test command; do not execute tools.`, routedDocuments: routed, toolNames: [], omitHistory: true, validations: [], executionPolicy, budget, limits: STAGE_LIMITS.discover });
         if (proposal.terminalState !== 'completed') {
           state = blockTask(state, outcomeFor(proposal), `Validation ${validation.id} discovery did not complete.`);
           submission.session.taskState = state; await this.lifecycle(submission, state, `Structured validation discovery stopped at ${validation.id}.`); return proposal;
@@ -265,7 +273,7 @@ export class StructuredTaskApplicationService extends CodingWorkflowApplicationS
         if (pendingCorrection?.validationId !== undefined && pendingCorrection.validationId !== validation.id) throw new GeorgeError('validation', 'A different structured correction is active.');
         if (pendingCorrection?.status === 'active') {
           const repair = correctionWork(state, validation);
-          const repaired = await super.run({ ...submission, input: renderSlice(projectStructuredTaskSlice(state, repair, [], validation.id), 'correction'), routedDocuments: routed, toolNames: CODING_TOOLS, omitHistory: true, validations: [], executionPolicy, budget });
+          const repaired = await super.run({ ...submission, input: renderSlice(projectStructuredTaskSlice(state, repair, [], validation.id), 'correction'), routedDocuments: routed, toolNames: CODING_TOOLS, omitHistory: true, validations: [], executionPolicy, budget, limits: STAGE_LIMITS.correction });
           if (repaired.directMutations.length > 0) stageEvidence = [];
           if (repaired.terminalState !== 'completed') {
             state = blockTask(state, outcomeFor(repaired), `Correction for ${validation.id} did not complete.`);
@@ -276,7 +284,7 @@ export class StructuredTaskApplicationService extends CodingWorkflowApplicationS
           await this.lifecycle(submission, state, `Structured correction repair completed for ${validation.id}; rerunning validation.`);
           continue;
         }
-        last = await super.run({ ...submission, input: `Run no provider-owned validation. George will execute ${validation.id}.`, routedDocuments: routed, toolNames: [], omitHistory: true, validations: [literal], executionPolicy, budget });
+        last = await super.validate({ ...submission, input: `George-owned validation ${validation.id}.`, routedDocuments: routed, toolNames: [], omitHistory: true, executionPolicy, budget }, literal);
         const observed = last.validations[0];
         if (!observed) throw new GeorgeError('validation', `Validation ${validation.id} produced no process evidence.`);
         state = recordTaskValidationAttempt(state, validation.id, {

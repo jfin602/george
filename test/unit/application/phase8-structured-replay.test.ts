@@ -56,6 +56,7 @@ test('frozen structured Phase 8 counterpart repairs the exact fixture and leaves
     ['read_file', 'list_directory', 'search_text', 'git_status', 'git_diff', 'write_file', 'apply_patch'],
     ['read_file', 'list_directory', 'search_text', 'git_status', 'git_diff', 'write_file', 'apply_patch'],
     ['read_file', 'list_directory', 'search_text', 'git_status', 'git_diff', 'write_file', 'apply_patch'],
-    [],
   ]);
+  assert.equal(provider.requests.length, 5);
+  assert.equal(events.filter((event) => event.type === 'validation.started').length, 1);
 });
