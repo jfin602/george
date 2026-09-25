@@ -8,7 +8,7 @@ VERSIONING
 
 The assigned project version is `0.9.8`.
 
-- Recommended configuration: `Terra Ultra`.
+- Recommended configuration: `Sol Medium`.
 - Browser required: no.
 
 GOAL
