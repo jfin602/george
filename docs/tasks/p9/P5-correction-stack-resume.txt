@@ -1,0 +1,129 @@
+GEORGE TASK FORMAT: 1
+
+STACK: p9
+TASK: Phase 9 / P5 — Bounded correction, stack sequencing, and resume
+KIND: implementation
+
+VERSIONING
+
+The assigned project version is `0.9.5`.
+
+- Recommended configuration: `Terra High`.
+- Browser required: no.
+
+GOAL
+
+Complete structured-task reliability with bounded correction/revalidation, truthful stop outcomes, stack sequencing, and interruption-safe durable resume over the P1-P4 structured execution path.
+
+READ FIRST
+
+- REQUIRED: BOOT.md
+- REQUIRED: AGENTS.md
+- REQUIRED: docs/planning/p9-structured-task-execution/decision-record.md
+- REQUIRED: docs/planning/p9-structured-task-execution/qualification-plan.md
+- REQUIRED: docs/tasks/p9/P4-phase8-regression-evidence.md
+- REQUIRED: docs/tasks/p9/implementation-plan.md
+- REQUIRED: docs/stability-contract.md
+
+INSPECT
+
+- TaskState transition/persistence code
+- StructuredTaskApplicationService validation path
+- Phase 5 interruption/recovery APIs
+- LocalSessionStore migration and reopen tests
+- current phase-runner stack/version behavior for historical compatibility
+
+REQUIREMENTS
+
+- R1: On required validation failure, retain the failed attempt, enter bounded correction state, derive a correction slice containing only the current work context plus relevant failure evidence, permit repair through normal tools/policy, and rerun the affected validation.
+- R2: Enforce the configured correction-cycle bound (default 2); exhaustion terminates truthfully without hiding earlier failures.
+- R3: A passing revalidation updates current validation/requirement state but preserves prior failure attempts.
+- R4: Implement application-owned terminal outcomes for completed, failed, blocked, Planning needed, cancelled, and budget exhausted without letting model text mark requirement/validation Green.
+- R5: Complete DISCOVER validation resolution so any model-proposed executable/argv is bounded, scope-tied, shell-free, and executed through canonical process policy.
+- R6: Support ordered structured task stacks using STACK/TASK metadata with deterministic numbering/dependency/version/closeout validation where applicable; do not reinterpret historical Phase 1-8 prompt files.
+- R7: Reopen durable structured sessions/stacks from canonical TaskState and Phase 5 reconciliation evidence without blindly replaying interrupted mutation, process, approval, external effect, or provider continuation.
+- R8: Resume from the next safe incomplete work/validation/correction state and preserve historical work/validation evidence as history, not active execution.
+- R9: Add bounded stack/task/correction lifecycle events/projections sufficient for TUI and diagnostics without raw hidden reasoning.
+- R10: Set package version to 0.9.5 and add permanent correction/stack/resume regression coverage.
+
+INVARIANTS
+
+- I1: Automatic retry/replay requires established Phase 5 replay safety.
+- I2: Model narration cannot erase failed evidence or manufacture completion.
+- I3: Task stacks cannot raise permissions or context authority.
+- I4: Canonical session/TaskState remains authoritative over derived provider slices.
+- I5: No package-lock.json is created.
+
+WORKFLOW
+
+W1 — Implement correction/revalidation cycle
+Covers: R1, R2, R3, R5
+Depends on: none
+
+W2 — Implement terminal/stop outcomes
+Covers: R4, R9
+Depends on: W1
+
+W3 — Implement structured stack sequencing
+Covers: R6, R9
+Depends on: W2
+
+W4 — Integrate durable resume/recovery
+Covers: R7, R8
+Depends on: W1, W2, W3
+
+W5 — Regression/version boundary
+Covers: R10
+Depends on: W1, W2, W3, W4
+
+VALIDATION
+
+V1 — Structured correction/stack tests
+Covers: R1, R2, R3, R4, R5, R6, R9, R10
+Run: node --test test/unit/tasks/*.test.ts test/unit/application/structured-task.test.ts
+
+V2 — Persistence/recovery tests
+Covers: R7, R8
+Run: node --test test/unit/core/session-store.test.ts test/unit/application/recovery.test.ts test/integration/phase5-qualification.test.ts
+
+V3 — Agent/coding regressions
+Covers: R1, R5, R7
+Run: node --test test/unit/application/one-turn.test.ts test/unit/application/coding-workflow.test.ts
+
+V4 — TypeScript
+Covers: R1, R6, R7, R9
+Run: npm run typecheck
+
+V5 — Runner regression
+Covers: R6, R10
+Run: npm run test:runner
+
+V6 — Diff hygiene
+Covers: R10
+Run: git diff --check
+
+STOP CONDITIONS
+
+- S1: Return Planning needed if safe resume requires replaying an ambiguous Phase 5 side effect.
+- S2: Do not broaden correction count or provider retry count to make live evidence pass.
+- S3: Do not modify TUI/autonomous/sandbox behavior in P5.
+- S4: Do not claim completion while correction, recovery, stack, typecheck, runner, or diff validation is failing.
+
+DELIVERABLES
+
+- D1: Bounded correction/revalidation orchestration.
+- D2: Structured stack sequencing.
+- D3: Durable structured resume/recovery.
+- D4: package.json at 0.9.5.
+
+NON-GOALS
+
+- Transcript/Task UI.
+- Workspace Autonomous mode.
+- OS sandbox.
+- Phase 10 concurrency.
+
+EVIDENCE
+
+- Preserve original and corrected validation attempts in durable test fixtures.
+- Verify no root package-lock.json.
