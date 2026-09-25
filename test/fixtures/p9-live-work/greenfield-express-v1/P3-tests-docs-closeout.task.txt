@@ -1,0 +1,54 @@
+GEORGE TASK FORMAT: 1
+
+STACK: greenfield-express-v1
+TASK: P3 — Test, document, and close out
+KIND: implementation
+
+GOAL
+
+Add focused tests, concise usage documentation, and a truthful completion report.
+
+INSPECT
+
+- application routes and validation
+- existing tests
+
+REQUIREMENTS
+
+- R1: Add node:test coverage for health, create/list, invalid title, and done update behavior.
+- R2: Add README.md with install, test, start, and API examples.
+- R3: Completion reporting identifies files changed, exact validation results, and any unmet prerequisite.
+
+WORKFLOW
+
+W1 — Inspect implementation and tests
+Covers: R1, R2, R3
+Depends on: none
+
+W2 — Add tests and documentation
+Covers: R1, R2
+Depends on: W1
+
+W3 — Validate and report
+Covers: R3
+Depends on: W2
+
+VALIDATION
+
+V1 — Focused service tests
+Covers: R1
+Run: npm test
+
+V2 — Broad package check
+Covers: R1, R2
+Run: npm run check
+
+STOP CONDITIONS
+
+- S1: Do not claim completion while V1 or V2 is failing or unexecuted.
+
+DELIVERABLES
+
+- D1: Tested Express task API.
+- D2: README.md.
+- D3: Truthful completion report.

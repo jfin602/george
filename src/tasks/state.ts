@@ -84,7 +84,8 @@ function nextStatus(state: TaskState): TaskStatus {
   return state.status === 'pending' ? 'in_progress' : state.status;
 }
 function clone(state: TaskState, changes: Partial<TaskState>): TaskState {
-  return freeze({ ...state, ...changes });
+  const { currentWorkUnit, terminalOutcome, ...required } = { ...state, ...changes };
+  return freeze({ ...required, ...(currentWorkUnit === undefined ? {} : { currentWorkUnit }), ...(terminalOutcome === undefined ? {} : { terminalOutcome }) });
 }
 
 /** Deterministic identity for one parsed task definition; it is not provider context. */

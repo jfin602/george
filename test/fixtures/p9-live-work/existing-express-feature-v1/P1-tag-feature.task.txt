@@ -1,0 +1,68 @@
+GEORGE TASK FORMAT: 1
+
+STACK: existing-express-feature-v1
+TASK: P1 — Add note tags
+KIND: implementation
+
+GOAL
+
+Extend the existing Express notes service with validated tags while preserving every existing route.
+
+INSPECT
+
+- current application routes
+- existing tests and README
+- Git status and diff
+
+REQUIREMENTS
+
+- R1: Preserve the existing GET /health, GET /notes, and POST /notes behavior.
+- R2: POST /notes accepts optional tags: an array of one to five strings; trim and lowercase them, remove duplicates, and reject blank or over-24-character values with 400 JSON errors.
+- R3: Every returned note includes tags, defaulting to an empty array.
+- R4: GET /notes?tag=value returns only notes carrying the normalized tag; an empty tag query returns 400.
+- R5: Add focused tag coverage without deleting baseline regression tests.
+- R6: Update README and provide a completion report with focused and broad validation results.
+
+WORKFLOW
+
+W1 — Inspect frozen baseline
+Covers: R1, R2, R3, R4, R5, R6
+Depends on: none
+
+Inspect source, tests, documentation, and Git state before mutations.
+
+W2 — Implement validated tag behavior
+Covers: R1, R2, R3, R4
+Depends on: W1
+
+Edit the route implementation and any required shared helpers only.
+
+W3 — Add feature tests and docs
+Covers: R5, R6
+Depends on: W2
+
+Preserve baseline tests and explain the feature in README.
+
+VALIDATION
+
+V1 — Focused tag tests
+Covers: R2, R3, R4, R5
+Run: node --test test/tags.test.js
+
+V2 — Broad regression
+Covers: R1, R2, R3, R4, R5, R6
+Run: npm test
+
+STOP CONDITIONS
+
+- S1: If dependency installation lacks explicit network approval or registry access, record Evidence Gap and leave the frozen fixture unchanged.
+- S2: Do not claim completion while V1 or V2 is failing or unexecuted.
+
+PERMISSIONS
+
+- Workspace: autonomous
+- Network: ask
+
+EVIDENCE
+
+Record the fixture commit, hidden acceptance result, validation attempts, tool calls, corrections, and completion ledger.

@@ -1,0 +1,10 @@
+{
+  "instrument": "existing-express-feature-v1",
+  "version": 1,
+  "taskFormat": 1,
+  "fixtureVersion": 1,
+  "fixtureSourceSha256": "45856b10bfe4ff3f14e1893da22b9a88b1c3334d3923d2417aee0c09e94a5aba",
+  "acceptance": "existing-express-feature-v1.test.mjs",
+  "acceptanceVersion": 1,
+  "dependencyPrerequisite": "user-approved network access and npm install"
+}

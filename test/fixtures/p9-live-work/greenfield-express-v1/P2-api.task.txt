@@ -1,0 +1,51 @@
+GEORGE TASK FORMAT: 1
+
+STACK: greenfield-express-v1
+TASK: P2 — Implement task API
+KIND: implementation
+
+GOAL
+
+Implement meaningful in-memory task API behavior.
+
+INSPECT
+
+- current application source
+- package scripts
+
+REQUIREMENTS
+
+- R1: GET /health returns JSON {"status":"ok"}.
+- R2: POST /tasks accepts a JSON title after trimming, returns 201 and {id,title,done:false}.
+- R3: Missing, non-string, blank, or over-120-character titles return 400 JSON with an error string.
+- R4: GET /tasks returns the created tasks in insertion order.
+- R5: PATCH /tasks/:id accepts a boolean done value and returns the updated task; unknown IDs and invalid done values return 404 and 400 respectively.
+
+WORKFLOW
+
+W1 — Inspect current application behavior
+Covers: R1, R2, R3, R4, R5
+Depends on: none
+
+Inspect before editing.
+
+W2 — Add routes and validation
+Covers: R1, R2, R3, R4, R5
+Depends on: W1
+
+Keep all state in the app factory so tests are isolated.
+
+VALIDATION
+
+V1 — Focused API test
+Covers: R1, R2, R3, R4, R5
+Run: npm test
+
+STOP CONDITIONS
+
+- S1: Do not claim completion while V1 is failing or unexecuted.
+
+PERMISSIONS
+
+- Workspace: autonomous
+- Network: ask
