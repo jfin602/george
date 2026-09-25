@@ -1,0 +1,134 @@
+GEORGE TASK FORMAT: 1
+
+STACK: p9
+TASK: Phase 9 / P8 — Bubblewrap workspace process containment
+KIND: implementation
+
+VERSIONING
+
+The assigned project version is `0.9.8`.
+
+- Recommended configuration: `Terra Ultra`.
+- Browser required: no.
+
+GOAL
+
+Implement a distinct Linux Bubblewrap-backed process executor for Workspace Autonomous mode so ordinary development processes can auto-run only inside a real OS-enforced workspace boundary, with safe fallback to the existing approval-required host process path.
+
+READ FIRST
+
+- REQUIRED: BOOT.md
+- REQUIRED: AGENTS.md
+- REQUIRED: docs/project-overview.md
+- REQUIRED: docs/architecture.md
+- REQUIRED: docs/planning/p9-structured-task-execution/decision-record.md
+- REQUIRED: docs/planning/p9-structured-task-execution/qualification-plan.md
+- REQUIRED: docs/tasks/p9/implementation-plan.md
+- REQUIRED: docs/stability-contract.md
+
+INSPECT
+
+- current host process executor, cleanup, environment, and process tests
+- ToolEffect/approval/effective execution policy from P7
+- Node 26 executable/toolchain layout assumptions
+- Linux workspace canonical-path/symlink boundaries
+- available bwrap behavior on the qualification host if present
+
+REQUIREMENTS
+
+- R1: Add a separate Linux workspace-sandbox process executor using bwrap; do not retrofit autonomous approval onto the existing host run_process executor.
+- R2: Detect bwrap availability and required namespace/mount support without shell execution and expose bounded capability evidence.
+- R3: Keep the provider-facing logical process interface stable where practical while internal ToolExecutionMetadata/evidence clearly distinguishes sandboxed workspace process from host_process.
+- R4: Build a minimal mount namespace: canonical workspace RW at its canonical path, only required system runtime roots RO, current Node/toolchain root RO when needed, isolated HOME/TMP, and only required proc/dev facilities.
+- R5: Do not use --ro-bind / / or otherwise expose arbitrary user-home/sibling/temp files as the sandbox security model.
+- R6: Deny network by default with an isolated network namespace; only effective user authority can enable network, and Task Prompt PERMISSIONS alone can never grant it.
+- R7: If effective network policy is ask, do not silently share host networking; require explicit policy/approval/fallback semantics.
+- R8: Preserve shell-false executable/argv semantics, sanitized environment, bounded stdout/stderr, timeouts, cancellation, descendant cleanup, run budgets, replay/recovery evidence, and Git/user-work preservation.
+- R9: If bwrap setup is unavailable or fails, autonomous process execution fails closed or falls back to the existing host process path with its normal explicit approval and truthful non-sandboxed warning.
+- R10: Add real-Linux adversarial qualification when bwrap is available: workspace read/write succeeds; sibling/outside sentinel read/write fails; symlink/traversal escape fails; secret env is absent; representative Node/npm/test/typecheck/Git-read commands work; network-deny is real; timeout/cancellation cleanup remains bounded.
+- R11: Deterministic command-construction/capability tests must not be represented as real containment proof when bwrap cannot actually run.
+- R12: Set package version to 0.9.8 and preserve standard-mode host process behavior.
+
+INVARIANTS
+
+- I1: cwd-only execution is never called sandboxed.
+- I2: Sandbox fallback is never silently auto-approved as host execution.
+- I3: Network authority remains independent from workspace filesystem authority.
+- I4: The sandbox cannot mount the entire host root read-only as a shortcut.
+- I5: No package-lock.json is created.
+
+WORKFLOW
+
+W1 — Add sandbox capability/effect/executor contracts
+Covers: R1, R2, R3, R9
+Depends on: none
+
+W2 — Implement bwrap mount/environment/network construction
+Covers: R4, R5, R6, R7, R8
+Depends on: W1
+
+W3 — Integrate Workspace Autonomous process policy/fallback
+Covers: R3, R8, R9, R12
+Depends on: W1, W2
+
+W4 — Adversarial real/deterministic qualification
+Covers: R10, R11, R12
+Depends on: W1, W2, W3
+
+VALIDATION
+
+V1 — Process/sandbox unit tests
+Covers: R1, R2, R3, R4, R5, R6, R7, R8, R9, R11, R12
+Run: node --test test/unit/tools/process.test.ts test/unit/tools/sandbox-process.test.ts
+
+V2 — Autonomous policy integration tests
+Covers: R3, R6, R7, R9, R12
+Run: node --test test/unit/application/one-turn.test.ts test/unit/application/structured-task.test.ts
+
+V3 — Real Linux containment
+Covers: R10
+Run: DISCOVER
+Scope: conditional integration test that invokes real bwrap on Linux and proves outside sentinel denial plus representative development commands
+
+V4 — Recovery regression
+Covers: R8, R9
+Run: node --test test/unit/application/recovery.test.ts test/integration/phase5-qualification.test.ts
+
+V5 — TypeScript
+Covers: R1, R3, R8
+Run: npm run typecheck
+
+V6 — Runner regression
+Covers: R12
+Run: npm run test:runner
+
+V7 — Diff hygiene
+Covers: R12
+Run: git diff --check
+
+STOP CONDITIONS
+
+- S1: Return Planning needed if the implementation would require broad host-root read access to claim containment.
+- S2: If real bwrap is unavailable/blocked, keep deterministic implementation but record containment Evidence Gap and ensure autonomous process fails closed/falls back safely.
+- S3: Do not install privileged daemons, require root, or add container infrastructure.
+- S4: Do not claim sandbox Green from mock/command-construction tests alone.
+- S5: Do not claim completion while deterministic safety tests/typecheck/runner/diff validation is failing.
+
+DELIVERABLES
+
+- D1: Distinct bwrap sandbox executor and capability detector.
+- D2: Workspace Autonomous sandbox-process integration/fallback.
+- D3: Adversarial containment tests/evidence.
+- D4: package.json at 0.9.8.
+
+NON-GOALS
+
+- General-purpose container runtime.
+- Windows/macOS containment backend in Phase 9.
+- Unrestricted host administration.
+- Implicit network access.
+
+EVIDENCE
+
+- Record whether real bwrap was exercised and its version/capability result.
+- Verify no root package-lock.json.
