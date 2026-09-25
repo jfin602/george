@@ -852,6 +852,41 @@ test('retries only a pre-response provider failure with stable evidence and boun
   assert.equal(events.at(-1)?.type, 'turn.completed');
 });
 
+test('initial required tool choice survives initial retries but not continuation retries', async (t) => {
+  const root = await workspace();
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const requests: ProviderRequest[] = [];
+  const provider = new class implements ModelProvider {
+    async *stream(request: ProviderRequest): AsyncGenerator<ProviderEvent> {
+      requests.push(request);
+      if (requests.length === 1 || requests.length === 3) throw new GeorgeError('provider', 'offline');
+      if (requests.length === 2) {
+        yield { type: 'provider.response.started', responseId: 'inspect' };
+        yield { type: 'provider.tool.call', callId: 'read', name: 'read_file', arguments: '{"path":"BOOT.md"}' };
+      } else yield { type: 'provider.text.delta', delta: 'done' };
+      yield { type: 'provider.response.completed' };
+    }
+  }();
+  const service = await createOneTurnApplicationService({ provider, workspace: root, toolNames: ['read_file'], providerRetryPolicy: { maxRetries: 1, initialDelayMs: 0, maxDelayMs: 0 }, retrySleeper: async () => {} });
+  const events = await collect(service.run({ session: createSession({ workspace: root }), input: 'inspect', initialToolChoice: 'required' }));
+
+  assert.deepEqual(requests.map((request) => request.toolChoice), ['required', 'required', undefined, undefined]);
+  assert.deepEqual(requests.map((request) => request.continuation !== undefined), [false, false, true, true]);
+  assert.equal(events.some((event) => event.type === 'tool.completed' && event.name === 'read_file'), true);
+  assert.equal(events.at(-1)?.type, 'turn.completed');
+});
+
+test('required initial tool choice with an empty selected surface fails before provider execution', async (t) => {
+  const root = await workspace();
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const provider = new ScriptedProvider([{ type: 'provider.response.completed' }]);
+  const service = await createOneTurnApplicationService({ provider, workspace: root });
+  const events = await collect(service.run({ session: createSession({ workspace: root }), input: 'inspect', toolNames: [], initialToolChoice: 'required' }));
+
+  assert.equal(provider.calls.length, 0);
+  assert.equal(events.at(-1)?.type === 'turn.failed' && events.at(-1).error.code, 'configuration');
+});
+
 test('cancellation during provider backoff stops before the next attempt', async (t) => {
   const root = await workspace();
   t.after(() => rm(root, { recursive: true, force: true }));

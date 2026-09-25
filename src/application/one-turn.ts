@@ -37,6 +37,7 @@ import {
   type GeorgeErrorShape,
   type ModelProvider,
   type ProviderContinuation,
+  type ProviderToolChoice,
   type Session,
   type TranscriptEntry,
   type Workspace,
@@ -166,6 +167,8 @@ export type OneTurnSubmission = Readonly<{
   activatedSkills?: readonly string[];
   /** Per-turn capability reduction; it can never add to the canonical registry. */
   toolNames?: readonly string[];
+  /** Optional provider tool-choice override for the initial round only. */
+  initialToolChoice?: ProviderToolChoice;
   /** Application-owned bounded turns may omit transcript history when it would leak unrelated durable state. */
   omitHistory?: boolean;
   /** An application-owned, capability-reducing policy projection. */
@@ -636,6 +639,9 @@ export class AgentLoopApplicationService {
     yield* this.invokeHooks(submission.session, { name: 'input.submitted', sessionId: submission.session.id, turnId, runId: budget.id }, budget, submission.signal);
     try {
       if (submission.signal?.aborted) throw cancellationError(submission.signal);
+      if (submission.initialToolChoice === 'required' && registry.definitions.length === 0) {
+        throw new GeorgeError('configuration', 'Required initial tool choice needs at least one exposed tool.');
+      }
       let context: AssembledContext | undefined;
       let selection: ContextProfileSelection = { mode: this.contextMode, profile: this.profile, attemptedProfileIds: [], promotionReasons: [] };
       try {
@@ -738,7 +744,11 @@ export class AgentLoopApplicationService {
             yield* this.invokeHooks(submission.session, { name: 'provider.requested', sessionId: submission.session.id, turnId, runId: budget.id }, budget, submission.signal);
             if (submission.signal?.aborted) throw cancellationError(submission.signal);
             for await (const event of this.provider.stream(
-              { ...baseRequest, ...(continuation === undefined ? {} : { continuation }) },
+              {
+                ...baseRequest,
+                ...(continuation === undefined && submission.initialToolChoice !== undefined ? { toolChoice: submission.initialToolChoice } : {}),
+                ...(continuation === undefined ? {} : { continuation }),
+              },
               { signal: submission.signal, timeoutMs: submission.timeoutMs },
             )) {
               if (submission.signal?.aborted) throw cancellationError(submission.signal);

@@ -74,6 +74,46 @@ test('LM Studio provider sends the Responses request shape and parses split CRLF
   ]);
 });
 
+test('LM Studio provider maps provider-neutral tool choice without changing tools or continuation', async (t) => {
+  const requests: Array<Record<string, unknown>> = [];
+  const { server, baseUrl } = await fixture((request, response) => {
+    let body = '';
+    request.setEncoding('utf8');
+    request.on('data', (chunk: string) => { body += chunk; });
+    request.on('end', () => { requests.push(JSON.parse(body)); sse(response, ['data: {"type":"response.completed","response":{}}\n\n']); });
+  });
+  t.after(() => close(server));
+  const provider = new LmStudioResponsesProvider({ baseUrl, model: 'local-model' });
+  const tools = [{ name: 'read_file', description: 'Read.', inputSchema: { type: 'object', properties: { path: { type: 'string' } }, required: ['path'], additionalProperties: false } }] as const;
+
+  for (const toolChoice of [undefined, 'auto', 'required', 'none'] as const) {
+    await eventsFrom(provider.stream({ input: 'Inspect.', tools, ...(toolChoice === undefined ? {} : { toolChoice }) }));
+  }
+  await eventsFrom(provider.stream({
+    input: 'ignored', tools, toolChoice: 'auto',
+    continuation: { responseId: 'response-1', toolResults: [{ callId: 'call-1', name: 'read_file', result: { ok: true, value: { path: 'BOOT.md' } } }] },
+  }));
+
+  assert.deepEqual(requests.map((request) => request.tool_choice), [undefined, 'auto', 'required', 'none', 'auto']);
+  assert.ok(requests.every((request) => JSON.stringify(request.tools) === JSON.stringify([{ type: 'function', name: 'read_file', description: 'Read.', parameters: tools[0].inputSchema }])));
+  assert.deepEqual(requests[4], {
+    model: 'local-model', previous_response_id: 'response-1',
+    input: [{ type: 'function_call_output', call_id: 'call-1', output: '{"ok":true,"value":{"path":"BOOT.md"}}' }],
+    tools: [{ type: 'function', name: 'read_file', description: 'Read.', parameters: tools[0].inputSchema }],
+    tool_choice: 'auto', stream: true,
+  });
+  assert.equal('tool_choice' in requests[0]!, false);
+});
+
+test('LM Studio provider rejects required tool choice without exposed tools before POST', async () => {
+  const provider = new LmStudioResponsesProvider({ baseUrl: 'http://127.0.0.1:1234', model: 'local-model' });
+  const events: unknown[] = [];
+  await assert.rejects(async () => {
+    for await (const event of provider.stream({ input: 'Inspect.', toolChoice: 'required' })) events.push(event);
+  }, (error: unknown) => error instanceof GeorgeError && error.code === 'configuration');
+  assert.equal((events.at(-1) as { type: string }).type, 'provider.error');
+});
+
 test('LM Studio provider assembles a function call from output-item and argument stream events', async (t) => {
   const { server, baseUrl } = await fixture((_request, response) => sse(response, [
     'data: {"type":"response.output_item.added","output_index":0,"item":{"id":"item-1","type":"function_call","call_id":"call-1","name":"read_file","arguments":""}}\n\n',

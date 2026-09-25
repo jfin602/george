@@ -357,6 +357,11 @@ export class LmStudioResponsesProvider implements ModelProvider {
       yield { type: 'provider.error', error };
       throw error;
     }
+    if (request.toolChoice === 'required' && (!request.tools || request.tools.length === 0)) {
+      const error = new GeorgeError('configuration', 'Required tool choice needs at least one exposed tool.');
+      yield { type: 'provider.error', error };
+      throw error;
+    }
     const requestTimeout = timeoutMs(options.timeoutMs ?? this.defaultTimeoutMs);
     const timeoutController = new AbortController();
     const timer = setTimeout(() => timeoutController.abort(), requestTimeout);
@@ -402,6 +407,7 @@ export class LmStudioResponsesProvider implements ModelProvider {
                 parameters: tool.inputSchema,
               })),
             }),
+            ...(request.toolChoice === undefined ? {} : { tool_choice: request.toolChoice }),
             stream: true,
           }),
           signal,

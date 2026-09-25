@@ -123,12 +123,29 @@ test('structured service preflights with local reads, progresses task state, and
   assert.equal(session.taskState?.status, 'completed');
   assert.equal(session.taskState?.requirements.R1, 'verified');
   assert.equal(session.taskState?.validations.V1?.status, 'passed');
-  assert.ok(provider.requests[0]?.tools.every((tool) => ['read_file', 'list_directory', 'search_text', 'git_status', 'git_diff'].includes(tool.name)));
+  assert.deepEqual(provider.requests[0]?.tools.map((tool) => tool.name), ['read_file', 'list_directory', 'search_text', 'git_status', 'git_diff']);
+  assert.equal(provider.requests[0]?.toolChoice, 'required');
+  assert.equal(provider.requests[1]?.toolChoice, undefined);
+  assert.equal(provider.requests[2]?.toolChoice, undefined);
   assert.match(provider.requests[0]?.input ?? '', /W1 — First work/);
   assert.doesNotMatch(provider.requests[0]?.input ?? '', /UNRELATED_COMPLETED_LEDGER/);
   assert.doesNotMatch(provider.requests[0]?.input ?? '', /W2 — Second work/);
   assert.match(provider.requests[3]?.input ?? '', /W2 — Second work/);
   assert.doesNotMatch(provider.requests[3]?.input ?? '', /W1 — First work|First work is bounded/);
+});
+
+test('text-only structured INSPECT fails without evidence despite required first-round choice', async (t) => {
+  const root = await workspace();
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const provider = new Provider([[{ type: 'provider.text.delta', delta: 'I inspected it.' }, { type: 'provider.response.completed' }]]);
+  const workflow = await createCodingWorkflowApplicationService({ provider, workspace: root });
+  const session = createSession({ workspace: root });
+
+  await assert.rejects(new StructuredTaskApplicationService(workflow.agent).run({ session, input: task }), /no read-only evidence/);
+  assert.equal(provider.requests.length, 1);
+  assert.equal(provider.requests[0]?.toolChoice, 'required');
+  assert.deepEqual(provider.requests[0]?.tools.map((tool) => tool.name), ['read_file', 'list_directory', 'search_text', 'git_status', 'git_diff']);
+  assert.equal(session.taskState?.status, 'blocked');
 });
 
 test('invalid marked tasks fail closed while ordinary chat keeps the inherited workflow', async (t) => {
@@ -266,6 +283,7 @@ STOP CONDITIONS
   const session = createSession({ id: 'resume', workspace: root });
   session.taskState = taskState;
   await new StructuredTaskApplicationService(workflow.agent).run({ session, input, turnId: 'resume' });
+  assert.equal(provider.requests[0]?.toolChoice, undefined);
   assert.equal(session.taskState?.status, 'completed');
   assert.deepEqual(session.taskState?.validations.V1?.attempts.map((attempt) => attempt.status), ['failed', 'passed']);
   assert.equal(session.taskState?.validations.V1?.attempts[0]?.stderr, 'old diagnostic');
@@ -324,6 +342,9 @@ STOP CONDITIONS
   await new StructuredTaskApplicationService(workflow.agent, undefined, undefined, 1).run({ session, input, turnId: 'diagnostic', budget, onEvent: (event) => { events.push(event); } });
 
   assert.equal(provider.requests[1]?.continuation?.toolResults[0]?.result.ok, true);
+  assert.equal(provider.requests[0]?.toolChoice, 'required');
+  assert.equal(provider.requests[1]?.toolChoice, undefined);
+  assert.equal(provider.requests[2]?.toolChoice, undefined);
   assert.match(JSON.stringify(provider.requests[1]?.continuation), /INSPECTION_PAYLOAD_ONLY_9E7C/);
   assert.match(provider.requests[2]?.input ?? '', /inspection result read_file:inspect-read/);
   assert.match(provider.requests[2]?.input ?? '', /"sha256":"[a-f0-9]{64}"/);

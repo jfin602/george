@@ -24,10 +24,13 @@ export type ProviderContinuation = Readonly<{
   toolResults: readonly ProviderToolResult[];
 }>;
 
+export type ProviderToolChoice = 'auto' | 'required' | 'none';
+
 export type ProviderRequest = Readonly<{
   instructions?: string;
   input: string;
   tools?: readonly ProviderToolDefinition[];
+  toolChoice?: ProviderToolChoice;
   continuation?: ProviderContinuation;
 }>;
 
