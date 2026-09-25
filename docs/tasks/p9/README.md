@@ -36,7 +36,7 @@ Authority:
 - P10 / 0.9.10 — evidence-only formal Phase 9 closeout.
 
 P1-P7 and P9 use Terra High.  
-P8 uses Terra Ultra because it owns the OS containment boundary.  
+P8 uses Sol Medium for the OS containment boundary.  
 P10 uses Terra Medium.
 
 Every prompt uses `Browser required: no.`.
