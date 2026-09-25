@@ -1,6 +1,6 @@
 # Phase 9 Closeout — Structured Task Execution + Workspace Autonomy
 
-Status: **EVIDENCE-ONLY CLOSEOUT — OWNER ACCEPTANCE NOT GRANTED**
+Status: **EVIDENCE-ONLY CLOSEOUT — OWNER ACCEPTANCE NOT GRANTED; LIVE QUALIFICATION NOT GREEN**
 
 Date: 2026-09-25  
 Package boundary: `0.9.10`  
@@ -9,6 +9,16 @@ Qualification artifact: [`P9-qualification-evidence.md`](tasks/p9/P9-qualificati
 Mandatory longitudinal replay artifact: [`P4-phase8-regression-evidence.md`](tasks/p9/P4-phase8-regression-evidence.md)
 
 This record audits the existing P1–P9 candidate and records observed evidence. It does not repair code, retune context/runtime, open Phase 10, alter Phase 9 planning history, or constitute owner acceptance.
+
+## 2026-09-25 live closeout refresh
+
+The refresh ran on clean HEAD `9b031333d3091df37aaab9b2c03175df76101bac`, package `0.9.10`, Node `v26.10.0`, npm `11.19.0`, Linux `7.0.0-31-generic`, and Bubblewrap `0.9.0`. The exact pinned Qwen instance was loaded with the expected REST-visible context/batch/parallel/Flash Attention/GPU-KV/expert controls. GPU Offload 26 remains UI-only and unconfirmed. The bounded LM Studio smoke was Green.
+
+Live qualification is **Not Green**. The P4 structured replay left the required label repair unchanged, observed a failed validation, and ended `budget_exhausted` in active correction (25 calls; 20 rounds; 344.745 s; `63,253 / 1,801` reported tokens). The historical Phase 8 failure remains independently Not Green.
+
+Both frozen live-work instruments were exercised and are **Not Green**. Greenfield P1 failed before validation; a temporary-harness sequencing defect then ran P2/P3 after that failure, so those preserved attempts are non-qualifying and no stack result is claimed. Existing-app P1 failed before required validation; baseline tests passed independently, but hidden acceptance failed. Neither run had human intervention. See [`P9-qualification-evidence.md`](tasks/p9/P9-qualification-evidence.md) for raw dimensions and [`live-results.json`](../artifacts/phase9-live-qualification-20260925T133841Z/live-results.json) for bounded records.
+
+Current deterministic results are mixed: typecheck, runner, Phase 9 integration, P4 deterministic replay, sandbox tests, and real Bubblewrap containment are Green; full `npm test` is **Not Green** with 337/345 passing and seven OpenTUI test-renderer failures. Native TUI remains an Evidence Gap because this host has no real TTY. No owner acceptance or Phase 10 transition follows.
 
 ## Candidate and deterministic qualification
 
@@ -44,19 +54,19 @@ Bubblewrap is a distinct autonomous-process backend. Its deterministic command/f
 
 Transcript/Task presentation is a projection of application state: `renderTask` and `taskHeader` render deterministic TaskState data, and do not become TaskState authority. Deterministic projection evidence is Green. Full OpenTUI/native interaction is not Green: the qualification host was Node `v24.21.0`, stdin/stdout were not TTYs, and `--experimental-ffi` was rejected. The direct renderer attempt had 27 FFI initialization failures and 27 non-renderer passes. Node 26 real-TTY evidence remains an Evidence Gap.
 
-The frozen `greenfield-express-v1` and `existing-express-feature-v1` Task Prompt v1 instruments, fixture digests/baseline, and hidden acceptance isolation are Green deterministically. Neither live instrument ran: LM Studio was unavailable and network/dependency installation was not user-authorized. Their raw live dimensions are therefore recorded as stopped-before-execution zeros, not a score or a pass.
+The frozen `greenfield-express-v1` and `existing-express-feature-v1` Task Prompt v1 instruments, fixture digests/baseline, and hidden acceptance isolation are Green deterministically. Both live instruments then ran with explicit authorized dependency installation and are Not Green as recorded in the refresh.
 
 | Area | State | Evidence |
 | --- | --- | --- |
 | Transcript/Task deterministic projection | Green | `test/integration/phase9-qualification.test.ts`; persisted TaskState renders header/task projection without provider/process payloads. |
 | Native Node-26 real-TTY/OpenTUI behavior | Evidence Gap | `P6-tui-native-evidence.md`; unsupported Node 24/no TTY/FFI host cannot establish native behavior. |
 | Frozen greenfield and existing-app instruments + hidden acceptance isolation | Green, deterministic only | `test/integration/phase9-qualification.test.ts`; frozen fixture/task/acceptance digests recorded in P9 evidence. |
-| `greenfield-express-v1` live execution and acceptance | Evidence Gap | No LM Studio/provider or authorized network installation; no model workspace or acceptance run. |
-| `existing-express-feature-v1` live execution and acceptance | Evidence Gap | Same unavailable provider/unauthorized network condition; no model workspace or acceptance run. |
+| `greenfield-express-v1` live execution and acceptance | Not Green | P1 failed; P2/P3 are preserved non-qualifying attempts after the temporary harness sequencing defect; acceptance failed. |
+| `existing-express-feature-v1` live execution and acceptance | Not Green | P1 failed before validation and hidden acceptance failed. |
 
 ## Phase 8 replay and inherited contracts
 
-The historical Phase 8 P5 `agentic-edit-validation-2048-001` is preserved as **Not Green**: the required edit was not produced; one validation ran but did not match; ten calls included unrequested/repeated behavior; and seven provider attempts/rounds were observed. Phase 9's frozen structured counterpart is deterministic Green only. Its live replay is an **Evidence Gap** because LM Studio was unreachable before execution. Neither result is relabeled or erased, and no claim is made that context size caused the P8 failure.
+The historical Phase 8 P5 `agentic-edit-validation-2048-001` is preserved as **Not Green**. Its Phase 9 structured counterpart also ran Not Green: the required edit remained absent, V1 failed, and the task exhausted correction. Neither result is relabeled or erased, and no claim is made that context size caused the failure.
 
 The current ordinary/medium/large context profiles remain provisional inherited operating policy, not empirically optimal agentic envelopes. Phase 3 context/source integrity, Phase 5 recovery/replay safety, Phase 6 external-effect boundaries, and Phase 8 P7 continuation-pressure safety remain deterministic regression floors; applicable renderer-independent P2–P8 coverage passed in P9 qualification. This closeout makes no new live provider, context-envelope, or performance claim.
 
@@ -72,10 +82,10 @@ The following are retained explicitly, including inherited owner-accepted histor
 | Phase 7 | Not Green | Final restored-runtime verification remains Not Green; only the separate `parallel=1` warm control was Green. |
 | Phase 8 | Not Green | P5 edit-plus-validation failed; no healthy all-family agentic envelope was established. |
 | Phase 8 | Evidence Gap | No healthy/risk boundary or confirmation repetitions; Offload 26 unconfirmed; comparable latency incomplete; no correction-time Node-26 real-TTY; no adaptive-envelope-specific fail/degrade threshold. |
-| Phase 9 P4 | Evidence Gap | No live structured replay; LM Studio unavailable. Historical Phase 8 result remains Not Green. |
+| Phase 9 P4 | Not Green | Live structured replay executed but left the repair absent, failed V1, and exhausted active correction. Historical Phase 8 result remains independently Not Green. |
 | Phase 9 TUI | Evidence Gap | No supported Node-26 real-TTY/OpenTUI qualification. |
-| Phase 9 live-work | Evidence Gap | Both frozen live stacks lack provider/network-authorized execution, hidden acceptance, raw provider/tool/context/time evidence, TaskState ledger, and live sandbox/permission events. |
-| Phase 9 controlled latency/runtime control | Evidence Gap | LM Studio was unreachable and UI-only GPU Offload 26 was not observed. |
+| Phase 9 live-work | Not Green | Both instruments executed with provider/network-authorized setup but did not complete validation/acceptance; greenfield's later attempts are non-qualifying after its harness defect. |
+| Phase 9 controlled latency/runtime control | Evidence Gap | REST runtime controls were observed but UI-only GPU Offload 26 remains unconfirmed; no controlled comparison is claimed. |
 
 ## Closeout validation and hygiene
 

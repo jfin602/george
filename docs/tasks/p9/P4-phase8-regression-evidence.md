@@ -1,11 +1,26 @@
 # P4 Phase 8 structured edit-validation regression evidence
 
-Status: **EVIDENCE GAP — live structured replay not run because LM Studio was unavailable**
+Status: **NOT GREEN — live structured replay executed and exhausted during correction**
 
 Date: 2026-09-25
 Phase: 9 / P4
 Package: `0.9.4`
 Pre-task George HEAD: `ba49ea742749002192b6200427518f2c35764a4c`
+
+## 2026-09-25 closeout refresh — live replay
+
+George `0.9.10` at `9b031333d3091df37aaab9b2c03175df76101bac` ran one official replay against the loaded pinned Qwen instance. The target began and ended as `export const label = (value) => value.trim();` (SHA-256 `4cd4635c7d8ef07c10bf7a2296d0f4d79cd3e753c1794774656eac5e764d4352`), so the required edit was not produced. George observed one V1 validation failure (exit 1), entered correction cycle 1, and then ended `budget_exhausted` with correction still active. This is **Not Green**, not an Evidence Gap.
+
+| Dimension | 2026-09-25 Phase 9 P4 live result |
+| --- | --- |
+| Model/runtime | Pinned `qwen3-coder-30b-a3b-instruct@q4_k_m`; Node `v26.10.0`; REST-visible reference controls matched (GPU Offload 26 remains UI-unconfirmed). |
+| Functional edit / validation | Not Green / Not Green: target unchanged; V1 failed once. |
+| Tool calls | 25: `read_file`, `git_status`, `search_text`, `git_diff`, `list_directory`, `apply_patch`, `write_file`, and George-owned `run_process`; repeated and unrequested calls were observed. |
+| Provider / context | 20 attempts and rounds, 0 retries; ordinary adaptive profile; reported input/output tokens `63,253 / 1,801`. |
+| Time / approvals / intervention | `344.745 s`; 7 standard-mode approvals; 0 human interventions. |
+| Final TaskState | `budget_exhausted`; W1 addressed; R1/R2 addressed; V1 failed; correction 1 active. |
+
+The full bounded event/result record is [`live-results.json`](../../../artifacts/phase9-live-qualification-20260925T133841Z/live-results.json). The historical Phase 8 P5 result below remains Not Green unchanged in substance.
 
 ## Frozen structured counterpart
 

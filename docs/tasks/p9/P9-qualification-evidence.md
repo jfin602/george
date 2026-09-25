@@ -1,11 +1,25 @@
 # P9 qualification evidence
 
-Status: **DETERMINISTIC QUALIFICATION GREEN; LIVE-WORK / LM STUDIO / NATIVE-TUI EVIDENCE GAPS REMAIN**
+Status: **DETERMINISTIC FLOORS PARTIALLY GREEN; P4 AND BOTH LIVE-WORK INSTRUMENTS NOT GREEN; NATIVE-TUI EVIDENCE GAP REMAINS**
 
 Date: 2026-09-25  
 Phase: 9 / P9  
 Package: `0.9.9`  
 Pre-task George HEAD: `ed3e1db503b2d34a90160c30be0fb2e6745e465c`
+
+## 2026-09-25 closeout refresh — authoritative current live evidence
+
+Refresh candidate: George `0.9.10`, HEAD `9b031333d3091df37aaab9b2c03175df76101bac`; Node `v26.10.0`, npm `11.19.0`, Linux `7.0.0-31-generic`, Bubblewrap `0.9.0`, clean baseline, and no root lockfile. The exact pinned Qwen model was loaded. REST observed context 32768, eval batch 2048, physical batch 512, parallel 1, Flash Attention on, GPU KV-cache on, and 8 experts. GPU Offload 26 remains UI-only and unconfirmed. `npm run smoke:lm-studio` was Green: one read-only tool cycle in 12.829 s with 409/4 input/output tokens.
+
+| Instrument | State | Actual result |
+| --- | --- | --- |
+| Phase 8 structured replay | **Not Green** | Required edit remained unchanged; V1 failed; TaskState ended `budget_exhausted` during active correction. 25 calls, 20 provider attempts/rounds, 0 retries, ordinary profile, `63,253 / 1,801` tokens, 344.745 s, 7 approvals, 0 human interventions. |
+| `greenfield-express-v1` | **Not Green** | P1 failed before V1. It made 5 calls across 2 rounds (`2,583 / 326` tokens; 42.363 s). The temporary harness then incorrectly installed dependencies and ran P2/P3 despite P1 failure; those executed attempts are retained as invalid/non-qualifying (P2: 22 calls/6 rounds, 157.066 s; P3: 22 calls/6 rounds, 96.594 s). App tests and hidden acceptance failed. No valid stack pass is claimed. |
+| `existing-express-feature-v1` | **Not Green** | Deterministic fixture commit `a3969e5f3ef7ef2502ffbaf1315399ce3316267d`; authorized `npm install` passed. P1 failed before validation: 47 calls, 23 rounds, 0 retries, ordinary profile, `49,446 / 1,937` tokens, 449.249 s, 0 approvals/sandbox events/interventions. Baseline `npm test` passed; hidden acceptance failed. |
+| Actual Bubblewrap containment | **Green** | Real current-host containment test passed workspace access, outside read/write and symlink denial, secret isolation, network isolation, descendant cleanup, Node/npm/test/typecheck/Git workflows. |
+| Native OpenTUI | **Evidence Gap** | Node 26 is available, but this execution has neither stdin nor stdout TTY; no native behavior was simulated. |
+
+The full bounded machine-readable evidence is [`live-results.json`](../../../artifacts/phase9-live-qualification-20260925T133841Z/live-results.json); the environment and human-readable summary are in the same Git-ignored artifact directory. No raw provider payloads, secrets, or hidden acceptance source were recorded.
 
 ## Frozen instruments
 
@@ -25,27 +39,27 @@ The integration guard verifies the frozen digests, valid task stacks, clean dete
 | Full OpenTUI renderer and native TUI | Evidence Gap | Host is Node `v24.21.0`, stdin/stdout are not TTYs, and Node rejects `--experimental-ffi`. Direct `test/unit/tui/app.test.ts` ran 54 tests: 27 passed and 27 failed before behavior because OpenTUI FFI is unavailable. This is also recorded in [`P6-tui-native-evidence.md`](P6-tui-native-evidence.md). It is not native Green. |
 | Workspace Autonomous policy; outside reject/ask | Green | `test/integration/agent-loop.test.ts` passed, including autonomous inside writes and rejected/exact-call outside access. Task expectations remain intersected with the configured user ceiling. |
 | Autonomous process containment | Green | Bubblewrap `0.9.0` was available; real containment tests passed: workspace operation, outside read/write denial, symlink denial, secret isolation, network isolation, descendant timeout cleanup, Node/npm/test/typecheck/Git workflows. This is real bwrap evidence, not a mock command test. |
-| P4 Phase 8 structured replay | Evidence Gap / preserved Not Green | [`P4-phase8-regression-evidence.md`](P4-phase8-regression-evidence.md) remains unchanged: the historical P8 edit-plus-validation run is Not Green; its frozen structured counterpart has no live LM Studio run. |
+| P4 Phase 8 structured replay | Not Green / preserved Not Green | The historical P8 edit-plus-validation run remains Not Green; the frozen Phase 9 counterpart also executed Not Green. |
 | Inherited P2–P8 floors | Green where runnable | Agent loop (10), Phase 5 (1), Phase 6 (1), and the renderer-independent Phase 4 interrupted-resume case (1) passed; parser/state/structured/sandbox replay tests passed. The remaining renderer-dependent Phase 4 fixture shares the Node-24 FFI Evidence Gap above. |
-| Live greenfield and existing-app work | Evidence Gap | Neither live stack ran. Network/dependency installation was not user-authorized and LM Studio was unavailable; fixtures and hidden acceptance were not weakened or copied into model workspaces. |
+| Live greenfield and existing-app work | Not Green | Both ran with explicit authorized dependency installation and pinned Qwen. Neither completed required validation/acceptance; greenfield also has a retained harness sequencing defect after its P1 failure. |
 
 ## Runtime controls and live raw dimensions
 
-The required preflight printed `MANUAL CHECK: LM Studio GPU Offload must show 26`. The follow-up `curl -fsS http://127.0.0.1:1234/api/v1/models` failed with connection refused, so no pinned model instance, REST-visible context/batch/parallel/flash/KV/expert settings, model token usage, or UI-only Offload 26 confirmation was observed.
+The required preflight printed `MANUAL CHECK: LM Studio GPU Offload must show 26`. This refresh reached the pinned loaded instance and captured the REST-visible values above; Offload 26 remains unconfirmed because it is UI-only.
 
 | Dimension | `greenfield-express-v1` v1 | `existing-express-feature-v1` v1 |
 | --- | --- | --- |
-| George/task/fixture/acceptance | George `0.9.9`; Task Prompt 1; fixture and acceptance v1 | George `0.9.9`; Task Prompt 1; fixture and acceptance v1 |
-| Pinned model/provider/runtime/context | Evidence Gap — LM Studio unreachable; Node `v24.21.0` | Evidence Gap — LM Studio unreachable; Node `v24.21.0` |
-| Hidden acceptance / required validation | Not run; no model workspace was created | Not run; no model workspace was created |
-| Human interventions / defects repaired | No live run; none observed | No live run; none observed |
-| Provider rounds / attempts / retries | `0 / 0 / 0` observed | `0 / 0 / 0` observed |
-| Tool calls / duplicate or unrequested calls | `0 / 0` observed | `0 / 0` observed |
-| Context/profile/tokens / wall time | No provider context or live wall time | No provider context or live wall time |
-| Final TaskState ledger | No live task state | No live task state |
-| Outside approvals / sandbox events | No live events | No live events |
+| George/task/fixture/acceptance | George `0.9.10`; Task Prompt 1; fixture/acceptance v1; no valid stack pass | George `0.9.10`; Task Prompt 1; fixture/acceptance v1; hidden acceptance failed |
+| Pinned model/provider/runtime/context | Loaded pinned Qwen; Node `v26.10.0`; ordinary adaptive profile | Same loaded pinned Qwen/Node/profile |
+| Hidden acceptance / required validation | Acceptance failed; P1 V1 and later required validation remained unexecuted | Acceptance failed; V1/V2 remained unexecuted |
+| Human interventions / defects repaired | 0; temporary harness incorrectly continued P2/P3 after P1 failure | 0 |
+| Provider rounds / attempts / retries | P1 `2 / 2 / 0`; P2 `6 / 6 / 0`; P3 `6 / 6 / 0` | `23 / 23 / 0` |
+| Tool calls / duplicate or unrequested calls | P1/P2/P3 `5 / 22 / 22`; repeated calls observed | `47`; repeated calls observed |
+| Context/profile/tokens / wall time | ordinary; `2,583 / 326`, `8,232 / 1,218`, `7,107 / 832`; `42.363`, `157.066`, `96.594 s` | ordinary; `49,446 / 1,937`; `449.249 s` |
+| Final TaskState ledger | P1/P2 failed; P3 budget exhausted; no validation pass | failed; W1 addressed, W2 active; V1/V2 pending |
+| Outside approvals / sandbox events | `0 / 0` | `0 / 0` |
 
-GPU Offload 26 is unconfirmed, so there is no controlled latency claim. Functional live evidence is also absent because the provider was unavailable. These zeros are stopped-before-execution observations, not passing scores.
+GPU Offload 26 is unconfirmed, so there is no controlled latency claim. Functional live evidence is present and Not Green; the figures above are raw observations, not passing scores.
 
 ## Validation
 
@@ -57,6 +71,7 @@ GPU Offload 26 is unconfirmed, so there is no controlled latency claim. Function
 | Direct full OpenTUI renderer attempt | Evidence Gap: 27 FFI-initialization failures and 27 non-renderer tests passed under unsupported Node 24; retained as visible host evidence, not ignored. |
 | `npm run typecheck` | Green. |
 | `npm run test:runner` | Green: 90/90 passed. |
+| `npm test` | Not Green: 337/345 passed; 7 OpenTUI test-renderer failures. |
 | `git diff --check` | Green. |
 | Root `package-lock.json` | Green: absent. |
 
