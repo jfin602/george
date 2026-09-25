@@ -46,9 +46,9 @@ The first autonomous loop follows this lifecycle:
 
 Phase 2 uses a simple configurable hard ceiling on tool rounds/calls to prevent infinite loops. Rich budgets, retries, compaction, and long-run recovery remain later-phase concerns.
 
-Tool execution is sequential in the Phase 2 baseline. That historical contract remains true for Phase 2 evidence; Phase 9 is the explicit point where George may introduce dependency-safe concurrency.
+Tool execution is sequential in the Phase 2 baseline. That historical contract remains true for Phase 2 evidence; Phase 10 is the explicit point where George may introduce dependency-safe concurrency.
 
-Phase 9 concurrency must be application/core-owned rather than a TUI or provider-adapter trick. Independent read-only operations may execute concurrently only when their dependency/ordering semantics are explicit. Side-effecting or ambiguous operations remain sequential by default. Concurrent calls retain distinct call/work identities, normal policy/approval/cancellation/output bounds, and deterministic normalized result ordering before provider continuation. A performance optimization may not weaken ToolRegistry validation, permission policy, retry/recovery rules, transcript truth, or evidence completeness.
+Phase 10 concurrency must be application/core-owned rather than a TUI or provider-adapter trick. Independent read-only operations may execute concurrently only when their dependency/ordering semantics are explicit. Side-effecting or ambiguous operations remain sequential by default. Concurrent calls retain distinct call/work identities, normal policy/approval/cancellation/output bounds, and deterministic normalized result ordering before provider continuation. A performance optimization may not weaken ToolRegistry validation, permission policy, retry/recovery rules, transcript truth, or evidence completeness.
 
 ### Provider-round assistant commit semantics
 
@@ -57,6 +57,35 @@ Assistant text is buffered per provider response round until George knows whethe
 Only a completed provider round with no tool calls may commit assistant text as the single final assistant response for that turn. Provider failure or cancellation before such completion leaves buffered text non-canonical. This buffering is a transcript-integrity rule, not a retry-safety signal: a provider attempt that has emitted response-start/text/tool evidence may still be non-replay-safe even when its provisional text was never committed.
 
 OpenTUI may progressively reveal an already-committed final response at a fast bounded cadence so the final answer still feels streamed. Reveal/animation state is presentation-only and must not alter canonical transcript, durable session content, provider-facing history, cancellation truth, or completion evidence.
+
+## Structured task execution
+
+Phase 9 introduces a provider-independent structured-task layer between accepted user/task intent and ordinary model/tool orchestration.
+
+The execution shape is:
+
+~~~text
+George Task Prompt v1
+        |
+        v
+ deterministic parser/validator
+        |
+        v
+ application-owned TaskState
+ requirements / work units / validation / stops / corrections
+        |
+        +-------> bounded model task slice -> provider
+        |
+        +-------> canonical tools / approvals / recovery
+        |
+        +-------> presentation projections
+~~~
+
+TaskState is operational/evidence state, not hidden model reasoning. It records explicit authored requirements plus George-observed execution/validation outcomes. A model proposal cannot directly mark requirements or validation Green.
+
+Task prompt content remains below George/user permission policy and cannot register tools, expand capabilities, bypass context precedence, or grant itself execution authority.
+
+Durable task state is bound to canonical workspace/session identity and inherits Phase 4/5 interruption/recovery truth. Ambiguous side effects are never replayed merely because a work unit remains incomplete.
 
 ## Progress and status events
 
@@ -72,7 +101,9 @@ Phase 4 progress/work state is harness-generated from George-owned workflow and 
 
 Progress events use bounded categories/messages and may coalesce repeated low-value operations. Work-item projection uses stable turn/tool/operation identity so one concrete operation can move through requested/running/waiting/succeeded/failed/denied/cancelled/interrupted state without generating redundant transcript rows for each underlying lifecycle event.
 
-The observable execution transcript covers meaningful context-source discovery/loading, file reads/listing/search, Git inspection, writes/patches, approvals, process execution, validation, recovery, and completion. Safe renderings may include bounded paths, queries, counts, byte sizes, literal process executable/argv, workspace-relative cwd, exit/signal state, durations, truncation markers, and concise errors. They must not automatically copy raw file contents, write/patch bodies, arbitrary tool-result JSON, unrestricted stdout/stderr, unrestricted environment state, secrets, or provider payloads.
+The observable execution/work projection covers meaningful context-source discovery/loading, file reads/listing/search, Git inspection, writes/patches, approvals, process execution, validation, recovery, and completion. Safe renderings may include bounded paths, queries, counts, byte sizes, literal process executable/argv, workspace-relative cwd, exit/signal state, durations, truncation markers, and concise errors. They must not automatically copy raw file contents, write/patch bodies, arbitrary tool-result JSON, unrestricted stdout/stderr, unrestricted environment state, secrets, or provider payloads.
+
+Through Phase 8 this projection may be interleaved with conversation. Phase 9 moves routine structured-task work presentation to a dedicated Task view while preserving the same authoritative event/work identities. Removing routine work rows from Transcript presentation must not delete or weaken execution evidence.
 
 Schema-invalid or otherwise failed tool requests may additionally retain a bounded allowlisted argument summary so developers can distinguish cases such as omitted fields, empty strings, wrong field names, or wrong primitive types. That diagnostic projection must redact write/patch bodies and must never become a generic raw-JSON dump. For the model-facing `list_directory` root case specifically, omitted `path`, empty-string `path`, and `path: "."` normalize to the active workspace root before the existing canonical workspace/traversal/symlink checks; this normalization does not broaden filesystem authority or imply similar coercion for unrelated tools.
 
@@ -90,26 +121,56 @@ If progress/work history is persisted, resume reconstructs prior entries as hist
 
 The initial user interface uses `@opentui/core` directly from TypeScript, without React.
 
-It should provide a Codex-style terminal experience:
-- owned screen regions and in-place redraw;
-- progressively revealed final assistant text, while preserving the provider-round commit rule above;
-- a single fast-changing live activity indicator that renders provider generation as `Thinking...` rather than exposing provider-protocol wording;
-- a persistent scrollable execution/work log interleaved chronologically with the conversation presentation;
-- compact grouping of consecutive work items beneath one visual `Work` header, with one stable item per concrete operation and explicit per-item textual status;
-- intelligible operation summaries for context loading, file read/list/search, Git inspection, mutations, approvals, process commands, validation, recovery, and completion;
-- literal executable/argv display for process execution with bounded safe outcome metadata;
-- visible permission requests with normalized tool/arguments and affected path or process command;
-- allow-once/deny input for Phase 2 approvals;
-- persistent multiline-capable input;
-- status/model/workspace information;
-- scrollback/history navigation;
-- terminal resize handling;
-- Ctrl+C/task cancellation semantics while model work, approval waits, or tools are active;
-- clean restoration of terminal state on normal exit and handled failure.
+The TUI consumes application/agent/task events and emits user commands/approval decisions. It must not implement provider protocol, tool policy, context assembly, task parsing authority, task state transitions, or agent-loop decisions.
 
-The TUI consumes application/agent events and emits user commands/approval decisions. It must not implement provider protocol, tool policy, context assembly, or agent-loop decisions.
+Through Phase 8 the supported presentation includes the historical chronological conversation/work view. Phase 9 deliberately evolves it into two first-class pages over the same application state:
+
+- Transcript — primarily user messages and committed George responses, with only bounded exceptional inline diagnostics/approval interaction where needed;
+- Task — structured goal, current work unit, requirement state, workflow/dependencies, validation, blockers, recent execution work, and effective permission envelope.
+
+A persistent compact header remains visible on both pages and exposes current task/work unit/progress/state plus bounded model/context/access information. The composer remains available in both views so the user can intervene while watching task execution.
+
+The Phase 9 TUI should additionally provide:
+- owned screen regions and in-place redraw;
+- progressively revealed final assistant text while preserving provider-round commit truth;
+- one fast-changing activity indicator that renders provider generation as `Thinking...`;
+- keyboard navigation between Transcript and Task, with pointer/click support where OpenTUI provides it reliably;
+- stable scroll/selection behavior per view;
+- visible normalized approval requests;
+- allow-once/deny interaction;
+- terminal resize handling;
+- Ctrl+C/task cancellation while provider work, approvals, or tools are active;
+- clean terminal restoration on normal exit and handled failure.
+
+Task/work visibility is a projection only. Rendering TaskState or work history must not inject it into provider context merely because it is visible.
 
 The supported Node host is Node.js 26.4.0 or later within the Node 26 major line. George remains ESM. Native OpenTUI launch paths must invoke Node with `--experimental-ffi`; package scripts/entrypoints should encode that requirement so normal users do not need to remember it manually.
+
+## Workspace Autonomous execution
+
+Phase 9 adds an optional application-owned Workspace Autonomous profile over the existing ToolRegistry/effect/approval architecture.
+
+The effective policy independently represents:
+- workspace-local filesystem authority;
+- outside-workspace filesystem policy (`reject` or `ask`);
+- network authority;
+- remote mutation authority;
+- browser interaction authority;
+- credential/environment exposure.
+
+Inside one canonical workspace, qualified native reads/writes and sandboxed ordinary development processes may execute without per-call approval. Existing validation, replay-safety, run-budget, cancellation, recovery, Git-user-work preservation, and environment/credential protections remain mandatory.
+
+Outside `reject` denies the requested outside resource without presenting approval. Outside `ask` emits one bounded approval request for the specific resource/action. An allow-once decision cannot become a broad remembered host grant.
+
+The task format may declare the permissions a task expects, but the effective policy is the intersection with configured user authority; task/repository/model/plugin/remote text can never raise the ceiling.
+
+### Workspace process containment
+
+The existing host-process executor remains explicitly non-sandboxed and approval-required under its historical contract.
+
+Workspace Autonomous process execution requires a distinct OS-enforced containment path. The selected implementation must actually prevent disallowed host filesystem access rather than relying on `cwd`. If containment cannot be initialized, George must fail closed or fall back to the normal approval-required host-process path. It must never label or auto-run cwd-only execution as sandboxed.
+
+The concrete Linux containment technology is an implementation-planning decision. Broader general-purpose host/container sandboxing remains outside Phase 9.
 
 ## Provider layer
 
@@ -208,7 +269,7 @@ Phase 5 implements compaction as provider-facing derived context over the author
 
 Compaction/summarization is exposed behind a provider-independent boundary. Deterministic structural reduction is preferred where inference is unnecessary so a later secondary utility model can assume semantic compaction duties without changing session or context architecture.
 
-Phase 11 may attach a secondary local utility model to that boundary only after the Phase 10 optimized primary-model baseline is frozen. Utility inference is subordinate derived-context work: it has no independent permission authority, cannot register or execute tools by instruction, cannot raise instruction precedence, and cannot replace canonical session/evidence state. Utility-model failure or disablement must have an explicit bounded fallback path.
+Phase 12 may attach a secondary local utility model to that boundary only after the Phase 11 optimized primary-model baseline is frozen. Utility inference is subordinate derived-context work: it has no independent permission authority, cannot register or execute tools by instruction, cannot raise instruction precedence, and cannot replace canonical session/evidence state. Utility-model failure or disablement must have an explicit bounded fallback path.
 
 The current Phase 1 behavior that loads bounded raw root `BOOT.md` and `AGENTS.md` content directly into a turn is a bootstrap implementation, not the intended mature context architecture.
 
@@ -676,4 +737,4 @@ One failing/malformed plugin or adapter must not corrupt unrelated extension sta
 
 ## Future boundaries
 
-Designed, not implemented initially: daemon/server transport, Tauri desktop UI, Chrome DevTools, Parallel Search, GitHub/MCP adapters, multiple inference providers, project software-graph/index services, OS/container sandboxing, remembered permission profiles, authenticated remote clients, and multi-agent execution.
+Designed, not implemented initially: daemon/server transport, Tauri desktop UI, multiple inference providers, project software-graph/index services, broader general-purpose OS/container sandboxing beyond the planned Phase 9 workspace-process boundary, remembered broad permission profiles, authenticated remote clients, and multi-agent execution. Chrome DevTools, Parallel Search, GitHub, and MCP are now Phase 6 capability/adapter directions rather than future architecture.

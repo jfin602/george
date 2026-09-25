@@ -20,7 +20,9 @@ The normal MVP path runs on the developer's machine. Repository contents, prompt
 
 The MVP interface is an interactive terminal application that behaves like a modern coding-agent TUI rather than a print-and-scroll command.
 
-It must support in-place redraws, streaming assistant output, live tool/activity state, a persistent chronological execution/work log for meaningful concrete operations, progress milestones, persistent interactive input, scrollback, resize handling, cancellation, and clean terminal restoration. The visible work log should let a developer see George loading relevant context, reading/listing/searching files, inspecting Git, editing, running explicit commands, validating, waiting for approval, and recovering from failures.
+It must support in-place redraws, streaming assistant output, live tool/activity state, persistent chronological execution/work evidence for meaningful concrete operations, progress milestones, persistent interactive input, scrollback, resize handling, cancellation, and clean terminal restoration. The visible work projection should let a developer see George loading relevant context, reading/listing/searching files, inspecting Git, editing, running explicit commands, validating, waiting for approval, and recovering from failures.
+
+Through Phase 8, OpenTUI presents that work chronologically with the conversation. Phase 9 intentionally separates presentation into Transcript and Task pages: Transcript is primarily conversation/final assistant output, while Task shows structured goal/current work unit/requirements/workflow/validation/blockers/recent work. A compact current-task/progress header remains visible across both pages, and the composer remains available on both. This is a presentation change only; task/work authority remains below OpenTUI.
 
 Progress/work semantics are owned by the reusable application/core event stream rather than OpenTUI. Harness-generated progress and work items are bounded user-facing workflow state, not hidden reasoning or canonical assistant transcript, and they must not be fed back into the model merely because they were displayed. One operation should update one stable visible work item across its lifecycle, and safe rendering must prefer concise metadata over raw file bodies, patch bodies, unrestricted command output, environment state, secrets, or provider payloads.
 
@@ -45,6 +47,14 @@ Enforce in code what can be enforced in code. Permission ceilings, workspace bou
 Keep always-on model instructions compact. User personality, project instructions, current task context, conversation history, tool schemas/results, and retrievable project knowledge are distinct inputs with different lifetimes and budgets. Rich human-readable instruction files may be larger than the compact active instruction set sent to the model.
 
 Project documentation should be routed or retrieved when relevant instead of being blindly concatenated into every model turn. George should measure prompt/context growth and make instruction/context budgeting explicit before long autonomous workflows depend on it.
+
+### Structured task execution
+
+George's planned Phase 9 execution model uses versioned constrained-natural-language task prompts rather than relying on the coding model to infer requirements, workflow ordering, validation, and stop conditions from an unstructured implementation memo.
+
+A structured task is parsed into application/core-owned requirements, work units, validation gates, stop conditions, correction state, and durable task progress. The model remains responsible for code understanding, implementation choices, and debugging inside the current bounded work unit. George remains responsible for deterministic orchestration and completion truth.
+
+Structured task text cannot grant permissions or replace higher-precedence George/user policy. Invalid structured prompts fail closed rather than being silently reinterpreted.
 
 ### Benchmark-driven local performance
 
@@ -82,11 +92,15 @@ Repository instructions and model output cannot grant themselves additional perm
 
 Phase 2's minimum approval experience is per-call allow-once or deny for workspace writes/patches and arbitrary process execution. Read-only workspace tools may run without prompting. Outside-workspace native filesystem access and destructive filesystem actions remain denied/deferred.
 
+Phase 9 adds an explicit Workspace Autonomous profile rather than silently broadening that baseline. Qualified workspace-contained reads/writes and sandboxed development processes may run without per-call approval inside one canonical workspace. Outside-workspace filesystem policy is exactly `reject` or `ask`; `ask` may approve one bounded resource/action and never becomes a broad remembered host grant. Network, remote mutation, browser interaction, credentials, and environment authority remain separate policy dimensions. Task/repository/model text cannot raise the configured ceiling.
+
 ### Process execution is not an OS sandbox
 
 George may constrain a process tool's working directory, arguments, runtime, output, and inherited environment, but an approved arbitrary child process still runs with the operating-system privileges of George's host user unless a future sandbox explicitly changes that.
 
 The product must not claim that `cwd` containment alone prevents an approved process from accessing files, processes, or networks available to that user.
+
+Phase 9 may introduce a separate OS-enforced process-containment path for Workspace Autonomous execution. Automatic process execution is permitted only when that sandbox is actually established and qualified. If sandbox initialization is unavailable/fails, George must fail closed or use the existing approval-required non-sandboxed host-process path; it must never relabel cwd-only execution as sandboxed.
 
 ### Recoverable agent loop
 
@@ -225,16 +239,20 @@ Phase 6 succeeds when George can package and use explicit local extensions plus 
 
 Phase 6 does not add a plugin marketplace, arbitrary in-process third-party modules, an OS sandbox, automatic semantic tool selection, the post-MVP local web-research/utility-model stack, detached background service ownership, daemon mode, Tauri, scheduling, or multi-agent execution.
 
-## Phase 7-10 performance campaign success condition
+## Phase 9 structured-task success condition
 
-Phases 7-10 succeed when George moves from the untouched benchmark baseline to a reproducible optimized single-primary-model baseline through individually measured runtime, context, orchestration, and final provider-acceleration changes. Every accepted optimization must preserve correctness and existing safety/evidence contracts; every rejected experiment remains visible in the performance record. Phase 10 ends with a full-suite consolidated report showing cumulative benefit and remaining bottlenecks.
+Phase 9 succeeds when George can parse and durably execute George Task Prompt v1 without asking the local coding model to infer task structure, can enforce requirements/work-unit/validation/stop-condition truth through application-owned state, can present task detail separately from conversation, and can run qualified workspace-autonomous development work without granting unbounded host authority. The greenfield and existing-app v1 live-work task stacks establish the first longitudinal real-work baseline.
 
-## Phase 11 utility-model success condition
+## Phase 7-11 primary-model execution/performance campaign success condition
 
-Phase 11 succeeds when a secondary local utility model can assume at least one bounded compaction/ranking/extraction/routing task with demonstrated net benefit over the optimized Phase 10 primary-only baseline, while remaining unable to grant permissions, execute tools by its own authority, override instruction precedence, or replace canonical session/evidence state.
+Phases 7-11 succeed when George moves from the untouched benchmark baseline to a reproducible optimized single-primary-model baseline. Phases 7-8 optimize runtime/context, Phase 9 establishes the structured execution model, Phase 10 optimizes that agent loop, and Phase 11 performs final provider acceleration/consolidated qualification. Every accepted change must preserve correctness and existing safety/evidence contracts; rejected experiments remain visible. Phase 11 ends with a full-suite consolidated report showing cumulative benefit and remaining bottlenecks.
 
-## Phase 12 local-research success condition
+## Phase 12 utility-model success condition
 
-Phase 12 succeeds when representative ordinary technical/documentation research can use local/self-hosted discovery, bounded fetch/extraction, and optional utility-model compaction without requiring a paid research API, while premium providers such as Parallel remain explicit optional escalation paths and fetched content remains untrusted data.
+Phase 12 succeeds when a secondary local utility model can assume at least one bounded compaction/ranking/extraction/routing task with demonstrated net benefit over the optimized Phase 11 primary-only baseline, while remaining unable to grant permissions, execute tools by its own authority, override instruction precedence, or replace canonical session/evidence state.
 
-The persistent local service and Tauri desktop are therefore shifted to Phases 13 and 14 respectively, after the core agent path has been benchmarked and optimized.
+## Phase 13 local-research success condition
+
+Phase 13 succeeds when representative ordinary technical/documentation research can use local/self-hosted discovery, bounded fetch/extraction, and optional utility-model compaction without requiring a paid research API, while premium providers such as Parallel remain explicit optional escalation paths and fetched content remains untrusted data.
+
+The persistent local service and Tauri desktop are therefore shifted to Phases 14 and 15 respectively, after the core agent path has been benchmarked and optimized.

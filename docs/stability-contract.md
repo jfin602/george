@@ -113,6 +113,32 @@ Phase 5 inherits the post-Phase-4 transcript/presentation hardening as a regress
 
 Native OpenTUI qualification should additionally verify progressive final reveal, compact Work grouping under resize/scrollback/restored-session conditions, semantic status coloring with textual fallbacks, and no duplicate/premature final assistant block around tool continuations.
 
+### Phase 9 structured-task qualification
+
+George Task Prompt v1 and its orchestration layer must be deterministic enough to qualify independently from live-model quality.
+
+Coverage must prove:
+- supported format detection and version rejection;
+- required/optional section grammar and fail-closed behavior;
+- unique/reference-valid R/I/W/V/S/D identifiers;
+- dependency-cycle rejection;
+- application-owned requirement/work-unit/validation/stop-condition state;
+- actual inspection evidence for declared INSPECT work where required;
+- required validation cannot become Green from model assertion alone;
+- bounded correction transitions retain the original failure evidence;
+- correction exhaustion/Planning needed/blocked outcomes terminate truthfully;
+- durable interruption/reopen restores task state without replaying ambiguous side effects;
+- task slicing preserves current applicable requirements/invariants/stop conditions under Phase 3/8 context rules;
+- task/repository/model text cannot raise the executable permission ceiling.
+
+Phase 9 TUI qualification must additionally prove Transcript/Task view separation, persistent current-task/progress header, composer availability in both views, view switching without task-state mutation, task/work evidence retention outside Transcript presentation, approval/cancellation/resize/scrollback/draft preservation, and no provider-context injection merely because state is visible.
+
+Phase 9 Workspace Autonomous qualification must prove standard mode remains unchanged; qualified workspace-native operations auto-run only under the configured profile; outside `reject` denies without prompting; outside `ask` produces one bounded resource-specific approval; task permission declarations cannot elevate authority; and network/remote/browser/credential policies remain independent.
+
+Workspace-autonomous process execution requires adversarial OS-containment evidence: allowed development processes operate in the workspace, disallowed outside sentinel reads/writes fail, traversal/symlink escape fails, unrestricted secret environment inheritance is absent, timeout/cancellation/cleanup remain bounded, and sandbox initialization failure fails closed. The existing non-sandboxed host-process path remains separately labeled/approval-gated.
+
+Phase 9 also freezes `greenfield-express-v1` and `existing-express-feature-v1` live-work instruments. Their raw acceptance/validation/intervention/provider/tool/context/time/permission dimensions are recorded without collapsing them into one score and should be rerun at later phase closeouts when available.
+
 ### Provider contract
 
 Use deterministic/mock provider fixtures for ordinary tests and bounded live LM Studio qualification when provider integration changes.
@@ -314,6 +340,8 @@ At minimum, test that repository/model-provided text cannot silently:
 
 Process qualification must distinguish policy controls from sandbox guarantees. A bounded `cwd` is not evidence that an arbitrary child process cannot access resources elsewhere on the host.
 
+When Phase 9 Workspace Autonomous execution is enabled, automatic process execution is Green only if the sandbox boundary itself is exercised with negative outside-workspace read/write cases. An unavailable sandbox is never inferred from policy intent or cwd configuration; it is Evidence Gap/Not Green and must fall back safely.
+
 ## Git/user-work preservation
 
 Any phase that mutates files must prove pre-existing user work survives success, failure, denial, timeout, and cancellation paths relevant to the change.
@@ -398,7 +426,7 @@ Phase 8 context qualification must additionally prove:
 - stable/incremental/provider-cached context paths never make provider-native cache state the sole copy of canonical or safety-relevant state;
 - a context speedup does not silently omit critical sources or change logical precedence.
 
-Phase 9 tool-concurrency qualification must additionally prove:
+Phase 10 tool-concurrency qualification must additionally prove:
 - only explicitly dependency-safe operations are concurrent;
 - side-effecting/ambiguous operations remain sequential unless separately authorized by a later contract;
 - concurrent calls retain unique lifecycle identities and normal permission/cancellation/output bounds;
@@ -406,14 +434,14 @@ Phase 9 tool-concurrency qualification must additionally prove:
 - normalized result ordering supplied to the provider is deterministic;
 - integrated permission, recovery, work-log, and transcript evidence remains complete.
 
-Phase 9 model-call reduction qualification must distinguish logical provider rounds from retry attempts and prove that removed model turns were unnecessary orchestration boundaries rather than lost reasoning/approval/recovery decisions.
+Phase 10 model-call reduction qualification must distinguish logical provider rounds from retry attempts and prove that removed model turns were unnecessary orchestration boundaries rather than lost reasoning/approval/recovery decisions.
 
-Phase 10 closes the primary-model optimization campaign only after a full-suite consolidated run records the original baseline, accepted/rejected experiments, cumulative deltas, correctness state, call counts, token usage where available, and resource footprint. Speculative decoding is retained only if the end-to-end evidence justifies its memory/runtime complexity.
+Phase 11 closes the primary-model optimization campaign only after a full-suite consolidated run records the original baseline, accepted/rejected experiments, cumulative deltas, correctness state, call counts, token usage where available, and resource footprint. Speculative decoding is retained only if the end-to-end evidence justifies its memory/runtime complexity.
 
-Phase 11 utility-model qualification must prove:
+Phase 12 utility-model qualification must prove:
 - utility output is bounded derived context/evidence, not authoritative instructions or canonical session truth;
 - utility inference cannot grant permissions, invoke tools by its own authority, or expand George's capability ceiling;
-- helper routing has net measured benefit against the optimized Phase 10 primary-only baseline after accounting for helper latency, memory pressure, scheduling, and quality;
+- helper routing has net measured benefit against the optimized Phase 11 primary-only baseline after accounting for helper latency, memory pressure, scheduling, and quality;
 - helper failure/disablement degrades explicitly through a documented fallback.
 
-Phase 12 local-research qualification must keep search discovery, fetch, deterministic extraction, browser fallback, utility inference, and premium escalation independently observable/disableable, while preserving source provenance and treating fetched content as untrusted data.
+Phase 13 local-research qualification must keep search discovery, fetch, deterministic extraction, browser fallback, utility inference, and premium escalation independently observable/disableable, while preserving source provenance and treating fetched content as untrusted data.

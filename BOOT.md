@@ -89,6 +89,19 @@ Adaptive profile selection must preserve Phase 3 precedence/routing/smallest-suf
 
 Do not stack multiple unmeasured context changes.
 
+## Next planned phase
+
+**Phase 9 — Structured Task Execution + Workspace Autonomy** is the approved next phase after Phase 8 closes. It must not begin implementation until Phase 8 is formally closed/accepted.
+
+Phase 9 authority:
+- decision record: `docs/planning/p9-structured-task-execution/decision-record.md`;
+- task grammar: `docs/planning/p9-structured-task-execution/task-format-v1.md`;
+- qualification plan: `docs/planning/p9-structured-task-execution/qualification-plan.md`.
+
+Phase 9 introduces George Task Prompt v1, application-owned structured task/validation/correction state, Transcript/Task TUI separation, and sandbox-backed Workspace Autonomous execution with outside-workspace `reject | ask` policy. The previously planned Agent Loop Throughput phase moves to Phase 10; later roadmap phases shift by one.
+
+Historical Phase 1-8 prompts/evidence are not renumbered or rewritten because of this forward roadmap change.
+
 ## Core premise
 
 George is a local-first coding agent harness. The pinned default local brain is LM Studio model ID `qwen3-coder-30b-a3b-instruct@q4_k_m`, with Qwen3-Coder served through LM Studio's OpenAI-compatible Responses API. `GEORGE_MODEL` remains an explicit override for deliberate model testing.
@@ -125,6 +138,7 @@ Read:
 - roadmap: `docs/roadmap/mvp-roadmap.md`;
 - Living Project Map / Software Graph, when relevant: `docs/planning/living-project-map/decision-record.md` (then its graph, interaction, and qualification companions as needed);
 - Phase 8 authority: `docs/planning/p8-context-throughput-optimization/decision-record.md`, `docs/planning/p8-context-throughput-optimization/initial-baseline.md`, `docs/planning/performance-benchmarking-worksheet.md`, and `docs/roadmap/mvp-roadmap.md`;
+- planned Phase 9 authority: `docs/planning/p9-structured-task-execution/decision-record.md`, `docs/planning/p9-structured-task-execution/task-format-v1.md`, and `docs/planning/p9-structured-task-execution/qualification-plan.md`;
 - Phase 7 closeout/history when needed: `docs/phase-7-closeout.md`, `docs/phase-7-owner-closeout.md`, `docs/planning/p7-inference-runtime-optimization/initial-baseline.md`;
 - Phase 6 closeout/history when needed: `docs/phase-6-closeout.md`, `docs/phase-6-owner-closeout.md`, `docs/planning/p6-plugins-external-adapters/decision-record.md`;
 - Phase 5 closeout/history when needed: `docs/phase-5-closeout.md`, `docs/phase-5-owner-closeout.md`, `docs/planning/p5-reliability-long-runs/decision-record.md`;

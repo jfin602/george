@@ -263,7 +263,7 @@ Non-goals:
 - Tauri desktop UI;
 - multi-agent scheduling/execution.
 
-Long-running in Phase 5 means a bounded attached local George run with durable recovery evidence. A persistent detached local service remains deferred until Phase 13, after the benchmark-driven primary-model optimization campaign, utility-model work, and local-research path.
+Long-running in Phase 5 means a bounded attached local George run with durable recovery evidence. A persistent detached local service remains deferred until Phase 14, after structured-task execution, the benchmark-driven primary-model optimization campaign, utility-model work, and local-research path.
 
 ## Phase 6 — Plugins + External Adapters
 
@@ -432,124 +432,157 @@ Non-goals:
 - making LM Studio/provider cache state canonical;
 - rewriting Phase 3 or Phase 5 historical evidence.
 
-## Phase 9 — Agent Loop Throughput
+## Phase 9 — Structured Task Execution + Workspace Autonomy
 
-Goal: reduce serialized orchestration latency and unnecessary primary-model invocations while preserving George-owned dependency ordering, permissions, transcript truth, recovery semantics, and deterministic evidence.
+Status: PLANNED NEXT PHASE AFTER PHASE 8
 
-Scope:
-- introduce explicit dependency-safe concurrency for independent operations, starting with read-only workspace/tool activity;
-- preserve model-requested ordering semantics whenever calls are dependent or ordering is otherwise significant;
-- keep writes, patches, approvals, arbitrary processes, ambiguous external effects, and other side-effecting operations sequential unless a later explicit safety contract proves concurrency safe;
-- ensure concurrent operations retain stable call/work identities, cancellation, bounded output, failure isolation, and deterministic normalized result ordering before provider continuation;
-- benchmark tool parallelism independently before changing primary-model call behavior;
-- then reduce redundant model turns by batching deterministic orchestration/tool work between provider rounds where the model does not need intermediate reasoning;
-- preserve the provider-round assistant commit rule and canonical event/session evidence;
-- track logical provider rounds separately from retry attempts.
+Decision authority: `docs/planning/p9-structured-task-execution/decision-record.md`.  
+Task-format authority: `docs/planning/p9-structured-task-execution/task-format-v1.md`.  
+Qualification authority: `docs/planning/p9-structured-task-execution/qualification-plan.md`.
 
-Success condition:
-- independent-tool benchmark cases show measured end-to-end improvement without changing correctness or weakening permissions/evidence;
-- model-call reduction produces fewer logical provider rounds or lower wall time on appropriate workloads without hiding useful reasoning checkpoints or increasing retries/failures;
-- each optimization is benchmarked and accepted/reverted independently.
-
-Non-goals:
-- concurrent ambiguous mutations;
-- multi-agent scheduling;
-- helper-model delegation;
-- daemon/background-job ownership.
-
-## Phase 10 — Final Acceleration + Primary-Model Performance Qualification
-
-Goal: characterize the remaining provider-level acceleration opportunity, then freeze a consolidated optimized single-primary-model baseline.
+Goal: make George execute rich software-development task stacks reliably with the local coding model by moving deterministic requirements/workflow/validation/permission orchestration into the harness rather than asking the model to infer it from frontier-model-style prose.
 
 Scope:
-- evaluate speculative decoding only if a compatible draft model/runtime path is practical;
-- treat speculative decoding as an experiment, not a requirement;
-- retain it only when end-to-end benefit survives memory/resource/quality comparison against the already-optimized Phase 9 baseline;
-- run the full benchmark suite against the final accumulated primary-model configuration;
-- produce a consolidated performance report covering the original baseline, every accepted/rejected optimization, per-stage deltas, cumulative improvement, quality/correctness deltas, provider/model-call counts, tool-call counts, token usage, retries, and resource footprint.
+- versioned George Task Prompt v1 constrained-natural-language grammar;
+- deterministic fail-closed parser/validator;
+- application/core-owned task/stack requirements, invariants, work units/dependencies, validation, stop conditions, deliverables, non-goals, and execution expectations;
+- bounded current-work-unit task slices for the primary model under Phase 3/8 context laws;
+- requirement/validation state based on authoritative George evidence rather than model claims;
+- bounded self-correction/revalidation loops with truthful failure history and existing recovery semantics;
+- durable task-stack state across session persistence/interruption;
+- OpenTUI Transcript and Task pages, persistent current-task/progress header, and composer on both;
+- routine detailed work presentation moves to Task without losing authoritative work/session evidence;
+- optional Workspace Autonomous execution inside one canonical workspace;
+- outside-workspace filesystem policy exactly `reject | ask`;
+- auto-run ordinary development processes only through an actually OS-enforced, qualified workspace containment path;
+- preserve existing approval-required non-sandboxed host-process behavior as a separate path/fallback;
+- keep network, remote mutation, browser interaction, credentials, and environment authority separate from workspace filesystem autonomy;
+- freeze `greenfield-express-v1` and `existing-express-feature-v1` live-work task-stack instruments.
 
 Success condition:
-- George has a reproducible, measured optimized primary-model baseline;
-- no accepted performance change is justified only by intuition or an aggregate that hides correctness failures;
-- the consolidated report makes the cumulative gain and remaining bottlenecks explicit.
+- structured prompts parse deterministically and invalid marked prompts fail closed before provider/tool execution;
+- task state/dependencies/validation/stop/correction semantics are durable and presentation-independent;
+- Qwen can complete representative structured task stacks with truthful validation/completion evidence;
+- Transcript/Task UI separation is usable without losing cancellation/approval/scrollback/draft behavior;
+- workspace-autonomous processes are demonstrably contained from disallowed host filesystem resources or the mode fails closed;
+- outside reject/ask behave exactly as configured and prompts cannot elevate policy;
+- both frozen v1 live-work baselines are recorded with raw outcome/performance/intervention dimensions;
+- inherited Phase 2-8 contracts remain Green or their existing gaps remain explicitly classified.
 
 Non-goals:
-- introducing the helper/utility model;
+- dependency-safe parallel tool execution or model-call batching;
+- speculative decoding;
+- utility/helper model;
 - local web-research replacement;
-- daemon or desktop work.
+- daemon/desktop implementation;
+- unrestricted host administration or broad full-machine autonomy;
+- multi-agent scheduling.
 
-## Phase 11 — Local Utility Model
+## Phase 10 — Agent Loop Throughput
 
-Goal: add a secondary local model only after the single-primary-model path is optimized, using it for narrow low-cost context-preparation work where benchmarks demonstrate net benefit.
-
-Scope:
-- define a provider-independent secondary utility-model role separate from the primary coding/reasoning model;
-- evaluate candidate local models against the Phase 10 optimized baseline;
-- candidate duties include context/log compaction, diff summarization, relevance extraction, result/file ranking, bounded classification/routing, structured extraction, and similar context preparation;
-- keep utility output as derived context/evidence rather than authoritative instructions or canonical session truth;
-- the utility model cannot grant permissions, invoke executable tools by its own authority, expand George capabilities, or override user/project/George instruction precedence;
-- measure helper inference, scheduling, memory pressure, routing overhead, quality retention, and primary-model savings as one net system result.
-
-Success condition:
-- at least one bounded helper use case produces demonstrated net benefit versus the optimized Phase 10 primary-only baseline;
-- failure/disable of the utility model degrades explicitly to the primary path or another documented fallback rather than corrupting the run;
-- provider/model implementations remain replaceable.
-
-Non-goals:
-- unrestricted helper-agent autonomy;
-- helper-owned permissions/tools;
-- web search/discovery itself;
-- daemon/background scheduling.
-
-## Phase 12 — Local Web Research
-
-Goal: make ordinary technical/documentation research primarily self-hosted/local where practical, with Parallel Search or another premium provider available as optional escalation rather than a required web brain.
+Goal: reduce serialized orchestration latency and unnecessary primary-model invocations on top of the Phase 9 structured execution model while preserving George-owned dependency ordering, permissions, transcript/task truth, recovery semantics, and deterministic evidence.
 
 Scope:
-- provider-independent research orchestration over George's canonical tool/network/permission boundaries;
-- local/self-hosted search discovery, with SearXNG as the preferred initial direction while keeping discovery providers replaceable;
-- keep search discovery separate from bounded page retrieval, deterministic extraction, semantic compaction, and final primary-model reasoning;
-- use bounded HTTP fetch first and browser rendering only as a fallback when ordinary retrieval/extraction cannot obtain useful content;
-- use the Phase 11 utility-model role for relevance extraction, page compaction, reranking/evidence shaping where it proves useful;
-- preserve URLs/source identity/titles/dates when available and enough provenance for the primary model to distinguish source evidence from generated summaries;
-- treat fetched content as untrusted data and prevent prompt injection/page text from becoming higher-authority instructions;
-- cap result counts, fetched bytes, render resources, per-source context, utility output, timeouts, retries, and total research budget;
-- compare local versus premium research paths for answer/evidence quality, provenance preservation, latency, context usage, failure rate, and external API cost.
+- dependency-safe concurrency for independent operations, beginning with read-only workspace/tool activity;
+- preserve model/task ordering whenever calls are dependent;
+- side-effecting or ambiguous operations remain sequential unless explicitly qualified otherwise;
+- concurrent operations retain stable identities, cancellation, bounded output, failure isolation, and deterministic normalized result ordering;
+- benchmark tool parallelism before model-call changes;
+- separately reduce redundant model turns where the model does not need intermediate reasoning;
+- preserve provider-round assistant commit and Phase 9 task-state authority;
+- track logical provider rounds separately from retries;
+- include frozen Phase 9 live-work instruments.
 
 Success condition:
-- representative ordinary technical research can complete without a paid research API when public search/fetch sources are sufficient;
-- premium research remains independently disableable/escalatable;
-- hostile page content cannot register tools, raise permissions, or override instruction precedence;
-- disabling search, browser rendering, utility inference, or premium escalation produces explicit bounded fallback/degradation behavior.
+- independent-tool cases improve end-to-end performance without correctness/permission/evidence/task regressions;
+- model-call reduction lowers rounds/wall time without hiding useful reasoning/approval/recovery checkpoints or increasing failures;
+- live-work fixtures remain functionally equivalent or improve;
+- each optimization is independently accepted/reverted.
 
-Non-goals:
-- crawling/indexing a private copy of the public web;
-- unrestricted model sockets/network access;
-- utility-model permission/tool authority;
-- requiring Parallel or another paid provider for ordinary research.
+Non-goals: concurrent ambiguous mutations, multi-agent scheduling, helper-model delegation, daemon/background ownership.
 
-## Phase 13 — Local Daemon
+## Phase 11 — Final Acceleration + Primary-Model Performance Qualification
 
-Goal: separate the long-lived George service from presentation clients after the core agent path has been benchmarked and optimized.
+Goal: characterize remaining provider acceleration, then freeze a consolidated optimized single-primary-model baseline over the Phase 9 structured execution model and Phase 10 loop optimizations.
+
+Scope:
+- evaluate speculative decoding only if a compatible path is practical;
+- retain it only when end-to-end benefit justifies memory/runtime complexity;
+- run full benchmark plus frozen live-work qualification;
+- consolidate original baseline, structured-execution baseline, accepted/rejected changes, cumulative deltas, correctness, call counts, token usage, retries, resources, and live-work outcomes.
+
+Success condition:
+- reproducible optimized primary-model baseline;
+- no performance acceptance hides correctness failures;
+- consolidated report shows cumulative gain/remaining bottlenecks;
+- structured-task live-work results remain comparable to Phase 9.
+
+Non-goals: helper model, local web research, daemon/desktop.
+
+## Phase 12 — Local Utility Model
+
+Goal: add a secondary local model only after the single-primary-model path is optimized, for narrow low-cost context preparation with demonstrated net benefit.
+
+Scope:
+- provider-independent utility role;
+- evaluate candidates against Phase 11 optimized baseline;
+- context/log compaction, diff summarization, relevance extraction, result/file ranking, bounded classification/routing, structured extraction;
+- utility output remains derived context/evidence, never authoritative task/session truth;
+- utility model cannot grant permissions, invoke tools independently, expand capabilities, or override instruction precedence;
+- measure helper overhead, quality, primary-model savings, and frozen live-work results.
+
+Success condition:
+- at least one bounded helper use case has net benefit versus Phase 11 primary-only baseline;
+- failure/disablement degrades explicitly;
+- provider/model implementations remain replaceable;
+- task/permission/evidence authority remains George-owned.
+
+Non-goals: unrestricted helper autonomy, helper-owned permissions/tools, web search itself, daemon scheduling.
+
+## Phase 13 — Local Web Research
+
+Goal: make ordinary technical/documentation research primarily self-hosted/local where practical, with Parallel or another premium provider as optional escalation.
+
+Scope:
+- provider-independent research orchestration through George tool/network/permission boundaries;
+- local/self-hosted discovery, SearXNG preferred initially but replaceable;
+- separate discovery, bounded fetch, deterministic extraction, semantic compaction, final primary-model reasoning;
+- use Phase 12 utility role for relevance extraction/compaction/reranking where useful;
+- preserve source identity/provenance;
+- fetched content remains untrusted;
+- bound results/bytes/rendering/context/utility/timeouts/retries/research budget;
+- compare local/premium paths and frozen live-work effects.
+
+Success condition:
+- representative research can complete without paid API when public sources suffice;
+- premium escalation independently disableable;
+- hostile page text cannot register tools, raise permissions, alter task authority, or override precedence;
+- disabled components degrade explicitly.
+
+Non-goals: private web crawl/index, unrestricted model sockets, utility-model authority, required paid provider.
+
+## Phase 14 — Local Daemon
+
+Goal: separate the long-lived George service from presentation clients after the core agent path is measured and optimized.
 
 Scope:
 - localhost-only server;
 - authenticated local client protocol;
-- session/run APIs;
+- session/run/task APIs;
 - event streaming;
 - process ownership;
 - single-user concurrency policy.
 
 No LAN/Internet exposure by default.
 
-## Phase 14 — Native Desktop
+## Phase 15 — Native Desktop
 
 Goal: provide a polished native application without rewriting the agent.
 
 Direction:
 - Tauri shell;
-- reuse daemon/application-service interfaces;
-- preserve the same event/command semantics proven by the OpenTUI adapter;
+- reuse daemon/application-service/task interfaces;
+- preserve OpenTUI event/command/task semantics;
 - session/task UI;
 - permission prompts;
 - tool/event inspection;

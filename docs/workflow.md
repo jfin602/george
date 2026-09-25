@@ -28,6 +28,18 @@ Do not jump from a substantial idea directly to implementation prompts.
 
 `/prompt-write` distills the accepted plan into the smallest precise implementation brief. Do not copy planning analysis wholesale.
 
+## Structured task authoring — planned Phase 9 contract
+
+Phase 9 adds George Task Prompt v1 as the execution-facing prompt contract.
+
+Rich architecture/decomposition remains in `/prompt-ass` and `/prompt-plan`. For Phase 9 and later structured stacks, `/prompt-write` should compile that accepted plan into the standardized constrained-natural-language grammar in `docs/planning/p9-structured-task-execution/task-format-v1.md` rather than emitting a frontier-model memo whose structure must be inferred by the local executor.
+
+The format is human-readable but deterministically parseable. Sol/Astra or a human may author it. George validates structure before execution and owns requirement/work-unit/validation/stop-condition state.
+
+A structured prompt cannot grant permissions. Declared permission expectations are intersected with the user's configured execution ceiling.
+
+Historical Phase 1-8 task prompts keep their original grammar/evidence and are not rewritten retroactively.
+
 ## Phase runner
 
 George uses the exact Petri Codex phase runner currently stored in:
@@ -47,7 +59,9 @@ Run implementation plus closeout with:
 
 `npm run codex:phase -- <folder> --closeout`
 
-The runner owns prompt execution, Git staging/commit boundaries, version verification, resume semantics, and prompt grammar. Do not silently fork runner behavior in project docs.
+The current runner owns prompt execution, Git staging/commit boundaries, version verification, resume semantics, and the historical Petri prompt grammar. Do not silently fork existing runner behavior in project docs.
+
+Phase 9 implementation may extend or replace the execution-facing grammar with George Task Prompt v1 only through the approved decision/format contracts and regression coverage. Existing task-stack history and commit/version resume semantics must remain truthfully migratable or explicitly versioned rather than silently reinterpreted.
 
 ## Prompt metadata
 
@@ -71,7 +85,7 @@ Routine cleanup and bounded repository hygiene should normally be repaired and v
 
 ## Benchmark-gated optimization work
 
-The Phase 7-12 performance campaign uses the formal npm benchmark harness as a control instrument over the real George application/provider/tool path.
+The Phase 7-13 performance/developer-usefulness campaign uses the formal npm benchmark harness plus, from Phase 9 onward, frozen live-work task-stack qualification over the real George application/provider/tool path.
 
 Canonical optimization loop:
 
@@ -84,6 +98,8 @@ Use:
 - generated `artifacts/benchmarks/<run-id>/results.json`, `report.md`, and optional `comparison.md` as performance evidence.
 
 Benchmark evidence complements tests and phase qualification; it does not replace them. Do not accept a speed change that regresses deterministic correctness, permission/recovery guarantees, or required evidence semantics. Do not combine multiple unmeasured performance changes into one acceptance gate.
+
+After Phase 9 establishes `greenfield-express-v1` and `existing-express-feature-v1`, rerun those frozen live-work instruments at later phase closeouts when the supported environment is available. Preserve their prompt/fixture/hidden-acceptance versions so longitudinal results remain comparable.
 
 ## Stability questions
 

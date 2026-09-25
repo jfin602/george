@@ -1,6 +1,6 @@
 # Performance + Benchmarking Worksheet
 
-Status: APPROVED PLANNING WORKSHEET — Phase 7 owner-closed; Phase 8 context throughput optimization active
+Status: APPROVED PLANNING WORKSHEET — Phase 7 owner-closed; Phase 8 context throughput optimization active; Phase 9 structured task execution planned next
 
 Date: 2026-09-23
 
@@ -8,7 +8,7 @@ Date: 2026-09-23
 
 Record the benchmark control instrument, current performance observations, and the approved sequence for optimizing George's primary-model path before introducing a secondary helper model.
 
-Phase 7 is owner-closed. This worksheet now governs the active Phase 8-12 performance campaign.
+Phase 7 is owner-closed. This worksheet governs the Phase 8-13 context/execution/performance/utility/research campaign. Phase 9 is a structured-execution foundation inserted before agent-loop throughput; historical Phase 7-8 evidence remains unchanged.
 
 ## Implemented benchmark tooling
 
@@ -77,7 +77,7 @@ through LM Studio, with `GEORGE_MODEL` available for deliberate model testing.
 
 ## Optimization contract
 
-For Phases 7-10:
+For bounded performance experiments in Phases 7-8 and 10-11:
 
 1. begin from the last accepted benchmark baseline;
 2. implement/configure **one** bounded speed change;
@@ -150,73 +150,53 @@ Only after adaptive profiles qualify, separately benchmark:
 
 Preserve Phase 3 smallest-sufficient-working-set, precedence, provenance, whole-source budgeting, and Phase 5 recovery semantics.
 
-### Phase 9 — Agent Loop Throughput
+### Phase 9 — Structured Task Execution + Workspace Autonomy
 
-First add dependency-safe parallel execution for independent operations, beginning with read-only work.
+Phase 9 changes the execution architecture before further throughput tuning.
 
-Concurrent mutations/ambiguous side effects remain out of scope unless a later explicit safety contract changes that.
+It introduces George Task Prompt v1, deterministic task/stack parsing, requirements/work-unit/validation/stop/correction state, bounded Qwen task slices, Transcript/Task TUI separation, sandbox-backed Workspace Autonomous execution with outside `reject | ask`, and frozen `greenfield-express-v1` / `existing-express-feature-v1` live-work instruments.
 
-Benchmark.
+Phase 9 is qualified primarily for correctness, autonomy, containment, and developer usefulness rather than raw speed. Record provider/tool/context/time dimensions so it becomes the baseline for Phase 10 throughput work.
 
-Then separately reduce redundant primary-model rounds by batching deterministic orchestration/tool work where no intermediate model decision is necessary.
+### Phase 10 — Agent Loop Throughput
 
-Benchmark again.
+Add dependency-safe parallel execution for independent operations, beginning with read-only work, on top of the Phase 9 task/dependency model. Benchmark it independently.
 
-Track logical provider rounds separately from retry attempts.
+Then separately reduce redundant primary-model rounds where no intermediate model decision is necessary. Benchmark again.
 
-### Phase 10 — Final Acceleration + Performance Qualification
+Track logical provider rounds separately from retry attempts and rerun the frozen Phase 9 live-work instruments.
 
-Evaluate speculative decoding only if a compatible draft-model/runtime path is practical.
+### Phase 11 — Final Acceleration + Performance Qualification
 
-Keep it only if the net end-to-end gain justifies memory/runtime complexity.
+Evaluate speculative decoding only if practical and retain it only when net end-to-end benefit justifies complexity.
 
-Then run the complete benchmark suite and produce the consolidated primary-model performance report:
-- original untouched baseline;
-- each accepted/rejected experiment;
-- per-stage and cumulative latency deltas;
-- correctness/quality state;
-- provider/model-call counts;
-- tool-call counts;
-- token usage where available;
-- retries;
-- resource footprint.
+Then run the complete benchmark suite and frozen live-work instruments and produce a consolidated primary-model report covering original baseline, Phase 9 structured-execution baseline, every accepted/rejected optimization, cumulative latency deltas, correctness, provider/tool calls, tokens, retries, resource footprint, live-work outcomes, and human interventions.
 
-Phase 10 freezes the optimized single-primary-model baseline.
+Phase 11 freezes the optimized single-primary-model baseline.
 
-### Phase 11 — Local Utility Model
+### Phase 12 — Local Utility Model
 
-Only after Phase 10, evaluate a secondary local helper/utility model for:
-- context/log compaction;
-- diff summarization;
-- file/search-result ranking;
-- relevance extraction;
-- bounded classification/routing;
-- structured extraction;
-- other low-cost context preparation.
+Only after Phase 11, evaluate a secondary local helper for context/log compaction, diff summarization, ranking, relevance extraction, bounded classification/routing, and structured extraction.
 
-Measure net system benefit, including helper scheduling/inference/memory overhead.
+Measure net system benefit including helper scheduling/inference/memory overhead and frozen live-work results.
 
-The utility model has no independent permission or tool authority and cannot override George/user/project instructions or replace canonical evidence.
+The utility model has no independent permission/tool authority and cannot override George/user/project instructions, structured task authority, or canonical evidence.
 
-### Phase 12 — Local Web Research
+### Phase 13 — Local Web Research
 
-Build on Phase 6 network/browser boundaries plus the Phase 11 utility role:
+Build on Phase 6 network/browser boundaries plus the Phase 12 utility role:
 
 `search discovery -> bounded fetch -> deterministic extraction -> utility compaction/reranking -> source-attributed evidence -> primary model`
 
-Prefer a local/self-hosted discovery path such as SearXNG while keeping providers replaceable.
+Prefer local/self-hosted discovery such as SearXNG while keeping providers replaceable. Parallel remains optional escalation.
 
-Parallel Search remains an optional escalation provider rather than a required web brain.
+Compare local/premium paths for quality, provenance, latency, context, failure rate, API cost, and frozen live-work effects.
 
-Compare local and premium paths for quality, provenance, latency, context usage, failure rate, and API cost.
+### Phase 14 / Phase 15
 
-### Phase 13 / Phase 14
-
-The former daemon/desktop phases move later:
-- Phase 13 — Local Daemon;
-- Phase 14 — Native Desktop.
-
-The intent is to put service/desktop layers over an already measured and optimized agent core.
+The daemon/desktop phases move later:
+- Phase 14 — Local Daemon;
+- Phase 15 — Native Desktop.
 
 ## Benchmark selection guidance
 
@@ -225,8 +205,8 @@ Use the quick suite as the default per-optimization gate because it covers repre
 Use the full suite:
 - for the untouched starting baseline;
 - when an optimization affects behavior not sufficiently represented by quick;
-- at the Phase 10 consolidated closeout;
-- before making cross-model/helper-model conclusions in Phase 11.
+- at the Phase 11 consolidated closeout;
+- before making cross-model/helper-model conclusions in Phase 12.
 
 Use `--compare <prior results.json>` when possible so the recorded deltas are tied to a concrete previous run.
 
@@ -236,10 +216,10 @@ These should be resolved during the relevant phase rather than prematurely:
 
 - whether startup warm-up should be revisited later given the repeatedly observed post-reload penalty;
 - which provider-native caching/continuation mechanism is safe and useful;
-- the dependency representation used by Phase 9 concurrency;
+- the dependency representation used by Phase 10 concurrency;
 - the minimum model-call reduction worth retaining;
 - whether speculative decoding is practical for the pinned Qwen path;
-- which smaller local model best fits the Phase 11 utility role;
+- which smaller local model best fits the Phase 12 utility role;
 - the eventual SearXNG/local-search deployment shape.
 
 ## Non-decisions
@@ -252,7 +232,8 @@ This worksheet still does **not**:
 - lock future context thresholds;
 - lock LM Studio tuning values before measurement;
 - authorize concurrent ambiguous mutations;
-- require speculative decoding.
+- require speculative decoding;
+- lock one Phase 9 Linux sandbox backend before implementation planning/qualification compares viable mechanisms.
 
 Those decisions must follow benchmark evidence and the normal George planning/qualification workflow.
 
