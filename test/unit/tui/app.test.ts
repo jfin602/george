@@ -20,7 +20,8 @@ import {
   type ProviderStreamOptions,
 } from '../../../src/core/index.ts';
 import { createCodingWorkflowApplicationService, createOneTurnApplicationService, WorkProjection, type OneTurnServiceOptions } from '../../../src/application/index.ts';
-import { GeorgeTui, NEON_THEME, formatElapsedDuration, formatThinkingElapsed, formatWorkflowTiming, renderTranscript, type GeorgeTuiOptions, type ThinkingClock, type TranscriptWorkEntry } from '../../../src/tui/app.ts';
+import { GeorgeTui, NEON_THEME, formatElapsedDuration, formatThinkingElapsed, formatWorkflowTiming, renderTask, renderTranscript, taskHeader, type GeorgeTuiOptions, type ThinkingClock, type TranscriptWorkEntry } from '../../../src/tui/app.ts';
+import { createTaskState, parseTaskPrompt } from '../../../src/tasks/index.ts';
 import type { ToolDefinition } from '../../../src/tools/index.ts';
 
 class ScriptedProvider implements ModelProvider {
@@ -165,6 +166,69 @@ test('test renderer shows identity, configuration, streamed text, and read-only 
   const frame = item.setup.captureCharFrame();
   assert.match(item.app.session.transcript.map((entry) => entry.text).join('\n'), /Inspect BOOT/);
   assert.match(frame, /streamed answer/);
+});
+
+test('Transcript and Task pages switch without changing session state or the composer draft', async (t) => {
+  const item = await tui(new ScriptedProvider([]));
+  t.after(() => cleanup(item));
+  const before = JSON.stringify(item.app.session);
+  await item.setup.mockInput.typeText('preserve this draft');
+  item.setup.mockInput.pressKey('2', { ctrl: true });
+  await item.setup.flush();
+  assert.equal(item.app.currentPage(), 'task');
+  assert.match(item.setup.captureCharFrame(), /\[Task\]/);
+  assert.match(item.setup.captureCharFrame(), /No structured task is active/);
+  assert.equal(item.app.input.plainText, 'preserve this draft');
+  assert.equal(JSON.stringify(item.app.session), before);
+  item.setup.mockInput.pressKey('1', { ctrl: true });
+  assert.equal(item.app.currentPage(), 'transcript');
+  await item.setup.mockMouse.click(60, 6);
+  await item.setup.flush();
+  assert.equal(item.app.currentPage(), 'task');
+});
+
+test('task renderer uses application-owned task and work projections without unsafe bodies', () => {
+  const parsed = parseTaskPrompt(`GEORGE TASK FORMAT: 1
+
+TASK: P6 — TUI split
+KIND: implementation
+
+GOAL
+
+- Split presentation.
+
+REQUIREMENTS
+
+- R1: Show pages.
+
+WORKFLOW
+
+W1 — Render pages
+Covers: R1
+Depends on: none
+
+VALIDATION
+
+V1 — TUI unit coverage
+Covers: R1
+Run: node --test test/unit/tui/app.test.ts
+
+STOP CONDITIONS
+
+- S1: Stop safely.`);
+  assert.equal(parsed.kind, 'structured');
+  if (parsed.kind !== 'structured') return;
+  const state = createTaskState({ sessionId: 'session', workspace: '/workspace', definition: parsed.task });
+  const rendered = renderTask(state, [{ afterEntryCount: 0, item: { id: 'work', turnId: 'turn', operationId: 'call', category: 'editing', status: 'succeeded', summary: 'Updated app.ts', details: {} } }], 80);
+  assert.match(rendered, /Goal[\s\S]*Split presentation/);
+  assert.match(rendered, /Requirements[\s\S]*R1 \(pending\)/);
+  assert.match(rendered, /Workflow[\s\S]*W1 \(pending\)/);
+  assert.match(rendered, /Validation[\s\S]*V1 \(pending, 0 attempts\)/);
+  assert.match(rendered, /Recent work[\s\S]*Updated app\.ts/);
+  assert.match(rendered, /Effective access: standard approvals/);
+  assert.doesNotMatch(rendered, /\["node"/);
+  assert.match(taskHeader(state), /W1|no active work/);
+  assert.doesNotMatch(taskHeader(state), /test\/unit\/tui/);
 });
 
 test('committed final answers reveal progressively without delaying canonical durability, and cancellation stops the reveal', async (t) => {

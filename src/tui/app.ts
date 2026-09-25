@@ -15,6 +15,7 @@ import {
 
 import { CodingWorkflowApplicationService, type AgentLoopApplicationService } from '../application/index.ts';
 import { createSession, type ApprovalRequest, type ApprovalResolver, type ApplicationEvent, type ContextDiagnostics, type Measurement, type Session, type TranscriptEntry, type WorkItem } from '../core/index.ts';
+import { type TaskState } from '../tasks/index.ts';
 
 export const COMPOSER_KEY_BINDINGS: TextareaKeyBinding[] = [
   { name: 'return', action: 'submit' },
@@ -79,6 +80,49 @@ export type TranscriptWorkEntry = Readonly<{
   order?: number;
   item: WorkItem;
 }>;
+
+export type TuiPage = 'transcript' | 'task';
+
+function taskAccess(state: TaskState): string {
+  const entries = Object.entries(state.effectivePermissionExpectations)
+    .filter(([, value]) => value !== undefined)
+    .map(([name, value]) => `${name.replace(/([A-Z])/g, ' $1').toLowerCase()} ${value}`);
+  return entries.length ? entries.join(', ') : 'standard approvals';
+}
+
+/** Bounded presentation projection; it reads canonical state but has no authority over it. */
+export function renderTask(state: TaskState | undefined, work: readonly TranscriptWorkEntry[], width = Number.MAX_SAFE_INTEGER): string {
+  if (!state) return 'No structured task is active.\n\nOrdinary chat remains available. Submit a GEORGE TASK FORMAT: 1 prompt to show task progress.';
+  const definition = state.definition;
+  const current = state.currentWorkUnit === undefined ? undefined : definition.workflow.find((item) => item.id === state.currentWorkUnit);
+  const line = (text: string) => wrapTranscriptBody(bounded(text, 480), Math.max(1, width - 2)).join('\n  ');
+  const requirements = definition.requirements.map((item) => `  ${item.id} (${state.requirements[item.id]}): ${line(item.text)}`);
+  const workflow = definition.workflow.map((item) => `  ${item.id} (${state.workUnits[item.id]}): ${line(item.title)}${item.dependsOn.length ? ` [after ${item.dependsOn.join(', ')}]` : ''}`);
+  const validations = definition.validations.map((item) => {
+    const result = state.validations[item.id]!;
+    return `  ${item.id} (${result.status}, ${result.attempts.length} attempt${result.attempts.length === 1 ? '' : 's'}): ${line(item.title)}`;
+  });
+  const recent = work.slice(-12).map(({ item }) => `  (${item.status}) ${line(workPrimary(item))}`);
+  return [
+    `${definition.task.title} · ${state.status}`,
+    '', 'Goal', ...definition.goal.lines.map((item) => `  ${line(item)}`),
+    '', `Current work: ${current ? `${current.id} (${state.workUnits[current.id]}) — ${line(current.title)}` : 'none'}`,
+    '', 'Requirements', ...(requirements.length ? requirements : ['  none']),
+    '', 'Workflow', ...(workflow.length ? workflow : ['  none']),
+    '', 'Validation', ...(validations.length ? validations : ['  none']),
+    '', `Corrections: ${state.corrections.length ? state.corrections.map((item) => `${item.validationId} #${item.cycle} ${item.status}`).join(', ') : 'none'}`,
+    `Blockers: ${state.blockers.length ? state.blockers.slice(-4).map((item) => line(item)).join(' | ') : 'none'}`,
+    `Effective access: ${taskAccess(state)}`,
+    '', 'Recent work', ...(recent.length ? recent : ['  none']),
+  ].join('\n');
+}
+
+export function taskHeader(state: TaskState | undefined): string {
+  if (!state) return 'Task: ordinary chat · progress inactive · access standard approvals';
+  const total = Object.keys(state.requirements).length;
+  const verified = Object.values(state.requirements).filter((status) => status === 'verified').length;
+  return bounded(`Task: ${state.definition.task.title} · ${state.currentWorkUnit ?? 'no active work'} · ${verified}/${total} requirements verified · ${state.status} · access ${taskAccess(state)}`, 480);
+}
 
 function formatElapsedDurationParts(value: number): Readonly<{ milliseconds: string; seconds: string }> {
   const ms = Math.max(0, Math.round(value));
@@ -310,6 +354,7 @@ function contextText(diagnostics: ContextDiagnostics): string {
 export class GeorgeTui {
   readonly input: TextareaRenderable;
   readonly transcript: ScrollBoxRenderable;
+  readonly task: ScrollBoxRenderable;
   readonly session: Session;
   /** UI-only diagnostics: visible history, never part of the session transcript or provider context. */
   readonly diagnostics: TranscriptDiagnosticEntry[] = [];
@@ -318,7 +363,10 @@ export class GeorgeTui {
   private readonly renderer: CliRenderer;
   private readonly service: AgentLoopApplicationService | CodingWorkflowApplicationService;
   private readonly transcriptView: TextRenderable;
+  private readonly taskView: TextRenderable;
   private readonly statusView: TextRenderable;
+  private readonly taskHeaderView: TextRenderable;
+  private readonly pagesView: TextRenderable;
   private readonly contextView: TextRenderable;
   private readonly activityView: TextRenderable;
   private readonly approvalView: TextRenderable;
@@ -342,6 +390,7 @@ export class GeorgeTui {
   private thinkingTimer: ThinkingTimer | undefined;
   private thinkingStartedAt: number | undefined;
   private thinkingDots = 0;
+  private page: TuiPage = 'transcript';
   private closed = false;
 
   constructor(options: GeorgeTuiOptions) {
@@ -361,12 +410,23 @@ export class GeorgeTui {
     layout.add(new TextRenderable(this.renderer, { id: 'header', width: '100%', height: 1, flexShrink: 0, fg: NEON_THEME.mint, content: 'George — local coding agent' }));
     this.statusView = new TextRenderable(this.renderer, { id: 'status', width: '100%', height: 1, flexShrink: 0, fg: NEON_THEME.green, content: this.status('Ready') });
     layout.add(this.statusView);
+    this.taskHeaderView = new TextRenderable(this.renderer, { id: 'task-header', width: '100%', height: 1, flexShrink: 0, fg: NEON_THEME.muted, content: taskHeader(this.session.taskState) });
+    layout.add(this.taskHeaderView);
     this.contextView = new TextRenderable(this.renderer, { id: 'context', width: '100%', height: 2, flexShrink: 0, fg: NEON_THEME.muted, content: 'Context: awaiting first turn' });
     layout.add(this.contextView);
+    this.pagesView = new TextRenderable(this.renderer, {
+      id: 'pages', width: '100%', height: 1, flexShrink: 0, fg: NEON_THEME.mint, content: '',
+      onMouseDown: (event) => { if (event.button === 0) this.switchPage(event.x < this.pagesView.x + Math.ceil(this.pagesView.width / 2) ? 'transcript' : 'task'); },
+    });
+    layout.add(this.pagesView);
     this.transcript = new ScrollBoxRenderable(this.renderer, { id: 'transcript', flexGrow: 1, scrollY: true, stickyScroll: true, stickyStart: 'bottom', border: true, borderStyle: 'single', borderColor: NEON_THEME.border, focusedBorderColor: NEON_THEME.mint, backgroundColor: NEON_THEME.transcript, title: 'Transcript', titleColor: NEON_THEME.mint });
     this.transcriptView = new TextRenderable(this.renderer, { id: 'transcript-text', width: '100%', fg: NEON_THEME.foreground, selectionBg: NEON_THEME.green, selectionFg: NEON_THEME.background, content: '', onSizeChange: () => this.refreshTranscript() });
     this.transcript.add(this.transcriptView);
     layout.add(this.transcript);
+    this.task = new ScrollBoxRenderable(this.renderer, { id: 'task', flexGrow: 1, scrollY: true, border: true, borderStyle: 'single', borderColor: NEON_THEME.border, focusedBorderColor: NEON_THEME.mint, backgroundColor: NEON_THEME.transcript, title: 'Task', titleColor: NEON_THEME.mint, visible: false });
+    this.taskView = new TextRenderable(this.renderer, { id: 'task-text', width: '100%', fg: NEON_THEME.foreground, selectionBg: NEON_THEME.green, selectionFg: NEON_THEME.background, content: '', onSizeChange: () => this.refreshTask() });
+    this.task.add(this.taskView);
+    layout.add(this.task);
     this.activityView = new TextRenderable(this.renderer, { id: 'activity', width: '100%', height: 1, flexShrink: 0, fg: NEON_THEME.mint, content: 'Idle' });
     layout.add(this.activityView);
     this.approvalView = new TextRenderable(this.renderer, { id: 'approval', width: '100%', height: 0, flexShrink: 0, fg: NEON_THEME.mint, content: '' });
@@ -393,7 +453,9 @@ export class GeorgeTui {
     this.renderer.root.add(layout);
     this.restoreHistory();
     this.refreshTranscript();
-    this.renderer.once(CliRenderEvents.FRAME, () => this.refreshTranscript());
+    this.refreshTask();
+    this.refreshPages();
+    this.renderer.once(CliRenderEvents.FRAME, () => { this.refreshTranscript(); this.refreshTask(); });
     this.renderer._internalKeyInput.onInternal('keypress', (key) => {
       if (key.name === 'escape') {
         key.preventDefault();
@@ -404,11 +466,17 @@ export class GeorgeTui {
       } else if (this.pendingApproval && key.ctrl && key.name === 'd') {
         key.preventDefault();
         this.decide('deny');
+      } else if (key.ctrl && key.name === '1') {
+        key.preventDefault();
+        this.switchPage('transcript');
+      } else if (key.ctrl && key.name === '2') {
+        key.preventDefault();
+        this.switchPage('task');
       } else if (key.ctrl && key.name === 'v') {
         key.preventDefault();
         void this.pasteClipboard();
       } else if (key.ctrl && key.name === 'c') {
-        if (this.hasTranscriptSelection()) {
+        if (this.hasViewSelection()) {
           key.preventDefault();
           const text = this.renderer.getSelection()?.getSelectedText();
           if (text) {
@@ -426,6 +494,7 @@ export class GeorgeTui {
     this.renderer.on(CliRenderEvents.RESIZE, () => {
       this.updateComposerOverflow();
       this.refreshTranscript();
+      this.refreshTask();
       this.renderer.requestRender();
     });
     this.renderer.on(CliRenderEvents.DESTROY, () => {
@@ -548,6 +617,14 @@ export class GeorgeTui {
     this.transcript.scrollBy(lines);
   }
 
+  scrollTask(lines: number): void {
+    this.task.scrollBy(lines);
+  }
+
+  currentPage(): TuiPage {
+    return this.page;
+  }
+
   hasTranscriptSelection(): boolean {
     let container = this.renderer.getSelectionContainer();
     while (container) {
@@ -555,6 +632,29 @@ export class GeorgeTui {
       container = container.parent;
     }
     return false;
+  }
+
+  private hasViewSelection(): boolean {
+    let container = this.renderer.getSelectionContainer();
+    while (container) {
+      if (container === this.transcript) return this.transcriptView.hasSelection();
+      if (container === this.task) return this.taskView.hasSelection();
+      container = container.parent;
+    }
+    return false;
+  }
+
+  private switchPage(page: TuiPage): void {
+    if (this.page === page) return;
+    this.page = page;
+    this.transcript.visible = page === 'transcript';
+    this.task.visible = page === 'task';
+    this.refreshPages();
+    this.renderer.requestRender();
+  }
+
+  private refreshPages(): void {
+    this.pagesView.content = `${this.page === 'transcript' ? '[Transcript]' : ' Transcript '}  ${this.page === 'task' ? '[Task]' : ' Task '} · Ctrl+1 / Ctrl+2 switch`;
   }
 
   close(): void {
@@ -614,6 +714,8 @@ export class GeorgeTui {
     this.recordDiagnostic(event);
     this.recordWork(event);
     this.refreshTranscript();
+    this.refreshTask();
+    this.taskHeaderView.content = taskHeader(this.session.taskState);
     if (event.type === 'context.assembled') {
       this.contextView.content = contextText(event.diagnostics);
       this.contextView.height = event.diagnostics.activeSourceIds.some((id) => id.startsWith('skill:')) ? 3 : 2;
@@ -668,7 +770,13 @@ export class GeorgeTui {
     const entries = this.revealedAssistant === undefined ? this.session.transcript : this.session.transcript.map((entry, index) =>
       index === this.revealedAssistant!.index ? { ...entry, text: this.revealedAssistant!.text } : entry,
     );
-    this.transcriptView.content = renderTranscript(entries, this.diagnostics, bodyWidth, this.work);
+    this.transcriptView.content = renderTranscript(entries, this.diagnostics, bodyWidth, this.session.taskState ? [] : this.work);
+  }
+
+  private refreshTask(): void {
+    const bodyWidth = this.taskView.width - 2;
+    if (bodyWidth < 1) return;
+    this.taskView.content = renderTask(this.session.taskState, this.work, bodyWidth);
   }
 
   private async revealAssistant(text: string): Promise<void> {
