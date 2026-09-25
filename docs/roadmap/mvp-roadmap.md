@@ -1,6 +1,6 @@
 # George MVP Roadmap
 
-Status: CURRENT ROADMAP — PHASE 7 OWNER-CLOSED; PHASE 8 AGENTIC-CONTEXT CORRECTION ACTIVE
+Status: CURRENT ROADMAP — PHASE 8 OWNER-CLOSED; PHASE 9 ACTIVE
 
 The roadmap deliberately proves the provider, read-only tool foundation, real interactive terminal surface, and safe autonomous tool execution before broader coding workflow, networking, or a desktop GUI.
 
@@ -377,74 +377,47 @@ Closeout:
 
 ## Phase 8 — Context Throughput Optimization
 
-Status: CURRENT PHASE — package `0.8.8` implemented and deterministically qualified; correction `c8-agentic-context` active; not owner-closed
+Status: OWNER-CLOSED WITH EXPLICIT AGENTIC-CONTEXT NOT-GREEN / EVIDENCE-GAP ACCEPTANCE
 
 Original decision authority: `docs/planning/p8-context-throughput-optimization/decision-record.md`.  
 Original measurement/evidence authority: `docs/planning/p8-context-throughput-optimization/initial-baseline.md`.  
-Correction authority: `docs/planning/c8-agentic-context/decision-record.md`.  
-Correction qualification: `docs/planning/c8-agentic-context/qualification-plan.md`.  
-Formal `0.8.8` evidence closeout: `docs/phase-8-closeout.md`.
+Formal `0.8.8` evidence closeout: `docs/phase-8-closeout.md`.  
+Agentic-context correction authority: `docs/planning/c8-agentic-context/decision-record.md`.  
+Agentic-context correction closeout: `docs/tasks/c8-agentic-context/closeout.md`.  
+Owner closeout: `docs/phase-8-owner-closeout.md`.
 
-Goal: reduce provider-facing context cost while preserving real coding-agent competence. George now optimizes for an empirically qualified **effective agentic working set**, not maximum context occupancy.
-
-Implemented `0.8.8` foundation:
+Accepted `0.8.8` foundation:
 - explicit adaptive-versus-fixed context mode;
 - deterministic ordinary -> medium -> large probing before the first provider request;
 - provider/tool/session-neutral discarded probes;
 - one frozen selected profile per user turn;
 - Phase 3 trust/precedence/source identity and whole-source omit/defer/fail behavior;
 - promotion before provider-backed semantic compaction for ordinary/medium;
-- Phase 5 large-profile compaction/recovery preservation;
+- Phase 5 large/fixed compaction/recovery preservation;
 - bounded selected-profile/promotion diagnostics;
-- frozen-turn continuation-pressure fail-closed protection;
-- 32,768 physical context retained as the pinned runtime target.
+- P7 frozen-turn continuation-pressure fail-closed protection;
+- 32,768 physical context retained as the pinned runtime target;
+- `agentic-context` suite v3/schema 3 retained as the real coding-agent measurement instrument.
 
-Current implemented profile values remain historical/current implementation truth, not final agentic operating envelopes:
+The current implemented profile values remain inherited/provisional operating policy rather than empirically proven optimal agentic envelopes:
 - ordinary: preferred 4,096-6,144; soft 7,168; provider-input ceiling 8,192;
 - medium: preferred 8,192-12,288; soft 14,336; provider-input ceiling 16,384;
 - large: preferred 12,000-18,000; soft 20,000; provider-input ceiling 24,576.
 
-Why the correction is active:
-- deterministic Phase 8 context behavior is Green;
-- live real-George qualification showed correct profile selection but poor/unstable provider behavior at medium/large real-agent request shapes;
-- a representative medium-selected request carried roughly 48.6 KB of instruction-channel text plus nine normal tool schemas and took roughly 88 seconds to first useful output;
-- similarly sized synthetic long-context cases can be much faster on warm runs;
-- the existing context ladder uses no tools and mostly user-input filler, so it is not representative enough to choose coding-agent profile boundaries;
-- later request-shape isolation controls became invalid when LM Studio stopped producing usable completions and then stopped accepting connections, so the exact inference cliff remains unresolved.
+Owner-accepted non-Green/gap state:
+- P2's smallest requested agentic band passed 1/3 families;
+- P5's bounded repeat passed inspection and multi-round investigation but failed edit plus validation with expanded/unrequested tool behavior and an incorrect edit;
+- no all-family healthy agentic envelope was established;
+- no adjacent risk/cliff region was established;
+- correction-time GPU Offload 26 and Node-26 real-TTY evidence remained incomplete.
 
-Correction scope:
-- add a real agentic-context benchmark using normal George instructions, realistic project guidance, normal tool schemas, real repository reads/searches, multi-round investigation, and edit-plus-validation work;
-- measure approximate 2k/4k/6k/8k/10k/12k provider-facing working-set bands as exploratory instrumentation, not production profile definitions;
-- stop ascending when a repeatable capability/latency cliff is established;
-- confirm the candidate healthy envelope and the next materially worse region with bounded repeat evidence;
-- measure task correctness, tool correctness/counts, duplicate/unrequested tools, first-useful-output latency, workflow latency, provider calls/retries/timeouts, provider-reported tokens, and context disposition/promotion evidence;
-- revise profile values/routing/promotion policy only after that evidence exists;
-- prefer high-signal required/task/repository context, deterministic routing/defer, and existing safe compaction before routine promotion to a larger envelope;
-- keep 32k physical context as safety/headroom capacity unless a separate runtime experiment changes it;
-- preserve all Phase 3, Phase 5, and P7 correctness/safety boundaries.
+These states remain Not Green/Evidence Gap and are not reclassified as context-size failures. Phase 8 does not establish that context size caused the edit/validation failure.
 
-Success condition:
-- a regression-protected agentic-context benchmark exists;
-- the pinned Qwen/LM Studio path has an empirically supported healthy coding-agent working-set envelope;
-- final ordinary/medium/large and routing/promotion policy is evidence-backed rather than capacity-derived;
-- real George coding scenarios remain correct and usable under the accepted policy;
-- required context, precedence/provenance, recovery, and continuation-pressure safety remain intact;
-- the synthetic context ladder is retained and labeled as runtime/prefill characterization rather than profile-boundary authority;
-- remaining Not Green/Evidence Gap results are recorded explicitly.
-
-Non-goals:
-- helper-model semantic compaction;
-- model-generated semantic relevance routing;
-- Phase 10 parallel tool execution or batching;
-- speculative decoding;
-- daemon/desktop work;
-- making provider cache state canonical;
-- changing tool permission authority;
-- changing the pinned primary model inside this correction.
+Phase 8 is owner-closed because the deterministic context machinery and safety boundaries are established, the unresolved evidence is explicitly preserved, and Phase 9's structured-execution work directly targets deterministic requirements/workflow/validation orchestration without requiring Phase 8 to invent an unmeasured envelope.
 
 ## Phase 9 — Structured Task Execution + Workspace Autonomy
 
-Status: PLANNED NEXT PHASE AFTER PHASE 8 AGENTIC-CONTEXT CORRECTION AND OWNER CLOSEOUT
+Status: CURRENT PHASE — baseline package `0.9.0`
 
 Decision authority: `docs/planning/p9-structured-task-execution/decision-record.md`.  
 Task-format authority: `docs/planning/p9-structured-task-execution/task-format-v1.md`.  
@@ -456,7 +429,7 @@ Scope:
 - versioned George Task Prompt v1 constrained-natural-language grammar;
 - deterministic fail-closed parser/validator;
 - application/core-owned task/stack requirements, invariants, work units/dependencies, validation, stop conditions, deliverables, non-goals, and execution expectations;
-- bounded current-work-unit task slices for the primary model under Phase 3/8 context laws;
+- bounded current-work-unit task slices for the primary model under inherited Phase 3/8 context laws;
 - requirement/validation state based on authoritative George evidence rather than model claims;
 - bounded self-correction/revalidation loops with truthful failure history and existing recovery semantics;
 - durable task-stack state across session persistence/interruption;
@@ -467,7 +440,8 @@ Scope:
 - auto-run ordinary development processes only through an actually OS-enforced, qualified workspace containment path;
 - preserve existing approval-required non-sandboxed host-process behavior as a separate path/fallback;
 - keep network, remote mutation, browser interaction, credentials, and environment authority separate from workspace filesystem autonomy;
-- freeze `greenfield-express-v1` and `existing-express-feature-v1` live-work task-stack instruments.
+- freeze `greenfield-express-v1` and `existing-express-feature-v1` live-work task-stack instruments;
+- preserve the Phase 8 `agentic-context` benchmark and failed edit/validation result as longitudinal evidence rather than erasing it.
 
 Success condition:
 - structured prompts parse deterministically and invalid marked prompts fail closed before provider/tool execution;
@@ -477,7 +451,7 @@ Success condition:
 - workspace-autonomous processes are demonstrably contained from disallowed host filesystem resources or the mode fails closed;
 - outside reject/ask behave exactly as configured and prompts cannot elevate policy;
 - both frozen v1 live-work baselines are recorded with raw outcome/performance/intervention dimensions;
-- inherited Phase 2-8 contracts remain Green or their existing gaps remain explicitly classified.
+- inherited Phase 2-8 contracts remain Green or their accepted Not Green/Evidence Gap states remain explicitly classified.
 
 Non-goals:
 - dependency-safe parallel tool execution or model-call batching;
