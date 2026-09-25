@@ -12,6 +12,20 @@ Phase 9 moves deterministic orchestration into George while leaving code underst
 
 The current TUI also interleaves detailed work history with conversation, consuming transcript space. Repeated per-call approvals likewise limit useful autonomy for long structured tasks.
 
+## Phase 8 evidence carried into Phase 9
+
+Phase 8 is owner-closed with explicit agentic-context Not Green / Evidence Gap acceptance.
+
+The inherited evidence must remain visible:
+- the deterministic Phase 8 context machinery and P7 continuation-pressure safety are accepted regression boundaries;
+- the `agentic-context` suite v3/schema 3 is the real coding-agent measurement instrument;
+- no empirically healthy all-family agentic working-set envelope was established;
+- the current ordinary/medium/large values are provisional inherited operating policy, not proven optimal envelopes;
+- the bounded live inspection and multi-round cases passed, while the edit-plus-validation case remained Not Green because the model expanded into unrequested/repeated tools and produced the wrong edit;
+- Phase 8 did not establish that context size caused that edit/validation failure.
+
+Phase 9 must treat that failed edit-plus-validation workload as a required longitudinal regression instrument. Structured execution is not assumed to fix it; the Phase 9 evidence must demonstrate whether George-owned task/workflow/validation orchestration materially improves the same class of work.
+
 ## Decisions
 
 ### George Task Prompt v1
@@ -53,13 +67,29 @@ The coding model owns understanding relevant code, selecting implementation deta
 
 George must not replace model intelligence with rigid pseudo-code. Work units describe outcomes, dependencies, requirements, and validation.
 
-### Task-scoped model slices
+### Canonical TaskState versus provider task slices
 
-George should send the primary model the smallest sufficient task slice rather than repeatedly sending the entire rich planning memo solely to remind the model where it is.
+The complete parsed Task Prompt v1 plus all durable requirement/work-unit/validation/correction state is canonical George state.
 
-A slice may include the current work-unit objective, applicable requirements/invariants, relevant inspected/routed context, bounded prior failure evidence, and the next required validation or stop condition.
+Canonical TaskState is **not** automatically provider context.
 
-Task slicing remains subject to Phase 3/8 context precedence, provenance, budgeting, and required-context rules.
+George sends the primary model the smallest sufficient task slice for the current work unit rather than repeatedly sending the entire rich planning memo or full accumulated task ledger.
+
+A provider slice may include:
+- the current work-unit objective;
+- only the requirements/invariants applicable to that work unit;
+- the next required validation and active stop conditions;
+- relevant inspected/routed repository context;
+- bounded unresolved/correction evidence needed to proceed;
+- only the recent task history required for correctness.
+
+Completed work units, old validation history, unrelated requirements, and historical correction evidence remain durable in George without being repeated in every provider request merely because they remain canonical state.
+
+A later correction may reintroduce the specific prior failure evidence needed to repair the current work, but a passing rerun does not erase the earlier durable failure record.
+
+Task slicing remains subject to Phase 3/8 trust, precedence, routing, budgeting, whole-source integrity, and continuation-safety rules.
+
+Phase 9 must not invent a new context-size threshold. The current inherited profile values remain provisional; structured task slicing is measured against the Phase 8 agentic-context instrumentation rather than justified by a guessed 4k/6k/8k envelope.
 
 ### Validation and bounded self-correction
 
@@ -95,13 +125,17 @@ The outside-filesystem policy has exactly two modes:
 - reject — deny outside-workspace access without prompting;
 - ask — emit a bounded allow-once approval request for the specific outside resource/action.
 
+Outside-workspace `ask` does not weaken George's canonical workspace resolver or turn outside paths into normal workspace paths. Any approved outside resource/action is a separate narrowly scoped capability for that one request.
+
 A task prompt may declare an expected execution envelope for reproducibility, but task/repository/model text can never raise the configured user permission ceiling.
 
 ### Process sandbox requirement
 
-George's existing host-process path remains truthfully non-sandboxed. A workspace-bounded cwd is not containment.
+George's existing host-process path remains truthfully non-sandboxed, approval-required, and separate. A workspace-bounded cwd is not containment.
 
-Workspace Autonomous mode may auto-run development processes only through a separately qualified OS-enforced process-containment path that prevents ordinary host filesystem authority outside the granted boundary.
+Workspace Autonomous mode may auto-run development processes only through a separately qualified OS-enforced process-containment path. Phase 9 must not retrofit auto-approval onto the existing host `run_process` path merely because its cwd is inside the workspace.
+
+The autonomous process path must prevent ordinary host filesystem authority outside the granted boundary and must remain separately identifiable in policy/evidence from the existing host-process executor.
 
 If the required sandbox is unavailable or cannot be established, George must fail closed or fall back to the normal approval-required non-sandboxed process policy. It must never silently treat cwd-only execution as sandboxed.
 
@@ -115,7 +149,21 @@ Existing Phase 6 effect classification and Phase 5 replay/recovery semantics rem
 
 ### Live-work longitudinal qualification
 
-Phase 9 establishes two frozen real-work task-stack instruments:
+Before the larger frozen work stacks, Phase 9 must replay the owner-accepted Phase 8 agentic edit-plus-validation regression as an equivalent structured-task workload under the same pinned model/tool/runtime assumptions where available.
+
+Record before/after dimensions including:
+- functional edit/validation result;
+- expected versus observed tool calls;
+- duplicate/redundant/unrequested tool behavior;
+- provider rounds/attempts/retries;
+- context/profile/token evidence;
+- wall time;
+- human intervention;
+- final task/validation ledger truth.
+
+This comparison is mandatory because it tests the core Phase 9 premise directly. It must preserve the original Phase 8 Not Green result rather than replacing it.
+
+Phase 9 also establishes two frozen real-work task-stack instruments:
 - greenfield-express-v1;
 - existing-express-feature-v1.
 
@@ -142,4 +190,4 @@ Phase 9 does not include dependency-safe parallel tool execution/model-call batc
 
 ## Success condition
 
-Phase 9 may close when George Task Prompt v1 parses/fails closed deterministically; task/stack state, validation, stop/correction, and resume semantics are qualified; bounded task slices preserve authority; Transcript/Task TUI separation is qualified; Workspace Autonomous mode auto-runs only genuinely contained operations; outside reject/ask behave exactly as configured; prompts cannot elevate permission ceilings; both v1 live-work stacks are frozen and baselined; and inherited Phase 2-8 contracts remain intact.
+Phase 9 may close when George Task Prompt v1 parses/fails closed deterministically; task/stack state, validation, stop/correction, and resume semantics are qualified; canonical TaskState remains distinct from bounded provider task slices; the structured replay of the Phase 8 edit-plus-validation regression is recorded without erasing the original Not Green evidence; Transcript/Task TUI separation is qualified; Workspace Autonomous mode auto-runs only genuinely contained operations through a separate qualified process path; outside reject/ask behave exactly as configured without weakening the canonical workspace boundary; prompts cannot elevate permission ceilings; both v1 live-work stacks are frozen and baselined; and inherited Phase 2-8 contracts remain intact.
