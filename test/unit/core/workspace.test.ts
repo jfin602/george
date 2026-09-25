@@ -7,6 +7,7 @@ import test from 'node:test';
 import {
   GeorgeError,
   loadRepositoryInstructions,
+  resolveOutsideFilesystemPath,
   resolveWorkspaceRoot,
 } from '../../../src/core/index.ts';
 
@@ -31,6 +32,24 @@ test('workspace instructions are root-only, ordered, and byte bounded', async (t
   assert.equal(bounded.bytes, 4);
   assert.equal(bounded.truncated, true);
   assert.equal(bounded.instructions[0]?.truncated, true);
+});
+
+test('outside capabilities reject traversal, symlink ambiguity, and non-regular mutation targets', async (t) => {
+  const root = await workspace();
+  const linked = await workspace();
+  t.after(async () => { await Promise.all([rm(root, { recursive: true, force: true }), rm(linked, { recursive: true, force: true })]); });
+  await writeFile(join(root, 'file.txt'), 'outside');
+  await symlink(root, join(linked, 'escape'));
+  await assert.rejects(() => resolveOutsideFilesystemPath(`${root}/../file.txt`), GeorgeError);
+  await assert.rejects(() => resolveOutsideFilesystemPath(`${join(root, 'file.txt')}\0`), GeorgeError);
+  await assert.rejects(() => resolveOutsideFilesystemPath(join(linked, 'escape', 'file.txt')), GeorgeError);
+  await assert.rejects(() => resolveOutsideFilesystemPath(root, true), GeorgeError);
+  const resolved = await resolveOutsideFilesystemPath(join(root, 'file.txt'), true);
+  assert.equal(resolved.path, join(root, 'file.txt'));
+  assert.equal(resolved.parent, root);
+  assert.equal(resolved.name, 'file.txt');
+  assert.equal(resolved.exists, true);
+  assert.ok(resolved.mode !== undefined);
 });
 
 test('workspace resolution rejects traversal and symlink escapes', async (t) => {

@@ -225,12 +225,15 @@ export type WorkspaceMutationToolExecutor = Readonly<{
 export function createWorkspaceMutationToolExecutor(
   workspace: Workspace,
   configuredLimits: MutationToolLimits = {},
+  executorOptions: Readonly<{ captureGit?: boolean }> = {},
 ): WorkspaceMutationToolExecutor {
   const limits = boundedLimits(configuredLimits);
   const executeRaw = async (call: MutationToolCall, options: Readonly<{ signal?: AbortSignal }> = {}): Promise<MutationToolResult> => {
     assertActive(options.signal);
     const target = await resolveWorkspaceMutationPath(workspace, call.path);
-    const gitSnapshot = await captureGitWorkingTreeSnapshot(workspace, target.path, { maxBytes: limits.maxGitSnapshotBytes, signal: options.signal });
+    const gitSnapshot = executorOptions.captureGit === false
+      ? { isRepository: false, repositoryRoot: null, entries: [], target: { path: target.relativePath, dirty: false } }
+      : await captureGitWorkingTreeSnapshot(workspace, target.path, { maxBytes: limits.maxGitSnapshotBytes, signal: options.signal });
     let next: string;
     if (call.name === 'write_file') {
       assertText(call.content, limits.maxContentBytes, 'content');

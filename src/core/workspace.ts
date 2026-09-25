@@ -14,6 +14,9 @@ export type WorkspaceMutationPath = Readonly<{
   mode?: number;
 }>;
 
+/** A one-call capability target. It deliberately is not a Workspace. */
+export type OutsideFilesystemPath = Readonly<{ path: string; parent: string; name: string; exists: boolean; mode?: number }>;
+
 export type RepositoryInstruction = Readonly<{
   path: 'BOOT.md' | 'AGENTS.md';
   text: string;
@@ -112,6 +115,27 @@ export async function resolveWorkspaceMutationPath(workspace: Workspace, path: s
   const name = basename(candidate);
   if (!name || name === '.') throw validationError('Path must name a file.');
   return { path: resolve(parent, name), relativePath: relative(workspace.root, resolve(parent, name)), exists: Boolean(target), ...(target ? { mode: target.mode & 0o777 } : {}) };
+}
+
+/** Resolves an absolute outside target without teaching workspace resolvers about it. */
+export async function resolveOutsideFilesystemPath(path: string, mutation = false): Promise<OutsideFilesystemPath> {
+  if (!path || path.includes('\0') || !isAbsolute(path) || path.split(/[\\/]/).includes('..')) throw validationError('Outside filesystem paths must be absolute, non-traversing paths without NUL.');
+  const candidate = resolve(path);
+  const rawParent = dirname(candidate);
+  let parent: string;
+  try { parent = await realpath(rawParent); }
+  catch (error) { throw new GeorgeError('validation', 'Outside filesystem parent must exist.', { cause: error }); }
+  if (parent !== rawParent || !(await stat(parent)).isDirectory()) throw validationError('Outside filesystem path has an ambiguous parent.');
+  const name = basename(candidate);
+  if (!name || name === '.') throw validationError('Outside filesystem path must name a target.');
+  const target = await lstat(candidate).catch((error: NodeJS.ErrnoException) => {
+    if (error.code === 'ENOENT') return undefined;
+    throw new GeorgeError('validation', 'Unable to inspect outside filesystem path.', { cause: error });
+  });
+  if (target?.isSymbolicLink()) throw validationError('Outside filesystem path must not name a symbolic link.');
+  if (mutation && (target?.isDirectory() || (target && !target.isFile()))) throw validationError('Outside mutation target must name a regular file.');
+  if (target && !target.isDirectory() && !target.isFile()) throw validationError('Outside filesystem path must name a regular file or directory.');
+  return { path: candidate, parent, name, exists: Boolean(target), ...(target ? { mode: target.mode & 0o777 } : {}) };
 }
 
 async function readBounded(path: string, maxBytes: number): Promise<{ text: string; bytes: number; truncated: boolean }> {

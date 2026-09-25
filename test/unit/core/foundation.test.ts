@@ -6,6 +6,7 @@ import {
   DEFAULT_LM_STUDIO_MODEL_ID,
   DEFAULT_PROVIDER_TIMEOUT_MS,
   DEFAULT_CONTEXT_PROFILE,
+  DEFAULT_EXECUTION_POLICY,
   CONTEXT_PROFILE_REGISTRY,
   LARGE_CONTEXT_PROFILE,
   MEDIUM_CONTEXT_PROFILE,
@@ -23,6 +24,7 @@ import {
   validateModelId,
   validateProviderBaseUrl,
   validateWorkspace,
+  intersectExecutionPolicy,
 } from '../../../src/core/index.ts';
 
 test('configuration resolves the pinned Qwen default while preserving model overrides', () => {
@@ -57,6 +59,20 @@ test('configuration resolves the pinned Qwen default while preserving model over
   assert.equal(validateContextOperatingMode('adaptive'), 'adaptive');
   assert.throws(() => validateContextOperatingMode('large' as never), GeorgeError);
   assert.throws(() => resolveGeorgeConfig({ contextMode: 'adaptive', contextProfile: DEFAULT_CONTEXT_PROFILE }, '/workspace'), GeorgeError);
+});
+
+test('execution policy defaults to standard and task-like requests only narrow the configured ceiling', () => {
+  assert.deepEqual(DEFAULT_EXECUTION_POLICY, {
+    workspace: 'standard', outsideWorkspace: 'reject', network: 'ask', remoteMutation: 'ask', browserInteraction: 'ask', credentialsEnvironment: 'ask',
+  });
+  const autonomous = { ...DEFAULT_EXECUTION_POLICY, workspace: 'workspace_autonomous' as const, outsideWorkspace: 'ask' as const };
+  assert.deepEqual(intersectExecutionPolicy(autonomous, {}), autonomous);
+  assert.deepEqual(intersectExecutionPolicy(autonomous, { workspace: 'standard', outsideWorkspace: 'ask' }), {
+    ...autonomous, workspace: 'standard', outsideWorkspace: 'reject',
+  });
+  assert.deepEqual(intersectExecutionPolicy(DEFAULT_EXECUTION_POLICY, { workspace: 'workspace_autonomous', outsideWorkspace: 'ask' }), DEFAULT_EXECUTION_POLICY);
+  assert.equal(resolveGeorgeConfig({}, '/workspace', { environment: { GEORGE_EXECUTION_POLICY: 'workspace-autonomous', GEORGE_OUTSIDE_WORKSPACE: 'ask' } }).executionPolicy.workspace, 'workspace_autonomous');
+  assert.throws(() => resolveGeorgeConfig({}, '/workspace', { environment: { GEORGE_EXECUTION_POLICY: 'all-files' } }), GeorgeError);
 });
 
 test('Phase 8 context profiles are validated, stable, and preserve the large default', () => {

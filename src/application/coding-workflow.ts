@@ -177,7 +177,7 @@ export class CodingWorkflowApplicationService {
       const validationEvents: ApplicationEvent[] = [];
       let failure: unknown;
       try {
-        for await (const event of this.agent.runProcess({ session: submission.session, turnId, callId, ...request, signal: submission.signal, budget })) {
+        for await (const event of this.agent.runProcess({ session: submission.session, turnId, callId, ...request, signal: submission.signal, budget, executionPolicy: submission.executionPolicy })) {
           validationEvents.push(event);
           await observe([event]);
         }

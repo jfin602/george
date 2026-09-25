@@ -6,6 +6,7 @@ import {
   classifySessionInterruptions,
   cancellationError,
   DEFAULT_CONTEXT_PROFILE,
+  DEFAULT_EXECUTION_POLICY,
   DEFAULT_RUN_BUDGET,
   denyApprovalPort,
   GeorgeError,
@@ -15,6 +16,7 @@ import {
   resolveGeorgeUserConfigRoot,
   RunBudget,
   HookRegistry,
+  intersectExecutionPolicy,
   type HookRegistration,
   type HookEvent,
   type RunBudgetClock,
@@ -22,6 +24,7 @@ import {
   type RunBudgetDimension,
   validateContextProfile,
   validateContextOperatingMode,
+  validateExecutionPolicy,
   validateRunBudget,
   type ApprovalPort,
   type ApprovalRequest,
@@ -29,6 +32,7 @@ import {
   type ContextDiagnostics,
   type ContextOperatingMode,
   type ContextProfile,
+  type ExecutionPolicy,
   type DiagnosticObserver,
   type GeorgeErrorShape,
   type ModelProvider,
@@ -52,6 +56,8 @@ import {
   createProcessToolExecutor,
   createReadOnlyToolExecutor,
   createWorkspaceMutationToolExecutor,
+  dispatchOutsideFilesystemCapability,
+  resolveOutsideFilesystemCapability,
   createParallelSearchTool,
   createGitHubTools,
   ChromeDevtoolsAdapter,
@@ -109,6 +115,8 @@ export type OneTurnServiceOptions = Readonly<{
   pluginManager?: PluginManager;
   /** Derived observability only; it cannot affect session, provider, or tool execution. */
   diagnostics?: DiagnosticObserver;
+  /** User-owned execution ceiling; task text can only reduce it per turn. */
+  executionPolicy?: ExecutionPolicy;
 }>;
 
 export type AgentLoopServiceOptions = OneTurnServiceOptions;
@@ -149,6 +157,8 @@ export type OneTurnSubmission = Readonly<{
   toolNames?: readonly string[];
   /** Application-owned bounded turns may omit transcript history when it would leak unrelated durable state. */
   omitHistory?: boolean;
+  /** An application-owned, capability-reducing policy projection. */
+  executionPolicy?: Partial<ExecutionPolicy>;
   budget?: RunBudget;
 }>;
 
@@ -214,6 +224,7 @@ export class AgentLoopApplicationService {
   private readonly maxToolCalls: number;
   private readonly maxToolRounds: number;
   private readonly approvalPort: ApprovalPort;
+  private readonly executionPolicy: ExecutionPolicy;
   private readonly skills: SkillRegistry;
   private readonly runBudget: RunBudgetConfig;
   private readonly clock: RunBudgetClock;
@@ -241,6 +252,7 @@ export class AgentLoopApplicationService {
     maxToolCalls: number,
     maxToolRounds: number,
     approvalPort: ApprovalPort,
+    executionPolicy: ExecutionPolicy,
     skills: SkillRegistry,
     runBudget: RunBudgetConfig,
     clock: RunBudgetClock,
@@ -263,6 +275,7 @@ export class AgentLoopApplicationService {
     this.maxToolCalls = maxToolCalls;
     this.maxToolRounds = maxToolRounds;
     this.approvalPort = approvalPort;
+    this.executionPolicy = executionPolicy;
     this.skills = skills;
     this.runBudget = runBudget;
     this.clock = clock;
@@ -412,10 +425,22 @@ export class AgentLoopApplicationService {
     return { input: match[2]?.trim() || input, activatedSkills: [skill.id] };
   }
 
-  private async approvalRequest(callId: string, validated: ValidatedToolCall, signal?: AbortSignal): Promise<ApprovalRequest | undefined> {
+  /** Intersects a structured-task envelope with the configured user ceiling. */
+  effectiveExecutionPolicy(expectations: Readonly<{ workspace?: 'standard' | 'autonomous'; outsideWorkspace?: 'reject' | 'ask'; network?: 'reject' | 'ask'; remoteMutation?: 'reject' | 'ask' }> = {}): ExecutionPolicy {
+    return intersectExecutionPolicy(this.executionPolicy, {
+      ...(expectations.workspace === undefined ? {} : { workspace: expectations.workspace === 'autonomous' ? 'workspace_autonomous' : 'standard' }),
+      ...(expectations.outsideWorkspace === undefined ? {} : { outsideWorkspace: expectations.outsideWorkspace }),
+      ...(expectations.network === undefined ? {} : { network: expectations.network }),
+      ...(expectations.remoteMutation === undefined ? {} : { remoteMutation: expectations.remoteMutation }),
+    });
+  }
+
+  private async approvalRequest(callId: string, validated: ValidatedToolCall, policy: ExecutionPolicy, outsidePath?: string, signal?: AbortSignal): Promise<ApprovalRequest | undefined> {
     const { definition, arguments: arguments_ } = validated;
+    if (outsidePath !== undefined) return { id: callId, toolName: definition.name, execution: definition.execution, target: { path: outsidePath, alreadyDirty: false, outsideWorkspace: true } };
     if (definition.execution.effect === 'local_read') return undefined;
     if (definition.execution.effect === 'workspace_mutation') {
+      if (policy.workspace === 'workspace_autonomous') return undefined;
       const target = await resolveWorkspaceMutationPath(this.workspace, arguments_.path as string);
       const git = await captureGitWorkingTreeSnapshot(this.workspace, target.path, { signal });
       return {
@@ -448,6 +473,7 @@ export class AgentLoopApplicationService {
     input?: string,
     hookId?: string,
     registry = this.registry,
+    submissionPolicy?: Partial<ExecutionPolicy>,
   ): AsyncGenerator<ApplicationEvent, import('../tools/index.ts').ToolResult> {
     const emit = (event: ApplicationEvent): readonly ApplicationEvent[] => this.record(session, event);
     const origin = hookId === undefined ? {} : { origin: { hookId } };
@@ -461,9 +487,33 @@ export class AgentLoopApplicationService {
       yield* emit({ type: 'tool.failed', turnId, callId: call.callId, name: call.name, result: validation.result as Extract<typeof validation.result, { ok: false }>, ...(execution === undefined ? {} : { execution }), ...origin });
       return validation;
     }
+    const policy = intersectExecutionPolicy(this.executionPolicy, submissionPolicy);
+    let outside: Awaited<ReturnType<typeof resolveOutsideFilesystemCapability>>;
+    try {
+      outside = await resolveOutsideFilesystemCapability(call, validation.definition.execution.effect === 'workspace_mutation');
+    } catch (error) {
+      const normalized = asGeorgeError(error, 'validation');
+      const result = { callId: call.callId, name: call.name, result: { ok: false as const, error: { code: normalized.code, message: normalized.message } } };
+      yield* emit({ type: 'tool.failed', turnId, callId: call.callId, name: call.name, result: result.result, execution: validation.definition.execution, ...origin });
+      return result;
+    }
+    if (outside && policy.outsideWorkspace === 'reject') {
+      const result = { callId: call.callId, name: call.name, result: { ok: false as const, error: { code: 'denied', message: 'Outside-workspace filesystem access is rejected by policy.' } } };
+      yield* emit({ type: 'tool.failed', turnId, callId: call.callId, name: call.name, result: result.result, execution: validation.definition.execution, ...origin });
+      return result;
+    }
+    const effectDenied = (validation.definition.execution.effect === 'external_read' && policy.network === 'reject')
+      || (validation.definition.execution.effect === 'remote_mutation' && policy.remoteMutation === 'reject')
+      || ((validation.definition.execution.effect === 'browser_observation' || validation.definition.execution.effect === 'browser_interaction') && policy.browserInteraction === 'reject')
+      || (validation.definition.execution.descriptor?.credentialConfigured === true && policy.credentialsEnvironment === 'reject');
+    if (effectDenied) {
+      const result = { callId: call.callId, name: call.name, result: { ok: false as const, error: { code: 'denied', message: 'Tool effect is rejected by execution policy.' } } };
+      yield* emit({ type: 'tool.failed', turnId, callId: call.callId, name: call.name, result: result.result, execution: validation.definition.execution, ...origin });
+      return result;
+    }
     let request: ApprovalRequest | undefined;
     try {
-      request = await this.approvalRequest(call.callId, validation, signal);
+      request = await this.approvalRequest(call.callId, validation, policy, outside?.path, signal);
     } catch (error) {
       const normalized = asGeorgeError(error, 'validation');
       if (normalized.code === 'cancelled') throw normalized;
@@ -486,7 +536,7 @@ export class AgentLoopApplicationService {
       yield* this.consumeBudget(session, turnId, budget, 'toolExecutions', 1, signal);
       if (call.name === 'run_process') yield* this.consumeBudget(session, turnId, budget, 'processExecutions', 1, signal);
     }
-    if (call.name === 'write_file' || call.name === 'apply_patch') {
+    if (!outside && (call.name === 'write_file' || call.name === 'apply_patch')) {
       const target = await resolveWorkspaceMutationPath(this.workspace, validation.arguments.path as string);
       const expected = validation.arguments.expectedSha256;
       const intent = call.name === 'write_file' && target.exists && typeof expected !== 'string' ? undefined : call.name === 'write_file'
@@ -496,7 +546,9 @@ export class AgentLoopApplicationService {
     }
     yield* emit({ type: 'tool.started', turnId, callId: call.callId, name: call.name, execution: validation.definition.execution, ...origin });
     const startedAt = call.name === 'run_process' ? this.clock() : undefined;
-    const result = await registry.dispatch(call, { signal, ...(input === undefined ? {} : { input }) });
+    const result = outside
+      ? await dispatchOutsideFilesystemCapability(outside, call, { signal, ...(input === undefined ? {} : { input }) })
+      : await registry.dispatch(call, { signal, ...(input === undefined ? {} : { input }) });
     if (result.result.ok) yield* emit({ type: 'tool.completed', turnId, callId: call.callId, name: call.name, result: result.result, execution: validation.definition.execution, ...origin });
     else {
       yield* emit({ type: 'tool.failed', turnId, callId: call.callId, name: call.name, result: result.result, execution: validation.definition.execution, ...origin });
@@ -511,12 +563,12 @@ export class AgentLoopApplicationService {
   }
 
   /** Explicit application-owned process work still uses the canonical registry and ApprovalPort. */
-  async *runProcess(submission: ProcessSubmission): AsyncGenerator<ApplicationEvent, import('../tools/index.ts').ToolResult> {
+  async *runProcess(submission: ProcessSubmission & Readonly<{ executionPolicy?: Partial<ExecutionPolicy> }>): AsyncGenerator<ApplicationEvent, import('../tools/index.ts').ToolResult> {
     const call = {
       callId: submission.callId ?? randomUUID(), name: 'run_process',
       arguments: JSON.stringify({ executable: submission.executable, arguments: submission.arguments, ...(submission.cwd === undefined ? {} : { cwd: submission.cwd }), ...(submission.timeoutMs === undefined ? {} : { timeoutMs: submission.timeoutMs }) }),
     };
-    return yield* this.executeTool(submission.session, submission.turnId, call, submission.signal, submission.budget ?? this.createRunBudget(), submission.input, submission.hookId);
+    return yield* this.executeTool(submission.session, submission.turnId, call, submission.signal, submission.budget ?? this.createRunBudget(), submission.input, submission.hookId, this.registry, submission.executionPolicy);
   }
 
   async *run(submission: AgentLoopSubmission): AsyncGenerator<ApplicationEvent> {
@@ -693,7 +745,7 @@ export class AgentLoopApplicationService {
             yield* emit({ type: 'tool.failed', turnId, callId: call.callId, name: call.name, result });
             throw new GeorgeError('tool', result.error.message);
           }
-          const iterator = this.executeTool(submission.session, turnId, call, submission.signal, budget, undefined, undefined, registry);
+          const iterator = this.executeTool(submission.session, turnId, call, submission.signal, budget, undefined, undefined, registry, submission.executionPolicy);
           let next = await iterator.next();
           while (!next.done) {
             yield next.value;
@@ -791,6 +843,7 @@ export async function createAgentLoopApplicationService(
     positive(options.maxToolCalls, DEFAULT_MAX_TOOL_CALLS, 'maxToolCalls'),
     positive(options.maxToolRounds, DEFAULT_MAX_TOOL_ROUNDS, 'maxToolRounds'),
     options.approvalPort ?? denyApprovalPort,
+    validateExecutionPolicy(options.executionPolicy ?? DEFAULT_EXECUTION_POLICY),
     skills,
     validateRunBudget(options.runBudget ?? DEFAULT_RUN_BUDGET),
     options.clock ?? Date.now,

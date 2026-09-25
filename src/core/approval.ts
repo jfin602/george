@@ -7,7 +7,7 @@ export type ApprovalRequest = Readonly<{
   id: string;
   toolName: string;
   execution: ToolExecutionMetadata;
-  target?: Readonly<{ path: string; alreadyDirty: boolean }>;
+  target?: Readonly<{ path: string; alreadyDirty: boolean; outsideWorkspace?: boolean }>;
   process?: Readonly<{ executable: string; argv: readonly string[]; cwd: string; warning: string }>;
 }>;
 

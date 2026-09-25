@@ -22,6 +22,13 @@ export type StructuredTaskSlice = Readonly<{
   evidence: readonly string[];
 }>;
 
+function permissionProjection(policy: ReturnType<CodingWorkflowApplicationService['agent']['effectiveExecutionPolicy']>): import('../tasks/index.ts').PermissionExpectation {
+  return {
+    workspace: policy.workspace === 'workspace_autonomous' ? 'autonomous' : 'standard', outsideWorkspace: policy.outsideWorkspace,
+    network: policy.network, remoteMutation: policy.remoteMutation,
+  };
+}
+
 /** A deliberately small derived view. Canonical TaskState never crosses this provider seam wholesale. */
 export function projectStructuredTaskSlice(state: TaskState, workId: `W${number}`): StructuredTaskSlice {
   const work = state.definition.workflow.find((item) => item.id === workId);
@@ -130,10 +137,11 @@ export class StructuredTaskApplicationService extends CodingWorkflowApplicationS
     const parsed = parseTaskPrompt(submission.input); // Marker detection is before provider/tool execution.
     if (parsed.kind === 'ordinary') return super.run(submission);
     const definition = parsed.task;
+    const executionPolicy = this.agent.effectiveExecutionPolicy(definition.permissions);
     if (submission.session.taskState && submission.session.taskState.definitionFingerprint !== createTaskState({ sessionId: submission.session.id, workspace: submission.session.workspace, definition }).definitionFingerprint) {
       throw new GeorgeError('validation', 'Session already has a different structured task.');
     }
-    let state = submission.session.taskState ?? createTaskState({ sessionId: submission.session.id, workspace: submission.session.workspace, definition, ...(this.correctionLimit === undefined ? {} : { correctionLimit: this.correctionLimit }) });
+    let state = submission.session.taskState ?? createTaskState({ sessionId: submission.session.id, workspace: submission.session.workspace, definition, effectivePermissionExpectations: permissionProjection(executionPolicy), ...(this.correctionLimit === undefined ? {} : { correctionLimit: this.correctionLimit }) });
     submission.session.taskState = state;
     if (recoveryNeedsPlanning(submission) && !['completed', 'failed', 'blocked', 'planning_needed', 'cancelled', 'budget_exhausted'].includes(state.status)) {
       state = blockTask(state, 'planning_needed', 'Recovery left an ambiguous side effect; inspect and plan before resuming.');
@@ -156,7 +164,7 @@ export class StructuredTaskApplicationService extends CodingWorkflowApplicationS
       const slice = projectStructuredTaskSlice(state, unit.id);
       if (definition.inspect.length && state.inspections.length === 0) {
         const events: ApplicationEvent[] = [];
-        for await (const event of this.agent.run({ session: submission.session, input: renderSlice(slice, 'inspection'), turnId: `${submission.turnId ?? randomUUID()}-inspect`, routedDocuments: routed, toolNames: INSPECTION_TOOLS, omitHistory: true, signal: submission.signal })) {
+        for await (const event of this.agent.run({ session: submission.session, input: renderSlice(slice, 'inspection'), turnId: `${submission.turnId ?? randomUUID()}-inspect`, routedDocuments: routed, toolNames: INSPECTION_TOOLS, omitHistory: true, signal: submission.signal, executionPolicy })) {
           events.push(event); await submission.onEvent?.(event);
         }
         const source = observedInspection(events);
@@ -169,7 +177,7 @@ export class StructuredTaskApplicationService extends CodingWorkflowApplicationS
         for (const item of definition.inspect) state = recordTaskInspection(state, { item, source });
         submission.session.taskState = state;
       }
-      last = await super.run({ ...submission, input: renderSlice(projectStructuredTaskSlice(state, unit.id), 'implementation'), routedDocuments: routed, toolNames: CODING_TOOLS, omitHistory: true, validations: [] });
+      last = await super.run({ ...submission, input: renderSlice(projectStructuredTaskSlice(state, unit.id), 'implementation'), routedDocuments: routed, toolNames: CODING_TOOLS, omitHistory: true, validations: [], executionPolicy });
       if (last.terminalState !== 'completed') {
         state = blockTask(state, outcomeFor(last), `Work unit ${unit.id} did not complete.`);
         submission.session.taskState = state;
@@ -185,7 +193,7 @@ export class StructuredTaskApplicationService extends CodingWorkflowApplicationS
       let literal = request(validation);
       if (!literal) {
         if (validation.command.kind !== 'discover') throw new GeorgeError('validation', `Validation ${validation.id} has an invalid command.`);
-        const proposal = await super.run({ ...submission, input: `For validation ${validation.id}, scope: ${validation.command.scope}\nReturn only JSON: {"executable":"...","arguments":["..."]}. Propose a bounded local test command; do not execute tools.`, routedDocuments: routed, toolNames: [], omitHistory: true, validations: [] });
+        const proposal = await super.run({ ...submission, input: `For validation ${validation.id}, scope: ${validation.command.scope}\nReturn only JSON: {"executable":"...","arguments":["..."]}. Propose a bounded local test command; do not execute tools.`, routedDocuments: routed, toolNames: [], omitHistory: true, validations: [], executionPolicy });
         literal = discoveredRequest(validation, proposal.finalAssistantResponse);
       }
       for (;;) {
@@ -193,7 +201,7 @@ export class StructuredTaskApplicationService extends CodingWorkflowApplicationS
         if (pendingCorrection?.validationId !== undefined && pendingCorrection.validationId !== validation.id) throw new GeorgeError('validation', 'A different structured correction is active.');
         if (pendingCorrection?.status === 'active') {
           const repair = correctionWork(state, validation);
-          const repaired = await super.run({ ...submission, input: renderSlice(projectStructuredTaskSlice(state, repair), 'correction'), routedDocuments: routed, toolNames: CODING_TOOLS, omitHistory: true, validations: [] });
+          const repaired = await super.run({ ...submission, input: renderSlice(projectStructuredTaskSlice(state, repair), 'correction'), routedDocuments: routed, toolNames: CODING_TOOLS, omitHistory: true, validations: [], executionPolicy });
           if (repaired.terminalState !== 'completed') {
             state = blockTask(state, outcomeFor(repaired), `Correction for ${validation.id} did not complete.`);
             submission.session.taskState = state; await this.lifecycle(submission, state, `Structured correction stopped at ${validation.id}.`); return repaired;
@@ -203,7 +211,7 @@ export class StructuredTaskApplicationService extends CodingWorkflowApplicationS
           await this.lifecycle(submission, state, `Structured correction repair completed for ${validation.id}; rerunning validation.`);
           continue;
         }
-        last = await super.run({ ...submission, input: `Run no provider-owned validation. George will execute ${validation.id}.`, routedDocuments: routed, toolNames: [], omitHistory: true, validations: [literal] });
+        last = await super.run({ ...submission, input: `Run no provider-owned validation. George will execute ${validation.id}.`, routedDocuments: routed, toolNames: [], omitHistory: true, validations: [literal], executionPolicy });
         const observed = last.validations[0];
         if (!observed) throw new GeorgeError('validation', `Validation ${validation.id} produced no process evidence.`);
         state = recordTaskValidationAttempt(state, validation.id, { turnId: last.turnId, callId: observed.callId, status: observed.status, exitCode: observed.exitCode, signal: observed.signal, ...(observed.outcome === undefined ? {} : { outcome: observed.outcome }) });

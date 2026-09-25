@@ -33,6 +33,7 @@ async function main(): Promise<void> {
     contextProfile: config.context.profile,
     runBudget: config.runBudget,
     userConfigRoot: config.userConfigRoot,
+    executionPolicy: config.executionPolicy,
     sessionStore: store,
     diagnostics,
   });

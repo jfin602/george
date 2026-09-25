@@ -1,6 +1,7 @@
 import { homedir } from 'node:os';
 import { join, resolve } from 'node:path';
 
+import { DEFAULT_EXECUTION_POLICY, type ExecutionPolicy, validateExecutionPolicy } from './execution.ts';
 import { GeorgeError } from './errors.ts';
 import { DEFAULT_RUN_BUDGET, type RunBudgetConfig, validateRunBudget } from './run-budget.ts';
 
@@ -28,6 +29,7 @@ export type GeorgeConfig = Readonly<{
   userConfigRoot: string;
   /** `profile` remains the concrete fixed-profile compatibility value. Adaptive selection ignores it. */
   context: Readonly<{ mode: ContextOperatingMode; profile: ContextProfile }>;
+  executionPolicy: ExecutionPolicy;
   runBudget: RunBudgetConfig;
   provider: Readonly<{
     baseUrl: URL;
@@ -45,6 +47,7 @@ export type GeorgeConfigInput = Readonly<{
   contextMode?: ContextOperatingMode;
   contextProfile?: ContextProfile;
   runBudget?: RunBudgetConfig;
+  executionPolicy?: ExecutionPolicy;
 }>;
 
 export type GeorgeConfigEnvironment = Readonly<{
@@ -85,6 +88,18 @@ function providerTimeoutFromEnvironment(value: string | undefined): number {
     configurationError(`GEORGE_PROVIDER_TIMEOUT_MS must be an integer between 1 and ${MAX_PROVIDER_TIMEOUT_MS} ms.`);
   }
   return validateProviderTimeoutMs(Number(value));
+}
+
+function executionPolicyFromEnvironment(value: string | undefined, outside: string | undefined, environment: Readonly<Record<string, string | undefined>>): ExecutionPolicy {
+  const workspace = value === undefined ? DEFAULT_EXECUTION_POLICY.workspace : value === 'standard' ? 'standard' : value === 'workspace-autonomous' ? 'workspace_autonomous' : configurationError('GEORGE_EXECUTION_POLICY must be standard or workspace-autonomous.');
+  const outsideWorkspace = outside === undefined ? DEFAULT_EXECUTION_POLICY.outsideWorkspace : outside === 'reject' || outside === 'ask' ? outside : configurationError('GEORGE_OUTSIDE_WORKSPACE must be reject or ask.');
+  const ask = (name: string): 'reject' | 'ask' => {
+    const value = environment[name];
+    if (value === undefined) return DEFAULT_EXECUTION_POLICY[name === 'GEORGE_NETWORK' ? 'network' : name === 'GEORGE_REMOTE_MUTATION' ? 'remoteMutation' : name === 'GEORGE_BROWSER_INTERACTION' ? 'browserInteraction' : 'credentialsEnvironment'];
+    if (value === 'reject' || value === 'ask') return value;
+    return configurationError(`${name} must be reject or ask.`);
+  };
+  return { ...DEFAULT_EXECUTION_POLICY, workspace, outsideWorkspace, network: ask('GEORGE_NETWORK'), remoteMutation: ask('GEORGE_REMOTE_MUTATION'), browserInteraction: ask('GEORGE_BROWSER_INTERACTION'), credentialsEnvironment: ask('GEORGE_CREDENTIALS_ENVIRONMENT') };
 }
 
 function positiveContextNumber(value: number, name: string): number {
@@ -216,6 +231,7 @@ export function resolveGeorgeConfig(
       ? resolveGeorgeUserConfigRoot(variables, environment.platform, environment.homeDirectory)
       : validateUserConfigRoot(input.userConfigRoot, cwd),
     context: { mode: contextMode, profile: validateContextProfile(input.contextProfile ?? DEFAULT_CONTEXT_PROFILE) },
+    executionPolicy: validateExecutionPolicy(input.executionPolicy ?? executionPolicyFromEnvironment(variables.GEORGE_EXECUTION_POLICY, variables.GEORGE_OUTSIDE_WORKSPACE, variables)),
     runBudget: validateRunBudget(input.runBudget ?? DEFAULT_RUN_BUDGET),
     provider: {
       baseUrl: validateProviderBaseUrl(

@@ -314,6 +314,52 @@ test('approval metadata is normalized, marks dirty write targets, warns about pr
   });
 });
 
+test('workspace autonomy auto-writes only inside the workspace while outside access is rejected or exact-call approved', async (t) => {
+  const root = await fixture();
+  const outside = await mkdtemp(join(tmpdir(), 'george-outside-'));
+  t.after(() => Promise.all([rm(root, { recursive: true, force: true }), rm(outside, { recursive: true, force: true })]));
+  const outsideFile = join(outside, 'outside.txt');
+  await writeFile(outsideFile, 'before');
+
+  const rejectProvider = new ScriptedProvider([[
+    { type: 'provider.response.started', responseId: 'reject' },
+    { type: 'provider.tool.call', callId: 'outside', name: 'read_file', arguments: JSON.stringify({ path: outsideFile }) },
+    { type: 'provider.response.completed' },
+  ], [{ type: 'provider.response.completed' }]]);
+  const rejectedApproval = new ScriptedApproval(['allow_once']);
+  const rejected = await createAgentLoopApplicationService({ provider: rejectProvider, workspace: root, approvalPort: rejectedApproval, executionPolicy: { workspace: 'workspace_autonomous', outsideWorkspace: 'reject', network: 'ask', remoteMutation: 'ask', browserInteraction: 'ask', credentialsEnvironment: 'ask' } });
+  const rejectedEvents = await collect(rejected.run({ session: createSession({ workspace: root }), input: 'Read outside.' }));
+  assert.equal(rejectedApproval.requests.length, 0);
+  assert.equal(rejectedEvents.some((event) => event.type === 'tool.started' && event.callId === 'outside'), false);
+
+  const provider = new ScriptedProvider([[
+    { type: 'provider.response.started', responseId: 'autonomous' },
+    { type: 'provider.tool.call', callId: 'inside', name: 'write_file', arguments: '{"path":"inside.txt","content":"inside"}' },
+    { type: 'provider.tool.call', callId: 'outside-write', name: 'write_file', arguments: JSON.stringify({ path: outsideFile, content: 'after', expectedSha256: createHash('sha256').update('before').digest('hex') }) },
+    { type: 'provider.response.completed' },
+  ], [
+    { type: 'provider.response.started', responseId: 'outside-again' },
+    { type: 'provider.tool.call', callId: 'outside-read', name: 'read_file', arguments: JSON.stringify({ path: outsideFile }) },
+    { type: 'provider.response.completed' },
+  ], [{ type: 'provider.text.delta', delta: 'done' }, { type: 'provider.response.completed' }]]);
+  const approval = new ScriptedApproval(['allow_once', 'allow_once']);
+  const service = await createAgentLoopApplicationService({ provider, workspace: root, approvalPort: approval, executionPolicy: { workspace: 'workspace_autonomous', outsideWorkspace: 'ask', network: 'ask', remoteMutation: 'ask', browserInteraction: 'ask', credentialsEnvironment: 'ask' } });
+  const events = await collect(service.run({ session: createSession({ workspace: root }), input: 'Write bounded files.' }));
+  assert.equal(await readFile(join(root, 'inside.txt'), 'utf8'), 'inside');
+  assert.equal(await readFile(outsideFile, 'utf8'), 'after');
+  assert.equal(approval.requests.length, 2);
+  assert.deepEqual(approval.requests.map((request) => request.target), [
+    { path: outsideFile, alreadyDirty: false, outsideWorkspace: true }, { path: outsideFile, alreadyDirty: false, outsideWorkspace: true },
+  ]);
+  assert.equal(events.filter((event) => event.type === 'approval.requested').length, 2);
+
+  const processApproval = new ScriptedApproval(['allow_once']);
+  const process = await createAgentLoopApplicationService({ provider: new ScriptedProvider([]), workspace: root, approvalPort: processApproval, executionPolicy: { workspace: 'workspace_autonomous', outsideWorkspace: 'ask', network: 'ask', remoteMutation: 'ask', browserInteraction: 'ask', credentialsEnvironment: 'ask' } });
+  await collect(process.runProcess({ session: createSession({ workspace: root }), turnId: 'host-process', executable: 'node', arguments: ['-e', '0'] }));
+  assert.equal(processApproval.requests.length, 1);
+  assert.ok(processApproval.requests[0]?.process);
+});
+
 test('Phase 3 integrated fixture keeps routed skills turn-scoped and hostile context behind approval', async (t) => {
   const root = await fixture();
   const userConfig = join(root, 'user-config');

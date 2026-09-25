@@ -108,6 +108,19 @@ test('invalid marked tasks fail closed while ordinary chat keeps the inherited w
   assert.equal(provider.requests.length, 1);
 });
 
+test('task permission expectations cannot elevate the configured execution ceiling', async (t) => {
+  const root = await workspace();
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const provider = new Provider([]);
+  const workflow = await createCodingWorkflowApplicationService({
+    provider, workspace: root,
+    executionPolicy: { workspace: 'standard', outsideWorkspace: 'reject', network: 'ask', remoteMutation: 'ask', browserInteraction: 'ask', credentialsEnvironment: 'ask' },
+  });
+  const policy = workflow.agent.effectiveExecutionPolicy({ workspace: 'autonomous', outsideWorkspace: 'ask', network: 'ask', remoteMutation: 'ask' });
+  assert.equal(policy.workspace, 'standard');
+  assert.equal(policy.outsideWorkspace, 'reject');
+});
+
 test('DISCOVER validation accepts only an explicit executable/argv proposal and runs it through George', async (t) => {
   const root = await workspace();
   t.after(() => rm(root, { recursive: true, force: true }));
