@@ -13,6 +13,7 @@ import {
   createSession,
   resolveGeorgeStateRoot,
 } from '../../../src/core/index.ts';
+import { beginTaskWorkUnit, createTaskState, parseTaskPrompt, recordTaskInspection } from '../../../src/tasks/index.ts';
 
 async function fixture(): Promise<{ root: string; workspace: string; state: string }> {
   const root = await mkdtemp(join(tmpdir(), 'george-session-store-'));
@@ -88,6 +89,63 @@ test('opening rejects malformed, unsupported, oversized, and invalid normalized 
   await assert.rejects(store.open('session-1', workspace), /event type is invalid/);
   await writeFile(path, 'x'.repeat(MAX_DURABLE_SESSION_BYTES + 1));
   await assert.rejects(store.open('session-1', workspace), /byte bound/);
+});
+
+test('schema-v1 sessions migrate as taskless while schema-v2 TaskState round-trips safely', async () => {
+  const { workspace, state } = await fixture();
+  const store = new LocalSessionStore({ root: state });
+  await mkdir(state);
+  await writeFile(join(state, 'legacy.json'), JSON.stringify({ schemaVersion: 1, id: 'legacy', workspace, transcript: [], events: [] }));
+  assert.equal((await store.open('legacy', workspace)).taskState, undefined);
+
+  const parsed = parseTaskPrompt(`GEORGE TASK FORMAT: 1
+
+TASK: P2 — Persist
+KIND: implementation
+
+GOAL
+
+Persist bounded state.
+
+INSPECT
+
+- session store
+
+REQUIREMENTS
+
+- R1: State reopens.
+
+WORKFLOW
+
+W1 — Persist
+Covers: R1
+Depends on: none
+
+VALIDATION
+
+V1 — Unit
+Covers: R1
+Run: node --test test/unit/core/session-store.test.ts
+
+STOP CONDITIONS
+
+- S1: Stop on failure.
+`);
+  if (parsed.kind !== 'structured') throw new Error('Expected structured task.');
+  const session = createSession({ id: 'task-session', workspace });
+  session.taskState = recordTaskInspection(beginTaskWorkUnit(createTaskState({ sessionId: session.id, workspace, definition: parsed.task }), 'W1'), { item: 'session store', source: 'read_file' });
+  await store.save(session);
+  const serialized = await readFile(join(state, 'task-session.json'), 'utf8');
+  assert.match(serialized, /"schemaVersion":2/);
+  assert.doesNotMatch(serialized, /raw provider|stdout|stderr/i);
+  const reopened = await store.open(session.id, workspace);
+  assert.equal(reopened.taskState?.definitionFingerprint, session.taskState.definitionFingerprint);
+  assert.deepEqual(reopened.taskState?.inspections, [{ item: 'session store', source: 'read_file' }]);
+
+  const malformed = JSON.parse(serialized) as { taskState: { status: string } };
+  malformed.taskState.status = 'green';
+  await writeFile(join(state, 'task-session.json'), JSON.stringify(malformed));
+  await assert.rejects(store.open(session.id, workspace), /task status is invalid/);
 });
 
 test('pre-adaptive context diagnostics reopen as fixed derived evidence', async () => {

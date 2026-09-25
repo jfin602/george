@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 
 import type { ApplicationEvent } from './events.ts';
+import type { TaskState } from '../tasks/state.ts';
 
 export type TranscriptEntry = Readonly<{
   role: 'user' | 'assistant';
@@ -14,6 +15,8 @@ export type Session = {
   events: ApplicationEvent[];
   /** Historical operations that stopped before George observed a terminal event. */
   interruptions: SessionInterruption[];
+  /** Optional canonical structured-task state; ordinary sessions remain taskless. */
+  taskState?: TaskState;
 };
 
 export type SessionInterruption = Readonly<{

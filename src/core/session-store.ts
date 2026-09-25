@@ -10,8 +10,9 @@ import type { RunBudgetDimension, RunBudgetSnapshot } from './run-budget.ts';
 import type { ToolExecutionMetadata } from './execution.ts';
 import type { TranscriptEntry, Session, SessionInterruption } from './session.ts';
 import { resolveWorkspaceRoot } from './workspace.ts';
+import { TASK_STATE_SCHEMA_VERSION, parseSerializedTaskDefinition, serializeTaskDefinition, taskDefinitionFingerprint, type TaskState, type TaskValidationAttempt } from '../tasks/state.ts';
 
-export const DURABLE_SESSION_SCHEMA_VERSION = 1;
+export const DURABLE_SESSION_SCHEMA_VERSION = 2;
 export const MAX_DURABLE_SESSION_BYTES = 1024 * 1024;
 export const MAX_DURABLE_EVENTS = 2048;
 export const MAX_DURABLE_TRANSCRIPT_ENTRIES = 1024;
@@ -23,7 +24,11 @@ type DurableSession = Readonly<{
   workspace: string;
   transcript: readonly TranscriptEntry[];
   events: readonly ApplicationEvent[];
+  taskState?: TaskState;
 }>;
+
+type DurableTaskState = Readonly<Omit<TaskState, 'definition'> & { definition: string }>;
+type SerializedDurableSession = Readonly<Omit<DurableSession, 'taskState'> & { taskState?: DurableTaskState }>;
 
 export type SessionStoreOptions = Readonly<{
   root?: string;
@@ -436,7 +441,80 @@ function safeDiagnostics(value: ContextDiagnostics): ContextDiagnostics {
   };
 }
 
-function durableSession(session: Session, workspace: string): DurableSession {
+function safePermissionExpectations(value: unknown): TaskState['effectivePermissionExpectations'] {
+  const permissions = record(value, 'task permission expectations');
+  const keys = Object.keys(permissions);
+  if (keys.some((key) => !['workspace', 'outsideWorkspace', 'network', 'remoteMutation'].includes(key))) invalid('task permission expectations have an invalid shape.');
+  const valueOf = <T extends string>(key: string, allowed: readonly T[]): T | undefined => permissions[key] === undefined ? undefined : oneOf(permissions[key], `task permission ${key}`, allowed);
+  return {
+    ...(valueOf('workspace', ['standard', 'autonomous'] as const) === undefined ? {} : { workspace: valueOf('workspace', ['standard', 'autonomous'] as const)! }),
+    ...(valueOf('outsideWorkspace', ['reject', 'ask'] as const) === undefined ? {} : { outsideWorkspace: valueOf('outsideWorkspace', ['reject', 'ask'] as const)! }),
+    ...(valueOf('network', ['reject', 'ask'] as const) === undefined ? {} : { network: valueOf('network', ['reject', 'ask'] as const)! }),
+    ...(valueOf('remoteMutation', ['reject', 'ask'] as const) === undefined ? {} : { remoteMutation: valueOf('remoteMutation', ['reject', 'ask'] as const)! }),
+  };
+}
+
+function safeTaskState(state: TaskState, sessionId: string, workspace: string): DurableTaskState {
+  if (state.sessionId !== sessionId || state.workspace !== workspace) invalid('task state belongs to a different session or workspace.');
+  const definition = serializeTaskDefinition(state.definition);
+  // Reparse before persisting so TaskState never creates a second, looser durable task grammar.
+  const parsed = parseSerializedTaskDefinition(definition);
+  if (taskDefinitionFingerprint(parsed) !== state.definitionFingerprint) invalid('task definition fingerprint does not match its parsed definition.');
+  const durable: DurableTaskState = {
+    ...state,
+    definition,
+    requirements: { ...state.requirements }, workUnits: { ...state.workUnits }, inspections: state.inspections.map((item) => ({ ...item })),
+    validations: Object.fromEntries(Object.entries(state.validations).map(([id, value]) => [id, { status: value.status, attempts: value.attempts.map((attempt) => ({ ...attempt })) }])),
+    corrections: state.corrections.map((item) => ({ ...item })), blockers: [...state.blockers], effectivePermissionExpectations: { ...state.effectivePermissionExpectations },
+  };
+  // The same strict parser guards both newly written and reopened task state.
+  parseTaskState(durable);
+  return durable;
+}
+
+function parseTaskState(value: unknown): TaskState {
+  const item = record(value, 'task state');
+  exactKeys(item, ['schemaVersion', 'sessionId', 'workspace', 'definition', 'definitionFingerprint', 'status', ...(item.currentWorkUnit === undefined ? [] : ['currentWorkUnit']), 'requirements', 'workUnits', 'inspections', 'validations', 'correctionLimit', 'corrections', 'blockers', ...(item.terminalOutcome === undefined ? [] : ['terminalOutcome']), 'effectivePermissionExpectations'], 'task state');
+  if (item.schemaVersion !== TASK_STATE_SCHEMA_VERSION) invalid(`unsupported task state schema version ${String(item.schemaVersion)}.`);
+  const definition = (() => { try { return parseSerializedTaskDefinition(string(item.definition, 'task definition', 128 * 1024)); } catch { return invalid('task definition is invalid.'); } })();
+  const fingerprint = string(item.definitionFingerprint, 'task definition fingerprint', 64);
+  if (!/^[a-f0-9]{64}$/.test(fingerprint) || fingerprint !== taskDefinitionFingerprint(definition)) invalid('task definition fingerprint does not match.');
+  const status = oneOf(item.status, 'task status', ['pending', 'in_progress', 'blocked', 'planning_needed', 'cancelled', 'completed', 'failed'] as const);
+  const requirementKeys = definition.requirements.map(({ id }) => id);
+  const workKeys = definition.workflow.map(({ id }) => id);
+  const validationKeys = definition.validations.map(({ id }) => id);
+  const requirements = record(item.requirements, 'task requirements'); exactKeys(requirements, requirementKeys, 'task requirements');
+  const safeRequirements = Object.fromEntries(requirementKeys.map((key) => [key, oneOf(requirements[key], 'task requirement status', ['pending', 'addressed', 'verified'] as const)])) as TaskState['requirements'];
+  const workUnits = record(item.workUnits, 'task work units'); exactKeys(workUnits, workKeys, 'task work units');
+  const safeWorkUnits = Object.fromEntries(workKeys.map((key) => [key, oneOf(workUnits[key], 'task work unit status', ['pending', 'active', 'addressed', 'blocked'] as const)])) as TaskState['workUnits'];
+  const currentWorkUnit = item.currentWorkUnit === undefined ? undefined : string(item.currentWorkUnit, 'current work unit', 64) as `W${number}`;
+  if (currentWorkUnit !== undefined && (!workKeys.includes(currentWorkUnit) || safeWorkUnits[currentWorkUnit] !== 'active')) invalid('current task work unit is invalid.');
+  if (workKeys.filter((key) => safeWorkUnits[key] === 'active').length !== (currentWorkUnit === undefined ? 0 : 1)) invalid('task active work unit is invalid.');
+  const inspections = boundedArray(item.inspections, 'task inspections', 64).map((entry) => { const evidence = record(entry, 'task inspection'); exactKeys(evidence, ['item', 'source'], 'task inspection'); const inspected = string(evidence.item, 'task inspection item', 8192); if (!definition.inspect.includes(inspected)) invalid('task inspection is not declared.'); return { item: inspected, source: string(evidence.source, 'task inspection source', 512) }; });
+  const validations = record(item.validations, 'task validations'); exactKeys(validations, validationKeys, 'task validations');
+  const safeValidations = Object.fromEntries(validationKeys.map((key) => {
+    const validation = record(validations[key], 'task validation'); exactKeys(validation, ['status', 'attempts'], 'task validation');
+    const attempts = boundedArray(validation.attempts, 'task validation attempts', 32).map((entry) => {
+      const attempt = record(entry, 'task validation attempt'); exactKeys(attempt, ['turnId', 'callId', 'status', 'exitCode', 'signal', ...(attempt.outcome === undefined ? [] : ['outcome'])], 'task validation attempt');
+      const exitCode = attempt.exitCode; if (exitCode !== null && (!Number.isInteger(exitCode) || (exitCode as number) < -1_000_000 || (exitCode as number) > 1_000_000)) invalid('task validation exit code is invalid.');
+      const signal = attempt.signal; if (signal !== null && typeof signal !== 'string') invalid('task validation signal is invalid.');
+      return { turnId: string(attempt.turnId, 'task validation turn ID', 256), callId: string(attempt.callId, 'task validation call ID', 256), status: oneOf(attempt.status, 'task validation attempt status', ['passed', 'failed', 'denied', 'cancelled'] as const), exitCode: exitCode as number | null, signal: signal === null ? null : string(signal, 'task validation signal', 128), ...(attempt.outcome === undefined ? {} : { outcome: oneOf(attempt.outcome, 'task validation outcome', ['completed', 'failed', 'timed_out', 'spawn_failed'] as const) }) } as TaskValidationAttempt;
+    });
+    const validationStatus = oneOf(validation.status, 'task validation status', ['pending', 'passed', 'failed', 'denied', 'cancelled'] as const);
+    if ((validationStatus === 'pending') !== (attempts.length === 0) || (attempts.length && attempts.at(-1)!.status !== validationStatus)) invalid('task validation current status is invalid.');
+    return [key, { status: validationStatus, attempts }];
+  })) as TaskState['validations'];
+  const correctionLimit = boundedInteger(item.correctionLimit, 'task correction limit', 10);
+  const corrections = boundedArray(item.corrections, 'task corrections', correctionLimit).map((entry, index) => { const correction = record(entry, 'task correction'); exactKeys(correction, ['cycle', 'validationId', 'status'], 'task correction'); const validationId = string(correction.validationId, 'task correction validation', 64) as `V${number}`; if (!validationKeys.includes(validationId) || correction.cycle !== index + 1) invalid('task correction is invalid.'); return { cycle: correction.cycle as number, validationId, status: oneOf(correction.status, 'task correction status', ['active', 'completed'] as const) }; });
+  if (corrections.filter((item) => item.status === 'active').length > 1) invalid('task correction state is invalid.');
+  const blockers = boundedArray(item.blockers, 'task blockers', 64).map((blocker) => boundedMessage(string(blocker, 'task blocker', 512)));
+  const terminalOutcome = item.terminalOutcome === undefined ? undefined : oneOf(item.terminalOutcome, 'task terminal outcome', ['blocked', 'planning_needed', 'cancelled', 'completed', 'failed'] as const);
+  if ((terminalOutcome === undefined) === ['blocked', 'planning_needed', 'cancelled', 'completed', 'failed'].includes(status)) invalid('task terminal outcome is invalid.');
+  if (terminalOutcome !== undefined && terminalOutcome !== status) invalid('task terminal outcome does not match status.');
+  return Object.freeze({ schemaVersion: TASK_STATE_SCHEMA_VERSION, sessionId: identifier(item.sessionId, 'task session ID'), workspace: canonicalPath(item.workspace, 'task workspace'), definition, definitionFingerprint: fingerprint, status, ...(currentWorkUnit === undefined ? {} : { currentWorkUnit }), requirements: Object.freeze(safeRequirements), workUnits: Object.freeze(safeWorkUnits), inspections: Object.freeze(inspections), validations: Object.freeze(safeValidations), correctionLimit, corrections: Object.freeze(corrections), blockers: Object.freeze(blockers), ...(terminalOutcome === undefined ? {} : { terminalOutcome }), effectivePermissionExpectations: Object.freeze(safePermissionExpectations(item.effectivePermissionExpectations)) });
+}
+
+function durableSession(session: Session, workspace: string): SerializedDurableSession {
   // Durable events intentionally omit prior input bodies, so they cannot rebuild a reopened transcript.
   // A trailing user entry is the only incomplete canonical turn state and remains non-durable.
   const transcript = (session.transcript.at(-1)?.role === 'user' ? session.transcript.slice(0, -1) : session.transcript).map((entry) => {
@@ -445,7 +523,11 @@ function durableSession(session: Session, workspace: string): DurableSession {
   });
   if (transcript.length > MAX_DURABLE_TRANSCRIPT_ENTRIES) invalid('transcript exceeds its bound.');
   if (session.events.length > MAX_DURABLE_EVENTS) invalid('event history exceeds its bound.');
-  return { schemaVersion: DURABLE_SESSION_SCHEMA_VERSION, id: identifier(session.id, 'session ID'), workspace, transcript, events: session.events.map(durableEvent).filter((event): event is ApplicationEvent => event !== undefined) };
+  return {
+    schemaVersion: DURABLE_SESSION_SCHEMA_VERSION, id: identifier(session.id, 'session ID'), workspace, transcript,
+    events: session.events.map(durableEvent).filter((event): event is ApplicationEvent => event !== undefined),
+    ...(session.taskState === undefined ? {} : { taskState: safeTaskState(session.taskState, session.id, workspace) }),
+  };
 }
 
 function parseTranscript(value: unknown): TranscriptEntry[] {
@@ -464,11 +546,19 @@ function parseEvents(value: unknown): ApplicationEvent[] {
 
 function parseDurableSession(value: unknown): DurableSession {
   const item = record(value, 'session');
-  exactKeys(item, ['schemaVersion', 'id', 'workspace', 'transcript', 'events'], 'session');
+  if (item.schemaVersion === 1) {
+    exactKeys(item, ['schemaVersion', 'id', 'workspace', 'transcript', 'events'], 'session');
+    return { schemaVersion: 1, id: identifier(item.id, 'session ID'), workspace: canonicalPath(item.workspace, 'workspace'), transcript: parseTranscript(item.transcript), events: parseEvents(item.events) };
+  }
+  exactKeys(item, ['schemaVersion', 'id', 'workspace', 'transcript', 'events', ...(item.taskState === undefined ? [] : ['taskState'])], 'session');
   if (item.schemaVersion !== DURABLE_SESSION_SCHEMA_VERSION) invalid(`unsupported schema version ${String(item.schemaVersion)}.`);
+  const id = identifier(item.id, 'session ID');
+  const workspace = canonicalPath(item.workspace, 'workspace');
+  const taskState = item.taskState === undefined ? undefined : parseTaskState(item.taskState);
+  if (taskState && (taskState.sessionId !== id || taskState.workspace !== workspace)) invalid('task state belongs to a different session or workspace.');
   return {
-    schemaVersion: DURABLE_SESSION_SCHEMA_VERSION, id: identifier(item.id, 'session ID'), workspace: canonicalPath(item.workspace, 'workspace'),
-    transcript: parseTranscript(item.transcript), events: parseEvents(item.events),
+    schemaVersion: DURABLE_SESSION_SCHEMA_VERSION, id, workspace, transcript: parseTranscript(item.transcript), events: parseEvents(item.events),
+    ...(taskState === undefined ? {} : { taskState }),
   };
 }
 
@@ -559,7 +649,7 @@ export class LocalSessionStore {
       if (Buffer.byteLength(raw, 'utf8') > MAX_DURABLE_SESSION_BYTES) invalid('session exceeds its byte bound.');
       const value = parseDurableSession(JSON.parse(raw));
       if (value.workspace !== expectedWorkspace) invalid('session belongs to a different workspace.');
-      return { id: value.id, workspace: value.workspace, transcript: [...value.transcript], events: [...value.events], interruptions: classifySessionInterruptions(value.events) };
+      return { id: value.id, workspace: value.workspace, transcript: [...value.transcript], events: [...value.events], interruptions: classifySessionInterruptions(value.events), ...(value.taskState === undefined ? {} : { taskState: value.taskState }) };
     } catch (error) {
       durableError(error);
     }
