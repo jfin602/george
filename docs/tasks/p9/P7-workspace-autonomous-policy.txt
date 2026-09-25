@@ -1,0 +1,133 @@
+GEORGE TASK FORMAT: 1
+
+STACK: p9
+TASK: Phase 9 / P7 — Workspace Autonomous filesystem policy
+KIND: implementation
+
+VERSIONING
+
+The assigned project version is `0.9.7`.
+
+- Recommended configuration: `Terra High`.
+- Browser required: no.
+
+GOAL
+
+Implement the application-owned standard versus Workspace Autonomous effective execution policy, including task-permission intersection and exact outside-workspace reject/ask filesystem behavior, while keeping host processes approval-required until P8.
+
+READ FIRST
+
+- REQUIRED: BOOT.md
+- REQUIRED: AGENTS.md
+- REQUIRED: docs/project-overview.md
+- REQUIRED: docs/architecture.md
+- REQUIRED: docs/planning/p9-structured-task-execution/decision-record.md
+- REQUIRED: docs/planning/p9-structured-task-execution/task-format-v1.md
+- REQUIRED: docs/planning/p9-structured-task-execution/qualification-plan.md
+- REQUIRED: docs/tasks/p9/implementation-plan.md
+- REQUIRED: docs/stability-contract.md
+
+INSPECT
+
+- ToolEffect/ToolExecutionMetadata and approval request policy
+- workspace resolvers and mutation/read executors
+- AgentLoopApplicationService approvalRequest/executeTool path
+- Task PERMISSIONS parser/state
+- configuration/env conventions and TUI access-status projection
+- filesystem/tool/adversarial tests
+
+REQUIREMENTS
+
+- R1: Add a typed user-configurable execution policy with at least standard and workspace-autonomous modes plus outside-workspace filesystem policy exactly reject or ask.
+- R2: Compute the effective task execution policy as the intersection of configured user authority and Task Prompt PERMISSIONS; task/repository/model/plugin/remote text can only narrow, never raise, the configured ceiling.
+- R3: Standard mode preserves current approval behavior and current workspace-only filesystem semantics.
+- R4: Workspace Autonomous may auto-permit qualified workspace-native read/write/patch operations while retaining schema validation, preconditions, budgets, recovery intents, Git dirty-state protection, cancellation, and durable evidence.
+- R5: Do not weaken resolveWorkspacePath/resolveWorkspaceMutationPath or change the canonical workspace root.
+- R6: Detect outside native filesystem path intent before normal workspace dispatch and handle it through a separate bounded outside capability path.
+- R7: Outside reject denies without approval or execution.
+- R8: Outside ask emits one resource/action-specific approval; allow-once grants only the exact canonical file/root and operation for that call and cannot become a remembered host grant.
+- R9: Outside capability resolution must conservatively reject ambiguous symlink/traversal/NUL/non-regular mutation targets and preserve bounded read/list/search/write/patch semantics; Git tools remain workspace-scoped.
+- R10: Network, remote mutation, browser interaction, credentials/environment exposure, and external adapters remain separate policy dimensions and retain Phase 6 authority.
+- R11: Host run_process remains the existing non-sandboxed approval-required path in P7 even under workspace-autonomous mode.
+- R12: Expose bounded effective-policy evidence to Task/TUI projections without secrets or raw policy internals.
+- R13: Set package version to 0.9.7 and add adversarial policy/outside-path regression coverage.
+
+INVARIANTS
+
+- I1: No task text can grant a new filesystem/process/network capability.
+- I2: An outside allow-once decision never modifies workspace-native resolvers.
+- I3: Existing host processes are never auto-approved in P7.
+- I4: Pre-existing user Git work remains preserved.
+- I5: No package-lock.json is created.
+
+WORKFLOW
+
+W1 — Add configured/effective execution policy
+Covers: R1, R2, R3, R10, R12
+Depends on: none
+
+W2 — Integrate autonomous workspace-native approval policy
+Covers: R4, R11
+Depends on: W1
+
+W3 — Implement separate outside reject/ask capability path
+Covers: R5, R6, R7, R8, R9
+Depends on: W1, W2
+
+W4 — Adversarial regression/version boundary
+Covers: R13
+Depends on: W1, W2, W3
+
+VALIDATION
+
+V1 — Execution policy/application tests
+Covers: R1, R2, R3, R4, R10, R11, R12, R13
+Run: node --test test/unit/application/one-turn.test.ts test/unit/application/structured-task.test.ts test/unit/core/*.test.ts
+
+V2 — Filesystem tool adversarial tests
+Covers: R5, R6, R7, R8, R9, R13
+Run: node --test test/unit/tools/read-only.test.ts test/unit/tools/mutation.test.ts test/unit/core/workspace.test.ts
+
+V3 — Phase 2/5 approval-recovery regression
+Covers: R3, R4, R8, R11
+Run: node --test test/integration/agent-loop.test.ts test/unit/application/recovery.test.ts test/integration/phase5-qualification.test.ts
+
+V4 — TypeScript
+Covers: R1, R2, R6, R12
+Run: npm run typecheck
+
+V5 — Runner regression
+Covers: R13
+Run: npm run test:runner
+
+V6 — Diff hygiene
+Covers: R13
+Run: git diff --check
+
+STOP CONDITIONS
+
+- S1: Return Planning needed if outside ask can only be implemented by weakening the canonical workspace resolver.
+- S2: Do not auto-run host processes or implement bwrap in P7.
+- S3: Do not give network/remote/browser authority as a side effect of filesystem autonomy.
+- S4: Do not claim completion while policy/adversarial/inherited/typecheck/runner/diff validation is failing.
+
+DELIVERABLES
+
+- D1: Typed configured/effective execution policy.
+- D2: Workspace Autonomous native-filesystem behavior.
+- D3: Separate outside reject/ask allow-once path.
+- D4: Permanent adversarial regression coverage.
+- D5: package.json at 0.9.7.
+
+NON-GOALS
+
+- OS process containment.
+- Remembered broad outside grants.
+- Destructive filesystem tools.
+- Full-machine autonomy.
+- Network auto-approval.
+
+EVIDENCE
+
+- Tests must prove outside allow-once scope is exact and non-sticky.
+- Verify no root package-lock.json.
