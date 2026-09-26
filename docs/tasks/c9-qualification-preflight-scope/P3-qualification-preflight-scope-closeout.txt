@@ -1,0 +1,150 @@
+TASK: Correction 9 / P3 — Qualification preflight scope closeout
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Sol Medium`.
+- Browser required: no.
+
+VERSIONING
+- Required unchanged project version: `0.9.10`.
+
+GOAL
+
+Perform an evidence-only closeout of `c9-qualification-preflight-scope`.
+
+Determine whether the qualification-policy defect is corrected and whether Phase 9 is ready for separate owner closeout.
+
+Read:
+- `BOOT.md`;
+- current roadmap/workflow/stability/Phase 9 authority;
+- `docs/planning/c9-qualification-preflight-scope/{decision-record,qualification-plan}.md`;
+- `docs/tasks/c9-qualification-preflight-scope/{prompt-assessment,implementation-plan,P1-preflight-evidence,P2-live-evidence}.md`;
+- committed `evidence/**`;
+- mutation-precondition and greenfield-alignment closeouts;
+- exact qualification helper/tests;
+- unchanged v1/v2 instrument metadata/digests.
+
+Do not repair implementation or rerun official live gates in P3.
+
+AUDIT — POLICY GUARD
+
+Verify:
+- hard preflight, aggregate broad state, broad regression delta, and eligibility are separate explicit states;
+- unchanged baseline failures can produce delta Green without aggregate Green;
+- new/worsened failures block;
+- missing baseline evidence becomes Evidence Gap/ineligible;
+- hard Not Green always blocks;
+- deterministic tests permanently cover the defect.
+
+AUDIT — CONTROLLED BROAD COMPARISON
+
+Verify:
+- exact baseline `d7e565ccb0e694166e6fe4346b56f4746f0697f1`;
+- exact production candidate `04405570b92680e6297b48391a7d0bdf0aa8ed5e`;
+- equivalent runtime/dependency/command/non-TTY conditions;
+- exact failed/skipped identities;
+- bounded failure categories/signatures;
+- counts were not used as sole equivalence evidence;
+- aggregate and delta states are reported separately.
+
+AUDIT — CURRENT PRE-GATE
+
+Report:
+- hard current-candidate state;
+- aggregate current broad state;
+- broad regression delta;
+- live eligibility.
+
+Do not relabel retained OpenTUI/native evidence.
+
+AUDIT — LIVE GATES
+
+Fresh Gate A:
+- Green / Not Green / Not Run;
+- exact edit/V1/TaskState/hidden acceptance/calls/rounds/intervention/exhaustion.
+
+B2:
+- Green / Not Green / Not Run;
+- P1/P2/P3;
+- validations;
+- StackState;
+- hidden acceptance;
+- intervention/exhaustion.
+
+C2:
+- Green / Not Green / Not Run;
+- baseline preservation;
+- focused/broad validation;
+- TaskState;
+- hidden acceptance;
+- intervention/exhaustion.
+
+AUDIT — EVIDENCE
+
+Verify:
+- bounded comparison/current-delta JSON hashes match;
+- every reached live gate has committed sanitized attempt/trace evidence;
+- no raw provider stream, write/patch body, secret/environment, workspace copy, dependency tree, or unbounded log was committed;
+- historical evidence remains unchanged.
+
+CREATE
+
+`docs/tasks/c9-qualification-preflight-scope/closeout.md`
+
+Decision table must include:
+
+- Qualification Policy Guard Qualified;
+- Controlled Broad Baseline Comparison Qualified;
+- Hard Preflight Qualified;
+- Aggregate Broad Suite State;
+- Broad Regression Delta;
+- Live Eligibility;
+- Fresh Gate A Qualified;
+- Gate B2 Greenfield Qualified;
+- Gate C2 Existing-App Qualified;
+- Evidence Auditability Qualified;
+- Historical Evidence Preserved;
+- Overall c9-qualification-preflight-scope Qualified;
+- Phase 9 Ready For Owner Closeout.
+
+PHASE 9 OWNER-CLOSEOUT RULE
+
+Yes only if:
+- policy guard Green;
+- controlled broad comparison sufficient;
+- hard preflight Green;
+- broad regression delta Green;
+- fresh Gate A Green;
+- B2 Green;
+- C2 Green;
+- no new blocking regression.
+
+Aggregate broad suite may remain Not Green and must remain labeled Not Green.
+
+If Phase 9 Ready = Yes, state:
+
+next action: `/closeout phase 9`
+
+Do not owner-close Phase 9 in this prompt.
+
+VALIDATION
+
+Re-run/verify:
+- preflight classifier tests;
+- qualification/live-work tests;
+- mutation-precondition/inherited c9 affected floor;
+- Phase 9 integration;
+- v1/v2 immutability;
+- typecheck;
+- runner;
+- current broad `npm test` characterization;
+- `git diff --check`.
+
+Verify package `0.9.10`, no root lockfile, and P3 made no production/fixture repair.
+
+Do not:
+- rerun Gate A/B2/C2;
+- repair TUI or production;
+- edit instruments;
+- rewrite historical evidence;
+- owner-close Phase 9;
+- open Phase 10.
