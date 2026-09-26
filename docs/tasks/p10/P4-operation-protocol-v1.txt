@@ -1,0 +1,118 @@
+GEORGE TASK FORMAT: 1
+
+STACK: p10
+TASK: Phase 10 / P4 — George Operation Protocol v1 and machine-mode internal rounds
+KIND: implementation
+
+VERSIONING
+
+The assigned project version is `0.10.4`.
+
+- Recommended configuration: `Sol High`.
+- Browser required: no.
+
+GOAL
+
+Separate operator-facing Human mode from internal Operation mode so structured agent rounds use typed machine protocol instead of routine natural-language narration, while preserving George-owned task, permission, validation, recovery, and side-effect authority.
+
+READ FIRST
+
+- REQUIRED: BOOT.md
+- REQUIRED: docs/planning/p10-agent-loop-throughput/decision-record.md
+- REQUIRED: docs/planning/p10-agent-loop-throughput/qualification-plan.md
+- REQUIRED: docs/planning/p10-agent-loop-throughput/optimization-metrics.md
+- REQUIRED: docs/tasks/p10/optimization-ledger.md
+- REQUIRED: docs/tasks/p10/P1-baseline.md
+
+INSPECT
+
+- provider request/tool-choice contracts
+- assistant response buffering/commit semantics
+- structured implementation/correction calls into AgentLoopApplicationService
+- ToolRegistry validation/execution boundary
+- TaskState/work-unit/validation transitions
+- TUI/work/progress event projection
+- benchmark/live-work text/tool metrics
+
+REQUIREMENTS
+
+- R1: Add an explicit provider/application Human mode versus Operation mode contract.
+- R2: Human mode preserves ordinary operator-facing conversational behavior.
+- R3: Operation mode is used for internal structured implementation/correction and emits typed executable tool calls and bounded George application-control output instead of routine narration.
+- R4: Add George Operation Protocol v1 with a minimal non-executable `handoff` control; a later control surface is out of scope unless required by evidence.
+- R5: George control must not be registered in ToolRegistry, grant permissions, execute effects, mark validation Green, or complete TaskState by model assertion.
+- R6: A valid completed handoff returns authority only to the structured orchestrator; malformed/unknown/mixed-invalid controls fail closed.
+- R7: Tool/control proposals from incomplete provider responses remain provisional and are never executed/accepted before `provider.response.completed`.
+- R8: Do not require handoff when George can deterministically advance after a completed tool result; avoid turning the control itself into another mandatory round.
+- R9: Internal Operation-mode natural-language text is bounded/ignored according to explicit fail-closed protocol semantics and is not committed as an operator-facing assistant response.
+- R10: Add deterministic TUI/work projections for operation progress using George events rather than model narration.
+- R11: Record Human/Operation rounds, George controls, and internal text amount in Phase 10 metrics without persisting raw internal prose.
+- R12: Run the full fast live matrix once after implementation because P4 materially changes structured provider behavior; do not run B2/C2.
+- R13: Compare against the accepted P3 baseline and append `accept | revise | revert` disposition to the optimization ledger.
+- R14: Set package version to 0.10.4 and add permanent protocol/authority regressions.
+
+INVARIANTS
+
+- I1: Model-provided machine output cannot raise executable authority.
+- I2: Response completion remains the side-effect/control acceptance boundary.
+- I3: George remains sole owner of TaskState/StackState/validation/completion.
+- I4: Ordinary Human-mode final answers remain usable and stream/persist normally.
+- I5: No B2/C2 run.
+- I6: No root package-lock.json.
+
+WORKFLOW
+
+W1 — Define Operation Protocol v1 contracts
+Covers: R1, R3, R4, R5, R6
+Depends on: none
+
+W2 — Integrate internal structured rounds
+Covers: R2, R7, R8, R9, R10, R11
+Depends on: W1
+
+W3 — Fast live comparison and disposition
+Covers: R12, R13, R14
+Depends on: W1, W2
+
+VALIDATION
+
+V1 — Operation protocol/agent-loop tests
+Covers: R1, R2, R3, R4, R5, R6, R7, R8, R9, R14
+Run: DISCOVER
+Scope: provider, agent-loop, structured-task, response-buffering and George-control tests affected by P4
+
+V2 — TUI/progress tests
+Covers: R10
+Run: DISCOVER
+Scope: work/progress/TUI projections affected by Operation mode
+
+V3 — TypeScript
+Covers: R1, R3, R10
+Run: npm run typecheck
+
+V4 — Runner regression
+Covers: R14
+Run: npm run test:runner
+
+V5 — Diff hygiene
+Covers: R14
+Run: git diff --check
+
+STOP CONDITIONS
+
+- S1: Do not hide a required operator-facing response behind Operation mode.
+- S2: Do not accept model text as task/validation/completion authority.
+- S3: Revert if fast efficacy or Phase 5/9 replay/permission floors regress.
+- S4: Do not run B2/C2.
+- S5: Do not claim completion while required validation fails.
+
+DELIVERABLES
+
+- D1: Human/Operation mode and George Operation Protocol v1 or documented reverted experiment.
+- D2: Permanent protocol/authority regressions.
+- D3: P4 fast live/benchmark comparison and optimization-ledger disposition.
+- D4: package.json at 0.10.4.
+
+EVIDENCE
+
+Record fast matrix results, provider rounds, internal text amount, George controls, tool calls, hidden acceptance, validation states, and exact disposition.

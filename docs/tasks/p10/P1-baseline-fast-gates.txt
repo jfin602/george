@@ -1,0 +1,124 @@
+GEORGE TASK FORMAT: 1
+
+STACK: p10
+TASK: Phase 10 / P1 — Baseline telemetry and fast live efficacy gates
+KIND: implementation
+
+VERSIONING
+
+The assigned project version is `0.10.1`.
+
+- Recommended configuration: `Sol High`.
+- Browser required: no.
+
+GOAL
+
+Establish the measurable Phase 10 baseline before production loop optimization: extend comparable benchmark/live telemetry, create compact pure-Node B3/C3 live instruments, freeze their identity, and record one baseline without rerunning Phase 9 B2/C2.
+
+READ FIRST
+
+- REQUIRED: BOOT.md
+- REQUIRED: AGENTS.md
+- REQUIRED: docs/workflow.md
+- REQUIRED: docs/stability-contract.md
+- REQUIRED: docs/phase-9-owner-closeout.md
+- REQUIRED: docs/planning/p10-agent-loop-throughput/decision-record.md
+- REQUIRED: docs/planning/p10-agent-loop-throughput/qualification-plan.md
+- REQUIRED: docs/planning/p10-agent-loop-throughput/optimization-metrics.md
+- REQUIRED: docs/planning/p10-agent-loop-throughput/fast-live-work.md
+- REQUIRED: docs/tasks/p10/prompt-assessment.md
+- REQUIRED: docs/tasks/p10/implementation-plan.md
+
+INSPECT
+
+- benchmark schema/case/result/report implementation
+- Phase 9 live-work artifact/trace helpers and sweep orchestration
+- Gate A and Phase 9 frozen instrument versioning/hidden acceptance conventions
+- current provider usage/timing events
+- current structured task/stack services and fixture conventions
+
+REQUIREMENTS
+
+- R1: Extend the existing benchmark/live-work measurement substrate with Phase 10-compatible optional fields for cached input tokens when reported, internal provider text bytes or estimated tokens, tool batch count/width, concurrent-read batch count/timing, model rounds avoided, George controls, Human/Operation mode round counts, and correction cycles.
+- R2: New metric fields that are not yet produced before later prompts must remain explicitly unavailable/zero according to documented semantics; do not fabricate evidence.
+- R3: Preserve compatibility with historical benchmark/live-work artifacts or increment/version schema explicitly where compatibility cannot be maintained.
+- R4: Add B3 `greenfield-core-v1`: a pure-Node compact structured task stack with multiple ordered tasks, one meaningful cross-task dependency, workspace mutation, literal George-owned validation, hidden acceptance, no network/dependency install, and zero human coding intervention.
+- R5: Add C3 `existing-core-edit-v1`: a tiny pure-Node existing-repository fixture requiring INSPECT, preservation of baseline behavior, one focused feature mutation, focused validation, broad validation, TaskState completion, hidden acceptance, no network/dependency install, and zero human coding intervention.
+- R6: Freeze B3/C3 instrument metadata, task/fixture digests, and independently versioned hidden acceptance before their first official live attempt; once exercised, structural changes require a new version.
+- R7: Add/extend qualification helpers so the routine Phase 10 fast live matrix is `greeting -> three-file -> Gate A -> B3 -> C3` with fresh isolated workspaces/sessions and existing complete-diagnostic-sweep behavior after common hard gates.
+- R8: Create `docs/tasks/p10/optimization-ledger.md` and `docs/tasks/p10/P1-baseline.md` recording the exact Phase 10 baseline candidate, runtime/model provenance, benchmark artifacts, fast live results, and metric availability.
+- R9: Capture one quick benchmark baseline and one full benchmark baseline when the supported LM Studio/Qwen runtime is available; if unavailable, retain deterministic instrumentation Green plus explicit live Evidence Gap without weakening acceptance.
+- R10: Run the fast live matrix exactly once when common runtime gates are valid; do not run B2 or C2 in P1.
+- R11: Preserve Phase 9 production loop semantics in P1 except strictly necessary observability/instrument plumbing.
+- R12: Set package version to 0.10.1 and add permanent instrument/schema/metric regressions.
+
+INVARIANTS
+
+- I1: Historical Phase 9 B2/C2 fixtures, acceptance, and evidence are immutable.
+- I2: B3/C3 test George agent efficacy, not Express/domain proficiency; no network or package installation is allowed.
+- I3: Hidden acceptance remains outside model-visible workspaces.
+- I4: Metrics cannot become execution authority.
+- I5: P1 does not implement Operation mode, stable-prefix changes, concurrency, model-round elimination, or helper inference.
+- I6: No root package-lock.json is created.
+
+WORKFLOW
+
+W1 — Extend comparable telemetry
+Covers: R1, R2, R3
+Depends on: none
+
+W2 — Create and freeze B3/C3
+Covers: R4, R5, R6, R7
+Depends on: W1
+
+W3 — Capture Phase 10 baseline
+Covers: R8, R9, R10
+Depends on: W1, W2
+
+W4 — Regression and version boundary
+Covers: R11, R12
+Depends on: W1, W2, W3
+
+VALIDATION
+
+V1 — Benchmark/live-work focused tests
+Covers: R1, R2, R3, R7, R12
+Run: DISCOVER
+Scope: benchmark, live-work, sweep, artifact schema and metric regression tests affected by P1
+
+V2 — B3/C3 instrument identity and hidden acceptance
+Covers: R4, R5, R6
+Run: DISCOVER
+Scope: Phase 10 live-work fixture identity, runner selection and hidden acceptance tests created by P1
+
+V3 — TypeScript
+Covers: R1, R7, R12
+Run: npm run typecheck
+
+V4 — Runner regression
+Covers: R12
+Run: npm run test:runner
+
+V5 — Diff hygiene
+Covers: R12
+Run: git diff --check
+
+STOP CONDITIONS
+
+- S1: Do not change production provider/tool orchestration to make B3/C3 pass in P1.
+- S2: If LM Studio is unavailable, record Evidence Gap rather than substituting mock live evidence.
+- S3: Do not run B2/C2.
+- S4: Do not claim a cache/internal-text/concurrency metric when its producer does not yet exist.
+- S5: Do not claim completion while focused tests, typecheck, runner tests, or diff check fail.
+
+DELIVERABLES
+
+- D1: Phase 10 telemetry extensions.
+- D2: Frozen B3 and C3 instruments plus hidden acceptance.
+- D3: docs/tasks/p10/optimization-ledger.md.
+- D4: docs/tasks/p10/P1-baseline.md.
+- D5: package.json at 0.10.1.
+
+EVIDENCE
+
+Record exact benchmark artifact paths, fast live attempt artifacts, fixture/acceptance hashes, runtime/model settings, test counts, metric availability, and root package-lock absence.

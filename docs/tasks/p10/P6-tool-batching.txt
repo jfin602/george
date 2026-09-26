@@ -1,0 +1,116 @@
+GEORGE TASK FORMAT: 1
+
+STACK: p10
+TASK: Phase 10 / P6 — Multi-tool batching and deterministic result continuation
+KIND: implementation
+
+VERSIONING
+
+The assigned project version is `0.10.6`.
+
+- Recommended configuration: `Sol High`.
+- Browser required: no.
+
+GOAL
+
+Turn multiple tool calls proposed in one completed provider response into an explicit validated batch and return their normalized results in one continuation, while keeping execution sequential in P6 so batching correctness is isolated from concurrency.
+
+READ FIRST
+
+- REQUIRED: BOOT.md
+- REQUIRED: docs/planning/p10-agent-loop-throughput/decision-record.md
+- REQUIRED: docs/planning/p10-agent-loop-throughput/qualification-plan.md
+- REQUIRED: docs/tasks/p10/optimization-ledger.md
+- REQUIRED: docs/stability-contract.md
+
+INSPECT
+
+- AgentLoopApplicationService `calls[]` collection and sequential execution loop
+- ToolRegistry validation/effect/replay metadata
+- duplicate/no-progress accounting
+- RunBudget tool execution accounting
+- provider result projection/continuation construction
+- benchmark independent-multi-tool-001 and structured-tool-use-001
+- work/progress event ordering
+
+REQUIREMENTS
+
+- R1: Introduce an application-owned tool-batch representation for all calls from one completed provider response.
+- R2: Validate every batch member independently through canonical ToolRegistry schema/effect/policy paths before execution.
+- R3: Preserve original provider call order as the canonical result/projection order.
+- R4: Execute P6 batch members sequentially; P6 must not introduce concurrency.
+- R5: Mixed success/failure within a batch remains explicit per call and must not fabricate batch-wide success.
+- R6: Duplicate/no-progress, tool/stage/run budgets, permission/approval, cancellation, mutation epochs, ambiguous effects, and recovery semantics remain per-call authoritative.
+- R7: Mutations/process/external-effect calls remain valid batch members only under their existing sequential semantics; batching does not weaken ordering.
+- R8: Send all completed batch results back in one provider continuation rather than creating avoidable model boundaries between independently proposed calls.
+- R9: Add Phase 10 metrics for tool batches, batch width, provider tool-selection rounds, and batch compression without changing historical metric meaning.
+- R10: Add permanent deterministic tests for all-success, mixed success, malformed call, duplicate read, mutation then dependent call, cancellation, and budget exhaustion inside a sequential batch.
+- R11: Run `independent-multi-tool-001` and relevant structured-tool/fast efficacy comparisons against the accepted P5 baseline.
+- R12: Append `accept | revise | revert` disposition to the optimization ledger; revert production behavior if batching regresses correctness or increases unnecessary provider rounds.
+- R13: Set package version to 0.10.6.
+
+INVARIANTS
+
+- I1: P6 adds no parallel execution.
+- I2: Every tool call retains unique canonical lifecycle/effect identity.
+- I3: Provider-visible result order is deterministic and follows original call order.
+- I4: A batch is not a new permission or transaction boundary.
+- I5: No B2/C2 run.
+- I6: No root package-lock.json.
+
+WORKFLOW
+
+W1 — Define/validate sequential tool batches
+Covers: R1, R2, R3, R4, R5, R6, R7
+Depends on: none
+
+W2 — Integrate one-continuation result batching
+Covers: R8, R9
+Depends on: W1
+
+W3 — Regression and measurement
+Covers: R10, R11, R12, R13
+Depends on: W1, W2
+
+VALIDATION
+
+V1 — Agent-loop batching tests
+Covers: R1, R2, R3, R4, R5, R6, R7, R8, R10
+Run: DISCOVER
+Scope: agent-loop/tool registry/budget/recovery tests for multiple tool calls in one provider response
+
+V2 — Benchmark focused cases
+Covers: R9, R11
+Run: DISCOVER
+Scope: benchmark harness tests covering structured-tool-use and independent-multi-tool metrics/comparison
+
+V3 — TypeScript
+Covers: R1, R9
+Run: npm run typecheck
+
+V4 — Runner regression
+Covers: R13
+Run: npm run test:runner
+
+V5 — Diff hygiene
+Covers: R13
+Run: git diff --check
+
+STOP CONDITIONS
+
+- S1: Do not introduce Promise.all/concurrency in P6.
+- S2: Do not treat a batch as atomic or hide member failures.
+- S3: Revert if provider result ordering, budgets, permissions, or efficacy regress.
+- S4: Do not run B2/C2.
+- S5: Do not claim completion while required validation fails.
+
+DELIVERABLES
+
+- D1: Sequential multi-tool batch abstraction and one-continuation result projection or documented reverted experiment.
+- D2: Permanent batch correctness tests.
+- D3: P6 benchmark/live comparison and optimization-ledger disposition.
+- D4: package.json at 0.10.6.
+
+EVIDENCE
+
+Record batch widths, provider tool-selection rounds, provider rounds, tool calls, correctness, and exact disposition.

@@ -1,0 +1,117 @@
+GEORGE TASK FORMAT: 1
+
+STACK: p10
+TASK: Phase 10 / P9 — Per-mode output budgets and residual loop cleanup
+KIND: implementation
+
+VERSIONING
+
+The assigned project version is `0.10.9`.
+
+- Recommended configuration: `Sol High`.
+- Browser required: no.
+
+GOAL
+
+Reduce remaining unnecessary primary-model generation cost after Operation mode, deterministic transitions, batching/concurrency, and focused correction by adding conservative per-mode output policy where supported and removing residual internal narration/round boundaries only when measured correctness is preserved.
+
+READ FIRST
+
+- REQUIRED: BOOT.md
+- REQUIRED: docs/planning/p10-agent-loop-throughput/decision-record.md
+- REQUIRED: docs/planning/p10-agent-loop-throughput/qualification-plan.md
+- REQUIRED: docs/planning/p10-agent-loop-throughput/optimization-metrics.md
+- REQUIRED: docs/tasks/p10/optimization-ledger.md
+- REQUIRED: docs/stability-contract.md
+
+INSPECT
+
+- ProviderRequest/LM Studio Responses output-limit support and tests
+- Human/Operation mode request construction
+- Operation Protocol v1 tool/control payload sizes
+- remaining provider.text.delta generation in internal structured rounds
+- benchmark actual output-token accounting
+- structured inspection/implementation/correction/discovery paths
+- any remaining model completion/handoff rounds after P5/P8
+
+REQUIREMENTS
+
+- R1: Add a provider-independent optional output/generation policy by request/round mode only where the adapter can represent it explicitly.
+- R2: Initial Operation-mode ceilings must be conservative and leave sufficient room for valid function-call/application-control payloads; do not blindly cap by prose-token estimates.
+- R3: Human-mode final responses retain normal existing output behavior unless a user/task explicitly requests a bound.
+- R4: Validation discovery/deep planning modes retain enough output capacity for their structured payload and are not forced into the smallest Operation ceiling without evidence.
+- R5: Unsupported provider output policy degrades explicitly to inherited behavior; it must not silently truncate or fail requests.
+- R6: Audit remaining internal natural-language generation and model rounds. Remove or suppress only narration/rounds that have no operator/task/recovery value.
+- R7: Preserve response-completion-before-effect, provisional-branch discard, tool/control schema validity, TaskState/validation authority, and cancellation/retry/rebase semantics.
+- R8: Add/extend metrics for requested output policy, actual output tokens, internal text amount, tool/control payload completion, and any rounds removed.
+- R9: Add permanent tests for small valid tool/control payloads, large bounded function arguments, unsupported adapter fallback, Human mode, correction mode, and truncation/error handling.
+- R10: Run quick benchmark plus the complete fast live matrix once against the accepted P8 baseline.
+- R11: Retain each output ceiling/cleanup only if correctness is Green and measured output-token/provider-time/round benefit exists. Otherwise revise or revert it while preserving evidence.
+- R12: Append P9 `accept | revise | revert` disposition to optimization-ledger.md.
+- R13: Set package version to 0.10.9.
+
+INVARIANTS
+
+- I1: Function/tool/control arguments cannot be silently truncated to satisfy prose limits.
+- I2: Faster output cannot replace semantic reasoning required for the task.
+- I3: Human-facing answer quality/streaming remains intact.
+- I4: Provider-specific output-limit details stay behind the adapter.
+- I5: No B2/C2 run.
+- I6: No root package-lock.json.
+
+WORKFLOW
+
+W1 — Add safe per-mode output policy
+Covers: R1, R2, R3, R4, R5, R8
+Depends on: none
+
+W2 — Remove residual unnecessary internal output/rounds
+Covers: R6, R7
+Depends on: W1
+
+W3 — Prove payload safety and measure
+Covers: R9, R10, R11, R12, R13
+Depends on: W1, W2
+
+VALIDATION
+
+V1 — Provider/output-policy tests
+Covers: R1, R2, R3, R4, R5, R7, R9
+Run: DISCOVER
+Scope: provider contract, LM Studio adapter, Operation Protocol and agent-loop tests affected by P9 output policy
+
+V2 — Structured/fast efficacy regressions
+Covers: R6, R7, R10
+Run: DISCOVER
+Scope: structured task/correction, benchmark quick and Phase 10 fast live gate helpers affected by P9
+
+V3 — TypeScript
+Covers: R1, R8
+Run: npm run typecheck
+
+V4 — Runner regression
+Covers: R13
+Run: npm run test:runner
+
+V5 — Diff hygiene
+Covers: R13
+Run: git diff --check
+
+STOP CONDITIONS
+
+- S1: Revert any limit that truncates/invalidates legitimate tool/control payloads or lowers task efficacy.
+- S2: Do not invent provider support for output limits.
+- S3: Do not reduce Human-mode output merely for benchmark scores.
+- S4: Do not run B2/C2.
+- S5: Do not claim completion while required validation fails.
+
+DELIVERABLES
+
+- D1: Accepted per-mode output policy/residual cleanup or documented reverted experiment.
+- D2: Permanent output/payload regressions.
+- D3: P9 quick/fast-live comparison and optimization-ledger disposition.
+- D4: package.json at 0.10.9.
+
+EVIDENCE
+
+Record requested/actual output tokens, internal text, provider rounds/active time, fast live efficacy, payload failures if any, and exact disposition.

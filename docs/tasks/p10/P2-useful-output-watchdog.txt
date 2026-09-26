@@ -1,0 +1,116 @@
+GEORGE TASK FORMAT: 1
+
+STACK: p10
+TASK: Phase 10 / P2 — Useful-output watchdog and provider attempt timing
+KIND: implementation
+
+VERSIONING
+
+The assigned project version is `0.10.2`.
+
+- Recommended configuration: `Sol High`.
+- Browser required: no.
+
+GOAL
+
+Repair provider liveness/timing semantics so response acceptance and local prompt prefill are distinct from useful generation, while preserving the finite Phase 9 replay/rebase safety ladder and adding measured attempt timing.
+
+READ FIRST
+
+- REQUIRED: BOOT.md
+- REQUIRED: docs/planning/p10-agent-loop-throughput/decision-record.md
+- REQUIRED: docs/planning/p10-agent-loop-throughput/qualification-plan.md
+- REQUIRED: docs/tasks/p10/P1-baseline.md
+- REQUIRED: docs/tasks/p10/optimization-ledger.md
+- REQUIRED: docs/planning/c9-gen-op/decision-record.md
+- REQUIRED: docs/tasks/c9-provider-stall-recovery/closeout.md
+- REQUIRED: docs/stability-contract.md
+
+INSPECT
+
+- provider-stall policy/watchdog
+- AgentLoopApplicationService provider event loop and retry/rebase state
+- LM Studio SSE normalization/activity callback
+- provider/core event and usage/timing types
+- benchmark/live-work attempt timing derivation
+- permanent stall/recovery tests
+
+REQUIREMENTS
+
+- R1: Distinguish provider response acceptance/prefill from useful model output in a provider-independent application contract.
+- R2: `provider.response.started` or equivalent response creation establishes identity/acceptance only and must not by itself switch the attempt to the shorter active-output inactivity threshold.
+- R3: First-useful-output timing continues through accepted prefill; text generation and function/application-control generation progress count as useful output.
+- R4: Once useful output begins, the existing active-output inactivity protection remains effective.
+- R5: Preserve the unchanged absolute provider timeout as the final ceiling and preserve caller cancellation authority.
+- R6: Preserve replay-safe retry eligibility, provisional response discard, at most one stall fresh retry, at most one structured canonical rebase, pressure-gated one-shot compaction, and truthful terminal provider failure.
+- R7: Refine the LM Studio activity seam only as needed to report bounded payload-free activity classes; provider adapter must not own recovery policy or expose raw SSE payloads.
+- R8: Add attempt timing evidence where observable: request/attempt start, response acceptance, first useful output, completion/provider-active duration; do not invent GPU/prefill timing unavailable through the wire.
+- R9: Add fake-time devlog-shaped regression proving accepted prefill can remain alive beyond 60000 ms without useful output and still complete before the first-useful-output/absolute ceilings.
+- R10: Run one focused comparable benchmark/live case sufficient to measure this optimization; do not run the full B3/C3 matrix unless needed to resolve a correctness regression.
+- R11: Append P2 baseline/candidate metrics and `accept | revise | revert` disposition to optimization-ledger.md. If the change does not preserve correctness, revert production behavior before completing P2 while retaining tests/evidence.
+- R12: Set package version to 0.10.2.
+
+INVARIANTS
+
+- I1: Response completion remains required before executing proposed tool/control effects.
+- I2: Incomplete response text/tool proposals remain non-canonical and unexecuted.
+- I3: Timeouts are not inflated merely to obtain Green.
+- I4: LM Studio developer logs are diagnostic evidence, not runtime authority.
+- I5: No root package-lock.json is created.
+
+WORKFLOW
+
+W1 — Refine provider activity/timing contract
+Covers: R1, R2, R3, R7, R8
+Depends on: none
+
+W2 — Preserve/retest recovery ladder
+Covers: R4, R5, R6, R9
+Depends on: W1
+
+W3 — Measure and disposition
+Covers: R10, R11, R12
+Depends on: W1, W2
+
+VALIDATION
+
+V1 — Provider stall/recovery unit coverage
+Covers: R1, R2, R3, R4, R5, R6, R7, R9
+Run: DISCOVER
+Scope: provider stall, LM Studio provider, agent-loop retry/rebase/cancellation tests affected by P2
+
+V2 — Phase 5/9 recovery integration
+Covers: R5, R6
+Run: DISCOVER
+Scope: inherited recovery, Phase 5 qualification and Phase 9 structured provider failure tests affected by P2
+
+V3 — TypeScript
+Covers: R1, R7, R8
+Run: npm run typecheck
+
+V4 — Runner regression
+Covers: R12
+Run: npm run test:runner
+
+V5 — Diff hygiene
+Covers: R12
+Run: git diff --check
+
+STOP CONDITIONS
+
+- S1: Do not weaken retry/effect safety for latency.
+- S2: Do not use raw LM Studio server progress logs as canonical application liveness.
+- S3: Revert the optimization if focused correctness/recovery becomes Not Green and a bounded revision cannot resolve it inside P2.
+- S4: Do not run B2/C2.
+- S5: Do not claim completion while required validation fails.
+
+DELIVERABLES
+
+- D1: Useful-output-aware provider watchdog/timing implementation or documented reverted experiment.
+- D2: Permanent false-prefill-stall regressions.
+- D3: P2 optimization-ledger disposition.
+- D4: package.json at 0.10.2.
+
+EVIDENCE
+
+Record exact before/after provider attempts/rounds/timing for the focused comparison and all regression results.

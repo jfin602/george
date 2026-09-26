@@ -1,0 +1,124 @@
+GEORGE TASK FORMAT: 1
+
+STACK: p10
+TASK: Phase 10 / P10 — Primary-only optimization consolidation and milestone qualification
+KIND: qualification
+
+VERSIONING
+
+The assigned project version is `0.10.10`.
+
+- Recommended configuration: `Sol Medium`.
+- Browser required: no.
+
+GOAL
+
+Freeze and qualify the accepted single-primary-model Phase 10 candidate, record cumulative deltas from the P1 baseline, run the fast live gate, then exercise frozen Phase 9 B2/C2 exactly once each as milestone longitudinal evidence.
+
+READ FIRST
+
+- REQUIRED: BOOT.md
+- REQUIRED: docs/phase-9-owner-closeout.md
+- REQUIRED: docs/planning/p10-agent-loop-throughput/decision-record.md
+- REQUIRED: docs/planning/p10-agent-loop-throughput/qualification-plan.md
+- REQUIRED: docs/planning/p10-agent-loop-throughput/optimization-metrics.md
+- REQUIRED: docs/tasks/p10/P1-baseline.md
+- REQUIRED: docs/tasks/p10/optimization-ledger.md
+- REQUIRED: docs/stability-contract.md
+- REQUIRED: docs/tasks/c9-final-live-convergence/P3-final-qualification-report.md
+- REQUIRED: docs/tasks/c9-final-live-convergence/failure-ledger.json
+
+INSPECT
+
+- exact accepted P1-P9 production state
+- every optimization-ledger disposition
+- benchmark schema/results/comparison support
+- fast live B3/C3 fixture identities and hidden acceptance
+- frozen Phase 9 B2/C2 identities/acceptance
+- current runtime/model/context provenance
+- qualification deadline/cancellation support
+
+REQUIREMENTS
+
+- R1: Verify every P2-P9 optimization has an explicit accepted/revised/reverted disposition and that current production code matches only the accepted/revised baseline.
+- R2: Run focused affected deterministic floors across provider/agent loop/context/structured tasks/recovery/batching/concurrency/correction/Operation mode/output policy plus inherited Phase 5/9 integration.
+- R3: Run `npm run typecheck`, `npm run test:runner`, broad `npm test` exactly once, and `git diff --check`; preserve all unexpected failures as current evidence.
+- R4: Run a new quick benchmark and full benchmark against the accepted primary-only candidate and compare directly to P1 baseline artifacts where compatible.
+- R5: Run a bounded selected `agentic-context` comparison sufficient to characterize inspection, multi-round investigation, and edit-plus-validation behavior without a broad context-band sweep.
+- R6: Run the complete fast live matrix exactly once: greeting, three-file, Gate A, B3, C3, using fresh workspaces/sessions and no repair between workloads.
+- R7: Run frozen B2 exactly once and frozen C2 exactly once after the fast matrix. Do not edit their task/fixture/acceptance definitions and do not repair between B2/C2.
+- R8: Use qualification-owned outer deadlines so milestone runs cannot dominate the phase: B2 maximum 900000 ms and C2 maximum 600000 ms for their complete workload invocation. Deadline expiry is Not Green evidence, not a production RunBudget change.
+- R9: Preserve Phase 9 B2/C2 historical Not Green evidence regardless of current result; a new Green does not rewrite history and a new Not Green does not erase accepted Phase 10 fast/benchmark evidence.
+- R10: Record cumulative Phase 10 primary-only deltas for elapsed/provider-active time, attempts/rounds, input/cached/output tokens where available, internal text, batches/concurrency, rounds avoided, correction cycles, tool calls, validation, task completion and hidden acceptance.
+- R11: Create `docs/tasks/p10/P10-primary-qualification.md` and bounded artifact references for all attempted live/benchmark layers.
+- R12: Do not repair production behavior, retune runtime/context, or rerun failed workloads inside P10.
+- R13: Set package version to 0.10.10.
+
+INVARIANTS
+
+- I1: P10 is qualification-only except package/version/evidence artifacts and strictly qualification-owned deadline plumbing if absent.
+- I2: B2/C2 remain immutable Phase 9 instruments.
+- I3: A failed individual run cannot be hidden by an aggregate/median.
+- I4: Correctness and efficacy outrank performance.
+- I5: No helper model runs in P10.
+- I6: No root package-lock.json.
+
+WORKFLOW
+
+W1 — Audit accepted primary-only candidate
+Covers: R1, R2, R3
+Depends on: none
+
+W2 — Consolidated benchmark and fast live qualification
+Covers: R4, R5, R6, R10
+Depends on: W1
+
+W3 — B2/C2 milestone qualification
+Covers: R7, R8, R9
+Depends on: W1, W2
+
+W4 — Record primary-only qualification truth
+Covers: R11, R12, R13
+Depends on: W1, W2, W3
+
+VALIDATION
+
+V1 — Phase 10 affected deterministic qualification
+Covers: R1, R2, R10
+Run: DISCOVER
+Scope: provider/agent-loop/context/structured/recovery/batching/concurrency/correction/Operation-mode/output-policy tests affected by P1-P9
+
+V2 — TypeScript
+Covers: R2
+Run: npm run typecheck
+
+V3 — Runner regression
+Covers: R13
+Run: npm run test:runner
+
+V4 — Broad suite
+Covers: R3
+Run: npm test
+
+V5 — Diff hygiene
+Covers: R3, R13
+Run: git diff --check
+
+STOP CONDITIONS
+
+- S1: Do not repair/rerun a live workload to fish for Green.
+- S2: Do not change B2/C2 to make them faster; the outer deadline is qualification policy only.
+- S3: Do not hide a regression behind cumulative performance gain.
+- S4: Do not run a helper model.
+- S5: Do not claim completion while required deterministic/typecheck/runner/diff validation is failing.
+
+DELIVERABLES
+
+- D1: docs/tasks/p10/P10-primary-qualification.md.
+- D2: Consolidated benchmark/fast-live/milestone artifact references.
+- D3: Primary-only cumulative delta table.
+- D4: package.json at 0.10.10.
+
+EVIDENCE
+
+Record exact candidate/runtime/model, all test counts, benchmark artifacts/comparisons, fast live artifacts, B2/C2 attempts/deadlines/results, and all remaining Not Green/Evidence Gaps.

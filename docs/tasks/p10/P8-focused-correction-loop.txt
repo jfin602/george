@@ -1,0 +1,117 @@
+GEORGE TASK FORMAT: 1
+
+STACK: p10
+TASK: Phase 10 / P8 — Focused validation correction and direct revalidation
+KIND: implementation
+
+VERSIONING
+
+The assigned project version is `0.10.8`.
+
+- Recommended configuration: `Sol High`.
+- Browser required: no.
+
+GOAL
+
+Make validation correction a minimal repair loop: provide the primary model only the failed validation plus relevant fresh task/evidence state, avoid broad rediscovery by default, then let George rerun the failed validation directly after repair.
+
+READ FIRST
+
+- REQUIRED: BOOT.md
+- REQUIRED: docs/planning/p10-agent-loop-throughput/decision-record.md
+- REQUIRED: docs/planning/p10-agent-loop-throughput/qualification-plan.md
+- REQUIRED: docs/tasks/p10/optimization-ledger.md
+- REQUIRED: docs/phase-9-owner-closeout.md
+- REQUIRED: docs/stability-contract.md
+
+INSPECT
+
+- StructuredTaskApplicationService correction path
+- TaskState correction state transitions
+- mission-card and StructuredTaskSlice failure evidence
+- evidence freshness/invalidation cache
+- validation result projection and bounded stdout/stderr/error handling
+- Operation mode/handoff behavior
+- B3 fixture and deterministic correction test fixture conventions
+
+REQUIREMENTS
+
+- R1: Define a bounded canonical Correction Frame v1 containing only the active repair work unit, failed validation identity/result, applicable requirements/invariants/stops, relevant fresh observations/mutations, and repair completion condition.
+- R2: Bounded validation stdout/stderr/error evidence remains available exactly according to existing redaction/truncation policy; do not expose unrestricted process output.
+- R3: Valid current inspection/mutation evidence is reused during correction rather than re-running broad root/Git/file discovery merely to regain orientation.
+- R4: Stale/invalidated/missing evidence still causes necessary reinspection through normal read tools; optimization must not freeze stale state.
+- R5: Correction provider calls run in Operation mode and are explicitly scoped to repair the observed validation failure only.
+- R6: After a correction repair stage completes, George reruns the failed declared validation directly without asking the model to claim/pass validation.
+- R7: A passing rerun advances correction/task state through existing canonical transitions without an unnecessary model completion round.
+- R8: A failing rerun remains durable and obeys existing correction-cycle limits; later passing evidence never erases the earlier failure.
+- R9: Add metrics for correction frame size, correction provider rounds, reinspection calls, validation reruns, and model rounds avoided.
+- R10: Add a deterministic B3 correction variant that intentionally produces a bounded validation failure then proves the repair/revalidate path; do not mutate the frozen B3 happy-path instrument after exercise.
+- R11: Run the correction variant plus relevant fast B3/C3 comparison against accepted P7 baseline; do not run B2/C2.
+- R12: Append `accept | revise | revert` disposition and revert if focused correction loses required context or efficacy.
+- R13: Set package version to 0.10.8.
+
+INVARIANTS
+
+- I1: Validation remains George-owned executable evidence.
+- I2: Correction frame is derived context, not durable replacement for TaskState/session truth.
+- I3: Freshness laws remain authoritative.
+- I4: Correction narrowing cannot suppress permission/recovery/stop conditions.
+- I5: No B2/C2 run.
+- I6: No root package-lock.json.
+
+WORKFLOW
+
+W1 — Define bounded Correction Frame v1
+Covers: R1, R2, R3, R4, R5
+Depends on: none
+
+W2 — Direct repair/revalidation transitions
+Covers: R6, R7, R8, R9
+Depends on: W1
+
+W3 — Exercise correction efficacy and disposition
+Covers: R10, R11, R12, R13
+Depends on: W1, W2
+
+VALIDATION
+
+V1 — Structured correction/freshness tests
+Covers: R1, R2, R3, R4, R5, R6, R7, R8, R9
+Run: DISCOVER
+Scope: structured-task correction, validation, evidence freshness, Operation-mode and task-state tests affected by P8
+
+V2 — B3 correction fixture tests
+Covers: R10
+Run: DISCOVER
+Scope: Phase 10 deterministic/live correction variant identity and acceptance tests
+
+V3 — TypeScript
+Covers: R1, R9
+Run: npm run typecheck
+
+V4 — Runner regression
+Covers: R13
+Run: npm run test:runner
+
+V5 — Diff hygiene
+Covers: R13
+Run: git diff --check
+
+STOP CONDITIONS
+
+- S1: Do not remove required context merely to make the correction frame small.
+- S2: If current evidence is stale, reinspection is required.
+- S3: Revert if repair success decreases or failure evidence becomes less actionable.
+- S4: Do not run B2/C2.
+- S5: Do not claim completion while required validation fails.
+
+DELIVERABLES
+
+- D1: Focused correction frame/direct revalidation path or documented reverted experiment.
+- D2: Permanent correction/freshness/revalidation regressions.
+- D3: P8 correction evidence and optimization-ledger disposition.
+- D4: package.json at 0.10.8.
+
+EVIDENCE
+
+Record correction-frame size, provider rounds, reinspection count, validation attempts, hidden acceptance/task state, elapsed time and exact disposition.

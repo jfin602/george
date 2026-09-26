@@ -1,0 +1,107 @@
+GEORGE TASK FORMAT: 1
+
+STACK: p10
+TASK: Phase 10 / P11 — Bounded non-authoritative helper model A/B experiment
+KIND: qualification
+
+VERSIONING
+
+The assigned project version is `0.10.11`.
+
+- Recommended configuration: `Sol Medium`.
+- Browser required: no.
+
+GOAL
+
+Run one narrow helper-model A/B experiment after the primary-only Phase 10 baseline is frozen, measuring whether a secondary local model can prepare bounded evidence with net end-to-end benefit without receiving tool, permission, TaskState, validation, completion, or canonical-evidence authority.
+
+READ FIRST
+
+- REQUIRED: BOOT.md
+- REQUIRED: docs/planning/p10-agent-loop-throughput/decision-record.md
+- REQUIRED: docs/planning/p10-agent-loop-throughput/qualification-plan.md
+- REQUIRED: docs/tasks/p10/P10-primary-qualification.md
+- REQUIRED: docs/tasks/p10/optimization-ledger.md
+- REQUIRED: docs/phase-9-owner-closeout.md
+
+INSPECT
+
+- available provider/model configuration surfaces
+- context compaction/evidence projection boundaries
+- benchmark/live-work fixture suitable for a bounded helper comparison
+- current local LM Studio loaded-model discovery
+- memory/runtime measurement support
+- Phase 12 utility-model roadmap constraints
+
+REQUIREMENTS
+
+- R1: Keep the accepted P10 primary-only production baseline unchanged.
+- R2: Choose exactly one narrow non-authoritative helper job, preferring recent tool-result/evidence compression or relevance selection where the output can be treated as derived context.
+- R3: The helper cannot invoke tools, grant permissions, own TaskState/StackState, decide validation, mark completion, replace canonical evidence, or alter instruction precedence.
+- R4: Helper output must be bounded, explicitly labeled derived context, and safely discardable; helper failure/absence must have an explicit primary-only fallback.
+- R5: Use an explicitly configured available local helper candidate only. If no suitable secondary model is available/loaded, record an Evidence Gap and do not install or promote a production helper runtime in P11.
+- R6: Compare the same bounded workload primary-only versus helper-assisted with no unrelated production changes.
+- R7: Measure helper latency, helper input/output, primary provider rounds saved, primary input/output tokens saved, total elapsed delta, memory/runtime overhead where available, task correctness, hidden acceptance/validation, and any new failure mode.
+- R8: Do not run B2/C2 again in P11.
+- R9: Create `docs/tasks/p10/P11-helper-ab.md` with result `beneficial | not beneficial | Evidence Gap`; this experiment does not promote helper behavior into the Phase 10 production baseline.
+- R10: Set package version to 0.10.11 while leaving production primary-only behavior unchanged.
+
+INVARIANTS
+
+- I1: Helper output is never authoritative state.
+- I2: Helper cannot expand capabilities or permissions.
+- I3: Primary-only fallback remains functional.
+- I4: No production helper delegation is added in Phase 10.
+- I5: No B2/C2 run.
+- I6: No root package-lock.json.
+
+WORKFLOW
+
+W1 — Select bounded helper experiment
+Covers: R2, R3, R4, R5
+Depends on: none
+
+W2 — Run A/B when valid
+Covers: R6, R7
+Depends on: W1
+
+W3 — Record experiment truth/version
+Covers: R1, R8, R9, R10
+Depends on: W1, W2
+
+VALIDATION
+
+V1 — Helper boundary deterministic tests
+Covers: R3, R4, R10
+Run: DISCOVER
+Scope: experimental helper harness/boundary tests created by P11, including no-tool/no-authority/fallback behavior
+
+V2 — TypeScript
+Covers: R3, R4
+Run: npm run typecheck
+
+V3 — Runner regression
+Covers: R10
+Run: npm run test:runner
+
+V4 — Diff hygiene
+Covers: R10
+Run: git diff --check
+
+STOP CONDITIONS
+
+- S1: If no suitable secondary model is available, record Evidence Gap and do not substitute the primary model while calling it a helper A/B.
+- S2: Do not add production helper authority or routing.
+- S3: Do not modify the P10 accepted primary-only baseline.
+- S4: Do not run B2/C2.
+- S5: Do not claim helper benefit unless total end-to-end evidence supports it.
+
+DELIVERABLES
+
+- D1: docs/tasks/p10/P11-helper-ab.md.
+- D2: Bounded experimental helper harness/tests if a valid candidate is available.
+- D3: package.json at 0.10.11.
+
+EVIDENCE
+
+Record exact primary/helper model IDs, workload identity, latency/tokens/rounds/memory where available, correctness, fallback behavior, and final experiment classification.

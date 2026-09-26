@@ -1,0 +1,118 @@
+GEORGE TASK FORMAT: 1
+
+STACK: p10
+TASK: Phase 10 / P12 — Phase 10 closeout
+KIND: closeout
+
+VERSIONING
+
+The assigned project version is `0.10.12`.
+
+- Recommended configuration: `Sol Medium`.
+- Browser required: no.
+
+GOAL
+
+Perform an evidence-only formal closeout of Phase 10 from the exact P11 candidate. Reconcile every keep/revise/revert optimization, the fast live gate, consolidated primary-only benchmark/milestone evidence, helper A/B result, inherited Phase 9 truth, and remaining Not Green/Evidence Gaps without repairing code or owner-closing the phase.
+
+READ FIRST
+
+- REQUIRED: BOOT.md
+- REQUIRED: AGENTS.md
+- REQUIRED: docs/workflow.md
+- REQUIRED: docs/stability-contract.md
+- REQUIRED: docs/roadmap/mvp-roadmap.md
+- REQUIRED: docs/phase-9-owner-closeout.md
+- REQUIRED: docs/planning/p10-agent-loop-throughput/decision-record.md
+- REQUIRED: docs/planning/p10-agent-loop-throughput/qualification-plan.md
+- REQUIRED: docs/planning/p10-agent-loop-throughput/optimization-metrics.md
+- REQUIRED: docs/planning/p10-agent-loop-throughput/fast-live-work.md
+- REQUIRED: docs/tasks/p10/P1-baseline.md
+- REQUIRED: docs/tasks/p10/optimization-ledger.md
+- REQUIRED: docs/tasks/p10/P10-primary-qualification.md
+- REQUIRED: docs/tasks/p10/P11-helper-ab.md
+
+INSPECT
+
+- exact P1-P11 source/tests and package/Git candidate
+- optimization-ledger dispositions versus current production code
+- benchmark baseline/final comparisons
+- fast B3/C3 identities/results
+- B2/C2 milestone results and historical Phase 9 results
+- helper A/B boundary/result
+- remaining recovery/permission/context/task/evidence gaps
+
+REQUIREMENTS
+
+- R1: Create `docs/phase-10-closeout.md` tied to the exact P11 candidate and package 0.10.12.
+- R2: Audit every P2-P9 optimization as accepted, revised, or reverted and verify current production behavior matches the ledger.
+- R3: Record Phase 10 baseline versus final accepted primary-only cumulative deltas for provider rounds/attempts/time, input/cached/output tokens where available, internal text, batching/concurrency, rounds avoided, correction/validation, tool calls, fast live efficacy and benchmark correctness.
+- R4: Audit Human/Operation mode, useful-output timing, stable-prefix context, deterministic round elimination, batching, read concurrency, focused correction and output policy against inherited Phase 9 authority.
+- R5: Record final fast live matrix state and B3/C3 immutability/hidden acceptance.
+- R6: Record P10 B2/C2 milestone outcomes without rewriting Phase 9 historical Not Green evidence.
+- R7: Record helper A/B as beneficial, not beneficial, or Evidence Gap and explicitly state that helper behavior is not the Phase 10 production baseline.
+- R8: Audit inherited permission/containment/recovery/replay/evidence/TaskState/validation contracts and every remaining Not Green/Evidence Gap.
+- R9: Run a bounded closeout recheck of affected deterministic floors, typecheck, runner regression and diff hygiene; do not rerun expensive live workloads merely for closeout.
+- R10: Set package version to 0.10.12, keep root package-lock.json absent, and preserve user/Git work.
+- R11: State whether the optimized primary-only baseline is ready for Phase 11 planning; do not owner-close Phase 10 or open Phase 11.
+
+INVARIANTS
+
+- I1: Closeout is evidence-only.
+- I2: Rejected/reverted optimizations remain recorded.
+- I3: A performance gain cannot convert a functional failure to Green.
+- I4: Phase 9 historical B2/C2 truth remains immutable.
+- I5: Helper A/B does not become production authority.
+- I6: No root package-lock.json.
+
+WORKFLOW
+
+W1 — Audit exact candidate and optimization ledger
+Covers: R1, R2, R4, R8
+Depends on: none
+
+W2 — Consolidate performance/live/milestone/helper evidence
+Covers: R3, R5, R6, R7
+Depends on: W1
+
+W3 — Write formal closeout and version boundary
+Covers: R1, R9, R10, R11
+Depends on: W1, W2
+
+VALIDATION
+
+V1 — TypeScript
+Covers: R4, R8
+Run: npm run typecheck
+
+V2 — Runner regression
+Covers: R10
+Run: npm run test:runner
+
+V3 — Phase 10 affected regression floor
+Covers: R2, R4, R8, R9
+Run: DISCOVER
+Scope: focused provider/agent-loop/structured/batching/concurrency/correction/Operation-mode/benchmark/live-work tests representing current Phase 10 production behavior
+
+V4 — Diff hygiene
+Covers: R10
+Run: git diff --check
+
+STOP CONDITIONS
+
+- S1: Do not repair implementation in closeout; record discovered defects as Not Green.
+- S2: Do not rerun B2/C2, the full benchmark, or the fast live matrix merely to obtain a better result.
+- S3: Do not owner-close Phase 10.
+- S4: Do not open Phase 11 or change BOOT/roadmap to Phase 11.
+- S5: Do not claim completion while closeout evidence is internally inconsistent or required deterministic/version/hygiene checks fail.
+
+DELIVERABLES
+
+- D1: docs/phase-10-closeout.md.
+- D2: package.json at 0.10.12.
+- D3: Explicit optimization disposition and Green / Not Green / Evidence Gap matrix.
+- D4: Phase 11 planning readiness statement.
+
+EVIDENCE
+
+Cite exact commits/artifacts/commands and verify root package-lock absence. Preserve all earlier phase evidence.
