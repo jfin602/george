@@ -1,0 +1,172 @@
+TASK: Correction 9 / P3 — Mutation precondition convergence closeout
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Sol Medium`.
+- Browser required: no.
+
+VERSIONING
+- Required unchanged project version: `0.9.10`.
+
+GOAL
+
+Perform an evidence-only closeout of `c9-mutation-precondition-convergence` from the exact P2 candidate.
+
+Determine whether the production correction is qualified and whether Phase 9 is ready for a separate owner closeout.
+
+Read:
+- `BOOT.md`;
+- `AGENTS.md`;
+- current roadmap/architecture/workflow/stability/Phase 9 authority;
+- `docs/planning/c9-mutation-precondition-convergence/{decision-record,qualification-plan}.md`;
+- `docs/tasks/c9-mutation-precondition-convergence/{prompt-assessment,implementation-plan,P2-live-evidence}.md`;
+- committed safe `docs/tasks/c9-mutation-precondition-convergence/evidence/**`;
+- prior c9 correction closeouts, especially mutation-intent authority and greenfield instrument alignment;
+- exact P1 code/tests;
+- unchanged v1/v2 instrument metadata/digests.
+
+Do not repair implementation or rerun official live gates in P3.
+
+AUDIT 1 — RECOVERABLE MUTATION PREREQUISITES
+
+Verify:
+- existing-file missing/stale SHA still fails closed;
+- no automatic SHA injection exists;
+- bounded failure reaches provider continuation;
+- missing safe parent no longer escapes the individual call boundary as the observed B2 turn failure;
+- cancellation/budget/configuration/denial/outcome-unknown semantics were not weakened;
+- same-response call terminality is regression-covered.
+
+AUDIT 2 — CREATE_DIRECTORY
+
+Verify:
+- canonical built-in provider tool;
+- workspace_mutation effect;
+- safe relative path semantics;
+- nested creation;
+- existing-directory idempotence;
+- file collision rejection;
+- absolute/traversal/symlink escape rejection;
+- no shell/process/network;
+- write_file still does not silently create parents;
+- structured implementation/correction exposes the tool; INSPECT does not.
+
+AUDIT 3 — PERMISSION / RECOVERY
+
+Verify:
+- Standard approval behavior;
+- Workspace Autonomous in-workspace behavior;
+- outside policy unchanged;
+- repository/task/model cannot elevate the ceiling;
+- bounded directory recovery intent;
+- complete/incomplete/ambiguous reconciliation;
+- no blind replay;
+- inherited write/patch recovery remains Green.
+
+AUDIT 4 — HISTORICAL / INSTRUMENT IMMUTABILITY
+
+Verify:
+- prior Gate A Green remains historical evidence;
+- first v2 B2 Not Green remains historical evidence;
+- v1 and v2 task/fixture/metadata/acceptance digests are unchanged;
+- no v3 was introduced;
+- Task Prompt remains format 1;
+- hidden acceptance was not weakened.
+
+AUDIT 5 — LIVE GATES
+
+Report separately:
+
+Fresh Gate A:
+- Green / Not Green / Not Run;
+- exact edit/V1/TaskState/hidden acceptance/calls/rounds/intervention/exhaustion.
+
+Fresh B2:
+- Green / Not Green / Not Run;
+- prerequisite convergence path;
+- P1/P2/P3 state;
+- validations;
+- hidden acceptance;
+- intervention/exhaustion.
+
+C2:
+- Green / Not Green / Not Run;
+- baseline preservation;
+- focused/broad validation;
+- TaskState;
+- hidden acceptance;
+- intervention/exhaustion.
+
+Do not infer an unrun gate from deterministic evidence.
+
+AUDIT 6 — EVIDENCE AUDITABILITY
+
+Verify:
+- each reached official live gate has committed bounded `attempt.json` and `trace.json`;
+- recorded SHA-256 values match the committed files;
+- committed evidence uses the repository-defined sanitized envelope/trace;
+- no raw provider stream, write/patch body, secret/environment, workspace copy, or unbounded output was committed;
+- optional report/render failure cannot erase the safe raw envelope.
+
+If a required safe artifact is missing, record an Evidence Gap; do not claim fully auditable live evidence.
+
+CREATE
+
+`docs/tasks/c9-mutation-precondition-convergence/closeout.md`
+
+Report a decision table with at least:
+
+- Implementation Complete: yes/no;
+- Recoverable Mutation Prerequisite Boundary Qualified: yes/no;
+- Native create_directory Qualified: yes/no;
+- Permission Boundary Qualified: yes/no;
+- Directory Recovery Qualified: yes/no;
+- Historical Evidence Preserved: yes/no;
+- Evidence Auditability Qualified: yes/no;
+- Fresh Gate A Qualified: yes/no/state;
+- Gate B2 Greenfield Qualified: yes/no/state;
+- Gate C2 Existing-App Qualified: yes/no/state;
+- Overall c9-mutation-precondition-convergence Qualified: yes/no;
+- Phase 9 Ready For Owner Closeout: yes/no.
+
+PHASE 9 OWNER-CLOSEOUT RULE
+
+Phase 9 Ready For Owner Closeout is Yes only if:
+- deterministic correction floor is Green;
+- fresh Gate A is Green;
+- B2 is Green;
+- C2 is Green;
+- no new blocking production/qualification regression exists.
+
+If Yes, explicitly state:
+
+next action: `/closeout phase 9`
+
+Do not owner-close Phase 9 in this prompt.
+
+CLOSEOUT VALIDATION
+
+Re-run/verify the appropriate current floor:
+- focused mutation/path/agent-loop/recovery/structured/progress/live-work tests;
+- Phase 9 integration;
+- inherited c9 regression floor;
+- v1/v2 immutability;
+- `npm run typecheck`;
+- `npm run test:runner`;
+- broad `npm test` on supported Node 26;
+- `git diff --check`.
+
+Verify:
+- package exactly `0.9.10`;
+- no root `package-lock.json`;
+- no production/fixture repair was made in P3.
+
+Retain unrelated native OpenTUI/runtime gaps truthfully.
+
+Do not:
+- rerun Gate A/B2/C2;
+- repair implementation;
+- edit live instruments;
+- rewrite historical evidence;
+- owner-close Phase 9;
+- open Phase 10;
+- change package version.
