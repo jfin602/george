@@ -463,6 +463,25 @@ Deterministic coverage must prove:
 
 Qualification-only instrument alignment must not change production agent-loop behavior merely to accommodate a malformed or semantically stale fixture.
 
+## Broad-suite regression delta
+
+Broad qualification has two distinct evidence dimensions:
+
+1. **Aggregate broad-suite state** — the actual Green / Not Green / Evidence Gap result of the broad run.
+2. **Candidate regression delta** — whether the current candidate introduces or materially worsens failures relative to a documented pre-change baseline run under equivalent conditions.
+
+A broad suite that remains historically Not Green may still have a Green candidate regression delta. This is not a waiver and does not convert the aggregate suite to Green.
+
+When broad failures are used to decide whether later live qualification may proceed, evidence must compare more than totals where practical:
+- exact failing/skipped test identities;
+- bounded failure category/signature;
+- runtime/command equivalence;
+- whether affected tests newly fail or skip.
+
+A candidate regression delta is Not Green when there is a new failure, a material worsening of a retained failure, a previously passing affected test becomes failing/skipped, or the candidate makes the suite newly un-runnable. If baseline equivalence cannot be established, classify the delta as Evidence Gap and fail closed for a live gate that depends on it.
+
+Hard focused/affected-system qualification remains independently required and cannot be waived by a Green broad regression delta.
+
 ## Regression permanence
 
 Every confirmed regression must leave a permanent detector at the lowest reliable reproduction layer or justified combination of layers.
