@@ -1,0 +1,177 @@
+TASK: Correction 9 / P1 — Deterministic mission-card alignment and convergence budgets
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Sol High`.
+- Browser required: no.
+
+VERSIONING
+- Required unchanged project version: `0.9.10`.
+
+GOAL
+
+Implement the final Phase 9 deterministic alignment layer and convergence-budget policy.
+
+Read first:
+- `BOOT.md`;
+- `AGENTS.md`;
+- current workflow/stability/Phase 9 authority;
+- `docs/planning/c9-final-live-convergence/{decision-record,qualification-plan}.md`;
+- `docs/tasks/c9-final-live-convergence/{prompt-assessment,implementation-plan}.md`;
+- `docs/tasks/c9-final-qualification/{report.md,failure-ledger.json}`;
+- Gate A and C2 schema-2 traces;
+- current structured-task, agent-loop, task-state, context, tool-registry, retry, recovery, and qualification tests.
+
+Do not introduce a helper/utility model.
+
+ROUND-TO-ROUND ALIGNMENT SEAM
+
+The current structured slice is rendered once while the canonical loop owns later provider continuations.
+
+Add the smallest provider-independent application/core seam that allows structured execution to recompute a bounded alignment projection before every implementation/correction provider request, including continuation requests after tool results.
+
+Requirements:
+- ordinary/non-structured turns remain unchanged when the seam is unused;
+- structured implementation/correction supplies fresh alignment every provider round;
+- alignment may depend on current canonical structured state plus bounded current-turn derived evidence;
+- LM Studio/provider adapters do not own structured-task logic;
+- the actual provider-visible alignment payload is included in continuation/context safety accounting.
+
+MISSION CARD
+
+Project a deterministic bounded mission card containing, when applicable:
+
+CURRENT OBJECTIVE
+- active task/work unit;
+- work-unit completion condition.
+
+MUST PRESERVE
+- applicable requirements/invariants;
+- effective permission/stop constraints.
+
+OBSERVED
+- relevant valid INSPECT/read/list/search/Git evidence;
+- current SHA/text-framing/path facts already observed;
+- relevant current tool/validation failures.
+
+COMPLETED
+- George-observed current-stage facts only.
+
+DO NOT REPEAT
+- still-valid replay-safe observations.
+
+NEXT COMPLETION CONDITION
+- exact condition that lets George advance;
+- pending George-owned validation that follows implementation.
+
+STOP IF
+- authored stop conditions and hard policy/recovery/budget conditions.
+
+Mission card rules:
+- deterministic stable ordering;
+- explicit byte/token bounds;
+- no private reasoning;
+- no model-inferred completion;
+- no permission expansion;
+- no hidden rewriting of TaskState/session evidence.
+
+EVIDENCE FRESHNESS
+
+Replace all-or-nothing stage-evidence clearing with a minimal typed ephemeral freshness representation.
+
+At minimum model:
+- bounded evidence identity/source;
+- resource/path where applicable;
+- safe projected fact;
+- mutation/freshness generation;
+- valid/stale state.
+
+Mutation invalidates only affected evidence.
+
+Unrelated evidence remains reusable.
+
+Examples required in deterministic coverage:
+- mutate `src/app.js` -> prior `src/app.js` content/SHA becomes stale;
+- prior `package.json` and `test/notes.test.js` observations remain usable when unaffected;
+- directory/path evidence remains usable unless invalidated by relevant mutation;
+- restart/reopen without safely reconstructible ephemeral freshness re-inspects.
+
+Do not persist a second canonical evidence ledger merely to preserve this cache.
+
+NO-REPEAT / COMPLETION ALIGNMENT
+
+Strengthen structured provider guidance so:
+- valid INSPECT evidence is used instead of broad re-inspection;
+- unchanged replay-safe evidence is not requested repeatedly;
+- after the current work-unit completion condition is materially satisfied, the model is told to stop unrelated verification/mutations and allow George-owned validation to run;
+- invented completion artifacts such as `.george/completion.md` are not requested unless authored by the task.
+
+Do not hard-code Gate A/C2 file names or exact model tool sequences into production behavior.
+
+CONVERGENCE BUDGET POLICY
+
+Separate:
+1. hard stage runaway ceiling;
+2. strict duplicate/no-progress guard;
+3. nonblocking efficiency target.
+
+The historical <=10 Gate A target remains a recorded efficiency target, not a current functional pass/fail requirement.
+
+Select the smallest justified revised hard implementation/correction limits from:
+- the final-sweep traces;
+- existing generic 32-call service ceiling;
+- deterministic runaway coverage.
+
+Do not remove task-wide RunBudget, cancellation, duplicate/no-progress, permission, recovery, or provider-round ceilings.
+
+QUALIFICATION CLASSIFICATION
+
+Update qualification/sweep helpers/tests only where required so functional Gate A state and efficiency target are reported separately.
+
+Never rewrite historical Gate A classifications.
+
+PERMANENT REGRESSIONS
+
+Add tests proving:
+- mission card refreshes between provider rounds after tool results;
+- ordinary turns are unchanged;
+- canonical TaskState is unchanged by projection;
+- path-aware freshness/reuse;
+- mutation invalidates only affected observations;
+- reopen without derived freshness re-inspects;
+- Gate-A-shaped correct work can hand off to George validation without requiring unrelated completion tooling;
+- C2-shaped INSPECT evidence reaches a legitimate mutation before hard ceiling without redundant broad reinspection;
+- duplicate unchanged reads remain bounded;
+- real runaway behavior still exhausts hard ceiling;
+- efficiency-target miss alone does not override functional Green;
+- alignment bytes/tokens participate in provider continuation safety;
+- permission/SHA/framing/recovery/containment behavior is unchanged.
+
+VALIDATION
+
+Run focused new tests plus affected:
+- structured-task;
+- agent-loop;
+- task state;
+- recovery;
+- context/continuation;
+- tool/provider-result projection;
+- Phase 9 integration;
+- qualification sweep;
+- inherited relevant Phase 2/4/5/8 floors;
+- `npm run typecheck`;
+- `npm run test:runner`;
+- `npm test`;
+- `git diff --check`.
+
+Verify:
+- package remains exactly `0.9.10`;
+- no root `package-lock.json`.
+
+Do not run official greeting/three-file/Gate A/B2/C2 live qualification in P1.
+
+Do not:
+- edit v1/v2 live-work instruments or hidden acceptance;
+- introduce helper inference;
+- retune LM Studio/context profile constants merely to pass;
+- weaken existing security/safety authority;
+- owner-close Phase 9.
