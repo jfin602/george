@@ -26,3 +26,10 @@ Prompt order:
 4. P4 — final live-convergence closeout — Sol Medium.
 
 Package remains exactly `0.9.10`.
+
+
+Inserted prerequisite before the next final P3 rerun:
+- `c9-provider-stall-recovery` — qualified;
+- `c9-gen-op` — repairs accepted-prefill watchdog semantics, stable-prefix alignment, and hidden intermediate generation; adds qualification workload deadlines.
+
+The official final sweep does not resume until `c9-gen-op` closeout says it is ready.

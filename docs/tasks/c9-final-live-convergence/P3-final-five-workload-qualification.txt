@@ -31,6 +31,36 @@ Preserve the earlier interrupted P3 attempt as historical diagnostic evidence. T
 
 Record any provider stall/retry/canonical-rebase/pressure-compaction observations from the new correction in the final report and failure ledger.
 
+GEN-OP PREREQUISITE
+
+Before this new official sweep, require `docs/tasks/c9-gen-op/closeout.md` to state that the correction is Qualified and the final five-workload sweep is ready to rerun.
+
+Preserve the devlog-triggering attempted sweep as historical/nonqualifying evidence.
+
+Require the qualified Gen-Op path and useful-output watchdog semantics.
+
+QUALIFICATION WORKLOAD DEADLINES
+
+Use one outer deadline per complete workload invocation:
+- greeting: 180000 ms;
+- three-file: 300000 ms;
+- Gate A: 600000 ms;
+- B2: 1200000 ms for the entire P1/P2/P3 stack;
+- C2: 900000 ms.
+
+Do not reset B2's qualification deadline between stack tasks.
+
+Deadline expiry is a Not Green workload result with bounded schema-2 evidence. It must not suppress later diagnostic workloads when common sweep validity remains Green.
+
+These deadlines do not modify production RunBudget.
+
+Record where available:
+- cached input tokens;
+- internal provider text bytes/estimated tokens;
+- George handoff controls;
+- time to first useful output;
+- Gen-Op provider rounds.
+
 COMMON HARD GATES
 
 

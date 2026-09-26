@@ -1,0 +1,113 @@
+TASK: Correction 9 / P3 — Gen-Op deterministic and bounded live qualification
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Sol Medium`.
+- Browser required: no.
+
+VERSIONING
+- Required unchanged project version: `0.9.10`.
+
+GOAL
+
+Qualify `c9-gen-op` without running the official final five-workload sweep.
+
+This prompt is evidence/qualification work. Do not repair production behavior by rerunning until Green.
+
+Read:
+- `BOOT.md`;
+- current Phase 5/8/9 authority;
+- `docs/planning/c9-gen-op/{decision-record,qualification-plan}.md`;
+- `docs/tasks/c9-gen-op/{prompt-assessment,implementation-plan}.md`;
+- P1/P2 commits and regressions;
+- provider, structured-task, qualification helpers;
+- owner-supplied developer-log diagnosis recorded in planning.
+
+CREATE
+
+- `docs/tasks/c9-gen-op/qualification-report.md`;
+- bounded evidence under `docs/tasks/c9-gen-op/evidence/`.
+
+DETERMINISTIC FLOOR
+
+Run:
+- provider stall plus LM Studio provider;
+- agent-loop/retry/recovery;
+- structured task/task stack;
+- mission-card/evidence freshness;
+- context/continuation;
+- run budget;
+- live-work/sweep deadlines;
+- TUI/work projection if affected;
+- Phase 5 integration;
+- Phase 9 integration;
+- `npm run typecheck`;
+- `npm run test:runner`;
+- `npm test` exactly once;
+- `git diff --check`.
+
+Record exact counts/results.
+
+RUNTIME PROVENANCE
+
+For the bounded live test record:
+- candidate SHA;
+- package version;
+- Node/npm/platform;
+- exact model ID;
+- LM Studio version/build if deterministically obtainable;
+- REST-visible runtime controls;
+- GPU Offload 26 confirmed/unconfirmed;
+- context mode/profile;
+- Gen-Op version;
+- stall thresholds;
+- qualification deadline used.
+
+Do not retune runtime merely to obtain a pass.
+
+If LM Studio version/build cannot be established, record an Evidence Gap and do not attribute cache behavior solely to George.
+
+BOUNDED LIVE GEN-OP TEST
+
+Run one representative local structured coding workload through the real supported George/LM Studio/Qwen path.
+
+This is NOT greeting/three-file/Gate A/B2/C2.
+
+Use an explicit outer qualification deadline suitable for the fixture.
+
+Measure/record where available:
+- correctness/acceptance;
+- task/validation completion;
+- tool/control sequence;
+- provider attempts;
+- logical provider rounds;
+- retries/rebases;
+- input tokens;
+- cached input tokens;
+- output tokens;
+- internal text bytes/estimated tokens;
+- time to response acceptance;
+- time to first useful output;
+- provider time;
+- total time;
+- selected profile/promotions;
+- whether stable instructions remained unchanged across continuation rounds;
+- whether dynamic mission card refreshed;
+- human intervention.
+
+When a safe control comparison is available, compare against the pre-Gen-Op provider-output shape once. Do not create repeated benchmark batches.
+
+ACCEPTANCE
+
+Gen-Op qualifies only if:
+- functional task result is equivalent or better;
+- permissions/recovery/TaskState/validation authority remains Green;
+- no false 60s accepted-prefill stall occurs;
+- internal operation prose/output is materially reduced or eliminated for measured internal rounds;
+- stable-prefix behavior is directly evidenced at George request shape and, where available, provider cache usage;
+- no new blocking deterministic/broad regression.
+
+Do not claim provider-cache improvement when cached-token evidence is unavailable.
+
+Do not run the official final sweep.
+
+Leave package `0.9.10`, no root lockfile.

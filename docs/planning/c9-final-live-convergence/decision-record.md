@@ -246,3 +246,16 @@ Repeated incomplete/stalled LM Studio behavior during Gate A demonstrated that r
 The final convergence architecture remains authoritative. The inserted correction may add provider-stall watchdog/recovery/rebase behavior, but it must not weaken mission-card alignment, evidence reuse, hard convergence ceilings, duplicate/no-progress protection, or P2 replay safety.
 
 After the inserted correction is qualified, rerun P3 from greeting through C2 once against the new candidate. Do not treat the interrupted attempt as the final qualification.
+
+
+## Inserted correction — Gen-Op
+
+After `c9-provider-stall-recovery` qualified, the next attempted P3 sweep exposed a watchdog semantic defect and provider-round efficiency problem.
+
+`c9-gen-op` is inserted before the next official P3 rerun.
+
+It may distinguish response acceptance/prefill from useful output, stabilize provider instructions while moving dynamic mission-card state late, introduce a non-executable George handoff control for internal structured rounds, require tool/control output for structured implementation/correction, and add qualification-only outer workload deadlines.
+
+It must not weaken mission-card authority, provisional-branch replay safety, stall-recovery bounds, TaskState/validation authority, or response-completion-before-side-effect semantics.
+
+The triggering devlog run remains historical/nonqualifying evidence.

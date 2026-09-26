@@ -130,27 +130,35 @@ The `c9-final-live-convergence` correction remains the final Phase 9 qualificati
 
 P1 and P2 of that correction completed before P3. During P3 Gate A, repeated incomplete/stalled local-model attempts consumed minutes of provider time before the run was manually interrupted. LM Studio developer logs showed a request still processing prompt state after roughly 51 seconds and then reaching the 120000 ms client timeout; a fresh retry later benefited from high LCP reuse and completed materially faster. The event proves that safe replay classification alone is insufficient: George also needs bounded stall detection, recovery escalation, and truthful provider-stall termination.
 
-The active inserted correction is now `c9-provider-stall-recovery`.
+The inserted `c9-provider-stall-recovery` correction is now qualified. Its deterministic closeout is `docs/tasks/c9-provider-stall-recovery/closeout.md`.
+
+The next attempted final P3 sweep produced owner-supplied LM Studio developer-log evidence showing:
+- response acceptance was being treated as active output, causing legitimate local prompt-prefill work to be disconnected at approximately the 60000 ms active-inactivity threshold;
+- some continuation rounds had poor prefix/LCP reuse and tens of seconds of prompt evaluation;
+- completed internal structured rounds could spend tens of seconds generating natural-language output that George neither needed nor presented to the operator.
+
+That attempted sweep is preserved as historical diagnostic evidence and is not the final qualifying Phase 9 chain.
+
+The active inserted correction is now `c9-gen-op`.
 
 It must:
-- keep the existing 120000 ms provider timeout as an absolute emergency ceiling rather than the only stall detector;
-- add provider-independent first-evidence and inactivity watchdog semantics in the application loop;
-- preserve the LM Studio adapter as wire/timeout normalization rather than recovery-policy authority;
-- allow at most one replay-safe identical fresh retry for a stalled/incomplete provider attempt;
-- after a repeated stall, stop repeating the same provider-native branch and perform at most one canonical request rebase from George-owned state/evidence;
-- condition stall-triggered compaction on real context pressure and compactable completed history rather than assuming every stall is a context problem;
-- prevent stall-triggered semantic compaction from recursively retrying an unhealthy provider without a strict bound;
-- preserve provisional-text/tool-call discard rules, permissions, recovery, SHA/framing, containment, TaskState, mission-card/evidence-reuse authority, and strict duplicate/no-progress behavior;
-- terminate repeated low-pressure or post-rebase failure truthfully as a provider failure rather than allowing long retries to surface misleading task `budget_exhausted`;
-- add bounded observable stall/recovery evidence and TUI-facing recovery status;
-- keep helper/utility-model inference out of Phase 9.
+- distinguish provider response acceptance/prefill from useful output so accepted prefill keeps the first-useful-output allowance;
+- preserve the qualified 120000 ms absolute provider timeout and bounded retry/rebase safety ladder;
+- keep stable provider instructions stable across structured continuation rounds;
+- move recomputed mission-card state into a bounded late dynamic round-context seam with correct token/pressure accounting;
+- add Generation Operation Protocol v1 so structured implementation/correction rounds emit only executable tool calls or one non-authoritative George handoff control instead of routine hidden prose;
+- preserve response completion as the boundary before tool execution/control acceptance;
+- add safe aggregate cached/input/output/internal-text observability without persisting internal prose;
+- add qualification-only outer workload deadlines without reducing production RunBudget, including one 20-minute deadline for the entire B2 P1/P2/P3 stack;
+- keep helper inference, parallel tools, compressed custom DSLs, and speculative decoding out of Phase 9.
 
-After `c9-provider-stall-recovery` is qualified and closed, rerun the existing `c9-final-live-convergence` P3 sweep from greeting through C2 exactly once on the new candidate, then run its P4 closeout. The interrupted P3 attempt remains immutable historical evidence.
+After `c9-gen-op` is qualified and closed, rerun the existing `c9-final-live-convergence` P3 sweep from greeting through C2 exactly once on the new candidate, then run P4 closeout.
 
 Current correction authority:
 - latest completed full-sweep truth: `docs/tasks/c9-final-qualification/report.md` and `failure-ledger.json`;
 - final convergence planning: `docs/planning/c9-final-live-convergence/decision-record.md` and `qualification-plan.md`;
-- active stall-recovery planning: `docs/planning/c9-provider-stall-recovery/decision-record.md` and `qualification-plan.md`.
+- qualified stall recovery: `docs/planning/c9-provider-stall-recovery/{decision-record,qualification-plan}.md` and `docs/tasks/c9-provider-stall-recovery/closeout.md`;
+- active Gen-Op planning: `docs/planning/c9-gen-op/decision-record.md` and `qualification-plan.md`.
 
 Historical Phase 1-8 prompts/evidence are not renumbered or rewritten.
 

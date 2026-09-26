@@ -1,0 +1,149 @@
+TASK: Correction 9 / P2 — Stable-prefix Gen-Op v1 and qualification deadlines
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Sol High`.
+- Browser required: no.
+
+VERSIONING
+- Required unchanged project version: `0.9.10`.
+
+GOAL
+
+Reduce structured provider-round prefill/output waste while preserving Phase 9 task authority and Phase 5 replay safety.
+
+Read:
+- `BOOT.md`;
+- current Phase 5/8/9 authority;
+- `docs/planning/c9-gen-op/{decision-record,qualification-plan}.md`;
+- `docs/tasks/c9-gen-op/{prompt-assessment,implementation-plan}.md`;
+- P1 implementation/tests;
+- current agent-loop, structured-task, provider/core types, LM Studio adapter, qualification live-work/sweep helpers and tests.
+
+PART A — STABLE PREFIX / LATE ROUND CONTEXT
+
+Current structured alignment recomputes each logical round and is appended to `instructions`.
+
+Replace that placement with a bounded provider-independent late round-context seam.
+
+Requirements:
+- stable George/base protocol instructions remain byte-identical across continuations when unchanged;
+- dynamic mission card is still recomputed every structured implementation/correction round;
+- dynamic context is delivered late in the provider request;
+- dynamic context participates in continuation/context pressure accounting;
+- provider adapter remains TaskState-blind;
+- canonical rebase carries current dynamic context but does not reuse failed response IDs;
+- ordinary turns are unchanged;
+- unsupported provider encoding fails explicitly rather than silently dropping alignment.
+
+Lock the LM Studio Responses wire body with unit tests for initial and continuation requests.
+
+PART B — GEN-OP V1
+
+Add an explicit internal structured operation mode for implementation/correction rounds.
+
+Stable protocol instruction:
+- emit only required executable tool call(s) or George handoff control;
+- do not narrate routine reasoning, progress, intent, or completion;
+- George owns validation/completion.
+
+Add one provider-visible, application-owned non-executable control:
+
+`george_control {"op":"handoff"}`
+
+The exact internal type/name may be refined, but semantics must match the decision record.
+
+Do NOT register it with ToolRegistry.
+
+Valid handoff:
+- requires a completed provider response;
+- stops only the current model-operation stage;
+- executes no tool;
+- grants no permission;
+- makes no TaskState/validation claim;
+- returns orchestration to StructuredTaskApplicationService.
+
+Structured implementation/correction internal rounds should require a provider tool/control choice on every logical round.
+
+Ordinary user-facing turns remain conversational.
+
+Fail closed on malformed/unknown controls.
+
+Define/test deterministic behavior for:
+- handoff plus executable tool in same response;
+- multiple handoffs;
+- free text plus handoff/tool;
+- tool-free free text in internal operation mode.
+
+Do not execute any streamed proposal before `provider.response.completed`.
+
+PART C — SAFE AGGREGATE METRICS
+
+Where provider usage supplies it, normalize optional cached input tokens.
+
+Add bounded aggregate evidence for completed logical rounds sufficient to measure:
+- text bytes or estimated text tokens;
+- executable tool-call count;
+- George control count;
+- cached/input/output provider usage.
+
+Never persist raw internal prose for this metric.
+
+Historical artifacts/readers must remain compatible or be explicitly versioned.
+
+PART D — QUALIFICATION-ONLY OUTER DEADLINES
+
+Add an optional deadline to live qualification helpers, not production RunBudget.
+
+One deadline wraps the entire workload invocation.
+
+For stack workloads the same deadline covers every task in the stack.
+
+Deadline expiry:
+- aborts through normal cancellation signal;
+- is recorded as bounded qualification/harness timing failure;
+- classifies the workload Not Green;
+- permits later diagnostic sweep workloads under existing sweep policy.
+
+Freeze final-sweep deadlines:
+- greeting: 180000 ms;
+- three-file: 300000 ms;
+- Gate A: 600000 ms;
+- B2: 1200000 ms total stack;
+- C2: 900000 ms.
+
+Production `DEFAULT_RUN_BUDGET` remains unchanged.
+
+PERMANENT REGRESSIONS
+
+Add tests proving:
+- stable instructions across continuation rounds;
+- mission card still refreshes late;
+- token accounting includes round context;
+- LM Studio initial/continuation request bodies preserve late context;
+- Gen-Op exposes selected coding tools plus control only;
+- tool/control choice is required every internal round;
+- valid handoff exits stage without executable dispatch;
+- TaskState changes only through structured orchestrator;
+- malformed/mixed control fails closed;
+- provisional control/tool proposals are discarded on incomplete response;
+- response completion remains the side-effect boundary;
+- ordinary chat/final responses unchanged;
+- cached-input usage is optional and bounded;
+- raw internal prose is not persisted in aggregate metrics;
+- whole-stack deadline does not reset between B2 tasks;
+- deadline failure is Not Green and later sweep workloads can still run;
+- production RunBudget unchanged.
+
+VALIDATION
+
+Run focused provider, agent-loop, structured-task/task-stack, context, recovery, live-work/sweep, TUI where affected, Phase 5/9 integration, typecheck, runner, broad suite once, and `git diff --check`.
+
+Do not run official final live matrix.
+
+Do not:
+- add parallel tools;
+- add compressed DSL;
+- add helper model;
+- execute tools before provider completion;
+- change package version;
+- owner-close Phase 9.

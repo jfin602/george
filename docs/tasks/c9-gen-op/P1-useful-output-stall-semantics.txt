@@ -1,0 +1,108 @@
+TASK: Correction 9 / P1 — Useful-output provider stall semantics
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Sol High`.
+- Browser required: no.
+
+VERSIONING
+- Required unchanged project version: `0.9.10`.
+
+GOAL
+
+Repair the provider watchdog semantics exposed by the latest LM Studio developer log.
+
+Read first:
+- `BOOT.md`;
+- `AGENTS.md`;
+- workflow/stability/Phase 5/8/9 authority;
+- `docs/planning/c9-gen-op/{decision-record,qualification-plan}.md`;
+- `docs/tasks/c9-gen-op/{prompt-assessment,implementation-plan}.md`;
+- `docs/tasks/c9-provider-stall-recovery/{qualification-report,closeout}.md`;
+- current provider-stall, agent-loop, LM Studio adapter, provider/event types, and tests.
+
+PROBLEM
+
+The current watchdog treats response acceptance as active output.
+
+The local Responses path can create/accept a response and then spend a long interval in prompt prefill with no semantic output event.
+
+That causes legitimate prefill to hit the shorter active-inactivity threshold.
+
+REQUIRED SEMANTICS
+
+Distinguish:
+- response acceptance/identity;
+- useful output progress;
+- response completion.
+
+`provider.response.started` / wire `response.created` must NOT by itself activate the short output-inactivity timer.
+
+First-useful-output allowance continues through accepted prefill.
+
+Useful output progress includes:
+- text generation;
+- function-call/control-call generation progress;
+- equivalent provider output-progress signals that are payload-free and bounded.
+
+Once useful output begins, the active-output inactivity timer applies.
+
+Do not scrape LM Studio server logs.
+
+PROVIDER ACTIVITY SEAM
+
+Refine `ProviderStreamOptions.onActivity` or replace it with the smallest typed provider-independent equivalent.
+
+The LM Studio adapter may classify valid SSE activity as:
+- accepted;
+- output progress.
+
+No raw SSE payload crosses the seam.
+
+Application code owns watchdog/retry/rebase decisions.
+
+PRESERVE
+
+Unless actual current code differs, preserve:
+- suspected stall: 60000 ms;
+- first useful output: 90000 ms;
+- active output inactivity: 60000 ms;
+- absolute provider timeout: 120000 ms;
+- max stall fresh retry: 1;
+- max canonical rebase: 1;
+- 30000 ms one-shot stall compaction;
+- replay-safe provisional-branch discard;
+- caller cancellation authority.
+
+Do not inflate timeouts to pass.
+
+PERMANENT REGRESSIONS
+
+Use fake time.
+
+Add tests for:
+1. response acceptance at t=0 plus no output at t=60000 does not stall;
+2. accepted prefill may continue until first-useful-output threshold;
+3. useful text starts active-output timer;
+4. function-call generation progress starts/refreshes active-output timer;
+5. output inactivity still stalls at the active threshold;
+6. no acceptance/no output still stalls at first-useful-output threshold;
+7. response completion cleans all timers;
+8. caller cancellation wins;
+9. adapter accepted activity cannot masquerade as useful output;
+10. output-progress heartbeat prevents false active stall;
+11. devlog-shaped accepted-prefill sequence remains alive beyond 60s and can complete;
+12. existing original -> retry -> rebase -> terminal ladder remains finite;
+13. incomplete proposals remain unexecuted/uncommitted.
+
+VALIDATION
+
+Run focused provider-stall/provider/agent-loop tests plus affected recovery, structured-task, Phase 5/9 integration, typecheck, runner, broad suite, and `git diff --check`.
+
+Do not run official live workloads.
+
+Do not:
+- change package version;
+- change frozen instruments;
+- weaken recovery/security authority;
+- add Gen-Op protocol yet;
+- owner-close Phase 9.
