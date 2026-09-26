@@ -1,0 +1,284 @@
+TASK: Correction 9 / P4 — Scoped live qualification of turn-context convergence
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Sol Medium`.
+- Browser required: no.
+
+VERSIONING
+- Required unchanged project version: `0.9.10`.
+
+GOAL
+
+Qualify the completed P1-P3 production correction without repairing it in this prompt.
+
+Run:
+hard affected-system preflight
+-> controlled broad regression delta
+-> ordinary greeting smoke
+-> synthetic three-file inspection smoke
+-> fresh Gate A
+-> fresh Gate B2
+-> Gate C2
+
+Stop at the first required Not Green/Evidence Gap boundary.
+
+Read:
+- `BOOT.md`;
+- `AGENTS.md`;
+- current workflow/stability/Phase 9 authority;
+- `docs/planning/c9-turn-context-convergence/{decision-record,qualification-plan}.md`;
+- `docs/tasks/c9-turn-context-convergence/{prompt-assessment,implementation-plan,P1-provider-projection-evidence,P2-continuation-convergence-evidence,P3-tui-and-smoke-instrumentation-evidence}.md`;
+- `docs/tasks/c9-qualification-preflight-scope/{P2-live-evidence,closeout}.md`;
+- exact P3 fixture/hash metadata;
+- current production source/tests;
+- qualification preflight helper;
+- existing live-work artifact helpers;
+- unchanged Gate A and v2 instruments/acceptance.
+
+P4 IS QUALIFICATION ONLY
+
+Do not change:
+- production source;
+- production tests except evidence-only generated fixtures are already frozen from P3;
+- profile constants;
+- runtime/convergence/stage/retry/correction/run-budget settings;
+- TUI wiring;
+- qualification semantics;
+- live instruments/hidden acceptance.
+
+If a production defect is found, preserve it and stop. Do not repair/rerun inside P4.
+
+HARD PREFLIGHT
+
+Require Green:
+- P1 provider projection regressions;
+- P2 continuation accounting/promotion regressions;
+- P3 TUI composition/greeting regressions;
+- provider contract;
+- tool registry/mutation/recovery/Git dirty-state;
+- context assembler/profile selector/one-turn;
+- qualification/live-work artifacts;
+- Phase 9 structured task/stack integration;
+- frozen Gate A deterministic replay;
+- v1/v2 task/fixture/metadata/digest/acceptance immutability;
+- `npm run typecheck`;
+- `npm run test:runner`;
+- `git diff --check`;
+- package exactly `0.9.10`;
+- no root `package-lock.json`.
+
+Any hard Not Green stops all live work.
+
+CONTROLLED BROAD REGRESSION DELTA
+
+Baseline is exactly:
+
+`d7804684801fa8418050c34d9ef097ca1adf80b6`
+
+Compare baseline and current candidate using the existing two-tier preflight policy.
+
+Use equivalent:
+- supported Node/npm;
+- exact `npm test`;
+- dependency identity/state;
+- TTY/non-TTY conditions;
+- relevant environment.
+
+Do not move active HEAD.
+
+Capture bounded baseline/current/delta JSON with:
+- exact failing/skipped identities;
+- bounded categories/signatures;
+- aggregate states;
+- regression delta.
+
+Counts alone are insufficient.
+
+Live eligibility requires:
+- hard preflight Green;
+- broad regression delta Green.
+
+Aggregate broad suite may remain Not Green and must stay labeled that way.
+
+If delta Not Green/Evidence Gap: stop.
+
+RUNTIME CONTROL
+
+Use exact model:
+
+`qwen3-coder-30b-a3b-instruct@q4_k_m`
+
+Use supported Node 26.
+
+Before live work:
+- print `MANUAL CHECK: LM Studio GPU Offload must show 26`;
+- capture REST-visible model/runtime controls;
+- do not retune anything.
+
+UI-only GPU Offload 26 remains Evidence Gap if it cannot be independently observed.
+
+LIVE SMOKE A — GREETING
+
+Run exactly one official attempt through the production ordinary TUI/application service path with:
+
+`hi`
+
+Use the P3 bounded smoke harness.
+
+Green requires:
+- exactly one logical provider round;
+- zero model-requested tools;
+- one committed direct assistant response;
+- provider instructions do not contain `CODING_WORKFLOW_GUIDANCE`;
+- no context/profile/task/stage/run-budget exhaustion;
+- zero human intervention except launching qualification.
+
+Record usage/timing as characterization only.
+
+If Not Green:
+- STOP;
+- do not run smoke B/A/B2/C2;
+- no repair/rerun.
+
+LIVE SMOKE B — SYNTHETIC THREE-FILE INSPECTION
+
+Only after greeting Green.
+
+Run exactly one official attempt using the unchanged P3 fixture and frozen fixture hashes.
+
+The user request should naturally ask Qwen to inspect the relevant files and explain the target implementation.
+
+Do not impose a "maximum three files" instruction.
+
+Green requires:
+- final direct explanation completed;
+- expected fixture read evidence observed;
+- no context/profile/task/stage/run-budget exhaustion;
+- source composition remains fixed across continuation;
+- any envelope promotions are monotonic and bounded in trace;
+- provider continuation contains bounded projected results, not internal mutation/Git metadata;
+- zero human coding intervention.
+
+If Not Green:
+- STOP before Gate A;
+- no repair/rerun.
+
+FRESH GATE A
+
+Only after both smokes Green.
+
+Run exactly one official attempt using unchanged:
+- frozen Gate A task/fixture;
+- qualification approval helper;
+- George-owned V1;
+- hidden acceptance;
+- locked call/round limits.
+
+Green criteria unchanged:
+- exact 60-byte result;
+- V1 Green;
+- completed/verified TaskState;
+- hidden acceptance Green;
+- zero intervention;
+- no exhaustion;
+- <=10 model-requested tool calls;
+- <=10 logical provider rounds.
+
+If Not Green: stop.
+
+FRESH GATE B2
+
+Only after Gate A Green.
+
+Run exactly one official `greenfield-express-v2` attempt.
+
+Use unchanged:
+- v2 task stack/digest;
+- acceptance version;
+- exact dependency prerequisite;
+- production structured stack service.
+
+Do not create v3.
+
+Require:
+- P1/P2/P3 completed in order;
+- declared validations Green;
+- completed StackState;
+- hidden acceptance Green;
+- zero intervention;
+- no exhaustion.
+
+Record enough bounded continuation evidence to prove the historical failure class is resolved:
+- provider-projected tool-result size/tokens where available;
+- initial selected profile;
+- continuation-envelope promotions;
+- provider-reported usage;
+- no internal Git snapshot in provider continuation.
+
+Do not require B2 to promote if compact projected results keep it inside ordinary. The acceptance is convergence, not forcing a promotion.
+
+If Not Green:
+- STOP;
+- C2 remains unspent;
+- no repair/rerun.
+
+GATE C2
+
+Only after B2 Green.
+
+Run exactly one unchanged `existing-express-feature-v2` attempt.
+
+Require:
+- baseline behavior preserved;
+- focused validation Green;
+- broad declared validation Green;
+- completed/verified TaskState;
+- hidden acceptance Green;
+- zero intervention;
+- no exhaustion.
+
+COMMITTED EVIDENCE
+
+Create:
+
+`docs/tasks/c9-turn-context-convergence/P4-live-evidence.md`
+
+Create bounded JSON as reached:
+- `evidence/broad-baseline.json`;
+- `evidence/broad-candidate.json`;
+- `evidence/broad-delta.json`;
+- `evidence/runtime.json`;
+- `evidence/greeting/{attempt,trace}.json`;
+- `evidence/three-file/{attempt,trace}.json`;
+- `evidence/gate-a/{attempt,trace}.json`;
+- `evidence/gate-b2/{attempt,trace}.json`;
+- `evidence/gate-c2/{attempt,trace}.json`.
+
+Use existing bounded/sanitized artifact contracts.
+
+Record SHA-256 for every committed JSON.
+
+Never commit:
+- raw provider stream;
+- full assistant prose merely as logging;
+- write/patch/file bodies;
+- internal unbounded Git snapshots/logs;
+- workspace copies;
+- node_modules/dependency trees;
+- secrets/environment dumps.
+
+Preserve every historical Gate A/B2/correction result unchanged.
+
+FINAL VALIDATION
+
+Run/record the required affected deterministic floor and current broad characterization after evidence generation.
+
+Verify package `0.9.10`, no root lockfile, `git diff --check`.
+
+Do not:
+- repair production;
+- rerun failed smoke/gate;
+- edit instruments;
+- retune runtime/profile limits;
+- owner-close Phase 9;
+- open Phase 10.

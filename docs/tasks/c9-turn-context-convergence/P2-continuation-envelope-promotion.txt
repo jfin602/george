@@ -1,0 +1,191 @@
+TASK: Correction 9 / P2 — Provider-grounded continuation and adaptive envelope promotion
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Sol High`.
+- Browser required: no.
+
+VERSIONING
+- Required unchanged project version: `0.9.10`.
+
+GOAL
+
+Repair continuation safety so adaptive turns can converge through ordinary -> medium -> large without rebuilding source context, while using actual provider usage as the strongest available continuation evidence.
+
+P1 provider-result projection is now the provider-visible payload boundary. Preserve it.
+
+Read:
+- `BOOT.md`;
+- `AGENTS.md`;
+- workflow/architecture/stability/Phase 8+9 context authority;
+- `docs/planning/c9-turn-context-convergence/{decision-record,qualification-plan}.md`;
+- `docs/tasks/c9-turn-context-convergence/{prompt-assessment,implementation-plan,P1-provider-projection-evidence}.md`;
+- Phase 8 agentic-context closeout;
+- current `src/core/{config,events,provider}.ts`;
+- `src/context/{profile-selector,index,compaction}.ts`;
+- `src/application/one-turn.ts`;
+- provider adapter and live-work trace code/tests.
+
+LOCKED DISTINCTION
+
+Do not reinterpret source-selection promotion as continuation-envelope promotion.
+
+Initial adaptive source selection remains finalized before first inference.
+
+Freeze for the turn:
+- active source identities;
+- source dispositions;
+- rendered guidance;
+- current user/task input;
+- routed documents;
+- activated skills;
+- selected task slice.
+
+Only the effective provider-input safety envelope may promote after inference begins.
+
+EFFECTIVE ENVELOPE
+
+Initialize the effective envelope to the selected profile.
+
+Adaptive mode may only move:
+`ordinary -> medium -> large`.
+
+Never demote.
+
+Promote only as far as needed.
+
+Promotion must not:
+- call provider;
+- execute tool;
+- rerun context assembly;
+- activate/deactivate sources;
+- change precedence;
+- rewrite canonical session/task state;
+- invoke semantic/provider-backed compaction merely to remain in ordinary/medium.
+
+Fixed mode never promotes.
+
+Above large remains fail-closed.
+
+PROVIDER-GROUNDED ACCOUNTING
+
+Track reported `inputTokens` / `outputTokens` from completed provider responses.
+
+For the next continuation safety decision, use provider usage as the strongest available observation while preserving a conservative deterministic lower bound/fallback.
+
+The implemented formula must be explicit and tested.
+
+It must account conservatively for:
+- observed prior provider chain input;
+- continuation-relevant provider output;
+- newly projected tool results;
+- bounded serialization/protocol overhead.
+
+Do not blindly add every historical estimate and reported value if that double-counts the same chain. Use `max`/chain-state or another justified conservative method and document it in code/tests/evidence.
+
+When usage is absent, retain deterministic fallback behavior.
+
+COMPLETED RESPONSE ABOVE CURRENT ADAPTIVE ENVELOPE
+
+Today George throws after LM Studio reports actual input above the frozen profile.
+
+Change this only for adaptive mode:
+
+- if reported input exceeds the current envelope but fits a larger existing envelope, promote and preserve the completed response;
+- if it exceeds large, fail terminally;
+- fixed mode preserves its fixed-ceiling failure.
+
+A final tool-free response that fits a larger adaptive envelope may still complete after recording the promotion.
+
+PRE-SEND SAFETY
+
+Before sending any tool continuation:
+- estimate against the effective envelope;
+- promote adaptively if required and possible;
+- fail before provider execution if fixed or >large and locally knowable.
+
+Use P1 projected tool results, not canonical internal results, in this estimate.
+
+OBSERVABILITY
+
+Add bounded explicit evidence for continuation-envelope promotion.
+
+Prefer a dedicated event such as `context.envelope.promoted` with:
+- turn ID;
+- from profile ID;
+- to profile ID;
+- reason category (`continuation-estimate` or `provider-usage`, or equivalent finite names);
+- bounded observed/estimated tokens;
+- new provider-input ceiling.
+
+Do not mutate the historical `context.assembled` source-selection evidence to pretend the initial profile was different.
+
+Update:
+- event typing;
+- diagnostics/progress consumers where needed;
+- qualification live-work trace extraction so P4 can prove promotions.
+
+No raw context/tool bodies in promotion evidence.
+
+PERMANENT TESTS
+
+Required deterministic cases:
+
+1. local continuation estimate exceeds ordinary but fits medium -> one ordinary->medium promotion -> next provider request occurs;
+2. subsequent pressure exceeds medium but fits large -> medium->large;
+3. no demotion;
+4. same initial provider request/source assembly across promotion;
+5. context assembler not invoked again because of continuation promotion;
+6. compactor not invoked merely for ordinary/medium promotion;
+7. promotion itself causes no provider/tool call;
+8. fixed ordinary does not promote and fails before unsafe continuation;
+9. adaptive >large fails before unsafe continuation when locally knowable;
+10. provider reports >ordinary but <=medium -> promotion, not retroactive turn failure;
+11. provider reports >large -> terminal budget failure;
+12. missing usage uses deterministic fallback;
+13. provider-reported usage participates in the next continuation estimate;
+14. projected P1 mutation results remain the continuation payload;
+15. existing profile-selector initial-promotion semantics remain unchanged.
+
+Preserve run-wide token budget accounting independently.
+
+EVIDENCE
+
+Create:
+
+`docs/tasks/c9-turn-context-convergence/P2-continuation-convergence-evidence.md`
+
+Record:
+- exact continuation formula/authority;
+- deterministic promotion sequences exercised;
+- fixed/>large outcomes;
+- provider-result projection preservation;
+- diagnostics added;
+- validation results.
+
+VALIDATION
+
+Run focused:
+- context profile selector/assembler;
+- one-turn continuation;
+- provider adapter;
+- event/progress/diagnostics consumers;
+- qualification live-work trace;
+- mutation/coding workflow regression floor.
+
+Also run:
+- Phase 9 integration affected floor;
+- `npm run typecheck`;
+- `npm run test:runner`;
+- broad `npm test` characterization;
+- `git diff --check`.
+
+Verify package `0.9.10`, no root lockfile, v1/v2 instrument immutability.
+
+Do not:
+- change profile constants;
+- change TUI base-agent wiring;
+- run live smokes or official gates;
+- create v3 instruments;
+- rewrite prior evidence;
+- owner-close Phase 9;
+- open Phase 10.

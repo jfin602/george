@@ -1,0 +1,147 @@
+TASK: Correction 9 / P1 — Separate canonical tool evidence from provider continuation
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Sol High`.
+- Browser required: no.
+
+VERSIONING
+- Required unchanged project version: `0.9.10`.
+
+GOAL
+
+Repair the confirmed continuation-amplification defect by introducing one provider-independent boundary between canonical George tool evidence and provider-visible tool results.
+
+The official B2 failure must remain immutable evidence. Do not rerun it in P1.
+
+Read:
+- `BOOT.md`;
+- `AGENTS.md`;
+- workflow/architecture/stability/Phase 9 authority;
+- `docs/planning/c9-turn-context-convergence/{decision-record,qualification-plan}.md`;
+- `docs/tasks/c9-turn-context-convergence/{prompt-assessment,implementation-plan}.md`;
+- `docs/tasks/c9-qualification-preflight-scope/{P2-live-evidence,closeout}.md`;
+- official Gate B2 attempt/trace;
+- `src/core/{provider,events}.ts`;
+- `src/tools/{registry,mutation,read-only}.ts`;
+- `src/application/{one-turn,coding-workflow,recovery}.ts`;
+- affected tests.
+
+REPRODUCE FIRST
+
+Add a deterministic regression fixture/test showing the current defect class:
+
+- construct or obtain a successful canonical workspace mutation result with a realistic large Git working-tree snapshot;
+- prove that forwarding the canonical result unchanged materially inflates serialized provider continuation;
+- keep the reproduction independent of Qwen and live LM Studio.
+
+Do not encode the exact historical 28,306 token number as a universal threshold.
+
+PROVIDER-RESULT PROJECTION
+
+Add the smallest generic provider-independent projection seam.
+
+Architectural requirements:
+
+1. Canonical execution result remains authoritative.
+2. Normal tool/application/session events retain the canonical result.
+3. Recovery, Git dirty-state preservation, workflow change attribution, and direct-mutation evidence may continue consuming canonical data.
+4. Provider continuation uses a distinct deterministic bounded projection.
+5. Projection authority belongs in the tool/application boundary, not the LM Studio adapter.
+6. Avoid scattered provider-specific or tool-name-specific projection logic in adapters.
+7. Tools without internal-only metadata must preserve existing semantics.
+
+A preferred shape is an optional tool-definition/registry provider-result projector or an equivalent single normalized seam. Choose the smallest implementation that preserves the architecture.
+
+BUILT-IN MUTATION PROJECTION
+
+For successful `write_file` / `apply_patch`, provider-visible result must preserve enough evidence for Qwen to continue safely:
+- path;
+- bytes;
+- resulting SHA-256;
+- tool/name only if needed by the existing result shape.
+
+It must not include the internal `git` snapshot.
+
+For successful `create_directory`, preserve bounded path/created outcome.
+
+For normal failures, preserve bounded error code/message.
+
+Do not remove canonical Git evidence from the mutation executor merely to shrink continuation.
+
+Do not expose file bodies.
+
+AGENT LOOP
+
+The canonical loop must:
+- execute tools normally;
+- retain canonical results for events/evidence;
+- derive provider projections after authoritative terminal execution;
+- accumulate/send projected results in `ProviderContinuation`;
+- use projected, not canonical, results for continuation-payload size estimation.
+
+Do not change adaptive/fixed profile promotion behavior yet; P2 owns that.
+
+PERMANENT TESTS
+
+At minimum prove:
+
+- canonical mutation result still includes Git snapshot;
+- provider continuation for the same mutation does not;
+- projected write/patch receipt includes path/bytes/SHA;
+- projected directory result is sufficient and bounded;
+- failure projection retains code/message;
+- identical canonical result produces identical provider projection;
+- a large internal Git snapshot does not proportionally inflate provider result;
+- `CodingWorkflowApplicationService` still extracts direct mutations correctly from canonical events;
+- recovery/Git dirty-state/text-framing/SHA floors remain Green;
+- projection cannot change execution metadata, permissions, replay-safety, or tool authority.
+
+If plugin/adapter result behavior is touched, preserve existing bounded semantics and add regression coverage.
+
+EVIDENCE
+
+Create:
+
+`docs/tasks/c9-turn-context-convergence/P1-provider-projection-evidence.md`
+
+Record:
+- pre-fix reproduction shape;
+- bounded canonical size versus provider-projected size;
+- exact tests run;
+- preserved invariants;
+- changed source/test files;
+- package/version/lockfile state.
+
+Do not commit raw/unbounded Git snapshots or logs.
+
+VALIDATION
+
+Run focused:
+- tool registry;
+- mutation;
+- one-turn provider continuation;
+- coding workflow;
+- recovery/Git preservation.
+
+Also run:
+- qualification/live-work tests if event/result shapes are affected;
+- Phase 9 integration affected floor;
+- `npm run typecheck`;
+- `npm run test:runner`;
+- broad `npm test` as characterization;
+- `git diff --check`.
+
+Verify:
+- package exactly `0.9.10`;
+- no root `package-lock.json`;
+- no v1/v2 instrument/acceptance changes.
+
+Do not:
+- retune context profiles;
+- implement adaptive envelope promotion in P1;
+- change production TUI wiring;
+- run live greeting/three-file smokes;
+- run Gate A/B2/C2;
+- rewrite historical evidence;
+- owner-close Phase 9;
+- open Phase 10.

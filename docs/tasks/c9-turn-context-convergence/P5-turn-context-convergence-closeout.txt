@@ -1,0 +1,219 @@
+TASK: Correction 9 / P5 — Turn-context convergence closeout
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Sol Medium`.
+- Browser required: no.
+
+VERSIONING
+- Required unchanged project version: `0.9.10`.
+
+GOAL
+
+Perform an evidence-only closeout of `c9-turn-context-convergence`.
+
+Determine:
+1. whether the production correction is deterministically qualified;
+2. whether ordinary/live context convergence is qualified;
+3. whether Phase 9 is ready for separate owner closeout.
+
+Do not repair production or rerun official live attempts.
+
+Read:
+- `BOOT.md`;
+- current roadmap/workflow/architecture/stability/Phase 9 authority;
+- `docs/planning/c9-turn-context-convergence/{decision-record,qualification-plan}.md`;
+- all `docs/tasks/c9-turn-context-convergence/P*-evidence.md`;
+- committed `evidence/**`;
+- `docs/tasks/c9-qualification-preflight-scope/closeout.md`;
+- exact implementation/tests;
+- unchanged v1/v2 instrument metadata/digests.
+
+AUDIT — PROVIDER RESULT PROJECTION
+
+Verify:
+- canonical mutation result retains required Git/internal evidence;
+- provider continuation excludes internal Git snapshot;
+- mutation provider receipt retains path/bytes/SHA;
+- directory/failure projection is bounded/useful;
+- canonical events/recovery/workflow truth is unchanged;
+- permanent tests cover the original amplification class.
+
+Report:
+`Provider Result Projection Qualified: Green / Not Green / Evidence Gap`.
+
+AUDIT — CONTINUATION ACCOUNTING
+
+Verify:
+- provider usage is used when available;
+- fallback remains deterministic;
+- formula is conservative and does not arbitrary-double-count;
+- provider-projected results, not canonical internal results, drive continuation payload accounting;
+- >large remains fail-closed.
+
+Report:
+`Provider-Grounded Continuation Accounting Qualified`.
+
+AUDIT — ADAPTIVE ENVELOPE PROMOTION
+
+Verify:
+- initial source selection remains final;
+- ordinary->medium and medium->large deterministic cases exist;
+- no demotion;
+- no source reassembly;
+- no provider/tool call caused by promotion;
+- no semantic compaction merely for ordinary/medium promotion;
+- fixed profile never promotes;
+- promotion diagnostics are bounded and included in live trace.
+
+Report:
+`Adaptive Envelope Promotion Qualified` and `Fixed-Profile Safety Preserved`.
+
+AUDIT — ORDINARY TUI WIRING
+
+Verify:
+- production TUI uses base agent composition;
+- ordinary instructions omit `CODING_WORKFLOW_GUIDANCE`;
+- explicit CodingWorkflow still includes it;
+- ordinary coding tools remain available;
+- structured Task Prompt behavior remains intact;
+- persistence/recovery/approval/cancellation boundaries remain intact.
+
+Report:
+`Ordinary TUI Base-Agent Wiring Qualified`.
+
+AUDIT — PREFLIGHT
+
+Report separately:
+- Hard Preflight Qualified;
+- Aggregate Broad Suite State;
+- Broad Regression Delta;
+- Live Eligibility.
+
+Do not relabel retained broad OpenTUI/native failures Green.
+
+Verify controlled baseline exactly:
+`d7804684801fa8418050c34d9ef097ca1adf80b6`.
+
+AUDIT — LIVE SMOKES
+
+Greeting:
+- exactly one provider round;
+- zero model-requested tools;
+- committed direct response;
+- no coding-workflow guidance;
+- no exhaustion;
+- zero intervention.
+
+Three-file:
+- expected fixture read evidence;
+- completed explanation;
+- no exhaustion;
+- truthful promotion evidence if used;
+- fixed source composition;
+- zero intervention.
+
+Report each Green / Not Green / Not Run.
+
+AUDIT — OFFICIAL GATES
+
+Fresh Gate A:
+- exact edit;
+- V1;
+- TaskState;
+- hidden acceptance;
+- calls/rounds;
+- intervention;
+- exhaustion.
+
+B2:
+- P1/P2/P3;
+- validations;
+- StackState;
+- hidden acceptance;
+- provider projection/promotion evidence relevant to the historical failure;
+- intervention/exhaustion.
+
+C2:
+- baseline preservation;
+- focused/broad validation;
+- TaskState;
+- hidden acceptance;
+- intervention/exhaustion.
+
+Never infer an unrun gate.
+
+AUDIT — EVIDENCE
+
+Verify:
+- all committed JSON hashes match P4 ledger;
+- every reached smoke/gate has bounded sanitized attempt/trace;
+- no raw provider streams, file bodies, internal unbounded Git snapshots/logs, secrets/environment, dependency trees, or workspace copies were committed;
+- historical correction/gate evidence and v1/v2 instruments remain unchanged.
+
+CREATE
+
+`docs/tasks/c9-turn-context-convergence/closeout.md`
+
+Decision table must include:
+
+- Provider Result Projection Qualified;
+- Provider-Grounded Continuation Accounting Qualified;
+- Adaptive Envelope Promotion Qualified;
+- Fixed-Profile Safety Preserved;
+- Ordinary TUI Base-Agent Wiring Qualified;
+- Hard Preflight Qualified;
+- Aggregate Broad Suite State;
+- Broad Regression Delta;
+- Live Eligibility;
+- Greeting Smoke;
+- Three-File Inspection Smoke;
+- Fresh Gate A Qualified;
+- Gate B2 Greenfield Qualified;
+- Gate C2 Existing-App Qualified;
+- Evidence Auditability Qualified;
+- Historical Evidence Preserved;
+- Overall c9-turn-context-convergence Qualified;
+- Phase 9 Ready For Owner Closeout.
+
+PHASE 9 OWNER-CLOSEOUT RULE
+
+Ready = Yes only if:
+- production correction deterministic boundaries Green;
+- hard preflight Green;
+- broad regression delta Green;
+- greeting Green;
+- three-file Green;
+- fresh Gate A Green;
+- B2 Green;
+- C2 Green;
+- no new blocking regression.
+
+Aggregate broad suite may remain Not Green and must remain labeled truthfully.
+
+If Phase 9 Ready = Yes, state:
+
+next action: `/closeout phase 9`
+
+Do not owner-close Phase 9 in this prompt.
+
+VALIDATION
+
+Re-run/verify:
+- new turn-context affected tests;
+- provider/tool/context/one-turn/coding/TUI/qualification floors;
+- Phase 9 integration;
+- v1/v2 immutability;
+- typecheck;
+- runner;
+- current broad `npm test` characterization;
+- `git diff --check`.
+
+Verify package `0.9.10`, no root lockfile, and P5 made no production/fixture/instrument repair.
+
+Do not:
+- rerun greeting/three-file/A/B2/C2;
+- repair production;
+- edit instruments;
+- rewrite historical evidence;
+- owner-close Phase 9;
+- open Phase 10.

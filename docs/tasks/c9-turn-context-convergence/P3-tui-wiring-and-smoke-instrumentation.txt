@@ -1,0 +1,160 @@
+TASK: Correction 9 / P3 — Restore ordinary TUI base-agent wiring and prepare live smokes
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Sol Medium`.
+- Browser required: no.
+
+VERSIONING
+- Required unchanged project version: `0.9.10`.
+
+GOAL
+
+Remove global coding-completion framing from ordinary production TUI turns without weakening George's coding tools or structured-task behavior.
+
+Then add the smallest bounded qualification support needed for P4's ordinary greeting and synthetic three-file live smokes.
+
+Read:
+- `BOOT.md`;
+- `AGENTS.md`;
+- current architecture/workflow/stability/Phase 9 authority;
+- `docs/planning/c9-turn-context-convergence/{decision-record,qualification-plan}.md`;
+- `docs/tasks/c9-turn-context-convergence/{prompt-assessment,implementation-plan,P1-provider-projection-evidence,P2-continuation-convergence-evidence}.md`;
+- `src/tui/{main,app}.ts`;
+- `src/application/{one-turn,coding-workflow,structured-task,structured-task-stack}.ts`;
+- session/recovery/config/diagnostics source;
+- current qualification live-work helper/tests.
+
+PRODUCTION TUI WIRING
+
+Current production startup constructs `createCodingWorkflowApplicationService(...)` and passes `workflow.agent` into `StructuredTaskApplicationService`.
+
+Replace that production composition with the canonical base agent:
+
+- construct `AgentLoopApplicationService` / `createAgentLoopApplicationService` directly using the same resolved provider/config/approval/run-budget/user-config/execution-policy/diagnostic inputs;
+- pass the base agent plus store into `StructuredTaskApplicationService`;
+- preserve recovery-before-use for resumed sessions;
+- preserve persistence, approvals, diagnostics, context config, execution policy, and model/provider identity.
+
+Explicit `createCodingWorkflowApplicationService` remains unchanged and must still append `CODING_WORKFLOW_GUIDANCE` for callers who choose that workflow.
+
+Do not introduce a semantic classifier to decide whether free-form input is coding or chat.
+
+Ordinary free-form turns keep the configured tool surface.
+
+TESTABLE COMPOSITION
+
+Refactor only enough wiring to make the production construction deterministically testable without opening a native renderer or making a network call.
+
+A small TUI composition factory/module is acceptable.
+
+Keep business logic out of the TUI layer.
+
+Permanent tests must prove:
+
+- production ordinary base-agent provider instructions do not contain `CODING_WORKFLOW_GUIDANCE`;
+- explicit CodingWorkflow provider instructions do contain it;
+- ordinary path still advertises the expected coding/read/write tools;
+- structured Task Prompt path remains available over the same base agent;
+- session resume/recovery/store wiring remains intact;
+- approvals/cancellation/config boundaries are unchanged.
+
+DETERMINISTIC GREETING GUARD
+
+Using a scripted provider that returns direct text:
+- submit ordinary `hi`;
+- exactly one provider request;
+- no George-generated tool request;
+- direct assistant response committed;
+- provider instructions lack coding-workflow guidance.
+
+Do not treat this scripted test as live Qwen evidence.
+
+LIVE-SMOKE QUALIFICATION SUPPORT
+
+Add/reuse one bounded ordinary-turn qualification harness so P4 can execute:
+1. ordinary greeting;
+2. ordinary synthetic three-file inspection.
+
+Reuse `src/qualification/live-work.ts` sanitization/artifact conventions where practical.
+
+Do not fork a second unbounded logging system.
+
+The ordinary-turn trace/artifact should retain only bounded:
+- attempt/runtime identity;
+- terminal result/error;
+- provider attempts/rounds/retries and input/output usage;
+- tool request/terminal names/states;
+- context assembly diagnostics;
+- P2 continuation-envelope promotions;
+- timing;
+- human intervention count;
+- final assistant response presence and a safe byte count/digest if needed for hidden fixture acceptance.
+
+Do not commit arbitrary full assistant prose as the evidence mechanism.
+
+SYNTHETIC THREE-FILE FIXTURE
+
+Create a correction-specific frozen non-George Git fixture under an appropriate test/qualification fixture path.
+
+It must contain exactly three bounded UTF-8 text files:
+- implementation;
+- focused test;
+- short README/task description.
+
+Aim for approximately 4-8 KiB each where practical.
+
+Add fixture hash/digest guards so P4 cannot silently change the fixture after P3.
+
+The prompt used by P4 should ask Qwen to inspect what it needs and explain the target implementation.
+
+Do not tell the model "maximum 3 files".
+
+This fixture is not a new version of `greenfield-express-v2` and must not alter v1/v2 live-work instruments.
+
+SMOKE ACCEPTANCE SUPPORT
+
+Provide deterministic acceptance helpers sufficient for P4 to classify:
+- greeting: one provider round, zero model-requested tools, committed response, no exhaustion, no coding-workflow guidance;
+- three-file: successful final response, required fixture evidence observed through read tools, no exhaustion, monotonic promotion evidence if any, zero intervention.
+
+Keep semantic acceptance modest and deterministic. The smoke is primarily a routing/context-convergence check, not a benchmark of prose quality.
+
+A response digest/length and observed read identities are preferable to storing model prose.
+
+AFFECTED-SYSTEM VALIDATION
+
+After P1-P3 production work, run:
+- provider/tool/registry floors;
+- context/profile/one-turn floors;
+- mutation/recovery/coding workflow;
+- TUI unit/composition;
+- qualification/live-work;
+- Phase 9 structured integration;
+- frozen Gate A deterministic replay;
+- v1/v2 immutability;
+- `npm run typecheck`;
+- `npm run test:runner`;
+- broad `npm test` characterization;
+- `git diff --check`.
+
+Verify:
+- package exactly `0.9.10`;
+- no root lockfile.
+
+EVIDENCE
+
+Create:
+
+`docs/tasks/c9-turn-context-convergence/P3-tui-and-smoke-instrumentation-evidence.md`
+
+Include fixture hashes and exact validation results.
+
+Do not:
+- run the official greeting smoke;
+- run the official three-file smoke;
+- run Gate A/B2/C2;
+- repair unrelated OpenTUI failures;
+- retune profiles/runtime;
+- create v3 instruments;
+- owner-close Phase 9;
+- open Phase 10.
