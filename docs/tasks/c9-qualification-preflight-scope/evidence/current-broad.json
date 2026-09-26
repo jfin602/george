@@ -1,0 +1,46 @@
+{
+  "state": "not_green",
+  "commit": "00072656b2ca892cc266db9c634f9718ec61b63b",
+  "nodeVersion": "v26.10.0",
+  "npmVersion": "11.19.1",
+  "command": "npm test",
+  "dependencyIdentity": "sha256:d01d095de8e27144ee1a0967e8f54b0aa3cc1ce5281b753138e1d9c708041c5c",
+  "environment": "non-TTY; clean Git tree; same installed dependency tree as controlled P1 comparison",
+  "total": 395,
+  "passed": 390,
+  "failed": 4,
+  "skipped": 1,
+  "durationMs": 10085.601038,
+  "observations": [
+    {
+      "identity": "test renderer shows identity, configuration, streamed text, and read-only activity",
+      "outcome": "failed",
+      "category": "opentui-renderer-assertion",
+      "signature": "ERR_ASSERTION: frame did not match /streamed answer/"
+    },
+    {
+      "identity": "Transcript and Task pages switch without changing session state or the composer draft",
+      "outcome": "failed",
+      "category": "opentui-renderer-assertion",
+      "signature": "ERR_ASSERTION: frame did not match /No structured task is active/"
+    },
+    {
+      "identity": "committed final answers reveal progressively without delaying canonical durability, and cancellation stops the reveal",
+      "outcome": "failed",
+      "category": "opentui-renderer-timeout",
+      "signature": "Timed out waiting for frame predicate after 20 passes"
+    },
+    {
+      "identity": "streaming does not overwrite draft input and returns the composer to ready state",
+      "outcome": "failed",
+      "category": "opentui-renderer-assertion",
+      "signature": "ERR_ASSERTION: frame did not match /streamed answer/"
+    },
+    {
+      "identity": "native OpenTUI launches and restores a real Node 26 terminal",
+      "outcome": "skipped",
+      "category": "native-environment",
+      "signature": "SKIP: non-TTY qualification environment"
+    }
+  ]
+}

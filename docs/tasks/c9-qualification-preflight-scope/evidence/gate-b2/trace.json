@@ -1,0 +1,244 @@
+{
+  "terminalStatus": "budget_exhausted",
+  "terminalError": null,
+  "observerError": null,
+  "taskState": {
+    "fingerprint": "1e35ad70f1a35bbdf2a1fc3af1bef5604923af67b60bdc155085884713f7973e",
+    "status": "budget_exhausted",
+    "requirements": [
+      {
+        "id": "R1",
+        "status": "pending"
+      },
+      {
+        "id": "R2",
+        "status": "pending"
+      },
+      {
+        "id": "R3",
+        "status": "pending"
+      }
+    ],
+    "workUnits": [
+      {
+        "id": "W1",
+        "status": "active"
+      }
+    ],
+    "validations": [
+      {
+        "id": "V1",
+        "status": "pending",
+        "attempts": 0
+      }
+    ],
+    "corrections": [],
+    "blockerCount": 1,
+    "terminalOutcome": "budget_exhausted",
+    "effectivePermissionExpectations": {
+      "workspace": "autonomous",
+      "outsideWorkspace": "reject",
+      "network": "ask",
+      "remoteMutation": "ask"
+    }
+  },
+  "stackState": {
+    "stackId": "greenfield-express-v2",
+    "fingerprint": "b4115722914fac5e5b254c80f69b75b8394cd4fcfa6c1a319120c7cf758a3c72",
+    "status": "budget_exhausted",
+    "currentTaskIndex": 0,
+    "currentTaskOrdinal": 1,
+    "tasks": [
+      {
+        "ordinal": 1,
+        "title": "Scaffold the service",
+        "status": "budget_exhausted"
+      },
+      {
+        "ordinal": 2,
+        "title": "Implement task API",
+        "status": "pending"
+      },
+      {
+        "ordinal": 3,
+        "title": "Test and document the service",
+        "status": "pending"
+      }
+    ],
+    "completedTaskOrdinals": [],
+    "terminalOutcome": "budget_exhausted",
+    "blockerSummary": "Work unit W1 did not complete."
+  },
+  "metrics": {
+    "providerAttempts": 2,
+    "providerRounds": 2,
+    "retries": 0,
+    "providerInputTokens": 2502,
+    "providerOutputTokens": 568,
+    "toolCalls": 8,
+    "contextAssemblies": 2,
+    "sandboxedProcessCalls": 0,
+    "taskUpdates": 2,
+    "stackUpdates": 2
+  },
+  "toolCalls": [
+    {
+      "callId": "call_453633730010031",
+      "name": "git_status",
+      "requestedArguments": "{}",
+      "effect": "local_read",
+      "terminalState": "succeeded"
+    },
+    {
+      "callId": "call_453633730010032",
+      "name": "list_directory",
+      "requestedArguments": "{\"path\":\".\"}",
+      "effect": "local_read",
+      "terminalState": "succeeded"
+    },
+    {
+      "callId": "call_453633730010033",
+      "name": "read_file",
+      "requestedArguments": "{\"path\":\"package.json\"}",
+      "effect": "local_read",
+      "terminalState": "succeeded"
+    },
+    {
+      "callId": "call_453633730010034",
+      "name": "search_text",
+      "requestedArguments": "{\"query\":\"\\\"express\\\"\",\"path\":\"package.json\"}",
+      "effect": "local_read",
+      "terminalState": "failed"
+    },
+    {
+      "callId": "call_453633730010038",
+      "name": "write_file",
+      "requestedArguments": "{\"path\":\"package.json\",\"content\":\"[omitted 226 bytes]\",\"expectedSha256\":\"f3dee37c3a5a1214c8b6bb2099697560d7c8d8be6e21cbb0d60920d7083cdb6c\"}",
+      "effect": "workspace_mutation",
+      "terminalState": "failed"
+    },
+    {
+      "callId": "call_453633730010039",
+      "name": "create_directory",
+      "requestedArguments": "{\"path\":\"src\"}",
+      "effect": "workspace_mutation",
+      "terminalState": "succeeded"
+    },
+    {
+      "callId": "call_453633730010040",
+      "name": "write_file",
+      "requestedArguments": "{\"path\":\"src/app.js\",\"content\":\"[omitted 102 bytes]\",\"expectedSha256\":\"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\"}",
+      "effect": "workspace_mutation",
+      "terminalState": "succeeded"
+    },
+    {
+      "callId": "call_453633730010041",
+      "name": "write_file",
+      "requestedArguments": "{\"path\":\"src/server.js\",\"content\":\"[omitted 182 bytes]\",\"expectedSha256\":\"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\"}",
+      "effect": "workspace_mutation",
+      "terminalState": "succeeded"
+    }
+  ],
+  "mutations": [
+    {
+      "callId": "call_453633730010040",
+      "tool": "write_file",
+      "path": "src/app.js",
+      "bytes": 102,
+      "sha256": "30822275b9296c9e49be0690babe4f72e845eb3d3d5e83b9d436b0fe1c288887"
+    },
+    {
+      "callId": "call_453633730010041",
+      "tool": "write_file",
+      "path": "src/server.js",
+      "bytes": 182,
+      "sha256": "1d1232a025871b962f2b11581678d29e0a95c2c6cb875df1b0421c116956beeb"
+    }
+  ],
+  "validations": [],
+  "correctionCount": 0,
+  "contexts": [
+    {
+      "profileId": "qwen3-coder-30b-a3b-instruct-q4_k_m-lm-studio-32k-ordinary",
+      "attemptedProfileIds": [
+        "qwen3-coder-30b-a3b-instruct-q4_k_m-lm-studio-32k-ordinary",
+        "qwen3-coder-30b-a3b-instruct-q4_k_m-lm-studio-32k-medium",
+        "qwen3-coder-30b-a3b-instruct-q4_k_m-lm-studio-32k"
+      ],
+      "promotionReasons": [],
+      "estimatedTokens": 577,
+      "providerInputBudget": 8192,
+      "remainingHeadroom": 7615
+    },
+    {
+      "profileId": "qwen3-coder-30b-a3b-instruct-q4_k_m-lm-studio-32k-ordinary",
+      "attemptedProfileIds": [
+        "qwen3-coder-30b-a3b-instruct-q4_k_m-lm-studio-32k-ordinary",
+        "qwen3-coder-30b-a3b-instruct-q4_k_m-lm-studio-32k-medium",
+        "qwen3-coder-30b-a3b-instruct-q4_k_m-lm-studio-32k"
+      ],
+      "promotionReasons": [],
+      "estimatedTokens": 1319,
+      "providerInputBudget": 8192,
+      "remainingHeadroom": 6873
+    }
+  ],
+  "budgets": {
+    "latest": [
+      {
+        "runId": "3428a9ef-04b9-464f-8405-4cb47999a5a7",
+        "snapshot": {
+          "runId": "3428a9ef-04b9-464f-8405-4cb47999a5a7",
+          "limits": {
+            "providerAttempts": 128,
+            "toolExecutions": 128,
+            "retryAttempts": 32,
+            "compactionAttempts": 32,
+            "compactionCheckpoints": 32,
+            "processExecutions": 64,
+            "processRuntimeMs": 3600000,
+            "wallClockMs": 3600000,
+            "contextTokens": 1000000,
+            "providerInputTokens": 1000000,
+            "providerOutputTokens": 1000000
+          },
+          "consumed": {
+            "providerAttempts": 2,
+            "toolExecutions": 8,
+            "retryAttempts": 0,
+            "compactionAttempts": 0,
+            "compactionCheckpoints": 0,
+            "processExecutions": 0,
+            "processRuntimeMs": 0,
+            "wallClockMs": 87194,
+            "contextTokens": 1896,
+            "providerInputTokens": 2502,
+            "providerOutputTokens": 568
+          },
+          "elapsedMs": 87194
+        }
+      }
+    ],
+    "pressure": [],
+    "exhaustion": [],
+    "taskExhausted": true,
+    "stageExhaustion": [
+      {
+        "turnId": "60cb6ab3-a836-4092-b535-98df7a96ec60",
+        "message": "Frozen context profile qwen3-coder-30b-a3b-instruct-q4_k_m-lm-studio-32k-ordinary cannot continue safely: estimated continuation context 28306 exceeds its 8192 token provider-input budget."
+      }
+    ]
+  },
+  "timing": {
+    "totalMs": 87265.261463,
+    "workflows": [
+      {
+        "turnId": "60cb6ab3-a836-4092-b535-98df7a96ec60",
+        "totalMs": 74795
+      }
+    ]
+  },
+  "hiddenAcceptance": "not_run",
+  "humanInterventions": 0,
+  "eventsOmitted": 2
+}
