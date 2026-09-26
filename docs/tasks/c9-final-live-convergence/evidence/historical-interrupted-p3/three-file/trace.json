@@ -8,11 +8,11 @@
       "source": "application",
       "category": "tool",
       "eventType": "tool.failed",
-      "code": "validation",
-      "message": "Tool search_text arguments do not match its input schema.",
-      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf",
-      "callId": "call_3526820938090005",
-      "name": "search_text"
+      "code": "denied",
+      "message": "Approval denied for tool run_process.",
+      "turnId": "70c653ee-320c-4baf-bfc4-e569007635ed",
+      "callId": "call_2029258686870099",
+      "name": "run_process"
     }
   ],
   "taskState": null,
@@ -21,9 +21,9 @@
     "providerAttempts": 5,
     "providerRounds": 5,
     "retries": 0,
-    "providerInputTokens": 28352,
-    "providerOutputTokens": 761,
-    "toolCalls": 7,
+    "providerInputTokens": 21300,
+    "providerOutputTokens": 721,
+    "toolCalls": 6,
     "contextAssemblies": 1,
     "sandboxedProcessCalls": 0,
     "taskUpdates": 0,
@@ -31,53 +31,46 @@
   },
   "toolCalls": [
     {
-      "callId": "call_3526820938090000",
+      "callId": "call_2029258686870094",
       "name": "git_status",
       "requestedArguments": "{}",
       "effect": "local_read",
       "terminalState": "succeeded"
     },
     {
-      "callId": "call_3526820938090001",
+      "callId": "call_2029258686870095",
       "name": "list_directory",
       "requestedArguments": "{\"path\":\"\"}",
       "effect": "local_read",
       "terminalState": "succeeded"
     },
     {
-      "callId": "call_3526820938090002",
+      "callId": "call_2029258686870096",
       "name": "read_file",
       "requestedArguments": "{\"path\":\"README.md\"}",
       "effect": "local_read",
       "terminalState": "succeeded"
     },
     {
-      "callId": "call_3526820938090003",
+      "callId": "call_2029258686870097",
       "name": "read_file",
       "requestedArguments": "{\"path\":\"plan.js\"}",
       "effect": "local_read",
       "terminalState": "succeeded"
     },
     {
-      "callId": "call_3526820938090004",
+      "callId": "call_2029258686870098",
       "name": "read_file",
       "requestedArguments": "{\"path\":\"plan.test.js\"}",
       "effect": "local_read",
       "terminalState": "succeeded"
     },
     {
-      "callId": "call_3526820938090005",
-      "name": "search_text",
-      "requestedArguments": "{\"query\":\"compileReleasePlan\",\"path\":\"\"}",
-      "effect": "local_read",
-      "terminalState": "failed"
-    },
-    {
-      "callId": "call_3526820938090006",
-      "name": "search_text",
-      "requestedArguments": "{\"query\":\"compileReleasePlan\"}",
-      "effect": "local_read",
-      "terminalState": "succeeded"
+      "callId": "call_2029258686870099",
+      "name": "run_process",
+      "requestedArguments": "{\"executable\":\"node\",\"arguments\":[\"plan.test.js\"]}",
+      "effect": "host_process",
+      "terminalState": "denied"
     }
   ],
   "mutations": [],
@@ -97,16 +90,7 @@
       "remainingHeadroom": 7111
     }
   ],
-  "envelopePromotions": [
-    {
-      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf",
-      "fromProfileId": "qwen3-coder-30b-a3b-instruct-q4_k_m-lm-studio-32k-ordinary",
-      "toProfileId": "qwen3-coder-30b-a3b-instruct-q4_k_m-lm-studio-32k-medium",
-      "reason": "provider-usage",
-      "tokens": 12661,
-      "providerInputBudget": 16384
-    }
-  ],
+  "envelopePromotions": [],
   "observedReadPaths": [
     "README.md",
     "plan.js",
@@ -114,15 +98,15 @@
   ],
   "finalResponse": {
     "present": true,
-    "bytes": 3440,
-    "sha256": "66bfde81085b63a6edbb796537ea75209ad9608539a7ebf2b340576a6a869853"
+    "bytes": 3174,
+    "sha256": "4227fef12710f396c82a8e5712ba9d75c14c7574d1b74e81ade61af240e4e5e7"
   },
   "budgets": {
     "latest": [
       {
-        "runId": "1c5d807f-57c5-440a-9389-15d0e380ae29",
+        "runId": "f683b66d-c0ae-44ec-9f67-1916d793242a",
         "snapshot": {
-          "runId": "1c5d807f-57c5-440a-9389-15d0e380ae29",
+          "runId": "f683b66d-c0ae-44ec-9f67-1916d793242a",
           "limits": {
             "providerAttempts": 128,
             "toolExecutions": 128,
@@ -138,18 +122,18 @@
           },
           "consumed": {
             "providerAttempts": 5,
-            "toolExecutions": 6,
+            "toolExecutions": 5,
             "retryAttempts": 0,
             "compactionAttempts": 0,
             "compactionCheckpoints": 0,
             "processExecutions": 0,
             "processRuntimeMs": 0,
-            "wallClockMs": 168011,
+            "wallClockMs": 146796,
             "contextTokens": 1081,
-            "providerInputTokens": 28352,
-            "providerOutputTokens": 761
+            "providerInputTokens": 21300,
+            "providerOutputTokens": 721
           },
-          "elapsedMs": 168011
+          "elapsedMs": 146796
         }
       }
     ],
@@ -159,15 +143,15 @@
     "stageExhaustion": []
   },
   "timing": {
-    "totalMs": 168037.06436699998,
+    "totalMs": 146810.104115,
     "workflows": [
       {
-        "turnId": "81516379-e788-4462-b2a9-e3caf1352acf",
-        "totalMs": 168032
+        "turnId": "70c653ee-320c-4baf-bfc4-e569007635ed",
+        "totalMs": 146809
       }
     ]
   },
   "hiddenAcceptance": "passed",
   "humanInterventions": 0,
-  "eventsOmitted": 763
+  "eventsOmitted": 723
 }

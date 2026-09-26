@@ -1,0 +1,693 @@
+{
+  "schemaVersion": 2,
+  "terminalStatus": "failed",
+  "terminalError": null,
+  "observerError": null,
+  "failures": [
+    {
+      "source": "application",
+      "category": "tool",
+      "eventType": "tool.failed",
+      "code": "validation",
+      "message": "Search path must name a directory.",
+      "turnId": "09931f66-e798-4713-9874-7ea982787c85-inspect",
+      "callId": "call_3526820938090016",
+      "name": "search_text"
+    },
+    {
+      "source": "application",
+      "category": "tool",
+      "eventType": "tool.failed",
+      "code": "validation",
+      "message": "Text framing change requires explicit acknowledgement: current lineEnding=lf finalNewline=lf; proposed lineEnding=lf finalNewline=none.",
+      "turnId": "90c063f6-793d-4e41-bf71-5dcce1736fe0",
+      "callId": "call_3526820938090017",
+      "name": "write_file"
+    },
+    {
+      "source": "application",
+      "category": "tool",
+      "eventType": "tool.failed",
+      "code": "denied",
+      "message": "Approval denied for tool write_file.",
+      "turnId": "90c063f6-793d-4e41-bf71-5dcce1736fe0",
+      "callId": "call_3526820938090018",
+      "name": "write_file"
+    },
+    {
+      "source": "application",
+      "category": "tool",
+      "eventType": "tool.failed",
+      "code": "validation",
+      "message": "Workspace path must exist.",
+      "turnId": "8e3ca6bd-25ed-4a79-8b8b-8c9df3752f33-inspect",
+      "callId": "call_3526820938090024",
+      "name": "read_file"
+    },
+    {
+      "source": "application",
+      "category": "tool",
+      "eventType": "tool.failed",
+      "code": "validation",
+      "message": "Workspace path must exist.",
+      "turnId": "8e3ca6bd-25ed-4a79-8b8b-8c9df3752f33-inspect",
+      "callId": "call_3526820938090025",
+      "name": "search_text"
+    },
+    {
+      "source": "application",
+      "category": "validation",
+      "eventType": "validation.completed",
+      "code": "failed",
+      "message": "Validation failed.",
+      "reason": "failed",
+      "turnId": "1b362457-2626-4c72-8871-babaa8362dda",
+      "callId": "2e58737d-eea5-47b8-8b05-487e65514abf",
+      "name": "2e58737d-eea5-47b8-8b05-487e65514abf"
+    },
+    {
+      "source": "application",
+      "category": "provider",
+      "eventType": "provider.error",
+      "code": "provider",
+      "message": "Provider stalled while the response was active after 60113 ms of inactivity.",
+      "turnId": "a61150e8-5380-4053-b77c-b3720a48b6ee",
+      "attemptId": "p2a1-0ed97161-0d82-4559-be1c-f3efbd2249b2"
+    },
+    {
+      "source": "application",
+      "category": "provider",
+      "eventType": "provider.error",
+      "code": "provider",
+      "message": "Provider stalled while the response was active after 60068 ms of inactivity.",
+      "turnId": "a61150e8-5380-4053-b77c-b3720a48b6ee",
+      "attemptId": "p3a1-0ed97161-0d82-4559-be1c-f3efbd2249b2"
+    },
+    {
+      "source": "application",
+      "category": "tool",
+      "eventType": "tool.failed",
+      "code": "validation",
+      "message": "Text framing change requires explicit acknowledgement: current lineEnding=lf finalNewline=lf; proposed lineEnding=lf finalNewline=none.",
+      "turnId": "a61150e8-5380-4053-b77c-b3720a48b6ee",
+      "callId": "call_3526820938090035",
+      "name": "write_file"
+    },
+    {
+      "source": "application",
+      "category": "provider",
+      "eventType": "provider.error",
+      "code": "provider",
+      "message": "Provider stalled while the response was active after 60058 ms of inactivity.",
+      "turnId": "a61150e8-5380-4053-b77c-b3720a48b6ee",
+      "attemptId": "p4a1-0ed97161-0d82-4559-be1c-f3efbd2249b2"
+    },
+    {
+      "source": "application",
+      "category": "tool",
+      "eventType": "tool.failed",
+      "code": "denied",
+      "message": "Approval denied for tool write_file.",
+      "turnId": "a61150e8-5380-4053-b77c-b3720a48b6ee",
+      "callId": "call_3526820938090036",
+      "name": "write_file"
+    },
+    {
+      "source": "application",
+      "category": "provider",
+      "eventType": "provider.error",
+      "code": "provider",
+      "message": "Provider stalled while the response was active after 60063 ms of inactivity.",
+      "turnId": "a61150e8-5380-4053-b77c-b3720a48b6ee",
+      "attemptId": "p5a1-0ed97161-0d82-4559-be1c-f3efbd2249b2"
+    },
+    {
+      "source": "application",
+      "category": "provider",
+      "eventType": "provider.error",
+      "code": "provider",
+      "message": "Provider stalled while the response was active after 60110 ms of inactivity.",
+      "turnId": "a61150e8-5380-4053-b77c-b3720a48b6ee",
+      "attemptId": "p6a1-0ed97161-0d82-4559-be1c-f3efbd2249b2"
+    },
+    {
+      "source": "application",
+      "category": "tool",
+      "eventType": "tool.failed",
+      "code": "tool",
+      "message": "Equivalent unchanged replay-safe local request already succeeded; use the existing observed evidence or make progress.",
+      "turnId": "a61150e8-5380-4053-b77c-b3720a48b6ee",
+      "callId": "call_3526820938090038",
+      "name": "git_status"
+    },
+    {
+      "source": "application",
+      "category": "provider",
+      "eventType": "provider.error",
+      "code": "provider",
+      "message": "Provider stalled while the response was active after 60080 ms of inactivity.",
+      "turnId": "a61150e8-5380-4053-b77c-b3720a48b6ee",
+      "attemptId": "p7a1-0ed97161-0d82-4559-be1c-f3efbd2249b2"
+    },
+    {
+      "source": "application",
+      "category": "provider",
+      "eventType": "provider.error",
+      "code": "provider",
+      "message": "Provider stalled while the response was active after 60088 ms of inactivity.",
+      "turnId": "a61150e8-5380-4053-b77c-b3720a48b6ee",
+      "attemptId": "p7a2-0ed97161-0d82-4559-be1c-f3efbd2249b2"
+    },
+    {
+      "source": "application",
+      "category": "provider",
+      "eventType": "provider.error",
+      "code": "provider",
+      "message": "Provider stalled while the response was active after 60071 ms of inactivity.",
+      "turnId": "a61150e8-5380-4053-b77c-b3720a48b6ee",
+      "attemptId": "p7a3-0ed97161-0d82-4559-be1c-f3efbd2249b2"
+    },
+    {
+      "source": "application",
+      "category": "turn",
+      "eventType": "turn.failed",
+      "code": "provider",
+      "message": "Provider stalled while the response was active after 60071 ms of inactivity.",
+      "turnId": "a61150e8-5380-4053-b77c-b3720a48b6ee"
+    }
+  ],
+  "taskState": {
+    "fingerprint": "ab612aad0ecd43a2bbbdb4d0135a21db32fa5c8e13e993ba90105e407c96b3dc",
+    "status": "failed",
+    "requirements": [
+      {
+        "id": "R1",
+        "status": "addressed"
+      },
+      {
+        "id": "R2",
+        "status": "addressed"
+      },
+      {
+        "id": "R3",
+        "status": "addressed"
+      },
+      {
+        "id": "R4",
+        "status": "addressed"
+      },
+      {
+        "id": "R5",
+        "status": "addressed"
+      }
+    ],
+    "workUnits": [
+      {
+        "id": "W1",
+        "status": "addressed"
+      }
+    ],
+    "validations": [
+      {
+        "id": "V1",
+        "status": "failed",
+        "attempts": 1
+      }
+    ],
+    "corrections": [
+      {
+        "cycle": 1,
+        "validationId": "V1",
+        "status": "active"
+      }
+    ],
+    "blockerCount": 1,
+    "terminalOutcome": "failed",
+    "effectivePermissionExpectations": {
+      "workspace": "autonomous",
+      "outsideWorkspace": "reject",
+      "network": "ask",
+      "remoteMutation": "ask"
+    }
+  },
+  "stackState": {
+    "stackId": "greenfield-express-v2",
+    "fingerprint": "b4115722914fac5e5b254c80f69b75b8394cd4fcfa6c1a319120c7cf758a3c72",
+    "status": "failed",
+    "currentTaskIndex": 1,
+    "currentTaskOrdinal": 2,
+    "tasks": [
+      {
+        "ordinal": 1,
+        "title": "Scaffold the service",
+        "status": "completed"
+      },
+      {
+        "ordinal": 2,
+        "title": "Implement task API",
+        "status": "failed"
+      },
+      {
+        "ordinal": 3,
+        "title": "Test and document the service",
+        "status": "pending"
+      }
+    ],
+    "completedTaskOrdinals": [
+      1
+    ],
+    "terminalOutcome": "failed",
+    "blockerSummary": "Correction for V1 did not complete."
+  },
+  "metrics": {
+    "providerAttempts": 27,
+    "providerRounds": 27,
+    "retries": 6,
+    "providerInputTokens": 62953,
+    "providerOutputTokens": 2623,
+    "toolCalls": 28,
+    "contextAssemblies": 5,
+    "sandboxedProcessCalls": 2,
+    "taskUpdates": 7,
+    "stackUpdates": 4
+  },
+  "toolCalls": [
+    {
+      "callId": "call_3526820938090013",
+      "name": "git_status",
+      "requestedArguments": "{}",
+      "effect": "local_read",
+      "terminalState": "succeeded"
+    },
+    {
+      "callId": "call_3526820938090014",
+      "name": "list_directory",
+      "requestedArguments": "{\"path\":\"\"}",
+      "effect": "local_read",
+      "terminalState": "succeeded"
+    },
+    {
+      "callId": "call_3526820938090015",
+      "name": "read_file",
+      "requestedArguments": "{\"path\":\"package.json\"}",
+      "effect": "local_read",
+      "terminalState": "succeeded"
+    },
+    {
+      "callId": "call_3526820938090016",
+      "name": "search_text",
+      "requestedArguments": "{\"query\":\"Express 5.1.0\",\"path\":\"package.json\"}",
+      "effect": "local_read",
+      "terminalState": "failed"
+    },
+    {
+      "callId": "call_3526820938090017",
+      "name": "write_file",
+      "requestedArguments": "{\"path\":\"package.json\",\"content\":\"[omitted 184 bytes]\",\"expectedSha256\":\"f3dee37c3a5a1214c8b6bb2099697560d7c8d8be6e21cbb0d60920d7083cdb6c\"}",
+      "effect": "workspace_mutation",
+      "terminalState": "failed"
+    },
+    {
+      "callId": "call_3526820938090018",
+      "name": "write_file",
+      "requestedArguments": "{\"path\":\"package.json\",\"content\":\"[omitted 184 bytes]\",\"expectedSha256\":\"f3dee37c3a5a1214c8b6bb2099697560d7c8d8be6e21cbb0d60920d7083cdb6c\",\"allowTextFramingChange\":true}",
+      "effect": "workspace_mutation",
+      "terminalState": "denied"
+    },
+    {
+      "callId": "call_3526820938090019",
+      "name": "create_directory",
+      "requestedArguments": "{\"path\":\"src\"}",
+      "effect": "workspace_mutation",
+      "terminalState": "succeeded"
+    },
+    {
+      "callId": "call_3526820938090020",
+      "name": "write_file",
+      "requestedArguments": "{\"path\":\"src/app.js\",\"content\":\"[omitted 102 bytes]\"}",
+      "effect": "workspace_mutation",
+      "terminalState": "succeeded"
+    },
+    {
+      "callId": "call_3526820938090021",
+      "name": "write_file",
+      "requestedArguments": "{\"path\":\"src/server.js\",\"content\":\"[omitted 184 bytes]\"}",
+      "effect": "workspace_mutation",
+      "terminalState": "succeeded"
+    },
+    {
+      "callId": "0a5b4542-9604-43cb-825e-9389d6187426",
+      "name": "run_process",
+      "requestedArguments": "{\"executable\":\"node\",\"arguments\":[\"--check\",\"src/app.js\"]}",
+      "effect": "sandboxed_workspace_process",
+      "terminalState": "succeeded"
+    },
+    {
+      "callId": "call_3526820938090022",
+      "name": "git_status",
+      "requestedArguments": "{}",
+      "effect": "local_read",
+      "terminalState": "succeeded"
+    },
+    {
+      "callId": "call_3526820938090023",
+      "name": "list_directory",
+      "requestedArguments": "{\"path\":\"\"}",
+      "effect": "local_read",
+      "terminalState": "succeeded"
+    },
+    {
+      "callId": "call_3526820938090024",
+      "name": "read_file",
+      "requestedArguments": "{\"path\":\"app.py\"}",
+      "effect": "local_read",
+      "terminalState": "failed"
+    },
+    {
+      "callId": "call_3526820938090025",
+      "name": "search_text",
+      "requestedArguments": "{\"query\":\"def create_app\",\"path\":\"app.py\"}",
+      "effect": "local_read",
+      "terminalState": "failed"
+    },
+    {
+      "callId": "call_3526820938090026",
+      "name": "list_directory",
+      "requestedArguments": "{\"path\":\"src\"}",
+      "effect": "local_read",
+      "terminalState": "succeeded"
+    },
+    {
+      "callId": "call_3526820938090027",
+      "name": "read_file",
+      "requestedArguments": "{\"path\":\"src/app.js\"}",
+      "effect": "local_read",
+      "terminalState": "succeeded"
+    },
+    {
+      "callId": "call_3526820938090028",
+      "name": "apply_patch",
+      "requestedArguments": "{\"path\":\"src/app.js\",\"expectedSha256\":\"30822275b9296c9e49be0690babe4f72e845eb3d3d5e83b9d436b0fe1c288887\",\"edits\":[{\"oldText\":\"[omitted 102 bytes]\",\"newText\":\"[omitted 1855 bytes]\"}]}",
+      "effect": "workspace_mutation",
+      "terminalState": "succeeded"
+    },
+    {
+      "callId": "call_3526820938090029",
+      "name": "git_status",
+      "requestedArguments": "{}",
+      "effect": "local_read",
+      "terminalState": "succeeded"
+    },
+    {
+      "callId": "2e58737d-eea5-47b8-8b05-487e65514abf",
+      "name": "run_process",
+      "requestedArguments": "{\"executable\":\"npm\",\"arguments\":[\"test\"]}",
+      "effect": "sandboxed_workspace_process",
+      "terminalState": "succeeded"
+    },
+    {
+      "callId": "call_3526820938090030",
+      "name": "git_status",
+      "requestedArguments": "{}",
+      "effect": "local_read",
+      "terminalState": "succeeded"
+    },
+    {
+      "callId": "call_3526820938090031",
+      "name": "list_directory",
+      "requestedArguments": "{\"path\":\".\"}",
+      "effect": "local_read",
+      "terminalState": "succeeded"
+    },
+    {
+      "callId": "call_3526820938090032",
+      "name": "list_directory",
+      "requestedArguments": "{\"path\":\"src\"}",
+      "effect": "local_read",
+      "terminalState": "succeeded"
+    },
+    {
+      "callId": "call_3526820938090033",
+      "name": "read_file",
+      "requestedArguments": "{\"path\":\"src/app.js\"}",
+      "effect": "local_read",
+      "terminalState": "succeeded"
+    },
+    {
+      "callId": "call_3526820938090034",
+      "name": "read_file",
+      "requestedArguments": "{\"path\":\"package.json\"}",
+      "effect": "local_read",
+      "terminalState": "succeeded"
+    },
+    {
+      "callId": "call_3526820938090035",
+      "name": "write_file",
+      "requestedArguments": "{\"path\":\"package.json\",\"content\":\"[omitted 129 bytes]\",\"expectedSha256\":\"f3dee37c3a5a1214c8b6bb2099697560d7c8d8be6e21cbb0d60920d7083cdb6c\"}",
+      "effect": "workspace_mutation",
+      "terminalState": "failed"
+    },
+    {
+      "callId": "call_3526820938090036",
+      "name": "write_file",
+      "requestedArguments": "{\"path\":\"package.json\",\"content\":\"[omitted 129 bytes]\",\"expectedSha256\":\"f3dee37c3a5a1214c8b6bb2099697560d7c8d8be6e21cbb0d60920d7083cdb6c\",\"allowTextFramingChange\":true}",
+      "effect": "workspace_mutation",
+      "terminalState": "denied"
+    },
+    {
+      "callId": "call_3526820938090037",
+      "name": "search_text",
+      "requestedArguments": "{\"query\":\"npm run\",\"path\":\".\"}",
+      "effect": "local_read",
+      "terminalState": "succeeded"
+    },
+    {
+      "callId": "call_3526820938090038",
+      "name": "git_status",
+      "requestedArguments": "{}",
+      "effect": "local_read",
+      "terminalState": "failed"
+    }
+  ],
+  "mutations": [
+    {
+      "callId": "call_3526820938090020",
+      "tool": "write_file",
+      "path": "src/app.js",
+      "bytes": 102,
+      "sha256": "30822275b9296c9e49be0690babe4f72e845eb3d3d5e83b9d436b0fe1c288887"
+    },
+    {
+      "callId": "call_3526820938090021",
+      "tool": "write_file",
+      "path": "src/server.js",
+      "bytes": 184,
+      "sha256": "883534ab6a59baca9a5f9ae0d82125da6a227152940327884ac0ca93712c4f36"
+    },
+    {
+      "callId": "call_3526820938090028",
+      "tool": "apply_patch",
+      "path": "src/app.js",
+      "bytes": 1855,
+      "sha256": "4b2ea756e0602f13be20b1eb314c72d316dc4b797b6a9df28e5a8dbf7e26f273"
+    }
+  ],
+  "validations": [
+    {
+      "callId": "0a5b4542-9604-43cb-825e-9389d6187426",
+      "status": "passed",
+      "exitCode": 0,
+      "outcome": "completed"
+    },
+    {
+      "callId": "2e58737d-eea5-47b8-8b05-487e65514abf",
+      "status": "failed",
+      "exitCode": 1,
+      "outcome": "failed"
+    }
+  ],
+  "correctionCount": 1,
+  "contexts": [
+    {
+      "profileId": "qwen3-coder-30b-a3b-instruct-q4_k_m-lm-studio-32k-ordinary",
+      "attemptedProfileIds": [
+        "qwen3-coder-30b-a3b-instruct-q4_k_m-lm-studio-32k-ordinary",
+        "qwen3-coder-30b-a3b-instruct-q4_k_m-lm-studio-32k-medium",
+        "qwen3-coder-30b-a3b-instruct-q4_k_m-lm-studio-32k"
+      ],
+      "promotionReasons": [],
+      "estimatedTokens": 619,
+      "providerInputBudget": 8192,
+      "remainingHeadroom": 7573
+    },
+    {
+      "profileId": "qwen3-coder-30b-a3b-instruct-q4_k_m-lm-studio-32k-ordinary",
+      "attemptedProfileIds": [
+        "qwen3-coder-30b-a3b-instruct-q4_k_m-lm-studio-32k-ordinary",
+        "qwen3-coder-30b-a3b-instruct-q4_k_m-lm-studio-32k-medium",
+        "qwen3-coder-30b-a3b-instruct-q4_k_m-lm-studio-32k"
+      ],
+      "promotionReasons": [],
+      "estimatedTokens": 1416,
+      "providerInputBudget": 8192,
+      "remainingHeadroom": 6776
+    },
+    {
+      "profileId": "qwen3-coder-30b-a3b-instruct-q4_k_m-lm-studio-32k-ordinary",
+      "attemptedProfileIds": [
+        "qwen3-coder-30b-a3b-instruct-q4_k_m-lm-studio-32k-ordinary",
+        "qwen3-coder-30b-a3b-instruct-q4_k_m-lm-studio-32k-medium",
+        "qwen3-coder-30b-a3b-instruct-q4_k_m-lm-studio-32k"
+      ],
+      "promotionReasons": [],
+      "estimatedTokens": 623,
+      "providerInputBudget": 8192,
+      "remainingHeadroom": 7569
+    },
+    {
+      "profileId": "qwen3-coder-30b-a3b-instruct-q4_k_m-lm-studio-32k-ordinary",
+      "attemptedProfileIds": [
+        "qwen3-coder-30b-a3b-instruct-q4_k_m-lm-studio-32k-ordinary",
+        "qwen3-coder-30b-a3b-instruct-q4_k_m-lm-studio-32k-medium",
+        "qwen3-coder-30b-a3b-instruct-q4_k_m-lm-studio-32k"
+      ],
+      "promotionReasons": [],
+      "estimatedTokens": 1370,
+      "providerInputBudget": 8192,
+      "remainingHeadroom": 6822
+    },
+    {
+      "profileId": "qwen3-coder-30b-a3b-instruct-q4_k_m-lm-studio-32k-ordinary",
+      "attemptedProfileIds": [
+        "qwen3-coder-30b-a3b-instruct-q4_k_m-lm-studio-32k-ordinary",
+        "qwen3-coder-30b-a3b-instruct-q4_k_m-lm-studio-32k-medium",
+        "qwen3-coder-30b-a3b-instruct-q4_k_m-lm-studio-32k"
+      ],
+      "promotionReasons": [],
+      "estimatedTokens": 1581,
+      "providerInputBudget": 8192,
+      "remainingHeadroom": 6611
+    }
+  ],
+  "envelopePromotions": [
+    {
+      "turnId": "a61150e8-5380-4053-b77c-b3720a48b6ee",
+      "fromProfileId": "qwen3-coder-30b-a3b-instruct-q4_k_m-lm-studio-32k-ordinary",
+      "toProfileId": "qwen3-coder-30b-a3b-instruct-q4_k_m-lm-studio-32k-medium",
+      "reason": "continuation-estimate",
+      "tokens": 8734,
+      "providerInputBudget": 16384
+    }
+  ],
+  "observedReadPaths": [
+    "package.json",
+    "src/app.js"
+  ],
+  "finalResponse": {
+    "present": false,
+    "bytes": 0,
+    "sha256": null
+  },
+  "budgets": {
+    "latest": [
+      {
+        "runId": "645a34a8-d0ce-4335-988d-3ecec9de05bc",
+        "snapshot": {
+          "runId": "645a34a8-d0ce-4335-988d-3ecec9de05bc",
+          "limits": {
+            "providerAttempts": 128,
+            "toolExecutions": 128,
+            "retryAttempts": 32,
+            "compactionAttempts": 32,
+            "compactionCheckpoints": 32,
+            "processExecutions": 64,
+            "processRuntimeMs": 3600000,
+            "wallClockMs": 3600000,
+            "contextTokens": 1000000,
+            "providerInputTokens": 1000000,
+            "providerOutputTokens": 1000000
+          },
+          "consumed": {
+            "providerAttempts": 7,
+            "toolExecutions": 9,
+            "retryAttempts": 0,
+            "compactionAttempts": 0,
+            "compactionCheckpoints": 0,
+            "processExecutions": 1,
+            "processRuntimeMs": 44,
+            "wallClockMs": 184243,
+            "contextTokens": 2035,
+            "providerInputTokens": 18704,
+            "providerOutputTokens": 723
+          },
+          "elapsedMs": 184243
+        }
+      },
+      {
+        "runId": "0ed97161-0d82-4559-be1c-f3efbd2249b2",
+        "snapshot": {
+          "runId": "0ed97161-0d82-4559-be1c-f3efbd2249b2",
+          "limits": {
+            "providerAttempts": 128,
+            "toolExecutions": 128,
+            "retryAttempts": 32,
+            "compactionAttempts": 32,
+            "compactionCheckpoints": 32,
+            "processExecutions": 64,
+            "processRuntimeMs": 3600000,
+            "wallClockMs": 3600000,
+            "contextTokens": 1000000,
+            "providerInputTokens": 1000000,
+            "providerOutputTokens": 1000000
+          },
+          "consumed": {
+            "providerAttempts": 20,
+            "toolExecutions": 16,
+            "retryAttempts": 6,
+            "compactionAttempts": 0,
+            "compactionCheckpoints": 0,
+            "processExecutions": 1,
+            "processRuntimeMs": 762,
+            "wallClockMs": 1008412,
+            "contextTokens": 3574,
+            "providerInputTokens": 44249,
+            "providerOutputTokens": 1900
+          },
+          "elapsedMs": 1008412
+        }
+      }
+    ],
+    "pressure": [],
+    "exhaustion": [],
+    "taskExhausted": false,
+    "stageExhaustion": []
+  },
+  "timing": {
+    "totalMs": 1254265.302939,
+    "workflows": [
+      {
+        "turnId": "90c063f6-793d-4e41-bf71-5dcce1736fe0",
+        "totalMs": 173121
+      },
+      {
+        "turnId": "7ca24024-75f8-4f6a-81fd-6e44052fb025",
+        "totalMs": 75
+      },
+      {
+        "turnId": "4bbed5d8-cda3-45f6-89c6-50ba8187b011",
+        "totalMs": 254548
+      },
+      {
+        "turnId": "1b362457-2626-4c72-8871-babaa8362dda",
+        "totalMs": 792
+      },
+      {
+        "turnId": "a61150e8-5380-4053-b77c-b3720a48b6ee",
+        "totalMs": 806196
+      }
+    ]
+  },
+  "hiddenAcceptance": "not_run",
+  "humanInterventions": 0,
+  "eventsOmitted": 690
+}

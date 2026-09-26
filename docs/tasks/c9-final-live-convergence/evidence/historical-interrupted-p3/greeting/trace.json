@@ -46,9 +46,9 @@
   "budgets": {
     "latest": [
       {
-        "runId": "1287e199-9925-4921-a8e9-d9df2eb5383d",
+        "runId": "0a9922de-345d-452e-b294-6dd67ea016cb",
         "snapshot": {
-          "runId": "1287e199-9925-4921-a8e9-d9df2eb5383d",
+          "runId": "0a9922de-345d-452e-b294-6dd67ea016cb",
           "limits": {
             "providerAttempts": 128,
             "toolExecutions": 128,
@@ -70,12 +70,12 @@
             "compactionCheckpoints": 0,
             "processExecutions": 0,
             "processRuntimeMs": 0,
-            "wallClockMs": 15916,
+            "wallClockMs": 15708,
             "contextTokens": 1012,
             "providerInputTokens": 1479,
             "providerOutputTokens": 9
           },
-          "elapsedMs": 15916
+          "elapsedMs": 15708
         }
       }
     ],
@@ -85,11 +85,11 @@
     "stageExhaustion": []
   },
   "timing": {
-    "totalMs": 15935.058415,
+    "totalMs": 15719.24733,
     "workflows": [
       {
-        "turnId": "804b9acc-81f2-40b8-93d3-141d7bed2d48",
-        "totalMs": 15930
+        "turnId": "674dace3-d0b9-4432-be4c-bba48663a183",
+        "totalMs": 15718
       }
     ]
   },

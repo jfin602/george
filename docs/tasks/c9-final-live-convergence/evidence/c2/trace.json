@@ -1,0 +1,299 @@
+{
+  "schemaVersion": 2,
+  "terminalStatus": "failed",
+  "terminalError": null,
+  "observerError": null,
+  "failures": [
+    {
+      "source": "application",
+      "category": "tool",
+      "eventType": "tool.failed",
+      "code": "validation",
+      "message": "Tool search_text arguments do not match its input schema.",
+      "turnId": "0f0ea263-b030-4df4-8b79-5c5e5eafaf88-inspect",
+      "callId": "call_3526820938090041",
+      "name": "search_text"
+    },
+    {
+      "source": "application",
+      "category": "tool",
+      "eventType": "tool.failed",
+      "code": "validation",
+      "message": "Tool search_text arguments do not match its input schema.",
+      "turnId": "0f0ea263-b030-4df4-8b79-5c5e5eafaf88-inspect",
+      "callId": "call_3526820938090042",
+      "name": "search_text"
+    },
+    {
+      "source": "application",
+      "category": "provider",
+      "eventType": "provider.error",
+      "code": "provider",
+      "message": "Provider stalled while the response was active after 60167 ms of inactivity.",
+      "turnId": "d3a054d0-1235-40c2-8bdc-1468b53e883b",
+      "attemptId": "p1a1-40c9bd3f-cb98-4a53-a01d-03aab2453824"
+    },
+    {
+      "source": "application",
+      "category": "provider",
+      "eventType": "provider.error",
+      "code": "provider",
+      "message": "Provider stalled while the response was active after 60120 ms of inactivity.",
+      "turnId": "d3a054d0-1235-40c2-8bdc-1468b53e883b",
+      "attemptId": "p2a1-40c9bd3f-cb98-4a53-a01d-03aab2453824"
+    },
+    {
+      "source": "application",
+      "category": "provider",
+      "eventType": "provider.error",
+      "code": "provider",
+      "message": "Provider stalled while the response was active after 60078 ms of inactivity.",
+      "turnId": "d3a054d0-1235-40c2-8bdc-1468b53e883b",
+      "attemptId": "p3a1-40c9bd3f-cb98-4a53-a01d-03aab2453824"
+    },
+    {
+      "source": "application",
+      "category": "provider",
+      "eventType": "provider.error",
+      "code": "provider",
+      "message": "LM Studio request timed out after 120000 ms.",
+      "turnId": "d3a054d0-1235-40c2-8bdc-1468b53e883b",
+      "attemptId": "p3a2-40c9bd3f-cb98-4a53-a01d-03aab2453824"
+    },
+    {
+      "source": "application",
+      "category": "provider",
+      "eventType": "provider.error",
+      "code": "provider",
+      "message": "LM Studio request timed out after 120000 ms.",
+      "turnId": "d3a054d0-1235-40c2-8bdc-1468b53e883b",
+      "attemptId": "p3a3-40c9bd3f-cb98-4a53-a01d-03aab2453824"
+    },
+    {
+      "source": "application",
+      "category": "provider",
+      "eventType": "provider.error",
+      "code": "provider",
+      "message": "LM Studio request timed out after 120000 ms.",
+      "turnId": "d3a054d0-1235-40c2-8bdc-1468b53e883b",
+      "attemptId": "p3a4-40c9bd3f-cb98-4a53-a01d-03aab2453824"
+    },
+    {
+      "source": "application",
+      "category": "turn",
+      "eventType": "turn.failed",
+      "code": "provider",
+      "message": "LM Studio request timed out after 120000 ms.",
+      "turnId": "d3a054d0-1235-40c2-8bdc-1468b53e883b"
+    }
+  ],
+  "taskState": {
+    "fingerprint": "fdc635e281657ab801a9038f899532f4eee32f75aa9fc5238eb9291c29bf94e5",
+    "status": "failed",
+    "requirements": [
+      {
+        "id": "R1",
+        "status": "pending"
+      },
+      {
+        "id": "R2",
+        "status": "pending"
+      },
+      {
+        "id": "R3",
+        "status": "pending"
+      },
+      {
+        "id": "R4",
+        "status": "pending"
+      },
+      {
+        "id": "R5",
+        "status": "pending"
+      },
+      {
+        "id": "R6",
+        "status": "pending"
+      }
+    ],
+    "workUnits": [
+      {
+        "id": "W1",
+        "status": "active"
+      },
+      {
+        "id": "W2",
+        "status": "pending"
+      }
+    ],
+    "validations": [
+      {
+        "id": "V1",
+        "status": "pending",
+        "attempts": 0
+      },
+      {
+        "id": "V2",
+        "status": "pending",
+        "attempts": 0
+      }
+    ],
+    "corrections": [],
+    "blockerCount": 1,
+    "terminalOutcome": "failed",
+    "effectivePermissionExpectations": {
+      "workspace": "autonomous",
+      "outsideWorkspace": "reject",
+      "network": "ask",
+      "remoteMutation": "ask"
+    }
+  },
+  "stackState": null,
+  "metrics": {
+    "providerAttempts": 9,
+    "providerRounds": 9,
+    "retries": 5,
+    "providerInputTokens": 5703,
+    "providerOutputTokens": 136,
+    "toolCalls": 6,
+    "contextAssemblies": 2,
+    "sandboxedProcessCalls": 0,
+    "taskUpdates": 2,
+    "stackUpdates": 0
+  },
+  "toolCalls": [
+    {
+      "callId": "call_3526820938090039",
+      "name": "git_status",
+      "requestedArguments": "{}",
+      "effect": "local_read",
+      "terminalState": "succeeded"
+    },
+    {
+      "callId": "call_3526820938090040",
+      "name": "list_directory",
+      "requestedArguments": "{\"path\":\"\"}",
+      "effect": "local_read",
+      "terminalState": "succeeded"
+    },
+    {
+      "callId": "call_3526820938090041",
+      "name": "search_text",
+      "requestedArguments": "{\"query\":\"GET /health\",\"path\":\"\"}",
+      "effect": "local_read",
+      "terminalState": "failed"
+    },
+    {
+      "callId": "call_3526820938090042",
+      "name": "search_text",
+      "requestedArguments": "{\"query\":\"POST /notes\",\"path\":\"\"}",
+      "effect": "local_read",
+      "terminalState": "failed"
+    },
+    {
+      "callId": "call_3526820938090043",
+      "name": "list_directory",
+      "requestedArguments": "{\"path\":\"src\"}",
+      "effect": "local_read",
+      "terminalState": "succeeded"
+    },
+    {
+      "callId": "call_3526820938090044",
+      "name": "read_file",
+      "requestedArguments": "{\"path\":\"src/app.js\"}",
+      "effect": "local_read",
+      "terminalState": "succeeded"
+    }
+  ],
+  "mutations": [],
+  "validations": [],
+  "correctionCount": 0,
+  "contexts": [
+    {
+      "profileId": "qwen3-coder-30b-a3b-instruct-q4_k_m-lm-studio-32k-ordinary",
+      "attemptedProfileIds": [
+        "qwen3-coder-30b-a3b-instruct-q4_k_m-lm-studio-32k-ordinary",
+        "qwen3-coder-30b-a3b-instruct-q4_k_m-lm-studio-32k-medium",
+        "qwen3-coder-30b-a3b-instruct-q4_k_m-lm-studio-32k"
+      ],
+      "promotionReasons": [],
+      "estimatedTokens": 667,
+      "providerInputBudget": 8192,
+      "remainingHeadroom": 7525
+    },
+    {
+      "profileId": "qwen3-coder-30b-a3b-instruct-q4_k_m-lm-studio-32k-ordinary",
+      "attemptedProfileIds": [
+        "qwen3-coder-30b-a3b-instruct-q4_k_m-lm-studio-32k-ordinary",
+        "qwen3-coder-30b-a3b-instruct-q4_k_m-lm-studio-32k-medium",
+        "qwen3-coder-30b-a3b-instruct-q4_k_m-lm-studio-32k"
+      ],
+      "promotionReasons": [],
+      "estimatedTokens": 1410,
+      "providerInputBudget": 8192,
+      "remainingHeadroom": 6782
+    }
+  ],
+  "envelopePromotions": [],
+  "observedReadPaths": [
+    "src/app.js"
+  ],
+  "finalResponse": {
+    "present": false,
+    "bytes": 0,
+    "sha256": null
+  },
+  "budgets": {
+    "latest": [
+      {
+        "runId": "40c9bd3f-cb98-4a53-a01d-03aab2453824",
+        "snapshot": {
+          "runId": "40c9bd3f-cb98-4a53-a01d-03aab2453824",
+          "limits": {
+            "providerAttempts": 128,
+            "toolExecutions": 128,
+            "retryAttempts": 32,
+            "compactionAttempts": 32,
+            "compactionCheckpoints": 32,
+            "processExecutions": 64,
+            "processRuntimeMs": 3600000,
+            "wallClockMs": 3600000,
+            "contextTokens": 1000000,
+            "providerInputTokens": 1000000,
+            "providerOutputTokens": 1000000
+          },
+          "consumed": {
+            "providerAttempts": 9,
+            "toolExecutions": 4,
+            "retryAttempts": 5,
+            "compactionAttempts": 0,
+            "compactionCheckpoints": 0,
+            "processExecutions": 0,
+            "processRuntimeMs": 0,
+            "wallClockMs": 577658,
+            "contextTokens": 2077,
+            "providerInputTokens": 5703,
+            "providerOutputTokens": 136
+          },
+          "elapsedMs": 577658
+        }
+      }
+    ],
+    "pressure": [],
+    "exhaustion": [],
+    "taskExhausted": false,
+    "stageExhaustion": []
+  },
+  "timing": {
+    "totalMs": 699246.645425,
+    "workflows": [
+      {
+        "turnId": "d3a054d0-1235-40c2-8bdc-1468b53e883b",
+        "totalMs": 635885
+      }
+    ]
+  },
+  "hiddenAcceptance": "not_run",
+  "humanInterventions": 0,
+  "eventsOmitted": 2
+}

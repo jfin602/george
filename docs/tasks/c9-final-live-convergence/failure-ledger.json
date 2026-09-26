@@ -1,0 +1,127 @@
+{
+  "schemaVersion": 1,
+  "head": "7670122869c87942bb01c3976233209581d9cf7a",
+  "candidateTree": "8d4a2c9f93c50dcea1c248a7d43ad90d6083e251",
+  "entries": [
+    {
+      "identity": "live:b2:p2-validation-failed",
+      "layer": "live",
+      "workload": "greenfield-express-v2",
+      "observedState": "Not Green",
+      "qualificationStatus": "qualifying",
+      "failureClass": "validation",
+      "code": "declared_validation_failed",
+      "message": "P1 completed and V1 passed. P2 implementation reached V1, which failed; the correction did not complete, P3 remained pending, StackState failed, and hidden acceptance did not run.",
+      "provider": { "attempts": 27, "rounds": 27, "inputTokens": 62953, "outputTokens": 2623 },
+      "toolCount": 28,
+      "validation": { "id": "P2 V1" },
+      "profile": { "selected": "ordinary", "promotions": ["ordinary->medium"] },
+      "taskState": { "fingerprint": "ab612aad0ecd43a2bbbdb4d0135a21db32fa5c8e13e993ba90105e407c96b3dc", "status": "failed", "currentWorkUnit": "W1" },
+      "stackState": { "fingerprint": "b4115722914fac5e5b254c80f69b75b8394cd4fcfa6c1a319120c7cf758a3c72", "status": "failed", "currentTaskOrdinal": 2 },
+      "hiddenAcceptance": "not_run",
+      "interventions": 0,
+      "exhausted": false,
+      "classification": "new",
+      "repairCluster": "agent-provider-context",
+      "evidence": [
+        { "path": "evidence/b2/attempt.json", "sha256": "12e7a271d955331b4ce3cf3b393086de62c81325110461d8dc6a86a177a8c5c4" },
+        { "path": "evidence/b2/trace.json", "sha256": "4694d3c6954e9103a66370b9e7f9ea0a7d0c3baa7ac0f63060441cd08d694e5b" }
+      ]
+    },
+    {
+      "identity": "live:b2:terminal-provider-stall-after-rebase",
+      "layer": "live",
+      "workload": "greenfield-express-v2",
+      "observedState": "Not Green",
+      "qualificationStatus": "qualifying",
+      "failureClass": "provider",
+      "code": "provider_stall_terminal",
+      "message": "B2 recorded eight active-response stalls, six replay-safe retries, one low-pressure canonical rebase without compaction, and truthful provider-class termination when the rebased attempt stalled again.",
+      "interventions": 0,
+      "exhausted": false,
+      "classification": "new",
+      "repairCluster": "agent-provider-context",
+      "evidence": [
+        { "path": "evidence/b2/attempt.json", "sha256": "12e7a271d955331b4ce3cf3b393086de62c81325110461d8dc6a86a177a8c5c4" },
+        { "path": "evidence/b2/trace.json", "sha256": "4694d3c6954e9103a66370b9e7f9ea0a7d0c3baa7ac0f63060441cd08d694e5b" }
+      ]
+    },
+    {
+      "identity": "live:c2:provider-timeout-retry-exhausted",
+      "layer": "live",
+      "workload": "existing-express-feature-v2",
+      "observedState": "Not Green",
+      "qualificationStatus": "diagnostic-only",
+      "failureClass": "provider",
+      "code": "provider_timeout_retry_exhausted",
+      "message": "C2 observed src/app.js, then implementation produced no mutation or validation before three active-response stalls and three subsequent 120000 ms provider timeouts exhausted retry handling. TaskState failed with W1 active and V1/V2 pending.",
+      "provider": { "attempts": 9, "rounds": 9, "inputTokens": 5703, "outputTokens": 136 },
+      "toolCount": 6,
+      "profile": { "selected": "ordinary", "promotions": [] },
+      "taskState": { "fingerprint": "fdc635e281657ab801a9038f899532f4eee32f75aa9fc5238eb9291c29bf94e5", "status": "failed", "currentWorkUnit": "W1" },
+      "hiddenAcceptance": "not_run",
+      "interventions": 0,
+      "exhausted": false,
+      "classification": "new",
+      "repairCluster": "agent-provider-context",
+      "evidence": [
+        { "path": "evidence/c2/attempt.json", "sha256": "9fe5fe2b676bb6491b14164c55b9c6a8e7b5d9f0094dfd42bb71e15be92d6295" },
+        { "path": "evidence/c2/trace.json", "sha256": "43c9ddc4e2a7131b568ffe18f56491cf0cfb69246668c1ad07ff4c1da8cd19c4" }
+      ]
+    },
+    {
+      "identity": "broad:progressive-final-answer-reveal",
+      "layer": "broad",
+      "workload": "OpenTUI progressive final-answer reveal",
+      "observedState": "Not Green",
+      "qualificationStatus": "not-run",
+      "failureClass": "test",
+      "code": "retained_intermittent_reproduced",
+      "message": "The single npm test run timed out waiting for the progressive-reveal frame after this identity passed in the focused affected floor.",
+      "classification": "intermittent",
+      "repairCluster": "ui-test-stability",
+      "evidence": []
+    },
+    {
+      "identity": "historical:sandbox-process-intermittent",
+      "layer": "deterministic",
+      "workload": "nested sandbox process",
+      "observedState": "Evidence Gap",
+      "qualificationStatus": "not-run",
+      "failureClass": "test",
+      "code": "historical_intermittent",
+      "message": "The historical non-completion did not reproduce in the affected or broad runs; its root cause remains unestablished.",
+      "classification": "intermittent",
+      "repairCluster": "ui-test-stability",
+      "evidence": []
+    },
+    {
+      "identity": "broad:native-real-tty",
+      "layer": "broad",
+      "workload": "native OpenTUI launches and restores a real Node 26 terminal",
+      "observedState": "Evidence Gap",
+      "qualificationStatus": "not-run",
+      "failureClass": "environment",
+      "code": "non_tty_host",
+      "message": "The exact broad run skipped the native real-TTY test in this non-TTY environment.",
+      "classification": "environment-only",
+      "repairCluster": "environment-only",
+      "evidence": []
+    },
+    {
+      "identity": "runtime:gpu-offload-26",
+      "layer": "deterministic",
+      "workload": "LM Studio GPU Offload 26",
+      "observedState": "Evidence Gap",
+      "qualificationStatus": "not-run",
+      "failureClass": "environment",
+      "code": "ui_only_control",
+      "message": "REST showed GPU KV-cache offload enabled, but the UI-only GPU Offload 26 value was not independently observable; no controlled-latency claim is made.",
+      "classification": "environment-only",
+      "repairCluster": "environment-only",
+      "evidence": [
+        { "path": "evidence/runtime.json", "sha256": "eb5760eab35cb31a78af83fa878b8758e3cf3090d0fef01f0d7c785157f9e91c" }
+      ]
+    }
+  ]
+}

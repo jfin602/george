@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "observedAt": "2026-09-26T14:57:38-05:00",
+  "candidate": {
+    "head": "7670122869c87942bb01c3976233209581d9cf7a",
+    "tree": "8d4a2c9f93c50dcea1c248a7d43ad90d6083e251",
+    "packageVersion": "0.9.10"
+  },
+  "runtime": {
+    "node": "v26.10.0",
+    "npm": "11.19.1",
+    "platform": "linux",
+    "bubblewrap": "0.9.0",
+    "tty": false
+  },
+  "provider": {
+    "origin": "http://127.0.0.1:1234",
+    "model": "qwen3-coder-30b-a3b-instruct@q4_k_m",
+    "loaded": true,
+    "config": {
+      "contextLength": 32768,
+      "evalBatchSize": 2048,
+      "physicalBatchSize": 512,
+      "parallel": 1,
+      "flashAttention": true,
+      "gpuKvCacheOffload": true,
+      "numExperts": 8
+    },
+    "gpuOffloadLayers": {
+      "requiredManualValue": 26,
+      "restVisible": false,
+      "state": "Evidence Gap"
+    }
+  },
+  "retuned": false
+}

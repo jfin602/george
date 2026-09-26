@@ -1,12 +1,12 @@
 {
   "schemaVersion": 2,
-  "attemptId": "c9-final-convergence-three-file",
+  "attemptId": "c9-final-live-convergence-p3-three-file",
   "runtime": {
     "node": "v26.10.0",
     "platform": "linux",
     "arch": "x64"
   },
-  "workspace": "/tmp/george-c9-final-convergence-three-file-B0pQd5/workspace",
+  "workspace": "/tmp/george-final-three-file-GSqEyM/workspace",
   "qualifying": true,
   "terminalStatus": "completed",
   "terminalError": null,
@@ -16,11 +16,11 @@
       "source": "application",
       "category": "tool",
       "eventType": "tool.failed",
-      "code": "denied",
-      "message": "Approval denied for tool run_process.",
-      "turnId": "70c653ee-320c-4baf-bfc4-e569007635ed",
-      "callId": "call_2029258686870099",
-      "name": "run_process"
+      "code": "validation",
+      "message": "Tool search_text arguments do not match its input schema.",
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf",
+      "callId": "call_3526820938090005",
+      "name": "search_text"
     }
   ],
   "hiddenAcceptance": "passed",
@@ -30,149 +30,149 @@
   "eventEvidence": [
     {
       "type": "turn.started",
-      "turnId": "70c653ee-320c-4baf-bfc4-e569007635ed"
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf"
     },
     {
       "type": "activity.updated",
-      "turnId": "70c653ee-320c-4baf-bfc4-e569007635ed"
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf"
     },
     {
       "type": "progress.milestone",
-      "turnId": "70c653ee-320c-4baf-bfc4-e569007635ed"
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf"
     },
     {
       "type": "reliability.run.started",
-      "turnId": "70c653ee-320c-4baf-bfc4-e569007635ed",
-      "runId": "f683b66d-c0ae-44ec-9f67-1916d793242a"
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf",
+      "runId": "1c5d807f-57c5-440a-9389-15d0e380ae29"
     },
     {
       "type": "budget.state",
-      "turnId": "70c653ee-320c-4baf-bfc4-e569007635ed",
-      "runId": "f683b66d-c0ae-44ec-9f67-1916d793242a"
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf",
+      "runId": "1c5d807f-57c5-440a-9389-15d0e380ae29"
     },
     {
       "type": "context.source",
-      "turnId": "70c653ee-320c-4baf-bfc4-e569007635ed",
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf",
       "status": "loading"
     },
     {
       "type": "activity.updated",
-      "turnId": "70c653ee-320c-4baf-bfc4-e569007635ed"
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf"
     },
     {
       "type": "work.updated"
     },
     {
       "type": "context.source",
-      "turnId": "70c653ee-320c-4baf-bfc4-e569007635ed",
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf",
       "status": "missing"
     },
     {
       "type": "activity.updated",
-      "turnId": "70c653ee-320c-4baf-bfc4-e569007635ed"
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf"
     },
     {
       "type": "work.updated"
     },
     {
       "type": "context.source",
-      "turnId": "70c653ee-320c-4baf-bfc4-e569007635ed",
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf",
       "status": "loading"
     },
     {
       "type": "activity.updated",
-      "turnId": "70c653ee-320c-4baf-bfc4-e569007635ed"
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf"
     },
     {
       "type": "work.updated"
     },
     {
       "type": "context.source",
-      "turnId": "70c653ee-320c-4baf-bfc4-e569007635ed",
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf",
       "status": "missing"
     },
     {
       "type": "activity.updated",
-      "turnId": "70c653ee-320c-4baf-bfc4-e569007635ed"
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf"
     },
     {
       "type": "work.updated"
     },
     {
       "type": "context.source",
-      "turnId": "70c653ee-320c-4baf-bfc4-e569007635ed",
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf",
       "status": "loading"
     },
     {
       "type": "activity.updated",
-      "turnId": "70c653ee-320c-4baf-bfc4-e569007635ed"
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf"
     },
     {
       "type": "work.updated"
     },
     {
       "type": "context.source",
-      "turnId": "70c653ee-320c-4baf-bfc4-e569007635ed",
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf",
       "status": "missing"
     },
     {
       "type": "activity.updated",
-      "turnId": "70c653ee-320c-4baf-bfc4-e569007635ed"
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf"
     },
     {
       "type": "work.updated"
     },
     {
       "type": "context.source",
-      "turnId": "70c653ee-320c-4baf-bfc4-e569007635ed",
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf",
       "status": "loading"
     },
     {
       "type": "activity.updated",
-      "turnId": "70c653ee-320c-4baf-bfc4-e569007635ed"
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf"
     },
     {
       "type": "work.updated"
     },
     {
       "type": "context.source",
-      "turnId": "70c653ee-320c-4baf-bfc4-e569007635ed",
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf",
       "status": "missing"
     },
     {
       "type": "activity.updated",
-      "turnId": "70c653ee-320c-4baf-bfc4-e569007635ed"
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf"
     },
     {
       "type": "work.updated"
     },
     {
       "type": "context.source",
-      "turnId": "70c653ee-320c-4baf-bfc4-e569007635ed",
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf",
       "status": "loading"
     },
     {
       "type": "activity.updated",
-      "turnId": "70c653ee-320c-4baf-bfc4-e569007635ed"
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf"
     },
     {
       "type": "work.updated"
     },
     {
       "type": "context.source",
-      "turnId": "70c653ee-320c-4baf-bfc4-e569007635ed",
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf",
       "status": "missing"
     },
     {
       "type": "activity.updated",
-      "turnId": "70c653ee-320c-4baf-bfc4-e569007635ed"
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf"
     },
     {
       "type": "work.updated"
     },
     {
       "type": "context.assembled",
-      "turnId": "70c653ee-320c-4baf-bfc4-e569007635ed",
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf",
       "diagnostics": {
         "profileId": "qwen3-coder-30b-a3b-instruct-q4_k_m-lm-studio-32k-ordinary",
         "attemptedProfileIds": [
@@ -188,27 +188,27 @@
     },
     {
       "type": "activity.updated",
-      "turnId": "70c653ee-320c-4baf-bfc4-e569007635ed"
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf"
     },
     {
       "type": "progress.milestone",
-      "turnId": "70c653ee-320c-4baf-bfc4-e569007635ed"
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf"
     },
     {
       "type": "budget.state",
-      "turnId": "70c653ee-320c-4baf-bfc4-e569007635ed",
-      "runId": "f683b66d-c0ae-44ec-9f67-1916d793242a"
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf",
+      "runId": "1c5d807f-57c5-440a-9389-15d0e380ae29"
     },
     {
       "type": "budget.state",
-      "turnId": "70c653ee-320c-4baf-bfc4-e569007635ed",
-      "runId": "f683b66d-c0ae-44ec-9f67-1916d793242a"
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf",
+      "runId": "1c5d807f-57c5-440a-9389-15d0e380ae29"
     },
     {
       "type": "provider.attempt.started",
-      "turnId": "70c653ee-320c-4baf-bfc4-e569007635ed",
-      "runId": "f683b66d-c0ae-44ec-9f67-1916d793242a",
-      "attemptId": "p1a1-f683b66d-c0ae-44ec-9f67-1916d793242a"
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf",
+      "runId": "1c5d807f-57c5-440a-9389-15d0e380ae29",
+      "attemptId": "p1a1-1c5d807f-57c5-440a-9389-15d0e380ae29"
     },
     {
       "type": "provider.response.started"
@@ -218,187 +218,187 @@
     },
     {
       "type": "provider.tool.call",
-      "callId": "call_2029258686870094",
+      "callId": "call_3526820938090000",
       "name": "git_status"
     },
     {
       "type": "provider.tool.call",
-      "callId": "call_2029258686870095",
+      "callId": "call_3526820938090001",
       "name": "list_directory"
     },
     {
       "type": "provider.tool.call",
-      "callId": "call_2029258686870096",
+      "callId": "call_3526820938090002",
       "name": "read_file"
     },
     {
       "type": "provider.response.completed",
       "usage": {
         "inputTokens": 1526,
-        "outputTokens": 21
+        "outputTokens": 32
       }
     },
     {
       "type": "budget.state",
-      "turnId": "70c653ee-320c-4baf-bfc4-e569007635ed",
-      "runId": "f683b66d-c0ae-44ec-9f67-1916d793242a"
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf",
+      "runId": "1c5d807f-57c5-440a-9389-15d0e380ae29"
     },
     {
       "type": "budget.state",
-      "turnId": "70c653ee-320c-4baf-bfc4-e569007635ed",
-      "runId": "f683b66d-c0ae-44ec-9f67-1916d793242a"
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf",
+      "runId": "1c5d807f-57c5-440a-9389-15d0e380ae29"
     },
     {
       "type": "budget.state",
-      "turnId": "70c653ee-320c-4baf-bfc4-e569007635ed",
-      "runId": "f683b66d-c0ae-44ec-9f67-1916d793242a"
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf",
+      "runId": "1c5d807f-57c5-440a-9389-15d0e380ae29"
     },
     {
       "type": "tool.requested",
-      "turnId": "70c653ee-320c-4baf-bfc4-e569007635ed",
-      "callId": "call_2029258686870094",
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf",
+      "callId": "call_3526820938090000",
       "name": "git_status"
     },
     {
       "type": "activity.updated",
-      "turnId": "70c653ee-320c-4baf-bfc4-e569007635ed"
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf"
     },
     {
       "type": "work.updated"
     },
     {
       "type": "budget.state",
-      "turnId": "70c653ee-320c-4baf-bfc4-e569007635ed",
-      "runId": "f683b66d-c0ae-44ec-9f67-1916d793242a"
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf",
+      "runId": "1c5d807f-57c5-440a-9389-15d0e380ae29"
     },
     {
       "type": "tool.started",
-      "turnId": "70c653ee-320c-4baf-bfc4-e569007635ed",
-      "callId": "call_2029258686870094",
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf",
+      "callId": "call_3526820938090000",
       "name": "git_status"
     },
     {
       "type": "activity.updated",
-      "turnId": "70c653ee-320c-4baf-bfc4-e569007635ed"
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf"
     },
     {
       "type": "work.updated"
     },
     {
       "type": "tool.completed",
-      "turnId": "70c653ee-320c-4baf-bfc4-e569007635ed",
-      "callId": "call_2029258686870094",
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf",
+      "callId": "call_3526820938090000",
       "name": "git_status"
     },
     {
       "type": "activity.updated",
-      "turnId": "70c653ee-320c-4baf-bfc4-e569007635ed"
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf"
     },
     {
       "type": "work.updated"
     },
     {
       "type": "progress.milestone",
-      "turnId": "70c653ee-320c-4baf-bfc4-e569007635ed"
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf"
     },
     {
       "type": "tool.requested",
-      "turnId": "70c653ee-320c-4baf-bfc4-e569007635ed",
-      "callId": "call_2029258686870095",
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf",
+      "callId": "call_3526820938090001",
       "name": "list_directory"
     },
     {
       "type": "activity.updated",
-      "turnId": "70c653ee-320c-4baf-bfc4-e569007635ed"
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf"
     },
     {
       "type": "work.updated"
     },
     {
       "type": "budget.state",
-      "turnId": "70c653ee-320c-4baf-bfc4-e569007635ed",
-      "runId": "f683b66d-c0ae-44ec-9f67-1916d793242a"
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf",
+      "runId": "1c5d807f-57c5-440a-9389-15d0e380ae29"
     },
     {
       "type": "tool.started",
-      "turnId": "70c653ee-320c-4baf-bfc4-e569007635ed",
-      "callId": "call_2029258686870095",
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf",
+      "callId": "call_3526820938090001",
       "name": "list_directory"
     },
     {
       "type": "activity.updated",
-      "turnId": "70c653ee-320c-4baf-bfc4-e569007635ed"
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf"
     },
     {
       "type": "work.updated"
     },
     {
       "type": "tool.completed",
-      "turnId": "70c653ee-320c-4baf-bfc4-e569007635ed",
-      "callId": "call_2029258686870095",
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf",
+      "callId": "call_3526820938090001",
       "name": "list_directory"
     },
     {
       "type": "activity.updated",
-      "turnId": "70c653ee-320c-4baf-bfc4-e569007635ed"
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf"
     },
     {
       "type": "work.updated"
     },
     {
       "type": "tool.requested",
-      "turnId": "70c653ee-320c-4baf-bfc4-e569007635ed",
-      "callId": "call_2029258686870096",
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf",
+      "callId": "call_3526820938090002",
       "name": "read_file"
     },
     {
       "type": "activity.updated",
-      "turnId": "70c653ee-320c-4baf-bfc4-e569007635ed"
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf"
     },
     {
       "type": "work.updated"
     },
     {
       "type": "budget.state",
-      "turnId": "70c653ee-320c-4baf-bfc4-e569007635ed",
-      "runId": "f683b66d-c0ae-44ec-9f67-1916d793242a"
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf",
+      "runId": "1c5d807f-57c5-440a-9389-15d0e380ae29"
     },
     {
       "type": "tool.started",
-      "turnId": "70c653ee-320c-4baf-bfc4-e569007635ed",
-      "callId": "call_2029258686870096",
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf",
+      "callId": "call_3526820938090002",
       "name": "read_file"
     },
     {
       "type": "activity.updated",
-      "turnId": "70c653ee-320c-4baf-bfc4-e569007635ed"
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf"
     },
     {
       "type": "work.updated"
     },
     {
       "type": "tool.completed",
-      "turnId": "70c653ee-320c-4baf-bfc4-e569007635ed",
-      "callId": "call_2029258686870096",
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf",
+      "callId": "call_3526820938090002",
       "name": "read_file"
     },
     {
       "type": "activity.updated",
-      "turnId": "70c653ee-320c-4baf-bfc4-e569007635ed"
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf"
     },
     {
       "type": "work.updated"
     },
     {
       "type": "budget.state",
-      "turnId": "70c653ee-320c-4baf-bfc4-e569007635ed",
-      "runId": "f683b66d-c0ae-44ec-9f67-1916d793242a"
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf",
+      "runId": "1c5d807f-57c5-440a-9389-15d0e380ae29"
     },
     {
       "type": "provider.attempt.started",
-      "turnId": "70c653ee-320c-4baf-bfc4-e569007635ed",
-      "runId": "f683b66d-c0ae-44ec-9f67-1916d793242a",
-      "attemptId": "p2a1-f683b66d-c0ae-44ec-9f67-1916d793242a"
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf",
+      "runId": "1c5d807f-57c5-440a-9389-15d0e380ae29",
+      "attemptId": "p2a1-1c5d807f-57c5-440a-9389-15d0e380ae29"
     },
     {
       "type": "provider.response.started"
@@ -408,271 +408,319 @@
     },
     {
       "type": "provider.tool.call",
-      "callId": "call_2029258686870097",
+      "callId": "call_3526820938090003",
       "name": "read_file"
     },
     {
       "type": "provider.response.completed",
       "usage": {
-        "inputTokens": 2700,
+        "inputTokens": 2711,
+        "outputTokens": 15
+      }
+    },
+    {
+      "type": "budget.state",
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf",
+      "runId": "1c5d807f-57c5-440a-9389-15d0e380ae29"
+    },
+    {
+      "type": "budget.state",
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf",
+      "runId": "1c5d807f-57c5-440a-9389-15d0e380ae29"
+    },
+    {
+      "type": "budget.state",
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf",
+      "runId": "1c5d807f-57c5-440a-9389-15d0e380ae29"
+    },
+    {
+      "type": "tool.requested",
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf",
+      "callId": "call_3526820938090003",
+      "name": "read_file"
+    },
+    {
+      "type": "activity.updated",
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf"
+    },
+    {
+      "type": "work.updated"
+    },
+    {
+      "type": "budget.state",
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf",
+      "runId": "1c5d807f-57c5-440a-9389-15d0e380ae29"
+    },
+    {
+      "type": "tool.started",
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf",
+      "callId": "call_3526820938090003",
+      "name": "read_file"
+    },
+    {
+      "type": "activity.updated",
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf"
+    },
+    {
+      "type": "work.updated"
+    },
+    {
+      "type": "tool.completed",
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf",
+      "callId": "call_3526820938090003",
+      "name": "read_file"
+    },
+    {
+      "type": "activity.updated",
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf"
+    },
+    {
+      "type": "work.updated"
+    },
+    {
+      "type": "budget.state",
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf",
+      "runId": "1c5d807f-57c5-440a-9389-15d0e380ae29"
+    },
+    {
+      "type": "provider.attempt.started",
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf",
+      "runId": "1c5d807f-57c5-440a-9389-15d0e380ae29",
+      "attemptId": "p3a1-1c5d807f-57c5-440a-9389-15d0e380ae29"
+    },
+    {
+      "type": "provider.response.started"
+    },
+    {
+      "type": "activity.updated"
+    },
+    {
+      "type": "provider.tool.call",
+      "callId": "call_3526820938090004",
+      "name": "read_file"
+    },
+    {
+      "type": "provider.response.completed",
+      "usage": {
+        "inputTokens": 4429,
+        "outputTokens": 15
+      }
+    },
+    {
+      "type": "budget.state",
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf",
+      "runId": "1c5d807f-57c5-440a-9389-15d0e380ae29"
+    },
+    {
+      "type": "budget.state",
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf",
+      "runId": "1c5d807f-57c5-440a-9389-15d0e380ae29"
+    },
+    {
+      "type": "budget.state",
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf",
+      "runId": "1c5d807f-57c5-440a-9389-15d0e380ae29"
+    },
+    {
+      "type": "tool.requested",
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf",
+      "callId": "call_3526820938090004",
+      "name": "read_file"
+    },
+    {
+      "type": "activity.updated",
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf"
+    },
+    {
+      "type": "work.updated"
+    },
+    {
+      "type": "budget.state",
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf",
+      "runId": "1c5d807f-57c5-440a-9389-15d0e380ae29"
+    },
+    {
+      "type": "tool.started",
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf",
+      "callId": "call_3526820938090004",
+      "name": "read_file"
+    },
+    {
+      "type": "activity.updated",
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf"
+    },
+    {
+      "type": "work.updated"
+    },
+    {
+      "type": "tool.completed",
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf",
+      "callId": "call_3526820938090004",
+      "name": "read_file"
+    },
+    {
+      "type": "activity.updated",
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf"
+    },
+    {
+      "type": "work.updated"
+    },
+    {
+      "type": "budget.state",
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf",
+      "runId": "1c5d807f-57c5-440a-9389-15d0e380ae29"
+    },
+    {
+      "type": "provider.attempt.started",
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf",
+      "runId": "1c5d807f-57c5-440a-9389-15d0e380ae29",
+      "attemptId": "p4a1-1c5d807f-57c5-440a-9389-15d0e380ae29"
+    },
+    {
+      "type": "provider.response.started"
+    },
+    {
+      "type": "activity.updated"
+    },
+    {
+      "type": "provider.tool.call",
+      "callId": "call_3526820938090005",
+      "name": "search_text"
+    },
+    {
+      "type": "provider.tool.call",
+      "callId": "call_3526820938090006",
+      "name": "search_text"
+    },
+    {
+      "type": "provider.response.completed",
+      "usage": {
+        "inputTokens": 12661,
         "outputTokens": 18
       }
     },
     {
       "type": "budget.state",
-      "turnId": "70c653ee-320c-4baf-bfc4-e569007635ed",
-      "runId": "f683b66d-c0ae-44ec-9f67-1916d793242a"
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf",
+      "runId": "1c5d807f-57c5-440a-9389-15d0e380ae29"
     },
     {
       "type": "budget.state",
-      "turnId": "70c653ee-320c-4baf-bfc4-e569007635ed",
-      "runId": "f683b66d-c0ae-44ec-9f67-1916d793242a"
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf",
+      "runId": "1c5d807f-57c5-440a-9389-15d0e380ae29"
     },
     {
-      "type": "budget.state",
-      "turnId": "70c653ee-320c-4baf-bfc4-e569007635ed",
-      "runId": "f683b66d-c0ae-44ec-9f67-1916d793242a"
-    },
-    {
-      "type": "tool.requested",
-      "turnId": "70c653ee-320c-4baf-bfc4-e569007635ed",
-      "callId": "call_2029258686870097",
-      "name": "read_file"
-    },
-    {
-      "type": "activity.updated",
-      "turnId": "70c653ee-320c-4baf-bfc4-e569007635ed"
-    },
-    {
-      "type": "work.updated"
-    },
-    {
-      "type": "budget.state",
-      "turnId": "70c653ee-320c-4baf-bfc4-e569007635ed",
-      "runId": "f683b66d-c0ae-44ec-9f67-1916d793242a"
-    },
-    {
-      "type": "tool.started",
-      "turnId": "70c653ee-320c-4baf-bfc4-e569007635ed",
-      "callId": "call_2029258686870097",
-      "name": "read_file"
-    },
-    {
-      "type": "activity.updated",
-      "turnId": "70c653ee-320c-4baf-bfc4-e569007635ed"
-    },
-    {
-      "type": "work.updated"
-    },
-    {
-      "type": "tool.completed",
-      "turnId": "70c653ee-320c-4baf-bfc4-e569007635ed",
-      "callId": "call_2029258686870097",
-      "name": "read_file"
-    },
-    {
-      "type": "activity.updated",
-      "turnId": "70c653ee-320c-4baf-bfc4-e569007635ed"
-    },
-    {
-      "type": "work.updated"
-    },
-    {
-      "type": "budget.state",
-      "turnId": "70c653ee-320c-4baf-bfc4-e569007635ed",
-      "runId": "f683b66d-c0ae-44ec-9f67-1916d793242a"
-    },
-    {
-      "type": "provider.attempt.started",
-      "turnId": "70c653ee-320c-4baf-bfc4-e569007635ed",
-      "runId": "f683b66d-c0ae-44ec-9f67-1916d793242a",
-      "attemptId": "p3a1-f683b66d-c0ae-44ec-9f67-1916d793242a"
-    },
-    {
-      "type": "provider.response.started"
-    },
-    {
-      "type": "activity.updated"
-    },
-    {
-      "type": "provider.tool.call",
-      "callId": "call_2029258686870098",
-      "name": "read_file"
-    },
-    {
-      "type": "provider.response.completed",
-      "usage": {
-        "inputTokens": 4421,
-        "outputTokens": 16
+      "type": "context.envelope.promoted",
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf",
+      "promotion": {
+        "fromProfileId": "qwen3-coder-30b-a3b-instruct-q4_k_m-lm-studio-32k-ordinary",
+        "toProfileId": "qwen3-coder-30b-a3b-instruct-q4_k_m-lm-studio-32k-medium",
+        "reason": "provider-usage",
+        "tokens": 12661,
+        "providerInputBudget": 16384
       }
     },
     {
-      "type": "budget.state",
-      "turnId": "70c653ee-320c-4baf-bfc4-e569007635ed",
-      "runId": "f683b66d-c0ae-44ec-9f67-1916d793242a"
+      "type": "activity.updated",
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf"
+    },
+    {
+      "type": "progress.milestone",
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf"
     },
     {
       "type": "budget.state",
-      "turnId": "70c653ee-320c-4baf-bfc4-e569007635ed",
-      "runId": "f683b66d-c0ae-44ec-9f67-1916d793242a"
-    },
-    {
-      "type": "budget.state",
-      "turnId": "70c653ee-320c-4baf-bfc4-e569007635ed",
-      "runId": "f683b66d-c0ae-44ec-9f67-1916d793242a"
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf",
+      "runId": "1c5d807f-57c5-440a-9389-15d0e380ae29"
     },
     {
       "type": "tool.requested",
-      "turnId": "70c653ee-320c-4baf-bfc4-e569007635ed",
-      "callId": "call_2029258686870098",
-      "name": "read_file"
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf",
+      "callId": "call_3526820938090005",
+      "name": "search_text"
     },
     {
       "type": "activity.updated",
-      "turnId": "70c653ee-320c-4baf-bfc4-e569007635ed"
-    },
-    {
-      "type": "work.updated"
-    },
-    {
-      "type": "budget.state",
-      "turnId": "70c653ee-320c-4baf-bfc4-e569007635ed",
-      "runId": "f683b66d-c0ae-44ec-9f67-1916d793242a"
-    },
-    {
-      "type": "tool.started",
-      "turnId": "70c653ee-320c-4baf-bfc4-e569007635ed",
-      "callId": "call_2029258686870098",
-      "name": "read_file"
-    },
-    {
-      "type": "activity.updated",
-      "turnId": "70c653ee-320c-4baf-bfc4-e569007635ed"
-    },
-    {
-      "type": "work.updated"
-    },
-    {
-      "type": "tool.completed",
-      "turnId": "70c653ee-320c-4baf-bfc4-e569007635ed",
-      "callId": "call_2029258686870098",
-      "name": "read_file"
-    },
-    {
-      "type": "activity.updated",
-      "turnId": "70c653ee-320c-4baf-bfc4-e569007635ed"
-    },
-    {
-      "type": "work.updated"
-    },
-    {
-      "type": "budget.state",
-      "turnId": "70c653ee-320c-4baf-bfc4-e569007635ed",
-      "runId": "f683b66d-c0ae-44ec-9f67-1916d793242a"
-    },
-    {
-      "type": "provider.attempt.started",
-      "turnId": "70c653ee-320c-4baf-bfc4-e569007635ed",
-      "runId": "f683b66d-c0ae-44ec-9f67-1916d793242a",
-      "attemptId": "p4a1-f683b66d-c0ae-44ec-9f67-1916d793242a"
-    },
-    {
-      "type": "provider.response.started"
-    },
-    {
-      "type": "activity.updated"
-    },
-    {
-      "type": "provider.tool.call",
-      "callId": "call_2029258686870099",
-      "name": "run_process"
-    },
-    {
-      "type": "provider.response.completed",
-      "usage": {
-        "inputTokens": 6282,
-        "outputTokens": 18
-      }
-    },
-    {
-      "type": "budget.state",
-      "turnId": "70c653ee-320c-4baf-bfc4-e569007635ed",
-      "runId": "f683b66d-c0ae-44ec-9f67-1916d793242a"
-    },
-    {
-      "type": "budget.state",
-      "turnId": "70c653ee-320c-4baf-bfc4-e569007635ed",
-      "runId": "f683b66d-c0ae-44ec-9f67-1916d793242a"
-    },
-    {
-      "type": "budget.state",
-      "turnId": "70c653ee-320c-4baf-bfc4-e569007635ed",
-      "runId": "f683b66d-c0ae-44ec-9f67-1916d793242a"
-    },
-    {
-      "type": "tool.requested",
-      "turnId": "70c653ee-320c-4baf-bfc4-e569007635ed",
-      "callId": "call_2029258686870099",
-      "name": "run_process"
-    },
-    {
-      "type": "activity.updated",
-      "turnId": "70c653ee-320c-4baf-bfc4-e569007635ed"
-    },
-    {
-      "type": "work.updated"
-    },
-    {
-      "type": "approval.requested",
-      "turnId": "70c653ee-320c-4baf-bfc4-e569007635ed",
-      "callId": "call_2029258686870099"
-    },
-    {
-      "type": "activity.updated",
-      "turnId": "70c653ee-320c-4baf-bfc4-e569007635ed"
-    },
-    {
-      "type": "work.updated"
-    },
-    {
-      "type": "approval.denied",
-      "turnId": "70c653ee-320c-4baf-bfc4-e569007635ed",
-      "callId": "call_2029258686870099"
-    },
-    {
-      "type": "activity.updated",
-      "turnId": "70c653ee-320c-4baf-bfc4-e569007635ed"
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf"
     },
     {
       "type": "work.updated"
     },
     {
       "type": "tool.failed",
-      "turnId": "70c653ee-320c-4baf-bfc4-e569007635ed",
-      "callId": "call_2029258686870099",
-      "name": "run_process",
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf",
+      "callId": "call_3526820938090005",
+      "name": "search_text",
       "error": {
-        "code": "denied",
-        "message": "Approval denied for tool run_process."
+        "code": "validation",
+        "message": "Tool search_text arguments do not match its input schema."
       }
     },
     {
       "type": "activity.updated",
-      "turnId": "70c653ee-320c-4baf-bfc4-e569007635ed"
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf"
+    },
+    {
+      "type": "work.updated"
+    },
+    {
+      "type": "tool.requested",
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf",
+      "callId": "call_3526820938090006",
+      "name": "search_text"
+    },
+    {
+      "type": "activity.updated",
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf"
     },
     {
       "type": "work.updated"
     },
     {
       "type": "budget.state",
-      "turnId": "70c653ee-320c-4baf-bfc4-e569007635ed",
-      "runId": "f683b66d-c0ae-44ec-9f67-1916d793242a"
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf",
+      "runId": "1c5d807f-57c5-440a-9389-15d0e380ae29"
+    },
+    {
+      "type": "tool.started",
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf",
+      "callId": "call_3526820938090006",
+      "name": "search_text"
+    },
+    {
+      "type": "activity.updated",
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf"
+    },
+    {
+      "type": "work.updated"
+    },
+    {
+      "type": "tool.completed",
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf",
+      "callId": "call_3526820938090006",
+      "name": "search_text"
+    },
+    {
+      "type": "activity.updated",
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf"
+    },
+    {
+      "type": "work.updated"
+    },
+    {
+      "type": "progress.milestone",
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf"
+    },
+    {
+      "type": "budget.state",
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf",
+      "runId": "1c5d807f-57c5-440a-9389-15d0e380ae29"
     },
     {
       "type": "provider.attempt.started",
-      "turnId": "70c653ee-320c-4baf-bfc4-e569007635ed",
-      "runId": "f683b66d-c0ae-44ec-9f67-1916d793242a",
-      "attemptId": "p5a1-f683b66d-c0ae-44ec-9f67-1916d793242a"
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf",
+      "runId": "1c5d807f-57c5-440a-9389-15d0e380ae29",
+      "attemptId": "p5a1-1c5d807f-57c5-440a-9389-15d0e380ae29"
     },
     {
       "type": "provider.response.started"
@@ -683,48 +731,48 @@
     {
       "type": "provider.response.completed",
       "usage": {
-        "inputTokens": 6371,
-        "outputTokens": 648
+        "inputTokens": 7025,
+        "outputTokens": 681
       }
     },
     {
       "type": "budget.state",
-      "turnId": "70c653ee-320c-4baf-bfc4-e569007635ed",
-      "runId": "f683b66d-c0ae-44ec-9f67-1916d793242a"
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf",
+      "runId": "1c5d807f-57c5-440a-9389-15d0e380ae29"
     },
     {
       "type": "budget.state",
-      "turnId": "70c653ee-320c-4baf-bfc4-e569007635ed",
-      "runId": "f683b66d-c0ae-44ec-9f67-1916d793242a"
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf",
+      "runId": "1c5d807f-57c5-440a-9389-15d0e380ae29"
     },
     {
       "type": "budget.state",
-      "turnId": "70c653ee-320c-4baf-bfc4-e569007635ed",
-      "runId": "f683b66d-c0ae-44ec-9f67-1916d793242a"
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf",
+      "runId": "1c5d807f-57c5-440a-9389-15d0e380ae29"
     },
     {
       "type": "activity.updated",
-      "turnId": "70c653ee-320c-4baf-bfc4-e569007635ed"
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf"
     },
     {
       "type": "progress.milestone",
-      "turnId": "70c653ee-320c-4baf-bfc4-e569007635ed"
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf"
     },
     {
       "type": "turn.completed",
-      "turnId": "70c653ee-320c-4baf-bfc4-e569007635ed"
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf"
     },
     {
       "type": "workflow.completed",
-      "turnId": "70c653ee-320c-4baf-bfc4-e569007635ed"
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf"
     },
     {
       "type": "activity.updated",
-      "turnId": "70c653ee-320c-4baf-bfc4-e569007635ed"
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf"
     },
     {
       "type": "progress.milestone",
-      "turnId": "70c653ee-320c-4baf-bfc4-e569007635ed"
+      "turnId": "81516379-e788-4462-b2a9-e3caf1352acf"
     },
     {
       "type": "work.updated"
