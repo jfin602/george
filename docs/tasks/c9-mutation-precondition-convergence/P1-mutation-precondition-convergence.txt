@@ -1,0 +1,220 @@
+TASK: Correction 9 / P1 — Mutation prerequisite convergence and native directory capability
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Sol High`.
+- Browser required: no.
+
+VERSIONING
+- Required unchanged project version: `0.9.10`.
+
+GOAL
+
+Repair the production Phase 9 mutation-prerequisite convergence defect exposed by the first official `greenfield-express-v2` B2 attempt.
+
+Implement an explicit native `create_directory` workspace tool and ensure ordinary schema-valid local mutation prerequisite/path failures with known no-side-effect outcomes become bounded per-call `tool.failed` evidence instead of escaping the provider turn.
+
+Read before editing:
+- `BOOT.md`;
+- `AGENTS.md`;
+- current architecture/workflow/stability and Phase 9 authority;
+- `docs/planning/c9-mutation-precondition-convergence/{decision-record,qualification-plan}.md`;
+- `docs/tasks/c9-mutation-precondition-convergence/{prompt-assessment,implementation-plan}.md`;
+- `docs/tasks/c9-greenfield-instrument-alignment/{P2-live-evidence,closeout}.md`;
+- current agent loop, workspace resolver, mutation tools, recovery/events, structured-task tool lists, progress projection, live-work evidence code, and affected tests.
+
+Preserve newer repository decisions if source differs from the planning file names below.
+
+ROOT FAILURE TO REPRODUCE
+
+The official B2 implementation response requested:
+1. existing `package.json` overwrite without `expectedSha256`;
+2. `write_file("src/app.js")` while `src/` did not exist;
+3. `write_file("src/server.js")`.
+
+The SHA rejection is correct.
+
+The blocking defect is that nested-file target preparation during model-originated mutation recovery-intent construction can throw `Workspace mutation parent must exist.` before normal terminal tool evidence, and George exposes no native directory-creation tool for the model to satisfy that prerequisite.
+
+Do not implement a narrow fixture special case.
+
+BOUNDARY 1 — KEEP SHA AUTHORITY
+
+Do not weaken existing-file mutation safety.
+
+Keep:
+- `read_file.sha256` as the provider-visible current-content authority;
+- explicit model-supplied `expectedSha256` for existing-file write/patch;
+- stale-SHA rejection;
+- exact write/patch byte semantics;
+- text-framing guards;
+- mutation-intent approval rules.
+
+George must not silently read, inject, refresh, or substitute a hash for a model-originated mutation.
+
+Install a deterministic convergence regression:
+
+missing SHA -> bounded tool failure -> provider continuation -> read_file -> explicit returned SHA -> retry -> successful mutation.
+
+Prove no mutation happens before the valid retry.
+
+BOUNDARY 2 — RECOVERABLE PRE-DISPATCH FAILURE
+
+Audit `AgentLoopApplicationService.executeTool()` after schema validation through dispatch.
+
+Fix the smallest production seam so a normal local prerequisite/path/precondition error that:
+- occurs before dispatch/side effect; and
+- is known to have produced no side effect
+
+returns a bounded terminal `tool.failed` ToolResult for that call.
+
+The B2 missing-parent recovery-intent path must be covered exactly.
+
+Requirements:
+- keep `tool.requested`;
+- attach execution metadata when known;
+- do not emit `tool.started` if dispatch never began;
+- return the failure into the existing provider continuation;
+- later same-response calls may continue in model order unless an existing legitimate hard-stop rule applies.
+
+Do NOT blanket-catch:
+- cancellation;
+- task/stage/run-budget exhaustion;
+- configuration failures;
+- ambiguous/outcome-unknown side effects.
+
+Keep explicit approval/policy denial in its existing denied path.
+
+BOUNDARY 3 — CREATE_DIRECTORY
+
+Add a canonical built-in tool:
+
+`create_directory`
+
+Semantics:
+- one required bounded relative workspace directory `path`;
+- `workspace_mutation` effect;
+- no shell/process/network;
+- safely create the requested missing directory chain inside the canonical workspace;
+- idempotent success if the requested target is already a real directory;
+- reject NUL/absolute/traversal paths;
+- reject symlink components/target and escapes;
+- reject regular-file/non-directory collisions;
+- never delete, replace, move, or rename existing entries.
+
+Use canonical workspace/path code, not duplicated string checks in the application loop.
+
+Do not make `write_file` silently create missing parents. Preserve its current contract.
+
+Prefer conservative replay classification and explicit recovery evidence over blind replay.
+
+BOUNDARY 4 — PERMISSIONS
+
+Integrate `create_directory` through the existing execution-effect/approval architecture.
+
+Standard workspace:
+- ordinary mutation approval applies.
+
+Workspace Autonomous:
+- qualified in-workspace directory creation may auto-run.
+
+Do not broaden:
+- outside-workspace policy;
+- network;
+- remote mutation;
+- browser;
+- credentials/environment.
+
+If outside-directory creation is not already supported by the canonical outside-filesystem capability, keep it unavailable.
+
+BOUNDARY 5 — RECOVERY
+
+Extend the bounded recovery intent union for `create_directory` with only safe path metadata.
+
+On reopen:
+- canonical requested directory exists as a real in-workspace directory -> confirmed complete;
+- it is provably absent -> confirmed incomplete;
+- unsafe/colliding/ambiguous observation -> conservative outcome;
+- never replay automatically.
+
+Preserve write/patch/process/external/approval/provider-continuation recovery semantics.
+
+BOUNDARY 6 — STRUCTURED TOOL SURFACE
+
+Expose `create_directory` to structured implementation and correction stages.
+
+Do not expose it to INSPECT.
+
+Do not add `run_process` to structured coding merely to create directories.
+
+BOUNDARY 7 — PROGRESS / SAFE EVIDENCE
+
+Project `create_directory` as an editing/workspace mutation with bounded path/result metadata.
+
+No raw provider JSON, file bodies, secrets, or unbounded payloads.
+
+Ensure live trace/tool evidence remains terminal and intelligible for:
+- missing SHA;
+- missing parent;
+- directory creation;
+- later successful writes.
+
+PERMANENT REGRESSIONS
+
+Add focused tests proving at least:
+
+1. `create_directory` appears in the canonical provider tool schema.
+2. One-level creation.
+3. Nested directory-chain creation.
+4. Already-existing directory idempotence.
+5. Regular-file collision rejection.
+6. Absolute/traversal rejection.
+7. Symlink component/escape rejection.
+8. Cancellation safety.
+9. `write_file` still rejects nonexistent parents.
+10. Missing existing-file SHA returns bounded tool failure and can converge through read/retry.
+11. Missing parent returns bounded per-call failure rather than turn-level failure.
+12. create-directory -> nested write succeeds.
+13. Same-response ordered calls do not become unexplained nonterminal states because of an ordinary preparation failure.
+14. Cancellation/budget/configuration/denial retain current stronger semantics.
+15. Standard approval allow/deny for directory creation.
+16. Workspace Autonomous in-workspace directory creation auto-runs.
+17. No outside-policy broadening.
+18. Interrupted directory creation reconciles complete/incomplete/ambiguous without replay.
+19. Structured implementation/correction exposes create_directory; INSPECT does not.
+20. Existing SHA/framing/mutation-intent/Gate-A deterministic regressions remain Green.
+21. v1/v2 live-work fixture/task/acceptance digests remain unchanged.
+
+Use existing test modules where they fit; do not build a second tool/recovery framework solely for the test.
+
+VALIDATION
+
+Run focused affected suites for:
+- workspace/path + mutation tools;
+- canonical agent loop;
+- recovery/session;
+- structured task execution;
+- progress/live-work evidence;
+- permission/Workspace Autonomous behavior;
+- Phase 9 integration and inherited c9 floors.
+
+Then run:
+- `npm run typecheck`;
+- `npm run test:runner`;
+- `npm test` on supported Node 26;
+- `git diff --check`.
+
+If broad OpenTUI/native failures remain environment-specific, preserve their exact state rather than relabeling them.
+
+Verify:
+- package remains exactly `0.9.10`;
+- no root `package-lock.json`.
+
+Do NOT:
+- change Task Prompt format/version;
+- edit any v1/v2 live-work instrument or hidden acceptance;
+- raise stage/run-budget limits;
+- retune provider/context/runtime settings;
+- weaken SHA/framing/mutation approval boundaries;
+- run official live Gate A/B2/C2 in P1;
+- owner-close Phase 9;
+- open Phase 10.
