@@ -60,7 +60,7 @@ import {
   assembleContext, checkpointFor, digest, ContextAssemblyError, ProviderContextCompactor, selectContextProfile,
   type AssembledContext, type ContextCheckpoint, type ContextCompactor, type ContextHistorySource, type ContextProfileSelection,
 } from '../context/index.ts';
-import { join } from 'node:path';
+import { isAbsolute, join } from 'node:path';
 import { WorkProjection } from './progress.ts';
 import { DEFAULT_PROVIDER_RETRY_POLICY, retryDelay, sleepForRetry, validateProviderRetryPolicy, type ProviderRetryPolicy, type RetrySleeper } from './retry.ts';
 import {
@@ -180,6 +180,7 @@ const DEFAULT_MAX_TOOL_CALLS = 32;
 const DEFAULT_MAX_TOOL_ROUNDS = 32;
 const CONTINUATION_PROTOCOL_OVERHEAD_TOKENS = 32;
 const MAX_REBASE_EVIDENCE_BYTES = 16 * 1024;
+const CONCURRENT_READ_TIMEOUT_MS = 30_000;
 
 function estimatedTokens(value: unknown): number {
   return Math.ceil(JSON.stringify(value).length / 4);
@@ -313,6 +314,35 @@ function toolBatch(responseId: string, calls: readonly ToolCall[], registry: Too
       return Object.freeze({ ordinal, call, validation: registry.validate(call) });
     })),
   });
+}
+
+type ConcurrentReadMember = ToolBatchMember & Readonly<{ validation: ValidatedToolCall; fingerprint: string }>;
+
+/** Only canonical replay-safe local observations with no known ordering dependency share a wave. */
+function concurrentReadGroup(
+  members: readonly ToolBatchMember[],
+  start: number,
+  maximum: number,
+  mutationEpoch: number,
+  successfulReads: ReadonlyMap<string, number>,
+  hooksActive: boolean,
+): readonly ConcurrentReadMember[] {
+  if (hooksActive || maximum < 2) return [];
+  const group: ConcurrentReadMember[] = [];
+  const fingerprints = new Set<string>();
+  for (let index = start; index < members.length && group.length < maximum; index += 1) {
+    const member = members[index]!;
+    if ('callId' in member.validation) break;
+    const { execution } = member.validation.definition;
+    if (execution.effect !== 'local_read' || execution.replaySafety !== 'replay_safe') break;
+    const path = member.validation.arguments.path;
+    if (typeof path === 'string' && isAbsolute(path)) break;
+    const fingerprint = `${member.call.name}:${stableJson(member.validation.arguments)}`;
+    if (fingerprints.has(fingerprint) || successfulReads.get(fingerprint) === mutationEpoch) break;
+    fingerprints.add(fingerprint);
+    group.push({ ...member, validation: member.validation, fingerprint });
+  }
+  return group.length > 1 ? group : [];
 }
 
 function operationControl(text: string, toolCallCount: number): GeorgeOperationControl | undefined {
@@ -724,6 +754,7 @@ export class AgentLoopApplicationService {
     hookId?: string,
     registry = this.registry,
     submissionPolicy?: Partial<ExecutionPolicy>,
+    timeoutMs?: number,
   ): AsyncGenerator<ApplicationEvent, import('../tools/index.ts').ToolResult> {
     const emit = (event: ApplicationEvent): readonly ApplicationEvent[] => this.record(session, event);
     const origin = hookId === undefined ? {} : { origin: { hookId } };
@@ -812,7 +843,7 @@ export class AgentLoopApplicationService {
     const startedAt = call.name === 'run_process' ? this.clock() : undefined;
     const result = outside
       ? await dispatchOutsideFilesystemCapability(outside, call, { signal, ...(input === undefined ? {} : { input }) })
-      : await activeRegistry.dispatch(call, { signal, ...(input === undefined ? {} : { input }) });
+      : await activeRegistry.dispatch(call, { signal, ...(input === undefined ? {} : { input }), ...(timeoutMs === undefined ? {} : { timeoutMs }) });
     if (result.result.ok) yield* emit({ type: 'tool.completed', turnId, callId: call.callId, name: call.name, result: result.result, execution: validation.definition.execution, ...origin });
     else {
       yield* emit({ type: 'tool.failed', turnId, callId: call.callId, name: call.name, result: result.result, execution: validation.definition.execution, ...origin });
@@ -824,6 +855,63 @@ export class AgentLoopApplicationService {
     if (!hookId && budget) yield* this.invokeHooks(session, { name: 'tool.after', sessionId: session.id, turnId, runId: budget.id, operation: { callId: call.callId, name: call.name } }, budget, signal);
     if (signal?.aborted) throw cancellationError(signal);
     return result;
+  }
+
+  private async *executeConcurrentReads(
+    session: Session,
+    turnId: string,
+    members: readonly ConcurrentReadMember[],
+    signal: AbortSignal | undefined,
+    budget: RunBudget,
+    registry: ToolRegistry,
+    submissionPolicy?: Partial<ExecutionPolicy>,
+  ): AsyncGenerator<ApplicationEvent, Readonly<{ results: readonly Readonly<{ member: ConcurrentReadMember; result: ToolResult; runtimeMs: number }>[]; wallMs: number; summedMemberMs: number; observedOverlapMs: number }>> {
+    const queued: ApplicationEvent[] = [];
+    let wake: (() => void) | undefined;
+    let remaining = members.length;
+    const ready = () => { const resolve = wake; wake = undefined; resolve?.(); };
+    let batchStartedAt: number | undefined;
+    let batchFinishedAt: number | undefined;
+    const executions = members.map(async (member) => {
+      let memberStartedAt: number | undefined;
+      let memberFinishedAt: number | undefined;
+      try {
+        const iterator = this.executeTool(session, turnId, member.call, signal, budget, undefined, undefined, registry, submissionPolicy, CONCURRENT_READ_TIMEOUT_MS);
+        let next = await iterator.next();
+        while (!next.done) {
+          const at = this.clock();
+          if (next.value.type === 'tool.started') {
+            memberStartedAt = at;
+            batchStartedAt = batchStartedAt === undefined ? at : Math.min(batchStartedAt, at);
+          } else if (next.value.type === 'tool.completed' || next.value.type === 'tool.failed') {
+            memberFinishedAt = at;
+            batchFinishedAt = batchFinishedAt === undefined ? at : Math.max(batchFinishedAt, at);
+          }
+          queued.push(next.value);
+          ready();
+          next = await iterator.next();
+        }
+        return { member, result: next.value, runtimeMs: memberStartedAt === undefined || memberFinishedAt === undefined ? 0 : Math.max(0, Math.floor(memberFinishedAt - memberStartedAt)) };
+      } finally {
+        remaining -= 1;
+        ready();
+      }
+    });
+    const settledExecution = Promise.allSettled(executions);
+    while (remaining > 0 || queued.length > 0) {
+      if (queued.length > 0) yield queued.shift()!;
+      else await new Promise<void>((resolve) => {
+        wake = resolve;
+        if (remaining === 0 || queued.length > 0) ready();
+      });
+    }
+    const settled = await settledExecution;
+    const rejected = settled.find((item): item is PromiseRejectedResult => item.status === 'rejected');
+    if (rejected) throw rejected.reason;
+    const results = settled.map((item) => (item as PromiseFulfilledResult<Awaited<typeof executions[number]>>).value);
+    const wallMs = batchStartedAt === undefined || batchFinishedAt === undefined ? 0 : Math.max(0, Math.floor(batchFinishedAt - batchStartedAt));
+    const summedMemberMs = results.reduce((total, item) => total + item.runtimeMs, 0);
+    return { results, wallMs, summedMemberMs, observedOverlapMs: Math.max(0, summedMemberMs - wallMs) };
   }
 
   /** Explicit application-owned process work still uses the canonical registry and ApprovalPort. */
@@ -1204,7 +1292,30 @@ export class AgentLoopApplicationService {
         toolRounds += 1;
         const results: ToolResult[] = [];
         const providerResults: ProviderToolResult[] = [];
-        for (const member of batch.members) {
+        const hooksActive = this.hooks.list().some((hook) => hook.enabled && (hook.event === 'tool.before' || hook.event === 'tool.after'));
+        for (let memberIndex = 0; memberIndex < batch.members.length; memberIndex += 1) {
+          const concurrent = concurrentReadGroup(batch.members, memberIndex, stageToolLimit - toolCalls, mutationEpoch, successfulReads, hooksActive);
+          if (concurrent.length > 0) {
+            toolCalls += concurrent.length;
+            attemptState.toolExecuted = true;
+            const executed = yield* this.executeConcurrentReads(submission.session, turnId, concurrent, submission.signal, budget, registry, submission.executionPolicy);
+            yield* emit({
+              type: 'tool.concurrent-read-batch.completed', turnId, callIds: concurrent.map((member) => member.call.callId), width: concurrent.length,
+              wallMs: executed.wallMs, summedMemberMs: executed.summedMemberMs, observedOverlapMs: executed.observedOverlapMs,
+            });
+            for (const item of executed.results) {
+              results.push(item.result);
+              providerResults.push(registry.projectProviderResult(item.result));
+              if (item.result.result.ok) successfulReads.set(item.member.fingerprint, mutationEpoch);
+              if (!item.result.result.ok && item.result.result.error.code === 'outcome_unknown') {
+                ambiguousEffect = true;
+                attemptState.ambiguousEffect = true;
+              }
+            }
+            memberIndex += concurrent.length - 1;
+            continue;
+          }
+          const member = batch.members[memberIndex]!;
           const { call, validation: validated } = member;
           toolCalls += 1;
           if (toolCalls > stageToolLimit) {

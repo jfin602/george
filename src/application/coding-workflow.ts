@@ -45,7 +45,7 @@ function bounded(value: string, maximum = 4096): string {
   return Buffer.byteLength(value, 'utf8') <= maximum ? value : `${Buffer.from(value, 'utf8').subarray(0, maximum - 3).toString('utf8')}...`;
 }
 
-/** Attributes sequential lifecycle intervals once; the remainder is explicit harness time. */
+/** Attributes lifecycle intervals once; concurrent read overlap is removed from summed tool time. */
 class WorkflowTimer {
   private readonly clock: () => number;
   private readonly startedAt: number;
@@ -65,6 +65,7 @@ class WorkflowTimer {
     else if (event.type === 'provider.response.completed' || event.type === 'provider.error' || event.type === 'provider.retry.scheduled') { close(this.providerStarted, (value) => { this.providerMs += value; }); this.providerStarted = undefined; }
     else if (event.type === 'tool.started') this.tools.set(event.callId, now);
     else if (event.type === 'tool.completed' || event.type === 'tool.failed') { close(this.tools.get(event.callId), (value) => { this.toolMs += value; }); this.tools.delete(event.callId); }
+    else if (event.type === 'tool.concurrent-read-batch.completed') this.toolMs = Math.max(0, this.toolMs - event.observedOverlapMs);
     else if (event.type === 'approval.requested') this.approvals.set(event.callId, now);
     else if (event.type === 'approval.allowed' || event.type === 'approval.denied') { close(this.approvals.get(event.callId), (value) => { this.approvalMs += value; }); this.approvals.delete(event.callId); }
   }

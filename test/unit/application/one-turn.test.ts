@@ -714,7 +714,8 @@ test('successful-tool-round completion executes the full round, retains evidence
 
   assert.equal(provider.calls, 1);
   assert.deepEqual(events.filter((event) => event.type === 'tool.started' && event.name === 'read_file').map((event) => event.callId), ['boot', 'agents']);
-  assert.deepEqual(events.filter((event) => event.type === 'tool.completed' && event.name === 'read_file').map((event) => event.callId), ['boot', 'agents']);
+  assert.deepEqual(events.filter((event) => event.type === 'tool.completed' && event.name === 'read_file').map((event) => event.callId).sort(), ['agents', 'boot']);
+  assert.equal(events.some((event) => event.type === 'tool.concurrent-read-batch.completed'), true);
   assert.equal(events.some((event) => event.type === 'assistant.response.completed'), false);
   assert.equal(events.some((event) => event.type === 'hook.completed' && event.hookId === 'completed' && event.status === 'succeeded'), true);
   assert.equal(events.at(-1)?.type, 'turn.completed');

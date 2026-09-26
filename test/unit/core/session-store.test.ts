@@ -68,6 +68,7 @@ test('Operation rounds persist only bounded metrics and never enter the transcri
   appendSessionEvent(session, { type: 'input.submitted', text: 'INTERNAL_OPERATION_OBJECTIVE', executionMode: 'operation' });
   appendSessionEvent(session, { type: 'agent.round.completed', turnId: 'operation', round: 1, executionMode: 'operation', internalTextBytes: 17, estimatedInternalTextTokens: 5, toolCallCount: 1, control: 'handoff' });
   appendSessionEvent(session, { type: 'model.round.avoided', turnId: 'operation', reason: 'validation-passed' });
+  appendSessionEvent(session, { type: 'tool.concurrent-read-batch.completed', turnId: 'operation', callIds: ['a', 'b'], width: 2, wallMs: 30, summedMemberMs: 50, observedOverlapMs: 20 });
   await store.save(session);
 
   const serialized = await readFile(join(state, 'operation-metrics.json'), 'utf8');
@@ -77,6 +78,7 @@ test('Operation rounds persist only bounded metrics and never enter the transcri
   assert.deepEqual(reopened.events, [
     { type: 'agent.round.completed', turnId: 'operation', round: 1, executionMode: 'operation', internalTextBytes: 17, estimatedInternalTextTokens: 5, toolCallCount: 1, control: 'handoff' },
     { type: 'model.round.avoided', turnId: 'operation', reason: 'validation-passed' },
+    { type: 'tool.concurrent-read-batch.completed', turnId: 'operation', callIds: ['a', 'b'], width: 2, wallMs: 30, summedMemberMs: 50, observedOverlapMs: 20 },
   ]);
 });
 

@@ -1,6 +1,7 @@
 import {
   asGeorgeError,
   cancellationError,
+  GeorgeError,
   type GeorgeErrorShape,
   type JsonObject,
   type JsonValue,
@@ -40,6 +41,7 @@ export type ToolDefinition = Readonly<{
 
 /** `input` is internal process stdin, not part of any model-visible tool schema. */
 export type ToolExecutionOptions = Readonly<{ signal?: AbortSignal; input?: string }>;
+export type ToolDispatchOptions = ToolExecutionOptions & Readonly<{ timeoutMs?: number }>;
 export type ToolCall = Readonly<{ callId: string; name: string; arguments: string }>;
 export type ToolResult = ProviderToolResult;
 export type ValidatedToolCall = Readonly<{ definition: ToolDefinition; arguments: JsonObject }>;
@@ -173,18 +175,38 @@ export class ToolRegistry {
     return { definition, arguments: arguments_ as JsonObject };
   }
 
-  async dispatch(call: ToolCall, options: ToolExecutionOptions = {}): Promise<ToolResult> {
+  async dispatch(call: ToolCall, options: ToolDispatchOptions = {}): Promise<ToolResult> {
     const definition = this.validate(call);
     if ('callId' in definition) return definition;
     if (options.signal?.aborted) throw cancellationError(options.signal)!;
+    if (options.timeoutMs !== undefined && (!Number.isInteger(options.timeoutMs) || options.timeoutMs < 1 || options.timeoutMs > 120_000)) {
+      throw new GeorgeError('configuration', 'Tool timeout must be an integer between 1 and 120000 ms.');
+    }
+    const timeoutMs = options.timeoutMs;
+    const controller = timeoutMs === undefined ? undefined : new AbortController();
+    const signal = controller === undefined ? options.signal : options.signal === undefined ? controller.signal : AbortSignal.any([options.signal, controller.signal]);
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let removeAbort: (() => void) | undefined;
     try {
-      const value = await definition.definition.execute(definition.arguments, options);
-      if (options.signal?.aborted) throw cancellationError(options.signal)!;
+      const execution = definition.definition.execute(definition.arguments, { ...(signal === undefined ? {} : { signal }), ...(options.input === undefined ? {} : { input: options.input }) });
+      const value = controller === undefined ? await execution : await Promise.race([
+        execution,
+        new Promise<never>((_resolve, reject) => {
+          const aborted = () => reject(cancellationError(signal!)!);
+          signal!.addEventListener('abort', aborted, { once: true });
+          removeAbort = () => signal!.removeEventListener('abort', aborted);
+          timer = setTimeout(() => controller.abort(new GeorgeError('tool', `Tool ${call.name} timed out after ${timeoutMs} ms.`)), timeoutMs);
+        }),
+      ]);
+      if (signal?.aborted) throw cancellationError(signal)!;
       return { callId: call.callId, name: call.name, result: { ok: true, value } };
     } catch (error) {
       const normalized = asGeorgeError(error, 'tool');
       if (normalized.code === 'cancelled') throw normalized;
       return { callId: call.callId, name: call.name, result: { ok: false, error: { code: normalized.code, message: normalized.message } } };
+    } finally {
+      if (timer !== undefined) clearTimeout(timer);
+      removeAbort?.();
     }
   }
 }

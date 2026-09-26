@@ -58,8 +58,12 @@ export type LiveWorkMetrics = Readonly<{
   providerToolSelectionRounds: number;
   toolBatchCompression: number;
   concurrentReadBatchCount: number;
+  concurrentReadBatchWidths: readonly number[];
+  averageConcurrentReadBatchWidth: number | null;
+  maxConcurrentReadBatchWidth: number | null;
   parallelBatchWallMs: number | null;
   summedChildToolRuntimeMs: number | null;
+  observedConcurrentReadOverlapMs: number | null;
   modelRoundsAvoided: number;
   modelRoundsAvoidedByReason: ModelRoundAvoidanceCounts;
   georgeControlCount: number;
@@ -305,6 +309,8 @@ function metrics(events: readonly ApplicationEvent[], correctionCycles: number):
   const attemptTimings = events.filter((event): event is Extract<ApplicationEvent, { type: 'provider.attempt.finished' }> => event.type === 'provider.attempt.finished');
   const attemptCount = events.filter((event) => event.type === 'provider.attempt.started').length;
   const avoidedByReason = countModelRoundsAvoided(events);
+  const concurrentReadBatches = events.filter((event): event is Extract<ApplicationEvent, { type: 'tool.concurrent-read-batch.completed' }> => event.type === 'tool.concurrent-read-batch.completed');
+  const concurrentReadBatchWidths = concurrentReadBatches.map((event) => event.width);
   const input = completed.map((event) => number(event.usage?.inputTokens)).filter((value): value is number => value !== null);
   const output = completed.map((event) => number(event.usage?.outputTokens)).filter((value): value is number => value !== null);
   const cachedInput = completed.map((event) => number(event.usage?.cachedInputTokens)).filter((value): value is number => value !== null);
@@ -335,9 +341,13 @@ function metrics(events: readonly ApplicationEvent[], correctionCycles: number):
     toolBatchWidths: Object.freeze(toolBatchWidths),
     providerToolSelectionRounds: toolBatchWidths.length,
     toolBatchCompression: toolBatchWidths.reduce((total, width) => total + width - 1, 0),
-    concurrentReadBatchCount: 0,
-    parallelBatchWallMs: null,
-    summedChildToolRuntimeMs: null,
+    concurrentReadBatchCount: concurrentReadBatches.length,
+    concurrentReadBatchWidths: Object.freeze(concurrentReadBatchWidths),
+    averageConcurrentReadBatchWidth: concurrentReadBatches.length === 0 ? null : concurrentReadBatchWidths.reduce((total, width) => total + width, 0) / concurrentReadBatches.length,
+    maxConcurrentReadBatchWidth: concurrentReadBatches.length === 0 ? null : Math.max(...concurrentReadBatchWidths),
+    parallelBatchWallMs: concurrentReadBatches.length === 0 ? null : concurrentReadBatches.reduce((total, event) => total + event.wallMs, 0),
+    summedChildToolRuntimeMs: concurrentReadBatches.length === 0 ? null : concurrentReadBatches.reduce((total, event) => total + event.summedMemberMs, 0),
+    observedConcurrentReadOverlapMs: concurrentReadBatches.length === 0 ? null : concurrentReadBatches.reduce((total, event) => total + event.observedOverlapMs, 0),
     modelRoundsAvoided: Object.values(avoidedByReason).reduce((total, value) => total + value, 0),
     modelRoundsAvoidedByReason: avoidedByReason,
     georgeControlCount: agentRounds.filter((event) => event.control !== undefined).length,
@@ -570,6 +580,7 @@ function eventEvidence(event: ApplicationEvent): Readonly<Record<string, unknown
   if (event.type === 'provider.response.completed') safe.usage = { inputTokens: event.usage?.inputTokens ?? null, outputTokens: event.usage?.outputTokens ?? null, cachedInputTokens: event.usage?.cachedInputTokens ?? null };
   if (event.type === 'agent.round.completed') safe.round = { round: event.round, executionMode: event.executionMode, internalTextBytes: event.internalTextBytes, estimatedInternalTextTokens: event.estimatedInternalTextTokens, toolCallCount: event.toolCallCount, control: event.control ?? null };
   if (event.type === 'model.round.avoided') safe.modelRoundAvoided = { reason: event.reason };
+  if (event.type === 'tool.concurrent-read-batch.completed') safe.concurrentReadBatch = { callIds: event.callIds, width: event.width, wallMs: event.wallMs, summedMemberMs: event.summedMemberMs, observedOverlapMs: event.observedOverlapMs };
   if (event.type === 'provider.error' || event.type === 'turn.failed' || event.type === 'turn.cancelled') safe.error = boundedFailureError(event.error);
   if (event.type === 'tool.failed') safe.error = boundedFailureError(event.result.error);
   if (event.type === 'validation.completed' && event.status !== 'passed') safe.error = { code: sanitizeTaskEvidence(event.error?.code ?? event.status, 128).text, message: sanitizeTaskEvidence(event.error?.message ?? `Validation ${event.status}.`, 1024).text, ...(event.outcome === undefined ? {} : { reason: event.outcome }) };

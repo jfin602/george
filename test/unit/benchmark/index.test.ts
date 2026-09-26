@@ -150,6 +150,7 @@ test('benchmark telemetry records completed tool batches and bounded Operation m
     { type: 'provider.tool.call', callId: 'two', name: 'read_file', arguments: '{}' },
     { type: 'provider.response.completed', usage: { inputTokens: 10, outputTokens: 2 } },
     { type: 'agent.round.completed', turnId: 't', round: 1, executionMode: 'operation', internalTextBytes: 12, estimatedInternalTextTokens: 3, toolCallCount: 2, control: 'handoff' },
+    { type: 'tool.concurrent-read-batch.completed', turnId: 't', callIds: ['one', 'two'], width: 2, wallMs: 30, summedMemberMs: 50, observedOverlapMs: 20 },
     { type: 'turn.failed', turnId: 't', error: { code: 'validation', message: 'fixture' } },
   ], 5, 1, 'warm-repeat', 'model', 'http://127.0.0.1:1234');
   assert.deepEqual(record.toolBatchWidths, [2]);
@@ -157,7 +158,7 @@ test('benchmark telemetry records completed tool batches and bounded Operation m
   assert.equal(record.providerToolSelectionRounds, 1);
   assert.equal(record.toolBatchCompression, 1);
   assert.equal(record.cachedInputTokens, null);
-  assert.deepEqual({ internal: record.internalTextBytes, parallel: record.parallelBatchWallMs, child: record.summedChildToolRuntimeMs, controls: record.georgeControlCount, human: record.humanModeRounds, operation: record.operationModeRounds, corrections: record.correctionCycles }, { internal: 12, parallel: null, child: null, controls: 1, human: 0, operation: 1, corrections: 0 });
+  assert.deepEqual({ internal: record.internalTextBytes, widths: record.concurrentReadBatchWidths, average: record.averageConcurrentReadBatchWidth, maximum: record.maxConcurrentReadBatchWidth, parallel: record.parallelBatchWallMs, child: record.summedChildToolRuntimeMs, overlap: record.observedConcurrentReadOverlapMs, controls: record.georgeControlCount, human: record.humanModeRounds, operation: record.operationModeRounds, corrections: record.correctionCycles }, { internal: 12, widths: [2], average: 2, maximum: 2, parallel: 30, child: 50, overlap: 20, controls: 1, human: 0, operation: 1, corrections: 0 });
 });
 
 test('structured and independent multi-tool benchmark cases expose selection-round compression without changing call counts', async () => {
@@ -178,6 +179,8 @@ test('structured and independent multi-tool benchmark cases expose selection-rou
   ], 'ALPHA-BETA-GAMMA');
   assert.deepEqual([structured.providerRounds, structured.toolCalls, structured.providerToolSelectionRounds, structured.toolBatchWidths, structured.toolBatchCompression, structured.passed], [2, 1, 1, [1], 0, true]);
   assert.deepEqual([independent.providerRounds, independent.toolCalls, independent.providerToolSelectionRounds, independent.toolBatchWidths, independent.toolBatchCompression, independent.passed], [2, 3, 1, [3], 2, true]);
+  assert.deepEqual([structured.concurrentReadBatchCount, structured.concurrentReadBatchWidths], [0, []]);
+  assert.deepEqual([independent.concurrentReadBatchCount, independent.concurrentReadBatchWidths, independent.averageConcurrentReadBatchWidth, independent.maxConcurrentReadBatchWidth], [1, [3], 3, 3]);
 });
 
 test('code-understanding requires one read and its exact deterministic answer', () => {
@@ -273,7 +276,7 @@ test('JSON artifacts, report, aggregates, and comparison remain stable', async (
   await writeFile(join(root, 'v2.json'), JSON.stringify({ ...results, schemaVersion: 2, suiteVersion: 'v2' }));
   assert.match(await compareBenchmark(join(root, 'v2.json'), results), /Legacy v2 artifact/);
   const legacyV3 = JSON.parse(JSON.stringify(results));
-  for (const item of legacyV3.records) for (const key of ['cachedInputTokens', 'internalTextBytes', 'estimatedInternalTextTokens', 'toolBatchCount', 'toolBatchWidths', 'providerToolSelectionRounds', 'toolBatchCompression', 'concurrentReadBatchCount', 'parallelBatchWallMs', 'summedChildToolRuntimeMs', 'modelRoundsAvoided', 'modelRoundsAvoidedByReason', 'georgeControlCount', 'humanModeRounds', 'operationModeRounds', 'correctionCycles']) delete item[key];
+  for (const item of legacyV3.records) for (const key of ['cachedInputTokens', 'internalTextBytes', 'estimatedInternalTextTokens', 'toolBatchCount', 'toolBatchWidths', 'providerToolSelectionRounds', 'toolBatchCompression', 'concurrentReadBatchCount', 'concurrentReadBatchWidths', 'averageConcurrentReadBatchWidth', 'maxConcurrentReadBatchWidth', 'parallelBatchWallMs', 'summedChildToolRuntimeMs', 'observedConcurrentReadOverlapMs', 'modelRoundsAvoided', 'modelRoundsAvoidedByReason', 'georgeControlCount', 'humanModeRounds', 'operationModeRounds', 'correctionCycles']) delete item[key];
   await writeFile(join(root, 'legacy-v3.json'), JSON.stringify(legacyV3));
   assert.match(await compareBenchmark(join(root, 'legacy-v3.json'), results), /tool batches delta/);
   assert.match(report(legacyV3), /Phase 10 telemetry/);

@@ -291,6 +291,11 @@ function durableEvent(event: ApplicationEvent): ApplicationEvent | undefined {
       toolCallCount: boundedInteger(event.toolCallCount, 'round tool call count', 1024), ...(event.control === undefined ? {} : { control: oneOf(event.control, 'George control', ['handoff'] as const) }),
     };
     case 'model.round.avoided': return { type: event.type, turnId: string(event.turnId, 'turn ID', 256), reason: oneOf(event.reason, 'model round avoidance reason', MODEL_ROUND_AVOIDANCE_REASONS) };
+    case 'tool.concurrent-read-batch.completed': return {
+      type: event.type, turnId: string(event.turnId, 'turn ID', 256), callIds: boundedArray(event.callIds, 'concurrent read call IDs', 128).map((callId) => string(callId, 'concurrent read call ID', 256)),
+      width: boundedInteger(event.width, 'concurrent read width', 128), wallMs: boundedInteger(event.wallMs, 'concurrent read wall time'),
+      summedMemberMs: boundedInteger(event.summedMemberMs, 'concurrent read member time'), observedOverlapMs: boundedInteger(event.observedOverlapMs, 'concurrent read overlap'),
+    };
     case 'provider.text.delta': return undefined; // The clean transcript is authoritative for completed assistant text.
     case 'provider.response.started': return event.responseId === undefined ? { type: event.type } : { type: event.type, responseId: string(event.responseId, 'response ID', 256) };
     case 'provider.response.completed': return event.usage === undefined ? { type: event.type } : { type: event.type, usage: safeUsage(event.usage) };

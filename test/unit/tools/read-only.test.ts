@@ -252,3 +252,16 @@ test('list_directory defaults an omitted path to the workspace root without weak
   await assert.rejects(() => executor.execute({ name: 'list_directory', path: outside }), GeorgeError);
   await assert.rejects(() => executor.execute({ name: 'list_directory', path: 'escape' }), GeorgeError);
 });
+
+test('registry dispatch bounds one call and aborts its executor', async () => {
+  let aborted = false;
+  const registry = new ToolRegistry([{
+    name: 'bounded', description: 'Wait until bounded.',
+    execution: { effect: 'local_read', replaySafety: 'replay_safe', source: { kind: 'builtin' } },
+    inputSchema: { type: 'object', properties: {}, additionalProperties: false },
+    execute: async (_arguments, options) => new Promise((_resolve) => options.signal?.addEventListener('abort', () => { aborted = true; }, { once: true })),
+  }]);
+  const result = await registry.dispatch({ callId: 'bounded', name: 'bounded', arguments: '{}' }, { timeoutMs: 10 });
+  assert.equal(aborted, true);
+  assert.deepEqual(result, { callId: 'bounded', name: 'bounded', result: { ok: false, error: { code: 'tool', message: 'Tool bounded timed out after 10 ms.' } } });
+});
