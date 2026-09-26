@@ -1,0 +1,43 @@
+{
+  "hardPreflight": "green",
+  "aggregateBroad": "not_green",
+  "broadRegressionDelta": "green",
+  "liveEligibility": "green",
+  "reasons": [
+    "All candidate failures and skips match materially equivalent baseline evidence."
+  ],
+  "matched": [
+    {
+      "identity": "Transcript and Task pages switch without changing session state or the composer draft",
+      "outcome": "failed",
+      "category": "opentui-renderer-assertion",
+      "signature": "ERR_ASSERTION: frame did not match /No structured task is active/"
+    },
+    {
+      "identity": "committed final answers reveal progressively without delaying canonical durability, and cancellation stops the reveal",
+      "outcome": "failed",
+      "category": "opentui-renderer-timeout",
+      "signature": "Timed out waiting for frame predicate after 20 passes"
+    },
+    {
+      "identity": "streaming does not overwrite draft input and returns the composer to ready state",
+      "outcome": "failed",
+      "category": "opentui-renderer-assertion",
+      "signature": "ERR_ASSERTION: frame did not match /streamed answer/"
+    },
+    {
+      "identity": "test renderer shows identity, configuration, streamed text, and read-only activity",
+      "outcome": "failed",
+      "category": "opentui-renderer-assertion",
+      "signature": "ERR_ASSERTION: frame did not match /streamed answer/"
+    },
+    {
+      "identity": "native OpenTUI launches and restores a real Node 26 terminal",
+      "outcome": "skipped",
+      "category": "native-environment",
+      "signature": "SKIP: non-TTY qualification environment"
+    }
+  ],
+  "new": [],
+  "worsened": []
+}

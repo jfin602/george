@@ -1,0 +1,27 @@
+{
+  "capturedAt": "2026-09-26T13:21:05.535Z",
+  "node": "v26.10.0",
+  "npm": "11.19.1",
+  "baseUrl": "http://127.0.0.1:1234",
+  "modelId": "qwen3-coder-30b-a3b-instruct@q4_k_m",
+  "modelListed": true,
+  "loadedInstanceId": null,
+  "contextLength": null,
+  "evalBatchSize": null,
+  "physicalBatchSize": null,
+  "parallel": null,
+  "flashAttention": null,
+  "gpuKvCache": null,
+  "numExperts": null,
+  "runtimeControls": {
+    "state": "evidence_gap",
+    "reason": "The pinned model is listed, but LM Studio reported no loaded instance before live work."
+  },
+  "gpuOffloadLayers": {
+    "state": "evidence_gap",
+    "expected": 26,
+    "observed": null,
+    "reason": "UI-only control not independently observed"
+  },
+  "retuned": false
+}
