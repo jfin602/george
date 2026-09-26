@@ -1,0 +1,51 @@
+{
+  "state": "not_green",
+  "commit": "d7e565ccb0e694166e6fe4346b56f4746f0697f1",
+  "nodeVersion": "v26.10.0",
+  "npmVersion": "11.19.1",
+  "command": "npm test",
+  "dependencyIdentity": "sha256:d01d095de8e27144ee1a0967e8f54b0aa3cc1ce5281b753138e1d9c708041c5c",
+  "environment": "non-TTY; isolated git-archive tree; identical hard-linked node_modules",
+  "total": 385,
+  "passed": 379,
+  "failed": 5,
+  "skipped": 1,
+  "observations": [
+    {
+      "identity": "test renderer shows identity, configuration, streamed text, and read-only activity",
+      "outcome": "failed",
+      "category": "opentui-renderer-assertion",
+      "signature": "ERR_ASSERTION: frame did not match /streamed answer/"
+    },
+    {
+      "identity": "Transcript and Task pages switch without changing session state or the composer draft",
+      "outcome": "failed",
+      "category": "opentui-renderer-assertion",
+      "signature": "ERR_ASSERTION: frame did not match /No structured task is active/"
+    },
+    {
+      "identity": "committed final answers reveal progressively without delaying canonical durability, and cancellation stops the reveal",
+      "outcome": "failed",
+      "category": "opentui-renderer-timeout",
+      "signature": "Timed out waiting for frame predicate after 20 passes"
+    },
+    {
+      "identity": "streaming does not overwrite draft input and returns the composer to ready state",
+      "outcome": "failed",
+      "category": "opentui-renderer-assertion",
+      "signature": "ERR_ASSERTION: frame did not match /streamed answer/"
+    },
+    {
+      "identity": "test renderer presents normalized approvals and allow, deny, and Esc keep the TUI usable",
+      "outcome": "failed",
+      "category": "opentui-renderer-timeout",
+      "signature": "Timed out waiting for frame predicate after 20 passes"
+    },
+    {
+      "identity": "native OpenTUI launches and restores a real Node 26 terminal",
+      "outcome": "skipped",
+      "category": "native-environment",
+      "signature": "SKIP: non-TTY qualification environment"
+    }
+  ]
+}
