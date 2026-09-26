@@ -1,0 +1,312 @@
+TASK: Correction 9 / P1 — Complete turn-context live qualification
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Sol Medium`.
+- Browser required: no.
+
+VERSIONING
+- Required unchanged project version: `0.9.10`.
+
+GOAL
+
+Complete the missing live qualification for the already-qualified turn-context production candidate.
+
+This prompt is qualification/evidence only.
+
+Exact production candidate:
+`25d51a93d229e9b8cc76f56eb4b7b9afae1a5723`
+
+Inherited controlled broad baseline:
+`d7804684801fa8418050c34d9ef097ca1adf80b6`
+
+Read:
+- `BOOT.md`;
+- `AGENTS.md`;
+- current workflow/stability/Phase 9 qualification authority;
+- `docs/planning/c9-turn-context-live-qualification/{decision-record,qualification-plan}.md`;
+- `docs/tasks/c9-turn-context-live-qualification/{prompt-assessment,implementation-plan}.md`;
+- `docs/tasks/c9-turn-context-convergence/{P4-live-evidence,closeout}.md`;
+- prior turn-context P1/P2/P3 evidence as needed;
+- current source/tests/qualification helpers;
+- unchanged three-file fixture, Gate A, v2 instruments, and hidden acceptance.
+
+DO NOT REPAIR PRODUCTION IN P1
+
+Do not edit:
+- `src/**`;
+- `test/**`;
+- `scripts/**`;
+- package/dependencies/config;
+- context profiles;
+- runtime settings;
+- qualification helper semantics;
+- three-file fixture;
+- Gate A fixture/helper;
+- v1/v2 instruments;
+- hidden acceptance.
+
+If any live step exposes a production defect, preserve evidence and stop.
+
+CANDIDATE IDENTITY GATE
+
+Prove current HEAD differs from `25d51a93d229e9b8cc76f56eb4b7b9afae1a5723` only through allowed planning/prompt/evidence/closeout documentation.
+
+Inspect the full changed-path list.
+
+Require no change since the candidate under:
+- `src/**`;
+- `test/**`;
+- `scripts/**`;
+- `package.json`;
+- dependency lock/shrinkwrap state;
+- relevant runtime/config files;
+- v1/v2 live instruments;
+- hidden acceptance.
+
+If production-sensitive identity differs:
+- STOP;
+- record Planning needed / Evidence Gap;
+- do not run live work.
+
+FRESH HARD SANITY PREFLIGHT
+
+Require Green:
+- provider-result projection/contract regressions;
+- continuation accounting/adaptive-promotion regressions;
+- context/profile/one-turn regressions;
+- mutation/recovery/Git preservation;
+- production TUI composition and deterministic greeting guard;
+- qualification/live-work helpers;
+- frozen three-file hashes;
+- Phase 9 integration and v1/v2 immutability;
+- `npm run typecheck`;
+- `npm run test:runner`;
+- `git diff --check`;
+- package exactly `0.9.10`;
+- no root `package-lock.json`.
+
+Run one fresh supported Node-26 `npm test` characterization.
+
+Compare exact failures/skips and bounded signatures to the retained controlled set in the prior turn-context evidence.
+
+If any new/materially worsened affected regression appears:
+- STOP;
+- do not run live work.
+
+Do not repeat the prior two-tree controlled baseline/candidate experiment while candidate identity is exact.
+
+RUNTIME GATE
+
+Before any official provider request:
+
+Print exactly:
+
+`MANUAL CHECK: LM Studio GPU Offload must show 26`
+
+Query:
+
+`GET http://127.0.0.1:1234/api/v1/models`
+
+Require a non-empty loaded instance for exactly:
+
+`qwen3-coder-30b-a3b-instruct@q4_k_m`
+
+Capture and compare REST-visible:
+- context length = 32,768;
+- eval batch = 2,048;
+- physical batch = 512;
+- parallel = 1;
+- Flash Attention enabled;
+- GPU KV-cache offload enabled;
+- experts = 8.
+
+Do not load, unload, or retune the model.
+
+If the model is not loaded or required REST-visible controls are unavailable/materially different:
+- record bounded runtime Evidence Gap/Not Green;
+- STOP before any official provider request.
+
+GPU Offload 26 is UI-only:
+- if independently observed, record Green;
+- otherwise record Evidence Gap;
+- do NOT block functional live qualification solely for this UI-only gap;
+- do not claim controlled latency/performance comparison.
+
+OFFICIAL LIVE SEQUENCE
+
+Every attempt below is exactly once.
+
+Stop on first required Not Green result.
+
+Do not rerun a failed attempt to get a pass.
+
+1. GREETING
+
+Use existing production ordinary-turn qualification path and `runOrdinaryTurnQualification()`.
+
+Input:
+`hi`
+
+Use existing `acceptGreetingSmoke()`.
+
+Green requires:
+- exactly one logical provider round;
+- zero model-requested tools;
+- final assistant response present;
+- no coding-workflow guidance;
+- no exhaustion;
+- zero human intervention.
+
+Write bounded:
+- `evidence/greeting/attempt.json`;
+- `evidence/greeting/trace.json`.
+
+If Not Green: STOP.
+
+2. THREE-FILE INSPECTION
+
+Only after greeting Green.
+
+Verify exact `THREE_FILE_INSPECTION_SMOKE` paths and SHA-256 values before execution.
+
+Prepare the unchanged frozen non-George fixture.
+
+Use its unchanged prompt and existing `acceptThreeFileSmoke()`.
+
+Green requires:
+- required fixture reads observed;
+- final response present;
+- no exhaustion;
+- zero intervention;
+- monotonic envelope promotions if any;
+- no violation of frozen source-composition semantics.
+
+Write bounded:
+- `evidence/three-file/attempt.json`;
+- `evidence/three-file/trace.json`.
+
+If Not Green: STOP before Gate A.
+
+3. FRESH GATE A
+
+Only after both smokes Green.
+
+Run exactly one unchanged frozen edit-plus-validation attempt.
+
+Require:
+- exact 60-byte result;
+- V1 Green;
+- completed/verified TaskState;
+- hidden acceptance Green;
+- zero intervention;
+- no task/stage/correction/run-budget exhaustion;
+- <=10 model-requested tool calls;
+- <=10 logical provider rounds.
+
+Write bounded Gate A attempt/trace.
+
+If Not Green: STOP.
+
+4. FRESH GATE B2
+
+Only after Gate A Green.
+
+Run exactly one unchanged `greenfield-express-v2` attempt using:
+- unchanged v2 task stack/digest;
+- unchanged acceptance;
+- exact authorized dependency prerequisite;
+- production structured stack service;
+- unchanged runtime/context/stage/correction/run-budget controls.
+
+Do not create v3.
+
+Require:
+- P1/P2/P3 complete;
+- declared validation Green;
+- completed StackState;
+- hidden acceptance Green;
+- zero intervention;
+- no exhaustion.
+
+Record enough bounded continuation evidence to determine:
+- mutation provider projections remain bounded;
+- internal Git snapshot is absent from provider continuation;
+- selected profile;
+- any envelope promotions;
+- provider-reported input/output tokens;
+- whether frozen ordinary exhaustion recurs.
+
+B2 does not need to promote if the corrected continuation remains inside ordinary.
+
+Write bounded B2 attempt/trace.
+
+If Not Green:
+- STOP;
+- leave C2 unspent.
+
+5. GATE C2
+
+Only after B2 Green.
+
+Run exactly one unchanged `existing-express-feature-v2` attempt.
+
+Require:
+- baseline behavior preserved;
+- focused validation Green;
+- broad declared validation Green;
+- completed/verified TaskState;
+- hidden acceptance Green;
+- zero intervention;
+- no exhaustion.
+
+Write bounded C2 attempt/trace.
+
+EVIDENCE
+
+Create:
+
+`docs/tasks/c9-turn-context-live-qualification/P1-live-evidence.md`
+
+Create:
+
+`docs/tasks/c9-turn-context-live-qualification/evidence/runtime.json`
+
+plus attempt/trace pairs only for attempts actually reached.
+
+Record SHA-256 for every committed JSON.
+
+Reference inherited broad comparison evidence instead of duplicating it.
+
+Record the fresh current broad characterization in Markdown.
+
+Never commit:
+- raw provider streams;
+- full assistant prose logs;
+- write/patch/file bodies;
+- unbounded Git snapshots/logs;
+- workspace copies;
+- dependency trees/node_modules;
+- secrets/environment dumps.
+
+HISTORICAL EVIDENCE
+
+Do not alter:
+- prior turn-context P4 runtime Evidence Gap;
+- prior turn-context closeout;
+- qualification-preflight Gate A/B2 history;
+- v1/v2 attempts/instruments.
+
+The new attempts are new evidence after runtime availability, not rewrites of prior Not Run results.
+
+FINAL VALIDATION
+
+After evidence generation verify again:
+- production-sensitive diff from `25d51a...` remains empty;
+- package exactly `0.9.10`;
+- no root lockfile;
+- `git diff --check`;
+- no production/test/fixture/instrument repair occurred.
+
+Do not:
+- owner-close Phase 9;
+- open Phase 10.

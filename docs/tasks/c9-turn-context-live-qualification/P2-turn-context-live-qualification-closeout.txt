@@ -1,0 +1,188 @@
+TASK: Correction 9 / P2 — Turn-context live qualification closeout
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Sol Medium`.
+- Browser required: no.
+
+VERSIONING
+- Required unchanged project version: `0.9.10`.
+
+GOAL
+
+Perform an evidence-only closeout of `c9-turn-context-live-qualification`.
+
+Do not run or rerun any official live attempt in P2.
+
+Read:
+- `BOOT.md`;
+- current roadmap/workflow/stability/Phase 9 qualification authority;
+- `docs/planning/c9-turn-context-live-qualification/{decision-record,qualification-plan}.md`;
+- `docs/tasks/c9-turn-context-live-qualification/{prompt-assessment,implementation-plan,P1-live-evidence}.md`;
+- all committed `evidence/**`;
+- `docs/tasks/c9-turn-context-convergence/{P4-live-evidence,closeout}.md`;
+- exact current source/test/fixture/instrument identity.
+
+AUDIT — CANDIDATE IDENTITY
+
+Verify exact production candidate:
+`25d51a93d229e9b8cc76f56eb4b7b9afae1a5723`.
+
+Confirm all later changes are allowed planning/prompt/evidence/closeout documentation only.
+
+Report:
+`Production Candidate Identity Preserved: Green / Not Green / Evidence Gap`.
+
+AUDIT — INHERITED QUALIFICATION
+
+Verify:
+- prior deterministic turn-context boundaries remain Green;
+- P4 controlled broad regression delta applies to the exact unchanged candidate;
+- P1 fresh sanity preflight has no new affected regression;
+- aggregate broad state remains separately truthful.
+
+Report:
+- Prior Deterministic Qualification Reused;
+- Fresh Hard Sanity Preflight;
+- Aggregate Broad Suite State;
+- Broad Regression Delta Still Applicable.
+
+AUDIT — RUNTIME
+
+Verify:
+- exact pinned model loaded instance;
+- REST-visible context/eval/physical/parallel/Flash/KV/expert controls;
+- no runtime retuning by the correction.
+
+Report:
+- Loaded Runtime Provenance;
+- GPU Offload 26 / Controlled Latency.
+
+UI-only GPU Offload 26 may remain Evidence Gap without blocking functional readiness if REST-visible runtime was healthy.
+
+AUDIT — GREETING
+
+Report exact:
+- provider rounds;
+- tool calls;
+- final response presence;
+- coding-workflow guidance absence;
+- exhaustion;
+- intervention;
+- Green / Not Green / Not Run.
+
+AUDIT — THREE-FILE
+
+Report:
+- fixture hash integrity;
+- required reads;
+- final response presence;
+- envelope promotion evidence;
+- exhaustion;
+- intervention;
+- Green / Not Green / Not Run.
+
+AUDIT — GATE A
+
+Report:
+- exact edit;
+- V1;
+- TaskState;
+- hidden acceptance;
+- calls/rounds;
+- intervention;
+- exhaustion;
+- Green / Not Green / Not Run.
+
+AUDIT — B2
+
+Report:
+- P1/P2/P3;
+- validations;
+- StackState;
+- hidden acceptance;
+- continuation/projection evidence relevant to historical 28,306 > 8,192 failure;
+- provider usage/envelope promotions;
+- intervention/exhaustion;
+- Green / Not Green / Not Run.
+
+AUDIT — C2
+
+Report:
+- baseline preservation;
+- focused/broad validation;
+- TaskState;
+- hidden acceptance;
+- intervention/exhaustion;
+- Green / Not Green / Not Run.
+
+AUDIT — EVIDENCE
+
+Verify:
+- every committed JSON hash matches P1 ledger;
+- every reached attempt has sanitized attempt/trace;
+- no raw provider stream, assistant prose log, file body, unbounded Git snapshot/log, secret/environment dump, workspace copy, or dependency tree is committed;
+- all historical P4/turn-context/prior-gate evidence remains unchanged.
+
+CREATE
+
+`docs/tasks/c9-turn-context-live-qualification/closeout.md`
+
+Decision table must include:
+- Production Candidate Identity Preserved;
+- Prior Deterministic Qualification Reused;
+- Fresh Hard Sanity Preflight;
+- Aggregate Broad Suite State;
+- Broad Regression Delta Still Applicable;
+- Loaded Runtime Provenance;
+- GPU Offload 26 / Controlled Latency;
+- Greeting Smoke;
+- Three-File Inspection Smoke;
+- Fresh Gate A Qualified;
+- Gate B2 Greenfield Qualified;
+- Gate C2 Existing-App Qualified;
+- Evidence Auditability Qualified;
+- Historical Evidence Preserved;
+- Overall c9-turn-context-live-qualification Qualified;
+- Phase 9 Ready For Owner Closeout.
+
+PHASE 9 OWNER-CLOSEOUT RULE
+
+Ready = Yes only if:
+- exact candidate identity preserved;
+- fresh sanity preflight Green;
+- no new broad regression;
+- REST-visible runtime sufficient;
+- greeting Green;
+- three-file Green;
+- A Green;
+- B2 Green;
+- C2 Green;
+- no blocker.
+
+GPU Offload 26 may remain Evidence Gap while functional readiness is Yes; in that case controlled latency/performance remains unqualified.
+
+If ready, state exactly:
+
+`next action: /closeout phase 9`
+
+Do not owner-close Phase 9 in this prompt.
+
+VALIDATION
+
+Re-run/verify:
+- current affected sanity floor as appropriate;
+- typecheck;
+- runner;
+- current broad characterization if needed to audit P1;
+- `git diff --check`;
+- package `0.9.10`;
+- no root lockfile;
+- P2 changed only closeout/evidence documentation as allowed.
+
+Do not:
+- rerun greeting/three-file/A/B2/C2;
+- repair production;
+- edit fixtures/instruments/acceptance;
+- rewrite historical evidence;
+- owner-close Phase 9;
+- open Phase 10.
