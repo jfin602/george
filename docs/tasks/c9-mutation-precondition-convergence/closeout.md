@@ -60,7 +60,7 @@ Current executable immutability checks passed with these authorities:
 | Instrument | Current immutable authority |
 | --- | --- |
 | Greenfield v1 | Complete-directory SHA-256 `7bda86b5fbbf0f85153bc50ea8e17277fbf5929ac1f645a522030ea41ab79117`; task-stack digest `c0ea964cc58423ff4646e93135a5e6766bd58dc6379f284219e3856745919063`; acceptance SHA-256 `052b109605e2eaec752477374f98a9d9c87f6b4e02bf4232d92dc79ce883c849`. |
-| Existing-app v1 | Complete-directory SHA-256 `0a6277bfb0bf002bbdea0d334de5f8ffe1bc69d9426351d589b78785d4205ea2`; fixture source digest `45856b10bfe4ff3f14e1893da22b9a88b1c3334d3923d2417aee0c09e94a5aba`; acceptance SHA-256 `183c74474b02166e2ec2fce21019eef2e2c1e20faa91b32d847e6f56e4608d21`. |
+| Existing-app v1 | Complete-directory SHA-256 `0a6277bfb0bf002bbdea0d334de5f8ffe1bc69d9426351d589b78785d4205ea2`; fixture source digest `45856b10bfe4ff3f14e1893da22b9a88b1c3334d3923d2417aee0c09e94a5aba`; acceptance SHA-256 `183c74474b02166e2ecfce21019eef2e2c1e20faa91b32d847e6f56e4608d21`. |
 | Greenfield v2 | Instrument version `2`, Task Prompt format `1`, task-stack digest `a8497efe8f26862c782bb8fb9a12201993df6175a30a5bf68a5149dc832c7618`, reused acceptance version `1`. |
 | Existing-app v2 | Instrument version `2`, Task Prompt format `1`, task-stack digest `66f262fd8f73171cdf5fc023d2be3a5032569fee9ebd8041241abcaf1c0eb0e9`, fixture version `1` with unchanged source digest, reused acceptance version `1`. |
 
