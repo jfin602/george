@@ -435,7 +435,8 @@ Current evidence after Phase 9 corrections:
 - the mandatory frozen edit-plus-validation Gate A is now Green on the corrected architecture;
 - `greenfield-express-v1` remains historically Not Green because its task stack duplicates application-owned preflight inspection inside ordinary workflow units; `c9-greenfield-instrument-alignment` preserves that history and deterministically qualifies the independently versioned v2 instrument semantics/runner;
 - the official `greenfield-express-v2` B2 attempt is Not Green after P1 implementation exposed a production mutation-precondition convergence gap: an existing-file write lacked `expectedSha256`, then a nested new-file write encountered a missing parent before normal terminal tool evidence, and no native directory-creation tool exists in the structured coding surface;
-- active correction `c9-mutation-precondition-convergence` preserves SHA authority, adds explicit native `create_directory`, and requires ordinary no-side-effect local prerequisite failures to remain recoverable tool results rather than aborting the provider turn;
+- `c9-mutation-precondition-convergence` is implementation-complete and deterministically qualifies explicit native `create_directory`, recoverable mutation prerequisites, permissions, recovery, and structured-stage exposure; its fresh live gates were not spent because its P2 prompt accidentally required aggregate broad `npm test` Green;
+- active correction `c9-qualification-preflight-scope` separates hard affected-system Green gates from broad regression-delta qualification, compares the immutable pre-P1 baseline to production candidate `04405570b92680e6297b48391a7d0bdf0aa8ed5e`, and only then permits fresh Gate A -> B2 -> C2;
 - native Node-26 real-TTY/OpenTUI behavior remains an Evidence Gap;
 - Phase 9 is not owner-closed and Phase 10 remains unopened.
 
@@ -466,7 +467,7 @@ Success condition:
 - Transcript/Task UI separation is usable without losing cancellation/approval/scrollback/draft behavior;
 - workspace-autonomous processes are demonstrably contained from disallowed host filesystem resources or the mode fails closed;
 - outside reject/ask behave exactly as configured and prompts cannot elevate policy;
-- both frozen v1 live-work baselines and the first v2 B2 Not Green attempt remain recorded with raw outcome/performance/intervention dimensions, and the corrected production path completes fresh Gate A -> B2 -> C2 qualification without rewriting those historical failures;
+- both frozen v1 live-work baselines, the first v2 B2 Not Green attempt, and the mutation-precondition preflight-stopped result remain recorded; the corrected production path completes a scoped hard-preflight + broad-regression-delta check followed by fresh Gate A -> B2 -> C2 without rewriting historical failures;
 - inherited Phase 2-8 contracts remain Green or their accepted Not Green/Evidence Gap states remain explicitly classified.
 
 Non-goals:
