@@ -1,0 +1,146 @@
+TASK: Correction 9 / P4 — Final live convergence closeout
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Sol Medium`.
+- Browser required: no.
+
+VERSIONING
+- Required unchanged project version: `0.9.10`.
+
+GOAL
+
+Perform an evidence-only closeout of `c9-final-live-convergence` and decide whether Phase 9 is ready for separate owner closeout.
+
+Do not repair production behavior and do not rerun official live workloads.
+
+Read:
+- `BOOT.md`;
+- current roadmap/workflow/stability/Phase 9 authority;
+- `docs/planning/c9-final-live-convergence/{decision-record,qualification-plan}.md`;
+- `docs/tasks/c9-final-live-convergence/{prompt-assessment,implementation-plan,P3-final-qualification-report.md,failure-ledger.json}`;
+- committed final evidence artifacts;
+- P1/P2 implementation and permanent regressions;
+- previous final-sweep report/ledger;
+- frozen instrument/acceptance metadata.
+
+AUDIT P1
+
+Verify:
+
+- deterministic mission-card projection is bounded/stable;
+- per-round continuation alignment actually recomputes before implementation/correction provider requests;
+- ordinary turns remain unaffected;
+- canonical TaskState/session authority is not replaced;
+- path/resource-aware evidence freshness preserves unaffected evidence and invalidates stale evidence;
+- reopen without safe derived freshness re-inspects;
+- valid INSPECT evidence can be reused;
+- no-repeat guidance is bounded and not a permission/control bypass;
+- hard runaway ceiling remains enforced;
+- duplicate/no-progress remains strict;
+- efficiency targets are metrics, not hidden functional gates.
+
+AUDIT P2
+
+Verify:
+
+- incomplete provider branch safe-retry classification is explicit;
+- provisional text/tool proposals are discarded, never executed/committed;
+- incomplete response ID is never reused;
+- retry starts from same canonical pre-round state;
+- executed/ambiguous effects are never transparently replayed;
+- retries are bounded/cancellable/budgeted/auditable;
+- timeout was not simply inflated.
+
+AUDIT P3
+
+Report exact:
+
+- broad suite;
+- greeting;
+- three-file;
+- Gate A Functional;
+- Gate A Efficiency Target;
+- B2;
+- C2;
+- provider retry observations;
+- hard convergence exhaustion;
+- human intervention;
+- hidden acceptance;
+- remaining Not Green/Evidence Gap ledger.
+
+EVIDENCE AUDIT
+
+Verify:
+- schema-2 attempt/trace hashes match the report;
+- failure ledger is bounded and complete;
+- no raw provider streams/file bodies/secrets/workspaces were committed;
+- historical attempts remain immutable;
+- v1/v2 instrument and hidden acceptance identities are unchanged.
+
+CREATE
+
+`docs/tasks/c9-final-live-convergence/closeout.md`
+
+Decision table must include:
+
+- Mission Card / Alignment Projection Qualified;
+- Per-Round Continuation Alignment Qualified;
+- Evidence Freshness / Reuse Qualified;
+- No-Repeat Convergence Qualified;
+- Hard Convergence Budget Qualified;
+- Efficiency Metric Separation Qualified;
+- Partial Provider Timeout Recovery Qualified;
+- Broad Suite State;
+- Greeting;
+- Three-File;
+- Gate A Functional;
+- Gate A Efficiency Target;
+- Gate B2;
+- Gate C2;
+- Evidence Auditability Qualified;
+- Historical Evidence Preserved;
+- Remaining Blocking Failure Count;
+- Nonblocking Evidence Gaps;
+- Overall `c9-final-live-convergence` Qualified;
+- Phase 9 Ready For Owner Closeout.
+
+PHASE 9 READY RULE
+
+Yes only if:
+- deterministic correction floors Green;
+- no blocking broad/security/recovery regression;
+- greeting Green;
+- three-file Green;
+- Gate A functional Green;
+- B2 Green;
+- C2 Green;
+- no blocking Evidence Gap.
+
+The historical Gate A <=10 efficiency target is reported but cannot independently block readiness.
+
+If ready, state exactly:
+
+`next action: /closeout phase 9`
+
+Do not perform owner closeout here.
+
+VALIDATION / HYGIENE
+
+Verify current:
+- focused P1/P2 regressions;
+- Phase 9 integration;
+- provider/recovery floors;
+- runner;
+- typecheck;
+- diff hygiene;
+- package `0.9.10`;
+- no root `package-lock.json`.
+
+Do not rerun official live workloads.
+
+Do not:
+- repair code;
+- change instruments;
+- rewrite evidence;
+- owner-close Phase 9;
+- open Phase 10.
