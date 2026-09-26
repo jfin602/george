@@ -14,36 +14,51 @@ Qualification is split into deterministic correctness, bounded task-slice correc
 
 The original qualification sequence remains historical authority.
 
-`c9-qualification-preflight-scope` is now closed as Not Green overall while preserving an important split:
-- qualification policy/preflight and controlled broad regression-delta handling: Green;
-- fresh Gate A: Green;
-- fresh `greenfield-express-v2` Gate B2: Not Green;
-- Gate C2: Not Run.
+`c9-turn-context-convergence` is now deterministically Green at its production boundaries but closed overall with a live Evidence Gap.
 
-The official B2 failure is now the active production convergence target. P1 INSPECT completed, the implementation stage correctly received the current package SHA, recoverable mutation failure worked, `create_directory("src")` succeeded, and two small new-file writes succeeded. The stage then exhausted because continuation was estimated at 28,306 tokens against the frozen ordinary 8,192 provider-input ceiling.
+Its exact production candidate is:
+`25d51a93d229e9b8cc76f56eb4b7b9afae1a5723`.
 
-Current Phase 9 acceptance therefore routes through `c9-turn-context-convergence` before any further official gates.
+Qualified production boundaries include:
+- provider-result projection with canonical Git evidence retained internally;
+- provider-grounded continuation accounting;
+- monotonic adaptive continuation-envelope promotion;
+- fixed-profile / >large fail-closed safety;
+- ordinary TUI base-agent wiring;
+- hard affected-system preflight;
+- controlled broad regression delta.
 
-The correction must first qualify:
-1. canonical tool evidence versus bounded provider-visible result projection;
-2. provider-grounded continuation accounting;
-3. monotonic adaptive continuation-envelope promotion without source reassembly;
-4. fixed-profile non-promotion and >large fail-closed behavior;
-5. ordinary production TUI base-agent wiring while preserving explicit coding-workflow guidance;
-6. bounded ordinary greeting and synthetic three-file live reproductions.
+Its P4 live sequence did not begin because LM Studio exposed no loaded pinned model instance. Greeting, three-file inspection, fresh Gate A, B2, and C2 therefore remain Not Run for the post-correction production candidate.
 
-After that correction's deterministic and scoped preflight is Green, Phase 9 again uses:
-1. fresh Gate A exactly once;
-2. fresh Gate B2 exactly once only after A Green;
-3. Gate C2 exactly once only after B2 Green.
+Current Phase 9 acceptance routes through `c9-turn-context-live-qualification`, a qualification-only follow-up.
 
-The correction baseline for controlled broad delta is `d7804684801fa8418050c34d9ef097ca1adf80b6`.
+That correction must:
+1. prove the exact production candidate remains unchanged across later docs/evidence commits;
+2. rerun a fresh affected sanity floor and current broad characterization;
+3. require a non-empty loaded instance for the pinned Qwen model and capture REST-visible runtime controls;
+4. run one greeting -> three-file -> Gate A -> B2 -> C2 sequence with strict stop-on-first-failure semantics.
 
-Historical v1/v2 instruments, hidden acceptance, prior Gate A/B2 attempts, and the scoped-preflight evidence remain immutable. Do not create v3 for a production-loop/context correction.
+The prior controlled broad comparison against baseline `d7804684801fa8418050c34d9ef097ca1adf80b6` may be reused while candidate identity is exact. Do not repeat the two-tree experiment solely because evidence/documentation commits moved HEAD.
 
-Phase 9 is ready for owner closeout only if the turn-context correction is Green, its hard affected-system floor and broad regression delta are Green, both new live smokes are Green, fresh Gate A/B2/C2 are all Green, and no new blocking regression appears. Aggregate retained broad failures remain separately classified.
+Historical P4 runtime Evidence Gap and all earlier live attempts remain immutable.
 
-## Mutation-precondition convergence correction qualification## Mutation-precondition convergence correction qualification
+Functional structured-task evidence may proceed when the pinned REST-visible runtime is healthy even if UI-only GPU Offload 26 remains unconfirmed. Such runs do not establish controlled latency/performance evidence.
+
+Phase 9 is ready for owner closeout only if the live-qualification follow-up confirms:
+- candidate identity preserved;
+- fresh sanity preflight Green;
+- no new broad regression;
+- loaded runtime provenance sufficient;
+- greeting Green;
+- three-file Green;
+- fresh Gate A Green;
+- B2 Green;
+- C2 Green;
+- no new blocking regression.
+
+Aggregate retained broad failures remain separately Not Green.
+
+## Mutation-precondition convergence correction qualification
 
 Deterministic qualification for `c9-mutation-precondition-convergence` must reproduce the exact failure class before any live rerun and then prove the repaired behavior.
 

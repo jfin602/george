@@ -230,6 +230,21 @@ These smokes supplement deterministic authority. They do not create a permanent 
 
 Because the correction changes production agent-loop/context behavior, preserve prior official attempts and rerun the gated Phase 9 sequence only after hard affected-system Green plus a Green controlled broad regression delta.
 
+#### Live qualification continuation after environment-only stop
+
+When an otherwise-qualified production candidate reaches a live-runtime gate and no official provider attempt begins solely because required environment/runtime provenance is unavailable, a later qualification-only correction may resume live qualification without creating a new production candidate.
+
+This reuse is valid only when:
+- the exact production candidate commit is identified;
+- later commits are proven not to modify production-sensitive source/tests/runtime configuration/instruments/acceptance;
+- the prior deterministic affected floor and controlled broad regression delta remain applicable;
+- a fresh current sanity floor and broad characterization show no new/worsened regression;
+- historical Not Run / Evidence Gap results remain immutable.
+
+Documentation/evidence commits moving HEAD do not by themselves require repeating a controlled two-tree broad comparison against unchanged production bytes.
+
+A loaded pinned model instance and REST-visible runtime controls are required before official provider work. UI-only GPU Offload 26 may remain an Evidence Gap for controlled latency while functional qualification proceeds under the healthy REST-visible runtime, consistent with the Phase 9 live-model rule.
+
 ### Provider contract
 
 Use deterministic/mock provider fixtures for ordinary tests and bounded live LM Studio qualification when provider integration changes.

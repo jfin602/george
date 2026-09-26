@@ -426,20 +426,19 @@ Qualification authority: `docs/planning/p9-structured-task-execution/qualificati
 Current evidence after Phase 9 corrections:
 - production task-stack validation/order/fail-stop/durable resume is qualified deterministically;
 - Workspace Autonomous Bubblewrap containment remains Green;
-- full-file read SHA -> safe existing-file mutation precondition, recoverable prerequisites, and explicit `create_directory` are qualified;
-- structured INSPECT first-round execution and application-owned completion are qualified;
-- official live-attempt evidence survives production-service exceptions;
-- text-framing evidence/preservation and mutation-intent authority remain qualified;
-- `c9-qualification-preflight-scope` qualified hard-vs-broad preflight policy and produced a fresh Gate A Green;
-- its fresh `greenfield-express-v2` B2 is **Not Green**: P1 implementation reached successful directory/file mutations, then continuation estimate grew to 28,306 against the frozen ordinary 8,192 provider-input ceiling; C2 was correctly not run;
-- source review identifies internal mutation Git snapshots being forwarded in provider tool-result continuation as a concrete amplification path;
-- an ordinary interactive reproduction also observed provider input around 8.2-8.6k crossing the frozen ordinary ceiling and a simple greeting expanding into repository inspection because production startup globally injects coding-workflow guidance;
-- active correction `c9-turn-context-convergence` separates canonical tool evidence from provider-visible projections, grounds continuation safety in provider usage when available, permits monotonic adaptive envelope promotion without source reassembly, and restores base-agent ordinary TUI wiring;
+- mutation preconditions, recoverable prerequisites, explicit directory creation, text fidelity, and mutation-intent authority remain qualified;
+- structured INSPECT execution/completion and v2 instrument semantics remain qualified;
+- `c9-qualification-preflight-scope` established the hard-vs-broad evidence model and historical fresh Gate A Green / B2 Not Green result;
+- `c9-turn-context-convergence` repaired the B2 continuation failure class and is deterministically Green: mutation provider projection shrank internal-heavy receipts, provider usage now grounds continuation accounting, adaptive safety envelopes promote monotonically, and ordinary TUI turns use the base agent;
+- exact production candidate `25d51a93d229e9b8cc76f56eb4b7b9afae1a5723` passed the turn-context hard floor and controlled broad regression delta;
+- its live P4 stopped before any provider request because the pinned LM Studio model was listed but not loaded, leaving greeting, three-file, Gate A, B2, and C2 Not Run;
+- active correction `c9-turn-context-live-qualification` is qualification-only and will complete those live gates against the unchanged production candidate once loaded REST-visible runtime provenance is available;
+- UI-only GPU Offload 26 remains a performance-control observation, not a functional qualification blocker when the REST-visible pinned runtime is healthy;
 - profile constants, Task Prompt format 1, v1/v2 instruments, hidden acceptance, and historical attempts remain unchanged;
 - native Node-26 real-TTY/OpenTUI behavior remains an Evidence Gap;
 - Phase 9 is not owner-closed and Phase 10 remains unopened.
 
-Goal: make George execute rich software-development task stacks reliablyGoal: make George execute rich software-development task stacks reliably with the local coding model by moving deterministic requirements/workflow/validation/permission orchestration into the harness rather than asking the model to infer it from frontier-model-style prose.
+Goal: make George execute rich software-development task stacks reliably with the local coding model by moving deterministic requirements/workflow/validation/permission orchestration into the harness rather than asking the model to infer it from frontier-model-style prose.
 
 Scope:
 - versioned George Task Prompt v1 constrained-natural-language grammar;
@@ -466,7 +465,7 @@ Success condition:
 - Transcript/Task UI separation is usable without losing cancellation/approval/scrollback/draft behavior;
 - workspace-autonomous processes are demonstrably contained from disallowed host filesystem resources or the mode fails closed;
 - outside reject/ask behave exactly as configured and prompts cannot elevate policy;
-- all prior live-work failures remain recorded; the turn-context correction passes scoped hard-preflight + broad-regression-delta qualification, ordinary greeting and synthetic three-file live smokes, then fresh Gate A -> B2 -> C2 without rewriting historical failures;
+- all prior live-work failures remain recorded; the unchanged turn-context production candidate passes its qualification-only greeting and synthetic three-file smokes, then fresh Gate A -> B2 -> C2 without rewriting historical failures;
 - inherited Phase 2-8 contracts remain Green or their accepted Not Green/Evidence Gap states remain explicitly classified.
 
 Non-goals:

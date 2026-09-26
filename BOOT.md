@@ -107,39 +107,37 @@ The failed Phase 8 agentic edit/validation workload must remain visible longitud
 
 Package remains `0.9.10`; Phase 9 remains open and Phase 10 is not opened.
 
-Post-closeout correction evidence remains authoritative for structured task convergence, safe mutation preconditions, INSPECT execution/completion, text-file fidelity, mutation intent authority, v2 instrument alignment, explicit directory creation, and qualification-preflight scope.
+`c9-turn-context-convergence` is now closed at commit `d8c27d13e6c1c86d53aa4d0f2f42acc7d18d5939`.
 
-`c9-qualification-preflight-scope` is now closed as **Not Green overall** at commit `d7804684801fa8418050c34d9ef097ca1adf80b6`:
-- qualification policy/preflight and controlled broad regression-delta handling are Green;
-- fresh Gate A is Green;
-- fresh `greenfield-express-v2` Gate B2 is Not Green;
-- Gate C2 remains unspent.
+Its deterministic production correction is **Green**:
+- canonical mutation evidence is separated from bounded provider-visible results;
+- provider-grounded continuation accounting is qualified;
+- adaptive ordinary -> medium -> large continuation-envelope promotion is qualified;
+- fixed-profile / >large fail-closed behavior is preserved;
+- ordinary production TUI turns use the base agent rather than global coding-workflow guidance;
+- hard affected-system qualification and controlled broad regression delta are Green.
 
-The official B2 attempt reached corrected mutation execution, including successful `create_directory("src")` and two successful small file writes, then failed because continuation context was estimated at 28,306 tokens against the frozen ordinary 8,192-token provider-input ceiling. Source review also shows mutation tool results currently carry internal Git working-tree snapshots into provider continuation. A separate ordinary interactive transcript reproduced frozen ordinary overshoot around 8.2-8.6k actual provider input and showed globally injected coding-workflow guidance causing a simple greeting to expand into repository inspection.
+Its live qualification remains an **Evidence Gap / Not Run** because P4 found the exact pinned LM Studio model listed but not loaded. No correction-era greeting, three-file smoke, fresh Gate A, B2, or C2 attempt began.
 
-The active correction is now `c9-turn-context-convergence`.
+The exact production candidate under live qualification remains:
+`25d51a93d229e9b8cc76f56eb4b7b9afae1a5723`.
 
-It must:
-- separate canonical/internal tool evidence from bounded provider-visible tool-result projections;
-- use provider-reported usage as continuation evidence when available;
-- preserve frozen source composition while allowing adaptive safety-envelope promotion ordinary -> medium -> large;
-- keep fixed profiles fixed and preserve >large fail-closed behavior;
-- wire ordinary production TUI turns through the base agent instead of globally injecting `CODING_WORKFLOW_GUIDANCE`;
-- leave the existing context profile constants, Task Prompt format 1, v1/v2 instruments, hidden acceptance, historical evidence, and package version unchanged.
+Commits after that candidate through the turn-context closeout are evidence/documentation only.
 
-Correction baseline: `d7804684801fa8418050c34d9ef097ca1adf80b6`.
+The active correction is now `c9-turn-context-live-qualification`.
 
-Current correction evidence/planning:
-- `docs/tasks/c9-structured-task-convergence/closeout.md`;
-- `docs/tasks/c9-qwen-workunit-convergence/closeout.md`;
-- `docs/tasks/c9-inspection-execution/closeout.md`;
-- `docs/tasks/c9-inspection-stage-completion/closeout.md`;
-- `docs/tasks/c9-text-file-edit-fidelity/closeout.md`;
-- `docs/tasks/c9-mutation-intent-authority/closeout.md`;
-- `docs/tasks/c9-greenfield-instrument-alignment/closeout.md`;
-- `docs/tasks/c9-mutation-precondition-convergence/closeout.md`;
-- `docs/tasks/c9-qualification-preflight-scope/closeout.md`;
-- active correction planning: `docs/planning/c9-turn-context-convergence/decision-record.md` and `docs/planning/c9-turn-context-convergence/qualification-plan.md`.
+It is qualification-only and must:
+- verify exact production-candidate identity is preserved;
+- reuse the already-qualified deterministic and controlled broad-delta evidence when identity is exact;
+- rerun a fresh affected sanity floor/current broad characterization;
+- require a genuinely loaded pinned LM Studio instance and REST-visible runtime provenance before provider work;
+- allow functional qualification to proceed if UI-only GPU Offload 26 remains unconfirmed while recording controlled-latency Evidence Gap;
+- run exactly one greeting -> three-file -> Gate A -> B2 -> C2 sequence, stopping on first Not Green result;
+- make no production, profile, fixture, instrument, acceptance, or runtime-setting change.
+
+Current correction authority:
+- prior correction truth: `docs/tasks/c9-turn-context-convergence/closeout.md`;
+- active planning: `docs/planning/c9-turn-context-live-qualification/decision-record.md` and `qualification-plan.md`.
 
 Historical Phase 1-8 prompts/evidence are not renumbered or rewritten.
 
@@ -178,7 +176,7 @@ Read:
 - stability/testing: `docs/stability-contract.md`;
 - roadmap: `docs/roadmap/mvp-roadmap.md`;
 - Living Project Map / Software Graph, when relevant: `docs/planning/living-project-map/decision-record.md` (then its graph, interaction, and qualification companions as needed);
-- current Phase 9 authority: `docs/planning/p9-structured-task-execution/decision-record.md`, `docs/planning/p9-structured-task-execution/task-format-v1.md`, and `docs/planning/p9-structured-task-execution/qualification-plan.md`; latest correction truth: `docs/tasks/c9-qualification-preflight-scope/closeout.md`; active correction planning: `docs/planning/c9-turn-context-convergence/decision-record.md` and `docs/planning/c9-turn-context-convergence/qualification-plan.md`;
+- current Phase 9 authority: `docs/planning/p9-structured-task-execution/decision-record.md`, `docs/planning/p9-structured-task-execution/task-format-v1.md`, and `docs/planning/p9-structured-task-execution/qualification-plan.md`; latest correction truth: `docs/tasks/c9-turn-context-convergence/closeout.md`; active correction planning: `docs/planning/c9-turn-context-live-qualification/decision-record.md` and `docs/planning/c9-turn-context-live-qualification/qualification-plan.md`;
 - Phase 8 closeout/history when needed: `docs/phase-8-closeout.md`, `docs/phase-8-owner-closeout.md`, `docs/tasks/c8-agentic-context/closeout.md`, `docs/planning/c8-agentic-context/decision-record.md`, `docs/planning/c8-agentic-context/qualification-plan.md`, `docs/planning/p8-context-throughput-optimization/decision-record.md`, `docs/planning/p8-context-throughput-optimization/initial-baseline.md`, and `docs/planning/performance-benchmarking-worksheet.md`;
 - Phase 7 closeout/history when needed: `docs/phase-7-closeout.md`, `docs/phase-7-owner-closeout.md`, `docs/planning/p7-inference-runtime-optimization/initial-baseline.md`;
 - Phase 6 closeout/history when needed: `docs/phase-6-closeout.md`, `docs/phase-6-owner-closeout.md`, `docs/planning/p6-plugins-external-adapters/decision-record.md`;
