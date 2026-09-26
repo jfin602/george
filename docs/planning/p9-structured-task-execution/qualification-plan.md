@@ -86,7 +86,7 @@ Required executable guards:
 - Gate A's exact-edit, text-framing, mutation-intent-authority, approval, and current-content precondition regressions remain Green;
 - v1/v2 task, fixture, metadata, and hidden-acceptance digests remain unchanged.
 
-Do not raise structured stage limits, weaken SHA requirements, silently inject current hashes, silently create write parents, expose arbitrary process execution as a directory-creation substitute, or revise Task Prompt format 1 merely to obtain a pass.
+Historical mutation-precondition qualification prohibited raising structured stage limits merely to obtain a pass. That remains true for that historical correction. Current final Phase 9 authority in `c9-final-live-convergence` supersedes only the stage-limit portion after the later full sweep showed that the fixed eight-call implementation ceiling can block the first legitimate mutation. Current changes must separate a bounded hard runaway ceiling from nonblocking efficiency targets while preserving strict duplicate/no-progress, task-wide budget, permission, recovery, SHA/framing, and containment controls. Do not weaken SHA requirements, silently inject current hashes, silently create write parents, expose arbitrary process execution as a directory-creation substitute, or revise Task Prompt format 1 merely to obtain a pass.
 
 ## Turn-context convergence correction qualification
 
