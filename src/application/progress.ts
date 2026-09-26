@@ -206,6 +206,10 @@ export class WorkProjection {
         return [this.activityEvent(event.turnId, 'context', summary), ...this.update({ id, turnId: event.turnId, operationId: event.sourceId, category: 'context', status, summary, details: event.bytes === undefined ? {} : { bytes: event.bytes }, ...(elapsedMs === undefined ? {} : { elapsedMs }) })];
       }
       case 'context.assembled': return [this.activityEvent(event.turnId, 'context', 'Context assembled'), ...this.progressEvent(event.turnId, 'context', 'Context assembled')];
+      case 'context.envelope.promoted': {
+        const message = `Context envelope promoted to ${event.toProfileId}`;
+        return [this.activityEvent(event.turnId, 'context', message), ...this.progressEvent(event.turnId, 'context', message)];
+      }
       case 'provider.response.started': return [this.activityEvent(undefined, 'inspection', 'Thinking...')];
       case 'provider.error': return [this.activityEvent(undefined, 'recovery', 'Provider failed')];
       case 'recovery.decision': {

@@ -174,13 +174,14 @@ test('pre-adaptive context diagnostics reopen as fixed derived evidence', async 
   await writeFile(join(state, 'legacy.json'), JSON.stringify({
     schemaVersion: DURABLE_SESSION_SCHEMA_VERSION, id: 'legacy', workspace, transcript: [], events: [{
       type: 'context.assembled', turnId: 'turn-1', diagnostics: { profileId: 'legacy', profile, estimatedTokens: 5, estimator: 'legacy', providerInputBudget: 9, remainingHeadroom: 4, softPressure: false, reservedHeadroom: 1, categoryTokens: { core: 1, project: 0, tools: 0, task: 1, skills: 0, routed: 0, conversation: 3, toolResults: 0 }, activeSourceIds: [], evidence: [] },
-    }],
+    }, { type: 'context.envelope.promoted', turnId: 'turn-1', fromProfileId: 'ordinary', toProfileId: 'medium', reason: 'provider-usage', tokens: 9, providerInputBudget: 16 }],
   }));
   const event = (await store.open('legacy', workspace)).events[0];
   if (event?.type !== 'context.assembled') throw new Error('Expected context diagnostics.');
   assert.equal(event.diagnostics.mode, 'fixed');
   assert.deepEqual(event.diagnostics.attemptedProfileIds, []);
   assert.deepEqual(event.diagnostics.promotionReasons, []);
+  assert.deepEqual((await store.open('legacy', workspace)).events[1], { type: 'context.envelope.promoted', turnId: 'turn-1', fromProfileId: 'ordinary', toProfileId: 'medium', reason: 'provider-usage', tokens: 9, providerInputBudget: 16 });
 });
 
 test('failed persistence preserves the previous complete file', async () => {

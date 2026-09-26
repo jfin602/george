@@ -59,6 +59,15 @@ async function portableSkill(root: string, name: string, body: string): Promise<
   await writeFile(join(root, name, 'SKILL.md'), `---\nname: ${name}\ndescription: ${name} skill\n---\n${body}\n`);
 }
 
+function payloadTool(bytes: number): ToolDefinition {
+  return {
+    name: 'payload', description: 'Return a deterministic test payload.',
+    inputSchema: { type: 'object', properties: {}, additionalProperties: false },
+    execution: { effect: 'local_read', replaySafety: 'replay_safe', source: { kind: 'builtin' } },
+    execute: async () => ({ payload: 'x'.repeat(bytes) }),
+  };
+}
+
 test('one-turn service keeps George context first and invokes the provider exactly once', async (t) => {
   const root = await workspace();
   t.after(() => rm(root, { recursive: true, force: true }));
@@ -151,7 +160,7 @@ test('adaptive selection is canonical once per turn and keeps its profile throug
   assert.equal(provider.calls[0]?.request.input, provider.calls[1]?.request.input);
 });
 
-test('frozen adaptive profiles retain critical context through safe continuation growth and stop before an unsafe continuation', async (t) => {
+test('adaptive continuation promotion retains critical context and completes without compaction', async (t) => {
   const root = await workspace();
   const skills = join(root, '.george', 'skills', 'pressure');
   t.after(() => rm(root, { recursive: true, force: true }));
@@ -193,18 +202,17 @@ test('frozen adaptive profiles retain critical context through safe continuation
   assert.equal(diagnostic.diagnostics.profileId, ORDINARY_CONTEXT_PROFILE.id);
   assert.ok(diagnostic.diagnostics.activeSourceIds.includes('workspace:routed:docs/selected.md'));
   assert.ok(diagnostic.diagnostics.activeSourceIds.includes('skill:workspace:pressure'));
-  assert.equal(provider.calls.length, 3);
+  assert.equal(provider.calls.length, 4);
   for (const call of provider.calls) {
     assert.match(call.request.instructions ?? '', /SELECTED ROUTED GUIDANCE/);
     assert.match(call.request.instructions ?? '', /ACTIVATED SKILL GUIDANCE/);
     assert.match(call.request.input ?? '', /Keep the selected task evidence\.|Authoritative unresolved state/);
   }
-  assert.deepEqual(provider.calls.slice(1).map((call) => call.request.continuation?.toolResults[0]?.callId), ['read-1', 'read-2']);
-  assert.deepEqual(events.filter((event) => event.type === 'provider.response.completed').map((event) => event.usage?.inputTokens), [4_000, 6_000, 7_800]);
+  assert.deepEqual(provider.calls.slice(1).map((call) => call.request.continuation?.toolResults[0]?.callId), ['read-1', 'read-2', 'read-3']);
+  assert.deepEqual(events.filter((event) => event.type === 'provider.response.completed').map((event) => event.usage?.inputTokens), [4_000, 6_000, 7_800, 8_400]);
+  assert.deepEqual(events.filter((event) => event.type === 'context.envelope.promoted').map((event) => [event.fromProfileId, event.toProfileId]), [[ORDINARY_CONTEXT_PROFILE.id, MEDIUM_CONTEXT_PROFILE.id]]);
   assert.equal(compactions, 0);
-  const failed = events.find((event) => event.type === 'turn.failed');
-  assert.equal(failed?.type, 'turn.failed');
-  if (failed?.type === 'turn.failed') assert.match(failed.error.message, /Frozen context profile .* cannot continue safely/);
+  assert.equal(events.at(-1)?.type, 'turn.completed');
 });
 
 test('a frozen medium profile retains its complete request through substantial continuation results', async (t) => {
@@ -245,8 +253,111 @@ test('a frozen medium profile retains its complete request through substantial c
   assert.match(provider.calls[2]?.request.input ?? '', /MEDIUM CURRENT INTENT/);
   assert.deepEqual(provider.calls.slice(1).map((call) => call.request.continuation?.toolResults[0]?.callId), ['medium-read-1', 'medium-read-2']);
   assert.deepEqual(events.filter((event) => event.type === 'provider.response.completed').map((event) => event.usage?.inputTokens), [8_000, 12_000, 16_000]);
+  assert.equal(events.some((event) => event.type === 'context.envelope.promoted'), false);
   assert.equal(compactions, 0);
   assert.equal(events.at(-1)?.type, 'turn.completed');
+});
+
+test('provider-grounded continuation promotes ordinary to medium to large without reassembly, demotion, or promotion side effects', async (t) => {
+  const root = await workspace();
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const provider = new class implements ModelProvider {
+    calls: ProviderRequest[] = [];
+    async *stream(request: ProviderRequest): AsyncGenerator<ProviderEvent> {
+      this.calls.push(request);
+      if (this.calls.length <= 2) {
+        const index = this.calls.length;
+        yield { type: 'provider.response.started', responseId: `chain-${index}` };
+        yield { type: 'provider.tool.call', callId: `read-${index}`, name: 'read_file', arguments: '{"path":"BOOT.md"}' };
+        yield { type: 'provider.response.completed', usage: { inputTokens: index === 1 ? 8_000 : 16_000, outputTokens: 300 } };
+        return;
+      }
+      yield { type: 'provider.text.delta', delta: 'complete' };
+      yield { type: 'provider.response.completed', usage: { inputTokens: 17_000, outputTokens: 2 } };
+    }
+  }();
+  let compactions = 0;
+  const service = await createOneTurnApplicationService({ provider, workspace: root, toolNames: ['read_file'], compactor: { compact: async () => { compactions += 1; return 'must not compact'; } } });
+  const events = await collect(service.run({ session: createSession({ workspace: root }), input: 'inspect' }));
+  const promotions = events.filter((event): event is Extract<typeof event, { type: 'context.envelope.promoted' }> => event.type === 'context.envelope.promoted');
+
+  assert.deepEqual(promotions.map(({ fromProfileId, toProfileId, reason }) => ({ fromProfileId, toProfileId, reason })), [
+    { fromProfileId: ORDINARY_CONTEXT_PROFILE.id, toProfileId: MEDIUM_CONTEXT_PROFILE.id, reason: 'continuation-estimate' },
+    { fromProfileId: MEDIUM_CONTEXT_PROFILE.id, toProfileId: LARGE_CONTEXT_PROFILE.id, reason: 'continuation-estimate' },
+  ]);
+  assert.equal(promotions[0]?.tokens, 8_000 + 300 + Math.ceil(JSON.stringify(provider.calls[1]?.continuation?.toolResults).length / 4) + 32);
+  assert.equal(promotions[1]?.tokens, 16_000 + 300 + Math.ceil(JSON.stringify(provider.calls[2]?.continuation?.toolResults).length / 4) + 32);
+  assert.equal(events.filter((event) => event.type === 'context.assembled').length, 1);
+  assert.equal(compactions, 0);
+  assert.equal(provider.calls.length, 3);
+  assert.equal(events.filter((event) => event.type === 'tool.requested').length, 2);
+  for (const call of provider.calls.slice(1)) {
+    assert.equal(call.instructions, provider.calls[0]?.instructions);
+    assert.equal(call.input, provider.calls[0]?.input);
+    assert.deepEqual(call.tools, provider.calls[0]?.tools);
+  }
+  assert.equal(events.at(-1)?.type, 'turn.completed');
+});
+
+test('reported usage promotes a completed adaptive response but remains terminal above large', async (t) => {
+  const root = await workspace();
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const within = new ScriptedProvider([{ type: 'provider.text.delta', delta: 'done' }, { type: 'provider.response.completed', usage: { inputTokens: 9_000, outputTokens: 2 } }]);
+  const service = await createOneTurnApplicationService({ provider: within, workspace: root });
+  const events = await collect(service.run({ session: createSession({ workspace: root }), input: 'finish' }));
+  const promotion = events.find((event) => event.type === 'context.envelope.promoted');
+  assert.deepEqual(promotion?.type === 'context.envelope.promoted' ? { from: promotion.fromProfileId, to: promotion.toProfileId, reason: promotion.reason, tokens: promotion.tokens } : undefined, {
+    from: ORDINARY_CONTEXT_PROFILE.id, to: MEDIUM_CONTEXT_PROFILE.id, reason: 'provider-usage', tokens: 9_000,
+  });
+  assert.equal(events.some((event) => event.type === 'assistant.response.completed'), true);
+  assert.equal(events.at(-1)?.type, 'turn.completed');
+
+  const above = new ScriptedProvider([{ type: 'provider.text.delta', delta: 'must not commit' }, { type: 'provider.response.completed', usage: { inputTokens: 25_000, outputTokens: 2 } }]);
+  const failed = await collect((await createOneTurnApplicationService({ provider: above, workspace: root })).run({ session: createSession({ workspace: root }), input: 'finish' }));
+  assert.equal(above.calls.length, 1);
+  assert.equal(failed.some((event) => event.type === 'assistant.response.completed'), false);
+  assert.equal(failed.some((event) => event.type === 'budget.state' && event.budget.consumed.providerInputTokens === 25_000 && event.budget.consumed.providerOutputTokens === 2), true);
+  assert.equal(failed.at(-1)?.type === 'turn.failed' && failed.at(-1).error.code, 'budget');
+  assert.match(failed.at(-1)?.type === 'turn.failed' ? failed.at(-1).error.message : '', /24576/);
+});
+
+test('missing usage uses a deterministic fallback while fixed ordinary and adaptive above-large fail before unsafe continuation', async (t) => {
+  const root = await workspace();
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const run = async (bytes: number, fixed = false) => {
+    const provider = new class implements ModelProvider {
+      calls: ProviderRequest[] = [];
+      async *stream(request: ProviderRequest): AsyncGenerator<ProviderEvent> {
+        this.calls.push(request);
+        if (this.calls.length === 1) {
+          yield { type: 'provider.response.started', responseId: 'payload' };
+          yield { type: 'provider.tool.call', callId: 'payload', name: 'payload', arguments: '{}' };
+        } else yield { type: 'provider.text.delta', delta: 'done' };
+        yield { type: 'provider.response.completed' };
+      }
+    }();
+    const service = await createOneTurnApplicationService({ provider, workspace: root, additionalTools: [payloadTool(bytes)], toolNames: ['payload'], ...(fixed ? { contextProfile: ORDINARY_CONTEXT_PROFILE } : {}) });
+    const events = await collect(service.run({ session: createSession({ workspace: root }), input: 'payload' }));
+    return { provider, events };
+  };
+
+  const first = await run(36_000);
+  const second = await run(36_000);
+  assert.equal(first.provider.calls.length, 2);
+  assert.equal(first.events.at(-1)?.type, 'turn.completed');
+  const promotions = (events: typeof first.events) => events.filter((event) => event.type === 'context.envelope.promoted').map(({ turnId: _turnId, ...event }) => event);
+  assert.deepEqual(promotions(first.events), promotions(second.events));
+  assert.deepEqual(first.provider.calls[1]?.continuation, second.provider.calls[1]?.continuation);
+
+  const fixed = await run(36_000, true);
+  assert.equal(fixed.provider.calls.length, 1);
+  assert.equal(fixed.events.some((event) => event.type === 'context.envelope.promoted'), false);
+  assert.equal(fixed.events.at(-1)?.type === 'turn.failed' && fixed.events.at(-1).error.code, 'budget');
+
+  const aboveLarge = await run(100_000);
+  assert.equal(aboveLarge.provider.calls.length, 1);
+  assert.equal(aboveLarge.events.some((event) => event.type === 'context.envelope.promoted'), false);
+  assert.equal(aboveLarge.events.at(-1)?.type === 'turn.failed' && aboveLarge.events.at(-1).error.code, 'budget');
 });
 
 test('adaptive probes emit source lifecycle evidence only for the final selected assembly', async (t) => {

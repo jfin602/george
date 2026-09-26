@@ -211,6 +211,7 @@ test('live trace uses typed diagnostics, pairs tools, retains mutation and safe 
   const execution = { effect: 'workspace_mutation', replaySafety: 'not_replay_safe', source: { kind: 'builtin' } } as const;
   const events: ApplicationEvent[] = [
     { type: 'context.assembled', turnId: 't1', diagnostics: { mode: 'adaptive', profileId: 'medium', profile: { id: 'medium', physicalContextTokens: 32_768, preferredWorkingSetTokens: { min: 1, max: 24_000 }, softPressureTokens: 22_000, providerInputTokens: 24_000, reservedHeadroomTokens: 8_768, alwaysOnInstructionTokens: 1_000 }, attemptedProfileIds: ['ordinary', 'medium'], promotionReasons: ['routed-document'], estimatedTokens: 12_000, estimator: 'fixture', providerInputBudget: 24_000, remainingHeadroom: 12_000, softPressure: false, reservedHeadroom: 8_768, categoryTokens: { core: 1, project: 2, tools: 3, task: 4, skills: 5, routed: 6, conversation: 7, toolResults: 8 }, activeSourceIds: [], evidence: [] } },
+    { type: 'context.envelope.promoted', turnId: 't1', fromProfileId: 'medium', toProfileId: 'large', reason: 'provider-usage', tokens: 16_500, providerInputBudget: 24_576 },
     { type: 'provider.response.completed' },
     { type: 'tool.requested', turnId: 't1', callId: 'call-1', name: 'write_file', arguments: JSON.stringify({ path: 'src/a.ts', expectedSha256: 'a'.repeat(64), content: 'private body', token: 'secret' }), execution },
     { type: 'tool.completed', turnId: 't1', callId: 'call-1', name: 'write_file', result: { ok: true, value: { path: 'src/a.ts', bytes: 4, sha256: 'b'.repeat(64) } }, execution },
@@ -222,6 +223,7 @@ test('live trace uses typed diagnostics, pairs tools, retains mutation and safe 
   ];
   const trace = extractLiveWorkTrace({ events, terminalStatus: 'in_progress', taskState: session.taskState, stackState: session.stackState, hiddenAcceptance: 'not_run', humanInterventions: 2 });
   assert.equal(trace.contexts[0]?.profileId, 'medium', 'reads context.assembled.diagnostics.profileId, never a nonexistent profile.id');
+  assert.deepEqual(trace.envelopePromotions, [{ turnId: 't1', fromProfileId: 'medium', toProfileId: 'large', reason: 'provider-usage', tokens: 16_500, providerInputBudget: 24_576 }]);
   assert.equal(trace.metrics.providerInputTokens, null, 'missing optional usage is explicit unavailable evidence');
   assert.deepEqual(trace.toolCalls.map(({ callId, terminalState }) => [callId, terminalState]), [['call-1', 'succeeded'], ['call-2', 'denied']]);
   assert.equal(trace.toolCalls[0]?.requestedArguments.includes('private body'), false);
@@ -236,12 +238,14 @@ test('live trace uses typed diagnostics, pairs tools, retains mutation and safe 
 test('artifact envelope survives optional report rendering failure', async (t) => {
   const root = await mkdtemp(join(tmpdir(), 'george-live-artifact-'));
   t.after(() => rm(root, { recursive: true, force: true }));
-  const trace = extractLiveWorkTrace({ events: [], terminalStatus: 'failed', hiddenAcceptance: 'not_run', humanInterventions: 0 });
-  const result: LiveWorkResult = Object.freeze({ attemptId: 'artifact-failure', qualifying: false, terminalStatus: 'failed', terminalError: null, observerError: null, hiddenAcceptance: 'not_run', metrics: trace.metrics, trace, events: Object.freeze([]) });
+  const events: ApplicationEvent[] = [{ type: 'context.envelope.promoted', turnId: 'turn', fromProfileId: 'ordinary', toProfileId: 'medium', reason: 'provider-usage', tokens: 9_000, providerInputBudget: 16_384 }];
+  const trace = extractLiveWorkTrace({ events, terminalStatus: 'failed', hiddenAcceptance: 'not_run', humanInterventions: 0 });
+  const result: LiveWorkResult = Object.freeze({ attemptId: 'artifact-failure', qualifying: false, terminalStatus: 'failed', terminalError: null, observerError: null, hiddenAcceptance: 'not_run', metrics: trace.metrics, trace, events: Object.freeze(events) });
   await assert.rejects(writeLiveWorkArtifacts({ directory: root, workspace: root, result, renderReport: () => { throw new TypeError("Cannot read properties of undefined (reading 'id')"); } }), /reading 'id'/);
-  const envelope = JSON.parse(await readFile(join(root, 'attempt.json'), 'utf8')) as { attemptId: string; terminalStatus: string };
+  const envelope = JSON.parse(await readFile(join(root, 'attempt.json'), 'utf8')) as { attemptId: string; terminalStatus: string; eventEvidence: Array<{ promotion?: { reason?: string } }> };
   assert.equal(envelope.attemptId, 'artifact-failure');
   assert.equal(envelope.terminalStatus, 'failed');
+  assert.equal(envelope.eventEvidence[0]?.promotion?.reason, 'provider-usage');
   assert.equal((JSON.parse(await readFile(join(root, 'trace.json'), 'utf8')) as { terminalStatus: string }).terminalStatus, 'failed');
   await assert.rejects(readFile(join(root, 'report.txt'), 'utf8'));
 });

@@ -47,6 +47,8 @@ export type ContextDiagnostics = Readonly<{
   evidence: readonly ContextDiagnosticEvidence[];
 }>;
 
+export type ContextEnvelopePromotionReason = 'continuation-estimate' | 'provider-usage';
+
 export type WorkflowChange = Readonly<{
   path: string;
   relationship: 'pre-existing' | 'newly-observed' | 'no-longer-observed';
@@ -166,6 +168,7 @@ export type ApplicationEvent =
   | Readonly<{ type: 'assistant.response.completed'; turnId: string; text: string }>
   | Readonly<{ type: 'context.source'; turnId: string; sourceId: string; kind: string; status: 'loading' | 'loaded' | 'missing' | 'oversized' | 'failed'; bytes?: number }>
   | Readonly<{ type: 'context.assembled'; turnId: string; diagnostics: ContextDiagnostics }>
+  | Readonly<{ type: 'context.envelope.promoted'; turnId: string; fromProfileId: string; toProfileId: string; reason: ContextEnvelopePromotionReason; tokens: number; providerInputBudget: number }>
   | Readonly<{ type: 'turn.completed'; turnId: string }>
   | Readonly<{ type: 'turn.cancelled'; turnId: string; error: GeorgeErrorShape }>
   | Readonly<{ type: 'turn.failed'; turnId: string; error: GeorgeErrorShape }>

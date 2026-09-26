@@ -111,6 +111,7 @@ function eventRecord(session: Session, event: ApplicationEvent, sequence: number
       break;
     }
     case 'context.assembled': fields.estimatedTokens = event.diagnostics.estimatedTokens; fields.providerInputBudget = event.diagnostics.providerInputBudget; fields.softPressure = event.diagnostics.softPressure; break;
+    case 'context.envelope.promoted': fields.fromProfileId = bounded(event.fromProfileId, 256); fields.toProfileId = bounded(event.toProfileId, 256); fields.reason = event.reason; fields.tokens = event.tokens; fields.providerInputBudget = event.providerInputBudget; break;
     case 'context.compaction.started': fields.start = event.start; fields.end = event.end; fields.reason = event.reason; break;
     case 'context.compaction.completed': correlation.compactionCheckpointId = event.checkpoint.id; fields.beforeTokens = event.checkpoint.beforeTokens; fields.afterTokens = event.checkpoint.afterTokens; fields.reason = event.checkpoint.reason; break;
     case 'context.compaction.failed': fields.reason = bounded(event.reason); break;

@@ -45,6 +45,7 @@ export type LiveWorkTrace = Readonly<{
   validations: readonly Readonly<{ callId: string; status: 'passed' | 'failed' | 'denied' | 'cancelled'; exitCode: number | null; outcome: string | null }>[];
   correctionCount: number;
   contexts: readonly Readonly<{ profileId: string | null; attemptedProfileIds: readonly string[]; promotionReasons: readonly string[]; estimatedTokens: number | null; providerInputBudget: number | null; remainingHeadroom: number | null }>[];
+  envelopePromotions: readonly Readonly<{ turnId: string; fromProfileId: string; toProfileId: string; reason: 'continuation-estimate' | 'provider-usage'; tokens: number; providerInputBudget: number }>[];
   budgets: Readonly<{
     latest: readonly Readonly<{ runId: string; snapshot: RunBudgetSnapshot }>[];
     pressure: readonly Readonly<{ runId: string; dimensions: readonly RunBudgetDimension[] }>[];
@@ -222,6 +223,7 @@ export function extractLiveWorkTrace(options: Readonly<{
     if (!record(diagnostics)) return [{ profileId: null, attemptedProfileIds: [], promotionReasons: [], estimatedTokens: null, providerInputBudget: null, remainingHeadroom: null }];
     return [{ profileId: typeof diagnostics.profileId === 'string' ? diagnostics.profileId : null, attemptedProfileIds: strings(diagnostics.attemptedProfileIds), promotionReasons: strings(diagnostics.promotionReasons), estimatedTokens: number(diagnostics.estimatedTokens), providerInputBudget: number(diagnostics.providerInputBudget), remainingHeadroom: number(diagnostics.remainingHeadroom) }];
   });
+  const envelopePromotions = options.events.flatMap((event) => event.type === 'context.envelope.promoted' ? [{ turnId: event.turnId, fromProfileId: event.fromProfileId, toProfileId: event.toProfileId, reason: event.reason, tokens: event.tokens, providerInputBudget: event.providerInputBudget }] : []);
   const snapshots = new Map<string, RunBudgetSnapshot>();
   const pressure: { runId: string; dimensions: readonly RunBudgetDimension[] }[] = [];
   const exhaustion: { runId: string; dimension: RunBudgetDimension }[] = [];
@@ -239,7 +241,7 @@ export function extractLiveWorkTrace(options: Readonly<{
   try { taskState = options.taskState ? projectTaskState(options.taskState) : null; } catch { /* Invalid partial state is not safe qualification evidence. */ }
   try { stackState = options.stackState ? projectStackState(options.stackState) : null; } catch { /* Invalid partial state is not safe qualification evidence. */ }
   return Object.freeze({
-    terminalStatus: options.terminalStatus, terminalError: options.terminalError ?? null, observerError: options.observerError ?? null, taskState, stackState, metrics: Object.freeze(metrics(options.events)), toolCalls: Object.freeze(toolCalls), mutations: Object.freeze(mutations), validations: Object.freeze(validations), correctionCount: taskState?.corrections.length ?? 0, contexts: Object.freeze(contexts),
+    terminalStatus: options.terminalStatus, terminalError: options.terminalError ?? null, observerError: options.observerError ?? null, taskState, stackState, metrics: Object.freeze(metrics(options.events)), toolCalls: Object.freeze(toolCalls), mutations: Object.freeze(mutations), validations: Object.freeze(validations), correctionCount: taskState?.corrections.length ?? 0, contexts: Object.freeze(contexts), envelopePromotions: Object.freeze(envelopePromotions),
     budgets: Object.freeze({ latest: Object.freeze([...snapshots].map(([runId, snapshot]) => ({ runId, snapshot }))), pressure: Object.freeze(pressure), exhaustion: Object.freeze(exhaustion), taskExhausted: options.terminalStatus === 'budget_exhausted' || taskState?.status === 'budget_exhausted' || stackState?.status === 'budget_exhausted', stageExhaustion: Object.freeze(stageExhaustion) }),
     timing: Object.freeze({ totalMs: number(options.totalMs), workflows: Object.freeze(workflows) }), hiddenAcceptance: options.hiddenAcceptance, humanInterventions: options.humanInterventions, eventsOmitted: options.eventsOmitted ?? 0,
   });
@@ -293,6 +295,7 @@ function eventEvidence(event: ApplicationEvent): Readonly<Record<string, unknown
   if ('name' in event && typeof event.name === 'string') safe.name = event.name;
   if ('status' in event && typeof event.status === 'string') safe.status = event.status;
   if (event.type === 'context.assembled') safe.diagnostics = { profileId: event.diagnostics?.profileId ?? null, attemptedProfileIds: event.diagnostics?.attemptedProfileIds ?? [], promotionReasons: event.diagnostics?.promotionReasons ?? [], estimatedTokens: event.diagnostics?.estimatedTokens ?? null, providerInputBudget: event.diagnostics?.providerInputBudget ?? null, remainingHeadroom: event.diagnostics?.remainingHeadroom ?? null };
+  if (event.type === 'context.envelope.promoted') safe.promotion = { fromProfileId: event.fromProfileId, toProfileId: event.toProfileId, reason: event.reason, tokens: event.tokens, providerInputBudget: event.providerInputBudget };
   if (event.type === 'provider.response.completed') safe.usage = { inputTokens: event.usage?.inputTokens ?? null, outputTokens: event.usage?.outputTokens ?? null };
   if (event.type === 'budget.pressure') safe.dimensions = event.dimensions;
   if (event.type === 'budget.exhausted') safe.dimension = event.dimension;

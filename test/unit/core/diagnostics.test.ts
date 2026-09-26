@@ -34,6 +34,7 @@ test('diagnostics are external, correlated, bounded, and redact non-authoritativ
   observe(sink, session, { type: 'provider.error', error: { code: 'provider', message: 'bounded failure', cause: { providerCode: 'safe-code', raw: 'SECRET_PROVIDER_WIRE' } } });
   observe(sink, session, { type: 'assistant.response.completed', turnId: 'turn-1', text: 'CANONICAL_SECRET' });
   observe(sink, session, { type: 'context.compaction.completed', turnId: 'turn-1', runId: 'run-1', checkpoint: { version: 1, id: 'compact-1', start: 0, end: 2, rangeDigest: 'a'.repeat(64), summaryDigest: 'b'.repeat(64), summary: 'SECRET_COMPACTION_BODY', beforeTokens: 100, afterTokens: 10, reason: 'soft-pressure' } });
+  observe(sink, session, { type: 'context.envelope.promoted', turnId: 'turn-1', fromProfileId: 'ordinary', toProfileId: 'medium', reason: 'continuation-estimate', tokens: 9_000, providerInputBudget: 16_384 });
   observe(sink, session, { type: 'recovery.decision', turnId: 'turn-1', callId: 'call-1', kind: 'mutation', outcome: 'outcome_unknown', evidence: 'bounded observation' });
   observe(sink, session, { type: 'hook.completed', turnId: 'turn-1', hookId: 'hook-1', event: 'provider.responded', status: 'succeeded', message: 'ignored output' });
   await sink.flush();
@@ -50,6 +51,8 @@ test('diagnostics are external, correlated, bounded, and redact non-authoritativ
   assert.match(serialized, /"compactionCheckpointId":"compact-1"/);
   assert.match(serialized, /"recoveryDecisionId":"call-1"/);
   assert.match(serialized, /"hookInvocationId":"hook-1"/);
+  assert.match(serialized, /"type":"context\.envelope\.promoted"/);
+  assert.match(serialized, /"tokens":9000/);
   for (let index = 0; index < 100; index += 1) sink.measure({ workload: 'fixture', name: 'rotation', value: index, unit: 'count', fields: { marker: 'x'.repeat(128) } });
   await sink.flush();
   assert.ok((await readdir(state)).length <= 3);

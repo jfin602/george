@@ -25,6 +25,14 @@ test('projection is presentation-independent, bounded, and keeps one tool work i
   assert.ok(projection.snapshot().progress.length <= 2);
 });
 
+test('continuation-envelope promotion is visible without changing context source work', () => {
+  const projection = new WorkProjection();
+  projection.observe({ type: 'context.envelope.promoted', turnId: 'turn', fromProfileId: 'ordinary', toProfileId: 'medium', reason: 'continuation-estimate', tokens: 9_000, providerInputBudget: 16_384 });
+  assert.equal(projection.snapshot().activity?.message, 'Context envelope promoted to medium');
+  assert.equal(projection.snapshot().progress[0]?.message, 'Context envelope promoted to medium');
+  assert.deepEqual(projection.snapshot().work, []);
+});
+
 test('completed, denied, and interrupted work retains monotonic elapsed time', () => {
   let now = 100;
   const projection = new WorkProjection({ clock: () => now });

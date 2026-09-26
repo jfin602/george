@@ -5,6 +5,8 @@ import {
   appendSessionEvent,
   classifySessionInterruptions,
   cancellationError,
+  CONTEXT_PROFILE_ORDER,
+  CONTEXT_PROFILE_REGISTRY,
   DEFAULT_CONTEXT_PROFILE,
   DEFAULT_EXECUTION_POLICY,
   DEFAULT_RUN_BUDGET,
@@ -34,6 +36,7 @@ import {
   type ContextDiagnostics,
   type ContextOperatingMode,
   type ContextProfile,
+  type ContextEnvelopePromotionReason,
   type ExecutionPolicy,
   type DiagnosticObserver,
   type GeorgeErrorShape,
@@ -152,6 +155,31 @@ export type ProcessSubmission = Readonly<{
 
 const DEFAULT_MAX_TOOL_CALLS = 32;
 const DEFAULT_MAX_TOOL_ROUNDS = 32;
+const CONTINUATION_PROTOCOL_OVERHEAD_TOKENS = 32;
+
+function estimatedTokens(value: unknown): number {
+  return Math.ceil(JSON.stringify(value).length / 4);
+}
+
+function continuationPromotions(
+  mode: ContextOperatingMode,
+  current: ContextProfile,
+  tokens: number,
+  reason: ContextEnvelopePromotionReason,
+): readonly ContextProfile[] {
+  if (tokens <= current.providerInputTokens) return [];
+  if (mode === 'adaptive') {
+    const index = CONTEXT_PROFILE_ORDER.findIndex((name) => CONTEXT_PROFILE_REGISTRY[name].id === current.id);
+    if (index >= 0) {
+      const candidates = CONTEXT_PROFILE_ORDER.slice(index + 1).map((name) => CONTEXT_PROFILE_REGISTRY[name]);
+      const target = candidates.findIndex((profile) => tokens <= profile.providerInputTokens);
+      if (target >= 0) return candidates.slice(0, target + 1);
+    }
+  }
+  const scope = mode === 'fixed' ? `Fixed context profile ${current.id}` : 'Adaptive continuation';
+  const ceiling = mode === 'fixed' ? current.providerInputTokens : CONTEXT_PROFILE_REGISTRY.large.providerInputTokens;
+  throw new GeorgeError('budget', `${scope} cannot continue safely: ${reason === 'provider-usage' ? 'provider reported' : 'estimated continuation context'} ${tokens} tokens above its ${ceiling} token provider-input budget.`);
+}
 
 function positive(value: number | undefined, fallback: number, name: string): number {
   const result = value ?? fallback;
@@ -743,8 +771,9 @@ export class AgentLoopApplicationService {
       if (submission.signal?.aborted) throw cancellationError(submission.signal);
       yield* this.consumeBudget(submission.session, turnId, budget, 'contextTokens', context.estimatedTokens, submission.signal);
       const baseRequest = { instructions: context.rendered.guidance, input: context.rendered.conversation, tools: registry.definitions };
+      let effectiveProfile = selection.profile;
       let continuation: ProviderContinuation | undefined;
-      let continuationTokens = 0;
+      let requestEstimate = context.estimatedTokens;
       let toolCalls = 0;
       let toolRounds = 0;
       let providerRounds = 0;
@@ -757,6 +786,8 @@ export class AgentLoopApplicationService {
         let text = '';
         let responseId: string | undefined;
         let completed = false;
+        let reportedInputTokens: number | undefined;
+        let reportedOutputTokens: number | undefined;
         let retries = 0;
         for (;;) {
           const attemptId = `p${toolRounds + 1}a${retries + 1}-${budget.id.slice(0, 110)}`;
@@ -765,6 +796,8 @@ export class AgentLoopApplicationService {
           text = '';
           responseId = undefined;
           completed = false;
+          reportedInputTokens = undefined;
+          reportedOutputTokens = undefined;
           try {
             yield* this.consumeBudget(submission.session, turnId, budget, 'providerAttempts', 1, submission.signal);
             yield* emit({ type: 'provider.attempt.started', turnId, runId: budget.id, attemptId });
@@ -785,11 +818,18 @@ export class AgentLoopApplicationService {
               if (event.type === 'provider.text.delta') text += event.delta;
               if (event.type === 'provider.tool.call') calls.push(event);
               if (event.type === 'provider.response.completed') completed = true;
-              if (event.type === 'provider.response.completed' && event.usage?.inputTokens !== undefined && event.usage.inputTokens > selection.profile.providerInputTokens) {
-                throw new GeorgeError('budget', `Frozen context profile ${selection.profile.id} cannot continue safely: provider reported ${event.usage.inputTokens} input tokens above its ${selection.profile.providerInputTokens} token provider-input budget.`);
+              if (event.type === 'provider.response.completed') {
+                reportedInputTokens = event.usage?.inputTokens;
+                reportedOutputTokens = event.usage?.outputTokens;
               }
               if (event.type === 'provider.response.completed' && event.usage?.inputTokens !== undefined) yield* this.consumeBudget(submission.session, turnId, budget, 'providerInputTokens', event.usage.inputTokens, submission.signal);
               if (event.type === 'provider.response.completed' && event.usage?.outputTokens !== undefined) yield* this.consumeBudget(submission.session, turnId, budget, 'providerOutputTokens', event.usage.outputTokens, submission.signal);
+              if (event.type === 'provider.response.completed' && reportedInputTokens !== undefined) {
+                for (const promoted of continuationPromotions(selection.mode, effectiveProfile, reportedInputTokens, 'provider-usage')) {
+                  yield* emit({ type: 'context.envelope.promoted', turnId, fromProfileId: effectiveProfile.id, toProfileId: promoted.id, reason: 'provider-usage', tokens: reportedInputTokens, providerInputBudget: promoted.providerInputTokens });
+                  effectiveProfile = promoted;
+                }
+              }
               if (event.type === 'provider.error') throw event.error;
             }
             yield* this.consumeBudget(submission.session, turnId, budget, 'wallClockMs', 0, submission.signal);
@@ -814,6 +854,11 @@ export class AgentLoopApplicationService {
             if (submission.signal?.aborted) throw cancellationError(submission.signal);
           }
         }
+        // Formula: chain = max(local request estimate, reported input) +
+        // (reported output ?? serialized response estimate). The provider input already contains
+        // prior history, so max() keeps that evidence authoritative without counting it twice.
+        const chainAfterResponse = Math.max(requestEstimate, reportedInputTokens ?? 0)
+          + (reportedOutputTokens ?? estimatedTokens({ text, calls }));
         if (calls.length === 0) {
           if (text) yield* emit({ type: 'assistant.response.completed', turnId, text });
           break;
@@ -868,11 +913,13 @@ export class AgentLoopApplicationService {
           if (next.value.result.ok && fingerprint !== undefined) successfulReads.set(fingerprint, mutationEpoch);
         }
         if (submission.completeAfterSuccessfulToolRound && results.some((result) => result.result.ok)) break;
-        continuationTokens += Math.ceil(JSON.stringify(providerResults).length / 4);
-        const continuationEstimate = context.estimatedTokens + continuationTokens;
-        if (continuationEstimate > selection.profile.providerInputTokens) {
-          throw new GeorgeError('budget', `Frozen context profile ${selection.profile.id} cannot continue safely: estimated continuation context ${continuationEstimate} exceeds its ${selection.profile.providerInputTokens} token provider-input budget.`);
+        // Next request = chain + newly projected results + a fixed 32-token protocol margin.
+        const continuationEstimate = chainAfterResponse + estimatedTokens(providerResults) + CONTINUATION_PROTOCOL_OVERHEAD_TOKENS;
+        for (const promoted of continuationPromotions(selection.mode, effectiveProfile, continuationEstimate, 'continuation-estimate')) {
+          yield* emit({ type: 'context.envelope.promoted', turnId, fromProfileId: effectiveProfile.id, toProfileId: promoted.id, reason: 'continuation-estimate', tokens: continuationEstimate, providerInputBudget: promoted.providerInputTokens });
+          effectiveProfile = promoted;
         }
+        requestEstimate = continuationEstimate;
         continuation = { responseId, toolResults: providerResults };
       }
       yield* this.invokeHooks(submission.session, { name: 'turn.completed', sessionId: submission.session.id, turnId, runId: budget.id }, budget, submission.signal);
