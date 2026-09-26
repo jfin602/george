@@ -7,7 +7,7 @@ import test from 'node:test';
 
 import { StructuredTaskApplicationService, StructuredTaskStackApplicationService, createAgentLoopApplicationService, createCodingWorkflowApplicationService } from '../../../src/application/index.ts';
 import { CONTEXT_PROFILE_REGISTRY, createSession, type ApplicationEvent, type ApprovalDecision, type ApprovalPort, type ApprovalRequest, type ModelProvider, type ProviderEvent, type ProviderRequest } from '../../../src/core/index.ts';
-import { THREE_FILE_INSPECTION_SMOKE, acceptGreetingSmoke, acceptThreeFileSmoke, createFrozenEditQualificationApproval, extractLiveWorkTrace, prepareThreeFileInspectionFixture, runExistingExpressFeatureV1, runExistingExpressFeatureV2, runGreenfieldExpressV1, runGreenfieldExpressV2, runLiveWorkInstrument, runOrdinaryTurnQualification, writeLiveWorkArtifacts, type LiveWorkResult } from '../../../src/qualification/index.ts';
+import { THREE_FILE_INSPECTION_SMOKE, acceptGreetingSmoke, acceptThreeFileSmoke, createFrozenEditQualificationApproval, extractLiveWorkTrace, prepareThreeFileInspectionFixture, recognizeLiveWorkArtifactSchema, runExistingExpressFeatureV1, runExistingExpressFeatureV2, runGreenfieldExpressV1, runGreenfieldExpressV2, runLiveWorkInstrument, runOrdinaryTurnQualification, writeLiveWorkArtifacts, type LiveWorkResult } from '../../../src/qualification/index.ts';
 import { createStackState, createTaskState, parseTaskPrompt } from '../../../src/tasks/index.ts';
 
 class Provider implements ModelProvider {
@@ -161,6 +161,15 @@ test('live-work runner rejects model-visible acceptance and unauthorized depende
   await assert.rejects(runLiveWorkInstrument({ attemptId: 'dependency', humanInterventions: 0, kind: 'single', service, session: createSession({ workspace }), prompt: prompt(1), acceptancePath: join(workspace, '..', 'hidden.test.mjs'), runHiddenAcceptance: async () => true, dependencyInstallation: { authorized: false, run: async () => undefined } }), /authorization/);
 });
 
+test('qualification harness failures become distinct bounded results instead of losing application evidence', async () => {
+  const service = { run: async () => ({ terminalState: 'completed', finalAssistantResponse: 'safe response' }) } as unknown as StructuredTaskApplicationService;
+  const result = await runOrdinaryTurnQualification({ attemptId: 'harness-failure', humanInterventions: 0, service, session: createSession({ workspace: '/tmp' }), input: 'hi', accept: () => { throw new Error('acceptance observer failed'); } });
+  assert.equal(result.qualifying, false);
+  assert.equal(result.terminalStatus, 'completed');
+  assert.match(result.terminalError?.message ?? '', /acceptance observer failed/);
+  assert.deepEqual(result.trace.failures.at(-1), { source: 'harness', category: 'harness', eventType: 'harness.error', code: 'provider', message: 'acceptance observer failed' });
+});
+
 test('greenfield frozen runner loads the full instrument into the production stack boundary', async (t) => {
   const workspace = await mkdtemp(join(tmpdir(), 'george-greenfield-runner-'));
   t.after(() => rm(workspace, { recursive: true, force: true }));
@@ -245,6 +254,62 @@ test('live trace uses typed diagnostics, pairs tools, retains mutation and safe 
   assert.equal(trace.humanInterventions, 2);
 });
 
+test('schema-2 artifacts retain bounded authoritative failures without raw payload, prose, file bodies, or secrets', async (t) => {
+  const root = await mkdtemp(join(tmpdir(), 'george-live-failures-'));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const events: ApplicationEvent[] = [
+    { type: 'turn.started', turnId: 'turn-1' },
+    { type: 'provider.attempt.started', turnId: 'turn-1', runId: 'run-1', attemptId: 'attempt-1' },
+    { type: 'provider.error', error: { code: 'provider', message: 'LM Studio returned HTTP 422. token=TOP_SECRET', cause: { providerCode: 'context_length_exceeded', providerReason: 'input_too_large', status: 422, rawBody: 'RAW_PROVIDER_PAYLOAD' } } },
+    { type: 'turn.failed', turnId: 'turn-1', error: { code: 'provider', message: 'Continuation failed.' } },
+    { type: 'turn.cancelled', turnId: 'turn-2', error: { code: 'cancelled', message: 'Operator cancelled.' } },
+    { type: 'tool.requested', turnId: 'turn-2', callId: 'tool-1', name: 'write_file', arguments: JSON.stringify({ path: 'secret.txt', content: 'FILE_BODY', password: 'PASSWORD_VALUE' }) },
+    { type: 'tool.failed', turnId: 'turn-2', callId: 'tool-1', name: 'write_file', result: { ok: false, error: { code: 'validation', message: 'Write rejected. secret=TOOL_SECRET' } } },
+    { type: 'tool.requested', turnId: 'turn-2', callId: 'tool-2', name: 'apply_patch', arguments: JSON.stringify({ path: 'secret.txt', edits: [{ oldText: 'OLD_FILE_BODY', newText: 'NEW_FILE_BODY' }] }) },
+    { type: 'validation.completed', turnId: 'turn-2', callId: 'V1', status: 'failed', exitCode: 1, signal: null, outcome: 'failed', stdoutTruncated: false, stderrTruncated: true, error: { code: 'tool', message: 'Validation failed. api_key=VALIDATION_SECRET' } },
+    { type: 'assistant.response.completed', turnId: 'turn-2', text: 'FULL_ASSISTANT_PROSE' },
+  ];
+  const trace = extractLiveWorkTrace({ events, terminalStatus: 'failed', terminalError: { code: 'validation', message: 'Harness failed. cookie=HARNESS_SECRET' }, observerError: { code: 'provider', message: 'Observer failed. Bearer OBSERVER_SECRET' }, hiddenAcceptance: 'failed', humanInterventions: 0 });
+  assert.equal(trace.schemaVersion, 2);
+  assert.deepEqual(trace.failures.map(({ category, eventType }) => [category, eventType]), [
+    ['provider', 'provider.error'], ['turn', 'turn.failed'], ['turn', 'turn.cancelled'], ['tool', 'tool.failed'], ['validation', 'validation.completed'], ['harness', 'harness.error'], ['observer', 'observer.error'],
+  ]);
+  assert.deepEqual(trace.failures[0], { source: 'application', category: 'provider', eventType: 'provider.error', code: 'provider', message: 'LM Studio returned HTTP 422. token=[redacted]', providerCode: 'context_length_exceeded', reason: 'input_too_large', status: 422, turnId: 'turn-1', attemptId: 'attempt-1' });
+  assert.equal(trace.failures.find(({ category }) => category === 'tool')?.callId, 'tool-1');
+  assert.equal(trace.failures.find(({ category }) => category === 'validation')?.callId, 'V1');
+
+  const result: LiveWorkResult = Object.freeze({ attemptId: 'failure-diagnostics', qualifying: false, terminalStatus: 'failed', terminalError: trace.terminalError, observerError: trace.observerError, hiddenAcceptance: 'failed', metrics: trace.metrics, trace, events: Object.freeze(events) });
+  await writeLiveWorkArtifacts({ directory: root, workspace: root, result });
+  const attempt = await readFile(join(root, 'attempt.json'), 'utf8');
+  const durableTrace = await readFile(join(root, 'trace.json'), 'utf8');
+  const evidence = `${attempt}${durableTrace}`;
+  assert.equal(recognizeLiveWorkArtifactSchema(JSON.parse(attempt)), 2);
+  for (const unsafe of ['RAW_PROVIDER_PAYLOAD', 'FULL_ASSISTANT_PROSE', 'FILE_BODY', 'OLD_FILE_BODY', 'NEW_FILE_BODY', 'PASSWORD_VALUE', 'TOP_SECRET', 'TOOL_SECRET', 'VALIDATION_SECRET', 'HARNESS_SECRET', 'OBSERVER_SECRET']) assert.equal(evidence.includes(unsafe), false, unsafe);
+});
+
+test('historical schema-1 evidence remains recognizable and schema-2 writes are deterministic', async (t) => {
+  const historicalPath = join(process.cwd(), 'docs/tasks/c9-turn-context-live-qualification/evidence/three-file/attempt.json');
+  const historicalTracePath = join(process.cwd(), 'docs/tasks/c9-turn-context-live-qualification/evidence/three-file/trace.json');
+  const historical = await readFile(historicalPath);
+  const historicalTrace = await readFile(historicalTracePath);
+  assert.equal(createHash('sha256').update(historical).digest('hex'), 'eb536899b5b4cac658692b440673b78697aa896d30b2d5270355016b77d88bec');
+  assert.equal(createHash('sha256').update(historicalTrace).digest('hex'), 'edaf91604eb3937923ba316a5562060fd220165d6417fc6b59ce022d5ab21f7c');
+  assert.equal(recognizeLiveWorkArtifactSchema(JSON.parse(historical.toString('utf8'))), 1);
+  assert.equal('failures' in JSON.parse(historicalTrace.toString('utf8')), false, 'schema-1 trace keeps its original event-category-only semantics');
+
+  const first = await mkdtemp(join(tmpdir(), 'george-schema2-first-'));
+  const second = await mkdtemp(join(tmpdir(), 'george-schema2-second-'));
+  t.after(() => Promise.all([rm(first, { recursive: true, force: true }), rm(second, { recursive: true, force: true })]));
+  const trace = extractLiveWorkTrace({ events: [{ type: 'turn.failed', turnId: 'turn', error: { code: 'provider', message: 'Offline.' } }], terminalStatus: 'failed', hiddenAcceptance: 'failed', humanInterventions: 0, totalMs: 12 });
+  const result: LiveWorkResult = Object.freeze({ attemptId: 'deterministic', qualifying: false, terminalStatus: 'failed', terminalError: null, observerError: null, hiddenAcceptance: 'failed', metrics: trace.metrics, trace, events: Object.freeze([{ type: 'turn.failed', turnId: 'turn', error: { code: 'provider', message: 'Offline.' } }]) });
+  await writeLiveWorkArtifacts({ directory: first, workspace: process.cwd(), result });
+  await writeLiveWorkArtifacts({ directory: second, workspace: process.cwd(), result });
+  assert.equal(await readFile(join(first, 'attempt.json'), 'utf8'), await readFile(join(second, 'attempt.json'), 'utf8'));
+  assert.equal(await readFile(join(first, 'trace.json'), 'utf8'), await readFile(join(second, 'trace.json'), 'utf8'));
+  assert.equal(createHash('sha256').update(await readFile(historicalPath)).digest('hex'), 'eb536899b5b4cac658692b440673b78697aa896d30b2d5270355016b77d88bec');
+  assert.equal(createHash('sha256').update(await readFile(historicalTracePath)).digest('hex'), 'edaf91604eb3937923ba316a5562060fd220165d6417fc6b59ce022d5ab21f7c');
+});
+
 test('artifact envelope survives optional report rendering failure', async (t) => {
   const root = await mkdtemp(join(tmpdir(), 'george-live-artifact-'));
   t.after(() => rm(root, { recursive: true, force: true }));
@@ -253,6 +318,7 @@ test('artifact envelope survives optional report rendering failure', async (t) =
   const result: LiveWorkResult = Object.freeze({ attemptId: 'artifact-failure', qualifying: false, terminalStatus: 'failed', terminalError: null, observerError: null, hiddenAcceptance: 'not_run', metrics: trace.metrics, trace, events: Object.freeze(events) });
   await assert.rejects(writeLiveWorkArtifacts({ directory: root, workspace: root, result, renderReport: () => { throw new TypeError("Cannot read properties of undefined (reading 'id')"); } }), /reading 'id'/);
   const envelope = JSON.parse(await readFile(join(root, 'attempt.json'), 'utf8')) as { attemptId: string; terminalStatus: string; eventEvidence: Array<{ promotion?: { reason?: string } }> };
+  assert.equal(recognizeLiveWorkArtifactSchema(envelope), 2);
   assert.equal(envelope.attemptId, 'artifact-failure');
   assert.equal(envelope.terminalStatus, 'failed');
   assert.equal(envelope.eventEvidence[0]?.promotion?.reason, 'provider-usage');

@@ -25,6 +25,21 @@ export const THREE_FILE_INSPECTION_SMOKE = Object.freeze({
 
 export type LiveWorkError = Readonly<{ code: string; message: string }>;
 
+export type LiveWorkFailure = Readonly<{
+  source: 'application' | 'harness' | 'observer';
+  category: 'provider' | 'turn' | 'tool' | 'validation' | 'harness' | 'observer';
+  eventType: 'provider.error' | 'turn.failed' | 'turn.cancelled' | 'tool.failed' | 'validation.completed' | 'harness.error' | 'observer.error';
+  code: string;
+  message: string;
+  reason?: string;
+  providerCode?: string;
+  status?: number;
+  turnId?: string;
+  attemptId?: string;
+  callId?: string;
+  name?: string;
+}>;
+
 export type LiveWorkMetrics = Readonly<{
   providerAttempts: number;
   providerRounds: number;
@@ -47,9 +62,11 @@ export type LiveWorkToolCall = Readonly<{
 }>;
 
 export type LiveWorkTrace = Readonly<{
+  schemaVersion: 2;
   terminalStatus: string;
   terminalError: LiveWorkError | null;
   observerError: LiveWorkError | null;
+  failures: readonly LiveWorkFailure[];
   taskState: TaskStateProjection | null;
   stackState: StackStateProjection | null;
   metrics: LiveWorkMetrics;
@@ -88,7 +105,7 @@ export type LiveWorkResult = Readonly<{
 }>;
 
 export type LiveWorkArtifactEnvelope = Readonly<{
-  schemaVersion: 1;
+  schemaVersion: 2;
   attemptId: string;
   runtime: Readonly<{ node: string; platform: string; arch: string }>;
   workspace: string;
@@ -96,6 +113,7 @@ export type LiveWorkArtifactEnvelope = Readonly<{
   terminalStatus: string;
   terminalError: LiveWorkError | null;
   observerError: LiveWorkError | null;
+  failures: readonly LiveWorkFailure[];
   hiddenAcceptance: LiveWorkResult['hiddenAcceptance'];
   humanInterventions: number;
   taskState: TaskStateProjection | null;
@@ -186,7 +204,7 @@ function safeArguments(value: unknown): string {
       if (!record(item)) return typeof item === 'string' ? sanitizeTaskEvidence(item, 512).text : item;
       return Object.fromEntries(Object.entries(item).slice(0, 64).map(([key, entry]) => {
         if (/authorization|cookie|credential|password|passwd|secret|token|api[-_]?(?:key|token)|private[-_]?key/i.test(key)) return [key, '[redacted]'];
-        if (/^(?:content|text|patch)$/i.test(key) && typeof entry === 'string') return [key, `[omitted ${Buffer.byteLength(entry, 'utf8')} bytes]`];
+        if (/^(?:content|text|patch|oldText|newText|body|payload|rawBody|wireBody|responseBody|reasoning)$/i.test(key) && typeof entry === 'string') return [key, `[omitted ${Buffer.byteLength(entry, 'utf8')} bytes]`];
         return [key, safe(entry, depth + 1)];
       }));
     };
@@ -198,6 +216,53 @@ function safeArguments(value: unknown): string {
 function safeError(error: unknown): LiveWorkError {
   const normalized = asGeorgeError(error);
   return Object.freeze({ code: sanitizeTaskEvidence(normalized.code, 128).text, message: sanitizeTaskEvidence(normalized.message, 1024).text });
+}
+
+function safeLiveWorkError(error?: LiveWorkError | null): LiveWorkError | null {
+  return error === undefined || error === null ? null : Object.freeze({ code: sanitizeTaskEvidence(error.code, 128).text, message: sanitizeTaskEvidence(error.message, 1024).text });
+}
+
+function boundedFailureError(error: Readonly<{ code: string; message: string; cause?: unknown }>): Readonly<{
+  code: string;
+  message: string;
+  reason?: string;
+  providerCode?: string;
+  status?: number;
+}> {
+  const result: { code: string; message: string; reason?: string; providerCode?: string; status?: number } = {
+    code: sanitizeTaskEvidence(error.code, 128).text,
+    message: sanitizeTaskEvidence(error.message, 1024).text,
+  };
+  if (!record(error.cause)) return Object.freeze(result);
+  if (typeof error.cause.providerCode === 'string') result.providerCode = sanitizeTaskEvidence(error.cause.providerCode, 128).text;
+  const reason = typeof error.cause.providerReason === 'string' ? error.cause.providerReason : typeof error.cause.providerEventType === 'string' ? error.cause.providerEventType : undefined;
+  if (reason !== undefined) result.reason = sanitizeTaskEvidence(reason, 256).text;
+  if (typeof error.cause.status === 'number' && Number.isInteger(error.cause.status) && error.cause.status >= 100 && error.cause.status <= 599) result.status = error.cause.status;
+  return Object.freeze(result);
+}
+
+function extractFailures(events: readonly ApplicationEvent[], terminalError?: LiveWorkError | null, observerError?: LiveWorkError | null): readonly LiveWorkFailure[] {
+  const failures: LiveWorkFailure[] = [];
+  let turnId: string | undefined;
+  let attemptId: string | undefined;
+  for (const event of events) {
+    if ('turnId' in event && typeof event.turnId === 'string') turnId = event.turnId;
+    if (event.type === 'provider.attempt.started') attemptId = event.attemptId;
+    if (event.type === 'provider.error') {
+      failures.push(Object.freeze({ source: 'application', category: 'provider', eventType: event.type, ...boundedFailureError(event.error), ...(turnId === undefined ? {} : { turnId }), ...(attemptId === undefined ? {} : { attemptId }) }));
+    } else if (event.type === 'turn.failed' || event.type === 'turn.cancelled') {
+      failures.push(Object.freeze({ source: 'application', category: 'turn', eventType: event.type, ...boundedFailureError(event.error), turnId: event.turnId }));
+    } else if (event.type === 'tool.failed') {
+      failures.push(Object.freeze({ source: 'application', category: 'tool', eventType: event.type, ...boundedFailureError(event.result.error), turnId: event.turnId, callId: event.callId, name: sanitizeTaskEvidence(event.name, 128).text }));
+    } else if (event.type === 'validation.completed' && event.status !== 'passed') {
+      const code = event.error?.code ?? event.status;
+      const message = event.error?.message ?? `Validation ${event.status}.`;
+      failures.push(Object.freeze({ source: 'application', category: 'validation', eventType: event.type, code: sanitizeTaskEvidence(code, 128).text, message: sanitizeTaskEvidence(message, 1024).text, ...(event.outcome === undefined ? {} : { reason: event.outcome }), turnId: event.turnId, callId: event.callId, name: event.callId }));
+    }
+  }
+  if (terminalError) failures.push(Object.freeze({ source: 'harness', category: 'harness', eventType: 'harness.error', ...boundedFailureError(terminalError) }));
+  if (observerError) failures.push(Object.freeze({ source: 'observer', category: 'observer', eventType: 'observer.error', ...boundedFailureError(observerError) }));
+  return Object.freeze(failures);
 }
 
 function operationalEvent(event: ApplicationEvent): boolean {
@@ -296,10 +361,12 @@ export function extractLiveWorkTrace(options: Readonly<{
   }
   let taskState: TaskStateProjection | null = null;
   let stackState: StackStateProjection | null = null;
+  const terminalError = safeLiveWorkError(options.terminalError);
+  const observerError = safeLiveWorkError(options.observerError);
   try { taskState = options.taskState ? projectTaskState(options.taskState) : null; } catch { /* Invalid partial state is not safe qualification evidence. */ }
   try { stackState = options.stackState ? projectStackState(options.stackState) : null; } catch { /* Invalid partial state is not safe qualification evidence. */ }
   return Object.freeze({
-    terminalStatus: options.terminalStatus, terminalError: options.terminalError ?? null, observerError: options.observerError ?? null, taskState, stackState, metrics: Object.freeze(metrics(options.events)), toolCalls: Object.freeze(toolCalls), mutations: Object.freeze(mutations), validations: Object.freeze(validations), correctionCount: taskState?.corrections.length ?? 0, contexts: Object.freeze(contexts), envelopePromotions: Object.freeze(envelopePromotions), observedReadPaths: successfulReadPaths(options.events), finalResponse: responseEvidence(options.finalAssistantResponse),
+    schemaVersion: 2, terminalStatus: options.terminalStatus, terminalError, observerError, failures: extractFailures(options.events, terminalError, observerError), taskState, stackState, metrics: Object.freeze(metrics(options.events)), toolCalls: Object.freeze(toolCalls), mutations: Object.freeze(mutations), validations: Object.freeze(validations), correctionCount: taskState?.corrections.length ?? 0, contexts: Object.freeze(contexts), envelopePromotions: Object.freeze(envelopePromotions), observedReadPaths: successfulReadPaths(options.events), finalResponse: responseEvidence(options.finalAssistantResponse),
     budgets: Object.freeze({ latest: Object.freeze([...snapshots].map(([runId, snapshot]) => ({ runId, snapshot }))), pressure: Object.freeze(pressure), exhaustion: Object.freeze(exhaustion), taskExhausted: options.terminalStatus === 'budget_exhausted' || taskState?.status === 'budget_exhausted' || stackState?.status === 'budget_exhausted', stageExhaustion: Object.freeze(stageExhaustion) }),
     timing: Object.freeze({ totalMs: number(options.totalMs), workflows: Object.freeze(workflows) }), hiddenAcceptance: options.hiddenAcceptance, humanInterventions: options.humanInterventions, eventsOmitted: options.eventsOmitted ?? 0,
   });
@@ -366,7 +433,11 @@ export async function runOrdinaryTurnQualification(submission: OrdinaryTurnQuali
   } catch (error) { terminalError = safeError(error); }
   const frozenEvents = Object.freeze([...events]);
   const provisional = extractLiveWorkTrace({ events: frozenEvents, terminalStatus, terminalError, observerError, hiddenAcceptance: 'not_run', humanInterventions: submission.humanInterventions, totalMs: performance.now() - started, eventsOmitted, finalAssistantResponse });
-  const accepted = terminalError === null && submission.accept(provisional);
+  let accepted = false;
+  if (terminalError === null) {
+    try { accepted = submission.accept(provisional); }
+    catch (error) { terminalError = safeError(error); }
+  }
   const trace = extractLiveWorkTrace({ events: frozenEvents, terminalStatus, terminalError, observerError, hiddenAcceptance: accepted ? 'passed' : 'failed', humanInterventions: submission.humanInterventions, totalMs: provisional.timing.totalMs ?? undefined, eventsOmitted, finalAssistantResponse });
   return Object.freeze({ attemptId: submission.attemptId, qualifying: accepted, terminalStatus, terminalError, observerError, hiddenAcceptance: trace.hiddenAcceptance, metrics: trace.metrics, trace, events: frozenEvents });
 }
@@ -405,7 +476,10 @@ export async function runLiveWorkInstrument(submission: LiveWorkSubmission): Pro
     terminalStatus = observed && !['pending', 'in_progress', 'completed'].includes(observed) ? observed : 'failed';
   }
   let hiddenAcceptance: LiveWorkResult['hiddenAcceptance'] = 'not_run';
-  if (terminalError === null && terminalStatus === 'completed') hiddenAcceptance = await submission.runHiddenAcceptance() ? 'passed' : 'failed';
+  if (terminalError === null && terminalStatus === 'completed') {
+    try { hiddenAcceptance = await submission.runHiddenAcceptance() ? 'passed' : 'failed'; }
+    catch (error) { terminalError = safeError(error); }
+  }
   const frozenEvents = Object.freeze([...events]);
   const trace = extractLiveWorkTrace({ events: frozenEvents, terminalStatus, terminalError, observerError, taskState: submission.session.taskState, stackState: submission.session.stackState, hiddenAcceptance, humanInterventions: submission.humanInterventions, totalMs: performance.now() - started, eventsOmitted });
   return Object.freeze({ attemptId: submission.attemptId, qualifying: terminalError === null && terminalStatus === 'completed' && hiddenAcceptance === 'passed', terminalStatus, terminalError, observerError, hiddenAcceptance, metrics: trace.metrics, trace, events: frozenEvents });
@@ -421,9 +495,19 @@ function eventEvidence(event: ApplicationEvent): Readonly<Record<string, unknown
   if (event.type === 'context.assembled') safe.diagnostics = { profileId: event.diagnostics?.profileId ?? null, attemptedProfileIds: event.diagnostics?.attemptedProfileIds ?? [], promotionReasons: event.diagnostics?.promotionReasons ?? [], estimatedTokens: event.diagnostics?.estimatedTokens ?? null, providerInputBudget: event.diagnostics?.providerInputBudget ?? null, remainingHeadroom: event.diagnostics?.remainingHeadroom ?? null };
   if (event.type === 'context.envelope.promoted') safe.promotion = { fromProfileId: event.fromProfileId, toProfileId: event.toProfileId, reason: event.reason, tokens: event.tokens, providerInputBudget: event.providerInputBudget };
   if (event.type === 'provider.response.completed') safe.usage = { inputTokens: event.usage?.inputTokens ?? null, outputTokens: event.usage?.outputTokens ?? null };
+  if (event.type === 'provider.error' || event.type === 'turn.failed' || event.type === 'turn.cancelled') safe.error = boundedFailureError(event.error);
+  if (event.type === 'tool.failed') safe.error = boundedFailureError(event.result.error);
+  if (event.type === 'validation.completed' && event.status !== 'passed') safe.error = { code: sanitizeTaskEvidence(event.error?.code ?? event.status, 128).text, message: sanitizeTaskEvidence(event.error?.message ?? `Validation ${event.status}.`, 1024).text, ...(event.outcome === undefined ? {} : { reason: event.outcome }) };
   if (event.type === 'budget.pressure') safe.dimensions = event.dimensions;
   if (event.type === 'budget.exhausted') safe.dimension = event.dimension;
   return Object.freeze(safe);
+}
+
+/** Recognizes historical schema-1 envelopes without assigning schema-2 diagnostics to them. */
+export function recognizeLiveWorkArtifactSchema(value: unknown): 1 | 2 | null {
+  if (!record(value) || (value.schemaVersion !== 1 && value.schemaVersion !== 2) || typeof value.attemptId !== 'string' || typeof value.terminalStatus !== 'string' || !Array.isArray(value.eventEvidence)) return null;
+  if (value.schemaVersion === 2 && !Array.isArray(value.failures)) return null;
+  return value.schemaVersion;
 }
 
 async function atomicJson(path: string, value: unknown): Promise<void> {
@@ -440,7 +524,7 @@ export async function writeLiveWorkArtifacts(options: Readonly<{
   renderReport?: (envelope: LiveWorkArtifactEnvelope) => string | Promise<string>;
 }>): Promise<Readonly<{ envelopePath: string; tracePath: string; reportPath?: string }>> {
   await mkdir(options.directory, { recursive: true });
-  const envelope: LiveWorkArtifactEnvelope = Object.freeze({ schemaVersion: 1, attemptId: options.result.attemptId, runtime: Object.freeze({ node: process.version, platform: process.platform, arch: process.arch }), workspace: resolve(options.workspace), qualifying: options.result.qualifying, terminalStatus: options.result.terminalStatus, terminalError: options.result.terminalError, observerError: options.result.observerError, hiddenAcceptance: options.result.hiddenAcceptance, humanInterventions: options.result.trace.humanInterventions, taskState: options.result.trace.taskState, stackState: options.result.trace.stackState, eventEvidence: Object.freeze(options.result.events.map(eventEvidence)) });
+  const envelope: LiveWorkArtifactEnvelope = Object.freeze({ schemaVersion: 2, attemptId: options.result.attemptId, runtime: Object.freeze({ node: process.version, platform: process.platform, arch: process.arch }), workspace: resolve(options.workspace), qualifying: options.result.qualifying, terminalStatus: options.result.terminalStatus, terminalError: options.result.trace.terminalError, observerError: options.result.trace.observerError, failures: options.result.trace.failures, hiddenAcceptance: options.result.hiddenAcceptance, humanInterventions: options.result.trace.humanInterventions, taskState: options.result.trace.taskState, stackState: options.result.trace.stackState, eventEvidence: Object.freeze(options.result.events.map(eventEvidence)) });
   const envelopePath = join(options.directory, 'attempt.json');
   await atomicJson(envelopePath, envelope);
   const tracePath = join(options.directory, 'trace.json');
