@@ -10,6 +10,7 @@ import { createAgentLoopApplicationService } from '../../src/application/index.t
 import { CONTEXT_PROFILE_REGISTRY, createSession, GeorgeError, LocalSessionStore, PendingApprovalPort, type ApprovalDecision, type ApprovalPort, type ApprovalRequest, type ApplicationEvent, type ModelProvider, type ProviderEvent, type ProviderRequest, type ProviderStreamOptions } from '../../src/core/index.ts';
 
 class ScriptedProvider implements ModelProvider {
+  readonly supportsRoundContext = true as const;
   readonly calls: Array<{ request: ProviderRequest; options: ProviderStreamOptions }> = [];
   private readonly rounds: readonly (readonly ProviderEvent[])[];
 
@@ -75,7 +76,7 @@ test('fixture repository completes read tool -> result -> final answer with orig
   assert.deepEqual(session.transcript, [{ role: 'user', text: 'Read the boot.' }, { role: 'assistant', text: 'The fixture boot was read.' }]);
 });
 
-test('optional provider-round alignment refreshes on continuation while ordinary requests remain unchanged', async (t) => {
+test('late provider-round context refreshes without changing stable instructions while ordinary requests remain unchanged', async (t) => {
   const root = await fixture();
   t.after(() => rm(root, { recursive: true, force: true }));
   const provider = new ScriptedProvider([
@@ -88,10 +89,24 @@ test('optional provider-round alignment refreshes on continuation while ordinary
   await collect(service.run({ session: createSession({ workspace: root }), input: 'Aligned.', alignment: () => `MISSION CARD ROUND ${++projection}` }));
   await collect(service.run({ session: createSession({ workspace: root }), input: 'Ordinary.' }));
 
-  assert.match(provider.calls[0]?.request.instructions ?? '', /MISSION CARD ROUND 1/);
-  assert.match(provider.calls[1]?.request.instructions ?? '', /MISSION CARD ROUND 2/);
-  assert.doesNotMatch(provider.calls[2]?.request.instructions ?? '', /MISSION CARD ROUND/);
+  assert.equal(provider.calls[0]?.request.instructions, provider.calls[1]?.request.instructions, 'stable instructions stay byte-identical across continuation rounds');
+  assert.equal(provider.calls[0]?.request.roundContext, 'MISSION CARD ROUND 1');
+  assert.equal(provider.calls[1]?.request.roundContext, 'MISSION CARD ROUND 2');
+  assert.equal(provider.calls[2]?.request.roundContext, undefined);
+  assert.doesNotMatch(provider.calls[0]?.request.instructions ?? '', /MISSION CARD ROUND/);
   assert.equal(provider.calls[1]?.request.continuation?.toolResults[0]?.callId, 'read');
+});
+
+test('provider-round context fails before dispatch when an adapter has not opted in', async (t) => {
+  const root = await fixture();
+  t.after(() => rm(root, { recursive: true, force: true }));
+  let calls = 0;
+  const provider: ModelProvider = { async *stream() { calls += 1; yield { type: 'provider.response.completed' }; } };
+  const service = await createAgentLoopApplicationService({ provider, workspace: root });
+  const events = await collect(service.run({ session: createSession({ workspace: root }), input: 'Aligned.', alignment: () => 'MISSION CARD' }));
+  assert.equal(calls, 0);
+  assert.equal(events.at(-1)?.type, 'turn.failed');
+  assert.match(events.findLast((event) => event.type === 'turn.failed')?.error.message ?? '', /does not support late provider-round context/);
 });
 
 test('provider-visible alignment participates in continuation safety accounting', async (t) => {

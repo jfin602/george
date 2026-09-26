@@ -26,10 +26,13 @@ export type ProviderContinuation = Readonly<{
 
 export type ProviderToolChoice = 'auto' | 'required' | 'none';
 export type ProviderActivity = 'accepted' | 'output_progress';
+export const MAX_PROVIDER_ROUND_CONTEXT_BYTES = 8 * 1024;
 
 export type ProviderRequest = Readonly<{
   instructions?: string;
   input: string;
+  /** Application-owned context appended after stable input/tool results for this logical round. */
+  roundContext?: string;
   tools?: readonly ProviderToolDefinition[];
   toolChoice?: ProviderToolChoice;
   continuation?: ProviderContinuation;
@@ -43,6 +46,8 @@ export type ProviderStreamOptions = Readonly<{
 }>;
 
 export interface ModelProvider {
+  /** Explicit opt-in: adapters must not silently discard provider-visible round context. */
+  readonly supportsRoundContext?: true;
   stream(
     request: ProviderRequest,
     options?: ProviderStreamOptions,

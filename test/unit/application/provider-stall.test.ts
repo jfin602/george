@@ -64,6 +64,7 @@ class FakeScheduler implements ProviderStallScheduler {
 type Round = (request: ProviderRequest, options: ProviderStreamOptions) => AsyncGenerator<ProviderEvent>;
 
 class ScriptedProvider implements ModelProvider {
+  readonly supportsRoundContext = true as const;
   readonly calls: Array<{ request: ProviderRequest; options: ProviderStreamOptions }> = [];
   private readonly rounds: readonly Round[];
   constructor(rounds: readonly Round[]) { this.rounds = rounds; }
@@ -279,7 +280,9 @@ test('repeated low-pressure stall rebases once from structured authority and nev
   assert.equal(events.some((event) => event.type === 'context.compaction.started'), false);
   assert.equal(provider.calls[2]?.request.continuation, undefined);
   assert.match(provider.calls[2]?.request.input ?? '', /CURRENT STRUCTURED OBJECTIVE[\s\S]*canonical provider request rebuild/);
-  assert.match(provider.calls[2]?.request.instructions ?? '', /MISSION CARD[\s\S]*Effective permissions[\s\S]*V1/);
+  assert.match(provider.calls[2]?.request.roundContext ?? '', /MISSION CARD[\s\S]*Effective permissions[\s\S]*V1/);
+  assert.equal(provider.calls[2]?.request.instructions, provider.calls[0]?.request.instructions);
+  assert.equal(provider.calls[2]?.request.continuation, undefined, 'canonical rebase never reuses a failed response ID');
   assert.deepEqual(session.transcript, [{ role: 'user', text: 'CURRENT STRUCTURED OBJECTIVE' }, { role: 'assistant', text: 'Rebased.' }]);
 });
 
@@ -335,7 +338,8 @@ test('repeated high-pressure stall compacts once, rebases with authoritative evi
   assert.deepEqual(provider.calls.slice(1, 3).map((call) => call.request.continuation?.responseId), ['completed-before-stall', 'completed-before-stall']);
   assert.equal(provider.calls[3]?.request.continuation, undefined);
   assert.match(provider.calls[3]?.request.input ?? '', /COMPACTED COMPLETED TOOL EVIDENCE[\s\S]*evidence_4/);
-  assert.match(provider.calls[3]?.request.instructions ?? '', /MISSION CARD WITH SHA AND TEXT FRAMING AUTHORITY/);
+  assert.match(provider.calls[3]?.request.roundContext ?? '', /MISSION CARD WITH SHA AND TEXT FRAMING AUTHORITY/);
+  assert.equal(provider.calls[3]?.request.instructions, provider.calls[0]?.request.instructions);
   assert.equal(events.filter((event) => event.type === 'context.compaction.started' && event.reason === 'stall-pressure').length, 1);
   assert.equal(events.filter((event) => event.type === 'provider.rebase.started' && event.compaction === 'completed').length, 1);
 });

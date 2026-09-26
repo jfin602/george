@@ -10,6 +10,7 @@ import { addressTaskWorkUnit, beginStackTask, beginTaskWorkUnit, completeTask, c
 import { renderTask, taskHeader } from '../../../src/tui/app.ts';
 
 class Provider implements ModelProvider {
+  readonly supportsRoundContext = true as const;
   readonly requests: ProviderRequest[] = [];
   async *stream(request: ProviderRequest): AsyncGenerator<ProviderEvent> { this.requests.push(request); yield { type: 'provider.response.completed' }; }
 }

@@ -10,6 +10,7 @@ import { createSession, DEFAULT_RUN_BUDGET, RunBudget, type ApplicationEvent, ty
 import { addressTaskWorkUnit, beginTaskCorrection, beginTaskWorkUnit, createTaskState, parseTaskPrompt, recordTaskInspection, recordTaskValidationAttempt } from '../../../src/tasks/index.ts';
 
 class Provider implements ModelProvider {
+  readonly supportsRoundContext = true as const;
   readonly requests: ProviderRequest[] = [];
   private readonly rounds: (readonly ProviderEvent[])[];
   constructor(rounds: readonly (readonly ProviderEvent[])[]) { this.rounds = [...rounds]; }
@@ -172,6 +173,10 @@ test('structured service preflights with local reads, progresses task state, and
   assert.match(provider.requests[1]?.input ?? '', /missing parent.*create_directory/);
   assert.match(provider.requests[2]?.input ?? '', /W2 — Second work/);
   assert.doesNotMatch(provider.requests[2]?.input ?? '', /W1 — First work|First work is bounded/);
+  assert.equal(provider.requests[1]?.instructions, provider.requests[2]?.instructions);
+  assert.match(provider.requests[1]?.roundContext ?? '', /MISSION CARD \(derived, non-authoritative\)[\s\S]*W1 — First work/);
+  assert.match(provider.requests[2]?.roundContext ?? '', /MISSION CARD \(derived, non-authoritative\)[\s\S]*W2 — Second work/);
+  assert.doesNotMatch(provider.requests[1]?.instructions ?? '', /MISSION CARD/);
 });
 
 test('text-only structured INSPECT fails without evidence despite required first-round choice', async (t) => {
@@ -324,8 +329,8 @@ STOP CONDITIONS
   await new StructuredTaskApplicationService(workflow.agent).run({ session, input, turnId: 'resume' });
   assert.equal(provider.requests[0]?.toolChoice, undefined);
   assert.deepEqual(provider.requests[0]?.tools.map((tool) => tool.name), ['read_file', 'list_directory', 'search_text', 'git_status', 'git_diff', 'write_file', 'apply_patch', 'create_directory']);
-  assert.match(provider.requests[0]?.instructions ?? '', /MISSION CARD/);
-  assert.match(provider.requests[0]?.instructions ?? '', /validation V1: failed outcome=failed exit=1/);
+  assert.match(provider.requests[0]?.roundContext ?? '', /MISSION CARD/);
+  assert.match(provider.requests[0]?.roundContext ?? '', /validation V1: failed outcome=failed exit=1/);
   assert.equal(session.taskState?.status, 'completed');
   assert.deepEqual(session.taskState?.validations.V1?.attempts.map((attempt) => attempt.status), ['failed', 'passed']);
   assert.equal(session.taskState?.validations.V1?.attempts[0]?.stderr, 'old diagnostic');
@@ -537,7 +542,7 @@ STOP CONDITIONS
   const events: ApplicationEvent[] = [];
   await new StructuredTaskApplicationService(workflow.agent).run({ session: createSession({ workspace: root }), input, onEvent: (event) => { events.push(event); } });
 
-  const refreshed = provider.requests[2]?.instructions ?? '';
+  const refreshed = provider.requests[2]?.roundContext ?? '';
   assert.match(refreshed, /MISSION CARD/);
   assert.match(refreshed, /read_file:read-app src\/app\.js is stale after mutation generation 1/);
   assert.match(refreshed, /read_file:read-package package\.json remains valid; reuse it/);

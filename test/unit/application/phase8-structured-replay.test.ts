@@ -13,6 +13,7 @@ import { parseTaskPrompt } from '../../../src/tasks/index.ts';
 const fixturePath = join(dirname(fileURLToPath(import.meta.url)), '../../fixtures/p9-phase8-structured-edit-validation.task.txt');
 
 class ObservedHashProvider implements ModelProvider {
+  readonly supportsRoundContext = true as const;
   readonly requests: ProviderRequest[] = [];
   observedSha256: string | undefined;
   rejection: string | undefined;
@@ -50,6 +51,7 @@ class ObservedHashProvider implements ModelProvider {
 }
 
 class IntentThenPatchProvider implements ModelProvider {
+  readonly supportsRoundContext = true as const;
   readonly requests: ProviderRequest[] = [];
   observedSha256: string | undefined;
   rereadSha256: string | undefined;
@@ -120,8 +122,12 @@ test('frozen structured Phase 8 counterpart repairs the exact fixture and leaves
   ]);
   assert.deepEqual(provider.requests.map((request) => request.toolChoice), ['required', undefined, undefined, undefined, undefined]);
   assert.equal(provider.requests.length, 5);
-  assert.match(provider.requests[4]?.instructions ?? '', /Do not create completion\/report artifacts unless the authored task requires them/);
-  assert.match(provider.requests[4]?.instructions ?? '', /stop unrelated verification or mutation and allow George to run: V1:/);
+  assert.equal(new Set(provider.requests.slice(1).map((request) => request.instructions)).size, 1, 'structured continuation instructions remain byte-stable');
+  assert.match(provider.requests[4]?.roundContext ?? '', /Do not create completion\/report artifacts unless the authored task requires them/);
+  assert.match(provider.requests[4]?.roundContext ?? '', /stop unrelated verification or mutation and allow George to run: V1:/);
+  assert.match(provider.requests[2]?.roundContext ?? '', /tool failure write_file:bad-write/);
+  assert.match(provider.requests[4]?.roundContext ?? '', /George observed apply_patch .* at generation 1/);
+  assert.match(provider.requests[4]?.roundContext ?? '', /read_file:reread .* is stale after mutation generation 1/);
   assert.equal(requested.some((event) => /completion/i.test(event.name)), false);
   assert.equal(events.filter((event) => event.type === 'validation.started').length, 1);
 });

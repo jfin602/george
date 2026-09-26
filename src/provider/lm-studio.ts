@@ -1,6 +1,7 @@
 import {
   DEFAULT_PROVIDER_TIMEOUT_MS,
   GeorgeError,
+  MAX_PROVIDER_ROUND_CONTEXT_BYTES,
   MAX_PROVIDER_TIMEOUT_MS,
   cancellationError,
   validateModelId,
@@ -354,6 +355,7 @@ export async function* parseSse(
 }
 
 export class LmStudioResponsesProvider implements ModelProvider {
+  readonly supportsRoundContext = true as const;
   readonly baseUrl: URL;
   readonly model: string | undefined;
   readonly defaultTimeoutMs: number;
@@ -375,6 +377,11 @@ export class LmStudioResponsesProvider implements ModelProvider {
     }
     if (request.toolChoice === 'required' && (!request.tools || request.tools.length === 0)) {
       const error = new GeorgeError('configuration', 'Required tool choice needs at least one exposed tool.');
+      yield { type: 'provider.error', error };
+      throw error;
+    }
+    if (request.roundContext !== undefined && (typeof request.roundContext !== 'string' || request.roundContext.includes('\0') || Buffer.byteLength(request.roundContext, 'utf8') > MAX_PROVIDER_ROUND_CONTEXT_BYTES)) {
+      const error = new GeorgeError('validation', `Provider round context must be bounded to ${MAX_PROVIDER_ROUND_CONTEXT_BYTES} bytes.`);
       yield { type: 'provider.error', error };
       throw error;
     }
@@ -401,19 +408,23 @@ export class LmStudioResponsesProvider implements ModelProvider {
       let response: Response;
       try {
         const continuation = request.continuation;
+        const toolResults = continuation?.toolResults.map((toolResult) => ({
+          type: 'function_call_output',
+          call_id: toolResult.callId,
+          output: JSON.stringify(toolResult.result),
+        })) ?? [];
+        const roundContext = request.roundContext === undefined ? [] : [{ role: 'developer', content: request.roundContext }];
         response = await fetch(new URL('/v1/responses', this.baseUrl), {
           method: 'POST',
           headers: { 'content-type': 'application/json', accept: 'text/event-stream' },
           body: JSON.stringify({
             model: this.model,
             ...(request.instructions === undefined ? {} : { instructions: request.instructions }),
-            input: continuation === undefined
-              ? request.input
-              : continuation.toolResults.map((toolResult) => ({
-                  type: 'function_call_output',
-                  call_id: toolResult.callId,
-                  output: JSON.stringify(toolResult.result),
-                })),
+            input: request.roundContext === undefined
+              ? continuation === undefined ? request.input : toolResults
+              : continuation === undefined
+                ? [{ role: 'user', content: request.input }, ...roundContext]
+                : [...toolResults, ...roundContext],
             ...(continuation === undefined ? {} : { previous_response_id: continuation.responseId }),
             ...(request.tools === undefined ? {} : {
               tools: request.tools.map((tool) => ({

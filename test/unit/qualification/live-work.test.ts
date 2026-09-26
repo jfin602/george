@@ -11,9 +11,11 @@ import { THREE_FILE_INSPECTION_SMOKE, acceptGreetingSmoke, acceptThreeFileSmoke,
 import { createStackState, createTaskState, parseTaskPrompt } from '../../../src/tasks/index.ts';
 
 class Provider implements ModelProvider {
+  readonly supportsRoundContext = true as const;
   async *stream(_request: ProviderRequest): AsyncGenerator<ProviderEvent> { yield { type: 'provider.response.completed', usage: { inputTokens: 4, outputTokens: 1 } }; }
 }
 class NoInspectionProvider implements ModelProvider {
+  readonly supportsRoundContext = true as const;
   async *stream(_request: ProviderRequest): AsyncGenerator<ProviderEvent> {
     yield { type: 'provider.response.started', responseId: 'inspection-without-tool' };
     yield { type: 'provider.text.delta', delta: 'raw-provider-secret=TOP_SECRET_PROVIDER_PAYLOAD' };
@@ -21,6 +23,7 @@ class NoInspectionProvider implements ModelProvider {
   }
 }
 class OrdinaryProvider implements ModelProvider {
+  readonly supportsRoundContext = true as const;
   readonly requests: ProviderRequest[] = [];
   private readonly rounds: readonly (readonly ProviderEvent[])[];
   constructor(rounds: readonly (readonly ProviderEvent[])[]) { this.rounds = rounds; }

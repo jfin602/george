@@ -107,6 +107,49 @@ test('LM Studio provider maps provider-neutral tool choice without changing tool
   assert.equal('tool_choice' in requests[0]!, false);
 });
 
+test('LM Studio appends late round context after initial input and continuation tool results', async (t) => {
+  const requests: Array<Record<string, unknown>> = [];
+  const { server, baseUrl } = await fixture((request, response) => {
+    let body = '';
+    request.setEncoding('utf8');
+    request.on('data', (chunk: string) => { body += chunk; });
+    request.on('end', () => { requests.push(JSON.parse(body)); sse(response, ['data: {"type":"response.completed","response":{}}\n\n']); });
+  });
+  t.after(() => close(server));
+  const provider = new LmStudioResponsesProvider({ baseUrl, model: 'local-model' });
+  await eventsFrom(provider.stream({ instructions: 'stable', input: 'objective', roundContext: 'MISSION CARD 1' }));
+  await eventsFrom(provider.stream({
+    instructions: 'stable', input: 'objective', roundContext: 'MISSION CARD 2',
+    continuation: { responseId: 'response-1', toolResults: [{ callId: 'call-1', name: 'read_file', result: { ok: true, value: 'observed' } }] },
+  }));
+
+  assert.deepEqual(requests, [
+    { model: 'local-model', instructions: 'stable', input: [{ role: 'user', content: 'objective' }, { role: 'developer', content: 'MISSION CARD 1' }], stream: true },
+    { model: 'local-model', instructions: 'stable', previous_response_id: 'response-1', input: [{ type: 'function_call_output', call_id: 'call-1', output: '{"ok":true,"value":"observed"}' }, { role: 'developer', content: 'MISSION CARD 2' }], stream: true },
+  ]);
+});
+
+test('LM Studio omits cached-input usage unless the provider reports it', async (t) => {
+  const { server, baseUrl } = await fixture((_request, response) => sse(response, [
+    'data: {"type":"response.completed","response":{"usage":{"input_tokens":9,"output_tokens":2,"input_tokens_details":{}}}}\n\n',
+  ]));
+  t.after(() => close(server));
+  assert.deepEqual(await eventsFrom(new LmStudioResponsesProvider({ baseUrl, model: 'local-model' }).stream({ input: 'usage' })), [
+    { type: 'provider.response.completed', usage: { inputTokens: 9, outputTokens: 2 } },
+  ]);
+});
+
+test('LM Studio rejects an invalid late round context before POST', async () => {
+  const provider = new LmStudioResponsesProvider({ baseUrl: 'http://127.0.0.1:1234', model: 'local-model' });
+  for (const roundContext of ['invalid\0context', 'x'.repeat(8 * 1024 + 1)]) {
+    const events: unknown[] = [];
+    await assert.rejects(async () => {
+      for await (const event of provider.stream({ input: 'objective', roundContext })) events.push(event);
+    }, (error: unknown) => error instanceof GeorgeError && error.code === 'validation');
+    assert.equal((events.at(-1) as { type: string }).type, 'provider.error');
+  }
+});
+
 test('LM Studio provider rejects required tool choice without exposed tools before POST', async () => {
   const provider = new LmStudioResponsesProvider({ baseUrl: 'http://127.0.0.1:1234', model: 'local-model' });
   const events: unknown[] = [];

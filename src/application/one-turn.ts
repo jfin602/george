@@ -12,6 +12,7 @@ import {
   DEFAULT_RUN_BUDGET,
   denyApprovalPort,
   GeorgeError,
+  MAX_PROVIDER_ROUND_CONTEXT_BYTES,
   TEXT_FRAMING_CHANGE_WARNING,
   resolveWorkspaceRoot,
   resolveWorkspaceDirectoryPath,
@@ -171,7 +172,6 @@ export type ProcessSubmission = Readonly<{
 const DEFAULT_MAX_TOOL_CALLS = 32;
 const DEFAULT_MAX_TOOL_ROUNDS = 32;
 const CONTINUATION_PROTOCOL_OVERHEAD_TOKENS = 32;
-const MAX_ALIGNMENT_BYTES = 8 * 1024;
 const MAX_REBASE_EVIDENCE_BYTES = 16 * 1024;
 
 function estimatedTokens(value: unknown): number {
@@ -893,15 +893,17 @@ export class AgentLoopApplicationService {
       while (true) {
         if (stageRoundLimit !== undefined && providerRounds >= stageRoundLimit) throw new GeorgeError('budget', `Structured stage provider round limit of ${stageRoundLimit} exhausted.`);
         const alignment = submission.alignment?.();
-        if (alignment !== undefined && (typeof alignment !== 'string' || alignment.includes('\0') || Buffer.byteLength(alignment, 'utf8') > MAX_ALIGNMENT_BYTES)) {
-          throw new GeorgeError('validation', `Provider-round alignment must be bounded to ${MAX_ALIGNMENT_BYTES} bytes.`);
+        if (alignment !== undefined && (typeof alignment !== 'string' || alignment.includes('\0') || Buffer.byteLength(alignment, 'utf8') > MAX_PROVIDER_ROUND_CONTEXT_BYTES)) {
+          throw new GeorgeError('validation', `Provider-round alignment must be bounded to ${MAX_PROVIDER_ROUND_CONTEXT_BYTES} bytes.`);
+        }
+        if (alignment !== undefined && this.provider.supportsRoundContext !== true) {
+          throw new GeorgeError('configuration', 'The configured provider does not support late provider-round context.');
         }
         const alignedRequestEstimate = requestEstimate + (alignment === undefined ? 0 : estimatedTokens(alignment));
         for (const promoted of continuationPromotions(selection.mode, effectiveProfile, alignedRequestEstimate, 'continuation-estimate')) {
           yield* emit({ type: 'context.envelope.promoted', turnId, fromProfileId: effectiveProfile.id, toProfileId: promoted.id, reason: 'continuation-estimate', tokens: alignedRequestEstimate, providerInputBudget: promoted.providerInputTokens });
           effectiveProfile = promoted;
         }
-        const instructions = alignment === undefined ? baseRequest.instructions : `${baseRequest.instructions}\n\n${alignment}`;
         let calls: Array<Extract<ApplicationEvent, { type: 'provider.tool.call' }>> = [];
         let text = '';
         let responseId: string | undefined;
@@ -945,7 +947,8 @@ export class AgentLoopApplicationService {
             watchdog = new ProviderAttemptWatchdog(this.providerStallPolicy, this.stallScheduler);
             const attemptSignal = submission.signal === undefined ? watchdog.controller.signal : AbortSignal.any([submission.signal, watchdog.controller.signal]);
             const request: ProviderRequest = {
-              ...baseRequest, input: attemptInput, instructions,
+              ...baseRequest, input: attemptInput,
+              ...(alignment === undefined ? {} : { roundContext: alignment }),
               ...(attemptContinuation === undefined && toolRounds === 0 && submission.initialToolChoice !== undefined ? { toolChoice: submission.initialToolChoice } : {}),
               ...(attemptContinuation === undefined ? {} : { continuation: attemptContinuation }),
             };
