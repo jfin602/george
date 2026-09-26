@@ -67,6 +67,10 @@ test('coding workflow preserves dirty work, records direct mutations, and does n
     { path: 'user-work.txt', relationship: 'pre-existing', directGeorgeMutation: false },
   ]);
   assert.deepEqual(completion.directMutations, [{ tool: 'write_file', path: 'george.txt', bytes: 7, sha256: hash('written') }]);
+  const canonicalMutation = session.events.find((event) => event.type === 'tool.completed' && event.callId === 'write');
+  assert.equal(canonicalMutation?.type === 'tool.completed' && canonicalMutation.result.ok && 'git' in (canonicalMutation.result.value as Record<string, unknown>), true);
+  const providerMutation = provider.requests[1]?.continuation?.toolResults.find((result) => result.callId === 'write');
+  assert.deepEqual(providerMutation, { callId: 'write', name: 'write_file', result: { ok: true, value: { name: 'write_file', path: 'george.txt', bytes: 7, sha256: hash('written') } } });
   assert.equal(completion.validations[0]?.status, 'failed');
   assert.ok(completion.validations[0]?.callId);
   assert.equal(completion.terminalState, 'failed');

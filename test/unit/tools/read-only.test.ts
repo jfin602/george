@@ -161,6 +161,48 @@ test('registry selection preserves canonical registrations and cannot add author
   assert.throws(() => registry.select(['missing']), /Unknown registered tool: missing/);
 });
 
+test('registry provider-result projection is deterministic and cannot alter canonical authority or evidence', async () => {
+  const execution = { effect: 'workspace_mutation' as const, replaySafety: 'not_replay_safe' as const, source: { kind: 'builtin' as const } };
+  const registry = new ToolRegistry([{
+    name: 'projected', description: 'Projected result.', execution,
+    inputSchema: { type: 'object', properties: {}, additionalProperties: false },
+    execute: async () => ({ receipt: 'kept', internal: { snapshot: 'large' } }),
+    projectProviderResult: (value) => {
+      const result = value as { receipt: string; internal: { snapshot: string } };
+      result.internal.snapshot = 'projector mutation';
+      return { receipt: result.receipt };
+    },
+  }, {
+    name: 'unchanged', description: 'Unchanged result.', execution: { effect: 'local_read', replaySafety: 'replay_safe', source: { kind: 'builtin' } },
+    inputSchema: { type: 'object', properties: {}, additionalProperties: false }, execute: async () => ({ value: 'same' }),
+  }, {
+    name: 'failing', description: 'Failed result.', execution: { effect: 'local_read', replaySafety: 'replay_safe', source: { kind: 'builtin' } },
+    inputSchema: { type: 'object', properties: {}, additionalProperties: false }, execute: async () => { throw new GeorgeError('tool', 'x'.repeat(5_000)); },
+  }]);
+  const canonical = await registry.dispatch({ callId: 'one', name: 'projected', arguments: '{}' });
+  const first = registry.projectProviderResult(canonical);
+  const second = registry.projectProviderResult(canonical);
+  const unchanged = await registry.dispatch({ callId: 'two', name: 'unchanged', arguments: '{}' });
+  const failure = await registry.dispatch({ callId: 'three', name: 'missing', arguments: '{}' });
+  const largeFailure = await registry.dispatch({ callId: 'four', name: 'failing', arguments: '{}' });
+
+  assert.deepEqual(canonical, { callId: 'one', name: 'projected', result: { ok: true, value: { receipt: 'kept', internal: { snapshot: 'large' } } } });
+  assert.deepEqual(first, { callId: 'one', name: 'projected', result: { ok: true, value: { receipt: 'kept' } } });
+  assert.deepEqual(second, first);
+  assert.strictEqual(registry.projectProviderResult(unchanged), unchanged);
+  assert.deepEqual(registry.projectProviderResult(failure), failure);
+  assert.equal(!largeFailure.result.ok && largeFailure.result.error.message.length, 5_000);
+  const projectedFailure = registry.projectProviderResult(largeFailure);
+  assert.equal(!projectedFailure.result.ok && projectedFailure.result.error.code, 'tool');
+  assert.equal(!projectedFailure.result.ok && Buffer.byteLength(projectedFailure.result.error.message), 4_096);
+  assert.deepEqual(registry.registration('projected')?.execution, execution);
+  assert.deepEqual(registry.definitions, [
+    { name: 'projected', description: 'Projected result.', inputSchema: { type: 'object', properties: {}, additionalProperties: false } },
+    { name: 'unchanged', description: 'Unchanged result.', inputSchema: { type: 'object', properties: {}, additionalProperties: false } },
+    { name: 'failing', description: 'Failed result.', inputSchema: { type: 'object', properties: {}, additionalProperties: false } },
+  ]);
+});
+
 test('read-only compatibility calls use the canonical registry definitions', async (t) => {
   const root = await fixture();
   t.after(() => rm(root, { recursive: true, force: true }));

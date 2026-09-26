@@ -1,4 +1,6 @@
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { chmod, mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -667,6 +669,46 @@ test('a bounded service advertises and executes only its selected canonical tool
   });
   assert.equal(events.some((event) => event.type === 'tool.completed' && event.name === 'read_file'), true);
   assert.equal(events.some((event) => event.type === 'turn.completed'), true);
+});
+
+test('provider continuation projects large canonical mutation evidence to a bounded receipt', async (t) => {
+  const root = await workspace();
+  t.after(() => rm(root, { recursive: true, force: true }));
+  execFileSync('git', ['init', '--quiet'], { cwd: root });
+  await mkdir(join(root, 'existing'));
+  await Promise.all(Array.from({ length: 120 }, (_, index) => writeFile(
+    join(root, 'existing', `realistic-working-tree-entry-${index.toString().padStart(3, '0')}.txt`),
+    `dirty ${index}\n`,
+  )));
+  const provider = new class implements ModelProvider {
+    calls: ProviderRequest[] = [];
+    async *stream(request: ProviderRequest): AsyncGenerator<ProviderEvent> {
+      this.calls.push(request);
+      if (this.calls.length === 1) {
+        yield { type: 'provider.response.started', responseId: 'mutation' };
+        yield { type: 'provider.tool.call', callId: 'write', name: 'write_file', arguments: JSON.stringify({ path: 'receipt.txt', content: 'bounded\n' }) };
+      }
+      yield { type: 'provider.response.completed' };
+    }
+  }();
+  const service = await createOneTurnApplicationService({
+    provider, workspace: root, approvalPort: { request: async () => 'allow_once' },
+  });
+  const events = await collect(service.run({ session: createSession({ workspace: root }), input: 'Write the receipt.' }));
+  const completed = events.find((event) => event.type === 'tool.completed' && event.callId === 'write');
+  if (completed?.type !== 'tool.completed' || !completed.result.ok) throw new Error('Expected canonical mutation evidence.');
+  const canonical = completed.result.value as { name: string; path: string; bytes: number; sha256: string; git: { entries: readonly unknown[] } };
+  const projected = provider.calls[1]?.continuation?.toolResults[0];
+
+  assert.equal(canonical.git.entries.length, 122);
+  assert.deepEqual(projected, {
+    callId: 'write', name: 'write_file',
+    result: { ok: true, value: { name: 'write_file', path: 'receipt.txt', bytes: 8, sha256: createHash('sha256').update('bounded\n').digest('hex') } },
+  });
+  const canonicalBytes = Buffer.byteLength(JSON.stringify(completed.result));
+  const projectedBytes = Buffer.byteLength(JSON.stringify(projected?.result));
+  assert.ok(canonicalBytes > projectedBytes * 20);
+  t.diagnostic(`canonical mutation result ${canonicalBytes} bytes; provider projection ${projectedBytes} bytes`);
 });
 
 test('a bounded service denies unselected tools while the default service keeps the full surface', async (t) => {

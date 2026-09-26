@@ -17,9 +17,22 @@ import { classifyTextFraming, type TextFraming } from './text-framing.ts';
 
 const SHA256_HEX = /^[a-f0-9]{64}$/;
 
+function providerMutationResult(value: import('../core/index.ts').JsonValue): import('../core/index.ts').JsonValue {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) throw new GeorgeError('tool', 'Mutation returned an invalid provider receipt.');
+  const result = value as Record<string, unknown>;
+  if (result.name === 'create_directory' && typeof result.path === 'string' && typeof result.created === 'boolean' && typeof result.createdDirectories === 'number') {
+    return { name: result.name, path: result.path, created: result.created, createdDirectories: result.createdDirectories };
+  }
+  if ((result.name === 'write_file' || result.name === 'apply_patch') && typeof result.path === 'string' && typeof result.bytes === 'number' && typeof result.sha256 === 'string') {
+    return { name: result.name, path: result.path, bytes: result.bytes, sha256: result.sha256 };
+  }
+  throw new GeorgeError('tool', 'Mutation returned an invalid provider receipt.');
+}
+
 export const WORKSPACE_MUTATION_TOOL_DEFINITIONS = [
   {
     name: 'write_file', description: 'Atomically create or exactly replace workspace text using the latest read_file.sha256 for an existing target. Prefer apply_patch for localized edits. Existing text must preserve read_file.textFraming unless an intentional framing change is acknowledged; George never reformats content.', execution: { effect: 'workspace_mutation', replaySafety: 'not_replay_safe', source: { kind: 'builtin' } },
+    projectProviderResult: providerMutationResult,
     inputSchema: {
       type: 'object', properties: {
         path: { type: 'string', minLength: 1 }, content: { type: 'string', maxLength: 1024 * 1024 },
@@ -30,6 +43,7 @@ export const WORKSPACE_MUTATION_TOOL_DEFINITIONS = [
   },
   {
     name: 'apply_patch', description: 'Preferred for localized edits: atomically apply unambiguous exact-text edits using the latest read_file.sha256 while preserving untouched bytes and read_file.textFraming unless an intentional framing change is acknowledged.', execution: { effect: 'workspace_mutation', replaySafety: 'not_replay_safe', source: { kind: 'builtin' } },
+    projectProviderResult: providerMutationResult,
     inputSchema: {
       type: 'object', properties: {
         path: { type: 'string', minLength: 1 }, expectedSha256: { type: 'string', minLength: 64, maxLength: 64, description: 'Latest observed read_file.sha256 for the current target.' },
@@ -47,6 +61,7 @@ export const WORKSPACE_MUTATION_TOOL_DEFINITIONS = [
   },
   {
     name: 'create_directory', description: 'Create workspace directory chains.', execution: { effect: 'workspace_mutation', replaySafety: 'not_replay_safe', source: { kind: 'builtin' } },
+    projectProviderResult: providerMutationResult,
     inputSchema: {
       type: 'object', properties: { path: { type: 'string', minLength: 1, maxLength: 4096 } }, required: ['path'], additionalProperties: false,
     },

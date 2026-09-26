@@ -91,6 +91,35 @@ test('directory mutation creates safe chains idempotently and never replaces col
   await assert.rejects(() => lstat(join(root, 'cancelled')), /ENOENT/);
 });
 
+test('mutation provider receipts preserve convergence fields and bounded failures only', async (t) => {
+  const root = await fixture();
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const executor = createWorkspaceMutationToolExecutor(await resolveWorkspaceRoot(root), {}, { captureGit: false });
+  const dispatch = (callId: string, name: string, arguments_: unknown) => executor.registry.dispatch({ callId, name, arguments: JSON.stringify(arguments_) });
+
+  const write = await dispatch('write', 'write_file', { path: 'file.txt', content: 'before\n' });
+  assert.equal(write.result.ok && 'git' in (write.result.value as Record<string, unknown>), true);
+  assert.deepEqual(executor.registry.projectProviderResult(write), {
+    callId: 'write', name: 'write_file', result: { ok: true, value: { name: 'write_file', path: 'file.txt', bytes: 7, sha256: hash('before\n') } },
+  });
+
+  const patch = await dispatch('patch', 'apply_patch', { path: 'file.txt', expectedSha256: hash('before\n'), edits: [{ oldText: 'before', newText: 'after' }] });
+  assert.deepEqual(executor.registry.projectProviderResult(patch), {
+    callId: 'patch', name: 'apply_patch', result: { ok: true, value: { name: 'apply_patch', path: 'file.txt', bytes: 6, sha256: hash('after\n') } },
+  });
+
+  const directory = await dispatch('directory', 'create_directory', { path: 'src/routes' });
+  assert.deepEqual(executor.registry.projectProviderResult(directory), {
+    callId: 'directory', name: 'create_directory', result: { ok: true, value: { name: 'create_directory', path: 'src/routes', created: true, createdDirectories: 2 } },
+  });
+
+  const failure = await dispatch('failure', 'apply_patch', { path: 'file.txt', expectedSha256: hash('stale'), edits: [{ oldText: 'after', newText: 'again' }] });
+  assert.equal(failure.result.ok, false);
+  assert.deepEqual(executor.registry.projectProviderResult(failure), failure);
+  if (failure.result.ok) throw new Error('Expected bounded mutation failure.');
+  assert.deepEqual(Object.keys(failure.result.error).sort(), ['code', 'message']);
+});
+
 test('existing text framing changes require explicit acknowledgement and never rewrite bytes', async (t) => {
   const root = await fixture();
   t.after(() => rm(root, { recursive: true, force: true }));

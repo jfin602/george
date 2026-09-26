@@ -35,6 +35,7 @@ export type ToolDefinition = Readonly<{
   inputSchema: ToolInputSchema;
   execution: ToolExecutionMetadata;
   execute: (arguments_: JsonObject, options: ToolExecutionOptions) => Promise<JsonValue>;
+  projectProviderResult?: (value: JsonValue) => JsonValue;
 }>;
 
 /** `input` is internal process stdin, not part of any model-visible tool schema. */
@@ -83,6 +84,12 @@ function validationError(message: string): GeorgeErrorShape {
   return { code: 'validation', message };
 }
 
+function boundedProviderText(value: string, maximum: number): string {
+  const bytes = Buffer.from(value, 'utf8');
+  if (bytes.length <= maximum) return value;
+  return `${bytes.subarray(0, maximum - 3).toString('utf8').replace(/\uFFFD$/, '')}...`;
+}
+
 function valid(schema: ToolInputSchema, value: unknown): boolean {
   switch (schema.type) {
     case 'null': return value === null;
@@ -129,6 +136,17 @@ export class ToolRegistry {
   }
 
   registration(name: string): ToolDefinition | undefined { return this.byName.get(name); }
+
+  /** Derives model-visible continuation data without changing canonical execution evidence. */
+  projectProviderResult(result: ToolResult): ToolResult {
+    if (!result.result.ok) return {
+      ...result,
+      result: { ok: false, error: { code: boundedProviderText(result.result.error.code, 128), message: boundedProviderText(result.result.error.message, 4096) } },
+    };
+    const project = this.byName.get(result.name)?.projectProviderResult;
+    if (!project) return result;
+    return { ...result, result: { ok: true, value: project(structuredClone(result.result.value)) } };
+  }
 
   /** Returns a capability-reducing view of this registry using the original registrations. */
   select(names: readonly string[]): ToolRegistry {

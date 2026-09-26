@@ -831,6 +831,7 @@ export class AgentLoopApplicationService {
 
         toolRounds += 1;
         const results = [];
+        const providerResults = [];
         for (const call of calls) {
           toolCalls += 1;
           if (toolCalls > stageToolLimit) {
@@ -852,6 +853,7 @@ export class AgentLoopApplicationService {
             yield* emit({ type: 'tool.failed', turnId, callId: call.callId, name: call.name, result: result.result, execution });
             if (duplicateReads >= duplicateLimit) throw new GeorgeError('budget', `Structured stage duplicate/no-progress limit of ${duplicateLimit} exhausted.`);
             results.push(result);
+            providerResults.push(registry.projectProviderResult(result));
             continue;
           }
           const iterator = this.executeTool(submission.session, turnId, call, submission.signal, budget, undefined, undefined, registry, submission.executionPolicy);
@@ -861,16 +863,17 @@ export class AgentLoopApplicationService {
             next = await iterator.next();
           }
           results.push(next.value);
+          providerResults.push(registry.projectProviderResult(next.value));
           if (next.value.result.ok && execution?.effect === 'workspace_mutation') mutationEpoch += 1;
           if (next.value.result.ok && fingerprint !== undefined) successfulReads.set(fingerprint, mutationEpoch);
         }
         if (submission.completeAfterSuccessfulToolRound && results.some((result) => result.result.ok)) break;
-        continuationTokens += Math.ceil(JSON.stringify(results).length / 4);
+        continuationTokens += Math.ceil(JSON.stringify(providerResults).length / 4);
         const continuationEstimate = context.estimatedTokens + continuationTokens;
         if (continuationEstimate > selection.profile.providerInputTokens) {
           throw new GeorgeError('budget', `Frozen context profile ${selection.profile.id} cannot continue safely: estimated continuation context ${continuationEstimate} exceeds its ${selection.profile.providerInputTokens} token provider-input budget.`);
         }
-        continuation = { responseId, toolResults: results };
+        continuation = { responseId, toolResults: providerResults };
       }
       yield* this.invokeHooks(submission.session, { name: 'turn.completed', sessionId: submission.session.id, turnId, runId: budget.id }, budget, submission.signal);
       yield* emit({ type: 'turn.completed', turnId });
