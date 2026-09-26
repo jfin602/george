@@ -1,67 +1,116 @@
-TASK: Phase 10 / P3 — Stable prefix and late dynamic round context
+GEORGE TASK FORMAT: 1
 
-MODEL / REASONING / USAGE
+STACK: p10
+TASK: Phase 10 / P3 — Stable provider prefix and late dynamic round context
+KIND: implementation
+
+VERSIONING
+
+The assigned project version is `0.10.3`.
+
 - Recommended configuration: `Sol High`.
 - Browser required: no.
 
-VERSIONING
-- This prompt's assigned project version is `0.10.3`.
-
 GOAL
 
-Reduce repeated local-model prefill by keeping stable provider instructions stable and moving changing task/alignment state late in the request.
+Preserve Phase 9 mission-card authority while keeping invariant provider instructions byte-stable across structured continuations and moving changing current-round state into a bounded late dynamic context seam.
 
-Read Phase 10 authority, Phase 8 context contracts, Phase 9 mission-card authority, current ProviderRequest/LM Studio adapter, and P1/P2 telemetry.
+READ FIRST
 
-REQUIRED DESIGN
+- REQUIRED: BOOT.md
+- REQUIRED: docs/planning/p10-agent-loop-throughput/decision-record.md
+- REQUIRED: docs/planning/p10-agent-loop-throughput/qualification-plan.md
+- REQUIRED: docs/tasks/p10/optimization-ledger.md
+- REQUIRED: docs/tasks/p10/P1-baseline.md
+- REQUIRED: docs/planning/c9-final-live-convergence/decision-record.md
+- REQUIRED: docs/planning/c9-gen-op/decision-record.md
 
-Add the smallest provider-independent request seam for bounded late dynamic round context.
+INSPECT
 
-Stable content should remain byte-stable across continuations when semantically unchanged:
-- George invariants;
-- operation-independent stable instructions;
-- stable tool definitions/task semantics where practical.
+- current context rendering and provider request construction
+- per-round alignment/mission-card seam
+- continuation token/profile promotion accounting
+- canonical rebase construction
+- LM Studio Responses request serialization/tests
+- benchmark provider input/cache usage normalization
 
-Changing content stays George-owned and recomputed:
-- current work unit;
-- fresh/stale evidence;
-- validation failure;
-- mutation generation;
-- next completion condition;
-- stop constraints.
+REQUIREMENTS
 
-The mission card remains deterministic, bounded, non-authoritative, and included in provider-input/pressure accounting.
+- R1: Introduce the smallest provider-independent bounded late dynamic round-context field or equivalent typed request seam.
+- R2: Stable George/base/Operation-protocol instructions remain byte-identical across continuation rounds when their semantic content is unchanged.
+- R3: Structured implementation/correction still recomputes the deterministic mission card/current round state immediately before every logical provider round.
+- R4: Dynamic round context is supplied late enough that it does not unnecessarily rewrite the stable prefix, while preserving instruction precedence and trust semantics.
+- R5: Continuation/context-pressure accounting includes the dynamic tail and provider-reported usage exactly as safely as the inherited Phase 8/9 path.
+- R6: Canonical rebase carries current round context but never reuses failed incomplete response IDs or makes provider cache state authoritative.
+- R7: Ordinary Human-mode turns with no dynamic structured alignment retain existing request semantics.
+- R8: LM Studio adapter serializes the new field through a supported Responses input shape without receiving TaskState objects or owning mission-card logic.
+- R9: Unsupported adapter/request shapes fail explicitly rather than silently dropping current structured alignment.
+- R10: Normalize optional cached-input token usage only when actually reported; no cache-hit claim may be inferred from latency alone.
+- R11: Measure a focused structured-tool/multi-round benchmark comparison against the current accepted P2 baseline and append `accept | revise | revert` disposition to the optimization ledger.
+- R12: Set package version to 0.10.3 and add permanent stable-prefix/mission-card freshness regressions.
 
-LM Studio adapter translates the provider-independent late context into a safe Responses wire shape. It must remain TaskState-blind.
+INVARIANTS
 
-CANONICAL REBASE
+- I1: Mission card remains provider-facing derived context, never canonical authority.
+- I2: Required/current/recovery/task context cannot be silently omitted for cache locality.
+- I3: Provider-native response/cache state is never the sole copy of George state.
+- I4: No task permission or instruction precedence changes.
+- I5: No B2/C2 run.
+- I6: No root package-lock.json.
 
-A rebase must receive the latest late dynamic context while discarding failed provider-native response identity exactly as Phase 9 recovery requires.
+WORKFLOW
 
-CACHE METRICS
+W1 — Add late round-context contract
+Covers: R1, R2, R4, R8, R9
+Depends on: none
 
-Normalize provider-reported cached input tokens when available and record cache ratio only from real provider data.
+W2 — Integrate structured mission-card/rebase/accounting
+Covers: R3, R5, R6, R7, R10
+Depends on: W1
 
-Do not claim cache improvement from request-shape inspection alone.
-
-PERMANENT REGRESSIONS
-
-Prove:
-- stable instructions identical across continuation rounds;
-- dynamic task context refreshes after tool/mutation/failure changes;
-- ordinary Human-mode requests remain compatible;
-- continuation pressure counts dynamic context;
-- LM Studio initial/continuation bodies preserve required context/tool results/response identity;
-- unsupported encoding fails explicitly rather than dropping mission authority;
-- replay/rebase safety remains Green.
+W3 — Measure and disposition
+Covers: R11, R12
+Depends on: W1, W2
 
 VALIDATION
 
-Run focused context/provider/agent-loop/structured/recovery tests, Phase 5/9 floors, benchmark comparisons, fast live gate once, typecheck, runner, broad suite, and `git diff --check`.
+V1 — Agent-loop/context stable-prefix tests
+Covers: R1, R2, R3, R4, R5, R6, R7, R12
+Run: DISCOVER
+Scope: agent-loop, context continuation, mission-card and rebase tests affected by P3
 
-Classify this optimization accept/revise/revert from measured evidence.
+V2 — LM Studio request-body tests
+Covers: R8, R9, R10
+Run: DISCOVER
+Scope: LM Studio Responses initial/continuation request serialization and usage parsing tests affected by P3
 
-Do not:
-- introduce opaque compressed DSL;
-- parallelize tools;
-- add helper inference.
+V3 — TypeScript
+Covers: R1, R8
+Run: npm run typecheck
+
+V4 — Runner regression
+Covers: R12
+Run: npm run test:runner
+
+V5 — Diff hygiene
+Covers: R12
+Run: git diff --check
+
+STOP CONDITIONS
+
+- S1: Do not sacrifice current task/evidence/permission context merely to improve cache reuse.
+- S2: Revert if correctness/freshness regresses or provider compatibility cannot be made explicit.
+- S3: Do not claim cache improvement without provider-reported cached-token evidence.
+- S4: Do not run B2/C2.
+- S5: Do not claim completion while required validation fails.
+
+DELIVERABLES
+
+- D1: Stable-prefix/late-round-context implementation or documented reverted experiment.
+- D2: Permanent provider/context regressions.
+- D3: P3 optimization-ledger disposition.
+- D4: package.json at 0.10.3.
+
+EVIDENCE
+
+Record byte-stability assertions, request-shape evidence, token/cache fields where available, focused benchmark deltas, and exact disposition.

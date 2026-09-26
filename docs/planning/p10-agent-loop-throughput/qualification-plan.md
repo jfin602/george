@@ -65,6 +65,19 @@ Use fresh isolated workspace/session per workload and bounded workload deadlines
 
 Ordinary functional failure is recorded; later diagnostic workloads continue when common validity remains Green.
 
+## Fast live deadlines
+
+Use one qualification-owned outer deadline per complete fast workload:
+- greeting: 120000 ms;
+- three-file: 240000 ms;
+- Gate A: 360000 ms;
+- B3: 300000 ms;
+- C3: 240000 ms.
+
+Deadline expiry is bounded Not Green evidence and does not modify production RunBudget.
+
+Milestone-only B2/C2 use 900000 ms / 600000 ms respectively.
+
 ## B3 acceptance
 
 Must prove:

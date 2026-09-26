@@ -57,3 +57,27 @@ B2/C2 stay immutable and are not rewritten into B3/C3.
 B3/C3 are new Phase 10 instruments.
 
 B2/C2 run only at milestone qualification after the primary-only campaign and at later consolidation as justified.
+
+
+## Qualification-owned deadlines
+
+Fast live workloads use one outer qualification deadline per complete workload invocation.
+
+Initial hard ceilings:
+- greeting: 120000 ms;
+- three-file: 240000 ms;
+- Gate A: 360000 ms;
+- B3: 300000 ms;
+- C3: 240000 ms.
+
+These are emergency ceilings, not target runtimes.
+
+Deadline expiry:
+- cancels through the normal signal path;
+- records bounded Not Green evidence;
+- does not change production RunBudget;
+- does not suppress later isolated diagnostic workloads while common sweep validity remains Green.
+
+Milestone-only frozen Phase 9 gates use:
+- B2: 900000 ms;
+- C2: 600000 ms.

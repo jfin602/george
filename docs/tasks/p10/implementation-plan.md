@@ -1,119 +1,220 @@
-# Phase 10 Implementation Plan
+# Phase 10 Implementation Plan — Agent Loop Throughput
 
 Status: READY FOR PROMPT EXECUTION
 
-## P1 — baseline, telemetry, and fast gates
+Phase: 10  
+Baseline: `0.10.0`
 
-- transition package into the `0.10.x` line;
-- extend benchmark/live-work telemetry for Phase 10 metrics without breaking historical artifact readers;
-- add immutable B3/C3 fixtures and hidden acceptance;
-- add a fast-gate runner/qualification path;
-- capture initial Phase 10 fast baseline;
-- do not optimize agent behavior yet.
+## Cross-phase invariants
 
-## P2 — useful-output liveness
+All prompts preserve:
+- Task Prompt v1;
+- canonical TaskState/StackState;
+- George-owned validation/completion;
+- permission/containment ceilings;
+- replay safety and ambiguous-effect handling;
+- response-completion-before-side-effect semantics unless explicitly requalified;
+- evidence freshness;
+- duplicate/no-progress;
+- session/evidence durability;
+- frozen Phase 9 evidence;
+- package-lock absence.
 
-Implement accepted/prefill/useful-output/completed liveness semantics.
+## Optimization ledger
 
-Do not treat response acceptance alone as active generation.
+P1 creates `docs/tasks/p10/optimization-ledger.md`.
 
-Add provider-independent typed activity semantics and fake-time regression coverage.
+Every P2-P9 prompt appends:
+- optimization identity;
+- baseline candidate/artifact;
+- candidate change;
+- focused correctness;
+- benchmark/live comparison;
+- intended metric;
+- observed delta;
+- disposition: accept / revise / revert;
+- accepted baseline commit/artifact after disposition.
 
-## P3 — stable prefix / late dynamic context
+A reverted experiment still advances the phase version with code returned to the prior accepted production behavior plus tests/evidence documenting the rejection.
 
-Extend ProviderRequest with the smallest provider-independent dynamic-tail seam.
+## P1 plan
 
-Keep stable instructions byte-stable when unchanged.
+### Telemetry
+Extend benchmark/live-work schema compatibly for:
+- cached input tokens when reported;
+- Human/Operation round counts when introduced later;
+- internal text amount;
+- tool batch counts/width;
+- concurrent read batches/timing;
+- rounds avoided;
+- George controls;
+- correction cycles.
 
-Move recomputed mission-card/control state late in the request while preserving token-pressure accounting and canonical rebase.
+Fields unavailable before later prompts remain null/zero with clear semantics rather than fabricated measurements.
 
-Qualify LM Studio request bodies and cache telemetry.
+### B3/C3
+Create `test/fixtures/p10-live-work/` plus independent hidden acceptance.
 
-## P4 — George Operation Protocol v1
+B3 should be pure Node and materially smaller than B2.
 
-Add Human vs Operation execution mode.
+C3 should be a tiny existing pure-Node repo and materially smaller than C2.
+
+Freeze instrument metadata/digests before first official run.
+
+### Baseline
+Capture:
+- quick benchmark;
+- full benchmark once if runtime is valid;
+- fast live matrix once;
+- exact runtime/Git/model provenance.
+
+Do not run B2/C2.
+
+## P2 plan — useful-output watchdog
+
+Refine provider activity seam to classify:
+- accepted;
+- useful output progress.
+
+`response.started` does not switch to active-output timeout.
+
+Add provider-attempt timing events/metrics without exposing raw payloads.
+
+Use fake-time deterministic tests and a focused live/benchmark comparison.
+
+## P3 plan — stable prefix
+
+Introduce a bounded late dynamic round-context provider field or equivalent typed seam.
+
+Keep stable instructions byte-stable.
+
+Ensure continuation/rebase/context-pressure accounting includes dynamic tail.
+
+LM Studio adapter gets only wire serialization logic.
+
+Measure cached input usage when actually reported.
+
+## P4 plan — Operation Protocol v1
+
+Add explicit provider/application Human versus Operation mode.
 
 Operation mode:
-- no routine natural-language narration;
-- normal tools remain canonical ToolRegistry capabilities;
-- George control is non-executable/non-authoritative;
-- no mandatory handoff round when George already knows the next transition.
+- tool calls;
+- George application-control output;
+- no routine prose.
 
-Preserve response completion before tool/control acceptance.
+Add non-executable `handoff`.
 
-## P5 — deterministic round elimination
+Do not require handoff when George can deterministically advance from a completed tool result.
 
-Trace structured orchestration and remove provider calls for transitions George can already determine.
+Do not execute provisional control/tool calls before response completion.
 
-Add explicit observability for avoided model rounds.
+Run fast B3/C3 after this major behavior change.
 
-Do not infer work-unit completion beyond deterministic authored/current evidence.
+## P5 plan — deterministic round elimination
 
-## P6 — multi-operation read batching
+Trace every structured provider call.
 
-Improve operation-mode prompting/protocol so one provider round can propose a bounded set of independent observations.
+Remove only boundaries where George already owns all state/authority.
 
-Return one normalized result batch in original call order.
+Instrument `modelRoundsAvoided`.
 
-This prompt does not yet make execution concurrent.
+Add regressions for validation, work-unit, stack, cancellation, budget, approval, and recovery transitions.
 
-## P7 — dependency-safe read-only concurrency
+## P6 plan — batching
 
-Execute qualified independent replay-safe observation calls concurrently.
+Introduce a batch abstraction around the existing per-response `calls[]`.
 
-Preserve deterministic result order, cancellation, failure isolation, budgets, duplicate-read accounting, and effect boundaries.
+Validate/effect-classify every member.
 
-No mutation/process/approval/ambiguous concurrency.
+Execute sequentially.
 
-## P8 — focused correction and output budgets
+Return provider results in original call order.
 
-Build a minimal Correction Frame from failed validation and fresh evidence.
+Measure batch width/compression.
 
-Avoid broad rediscovery.
+Use `independent-multi-tool-001` and deterministic mixed-success tests.
 
-Directly revalidate after repair.
+## P7 plan — concurrency
 
-Add provider-independent output-budget intent by operation type where supported, without truncating structured arguments.
+Add dependency-safe scheduler for replay-safe local reads only.
 
-## P9 — primary-only qualification and milestone gates
+Do not infer safety from tool name alone; use canonical effect/replay metadata plus dependency rules.
+
+Execute safe members concurrently.
+
+Normalize results in provider call order.
+
+Use delayed deterministic fixtures to prove overlap.
+
+No concurrent mutations/processes/approvals/external effects.
+
+## P8 plan — correction
+
+Build focused correction frame from current TaskState/freshness/failed validation.
+
+Avoid broad reinspection by default.
+
+After repair, George reruns failed validation directly.
+
+Reinspect only stale/unknown evidence.
+
+Exercise induced-failure B3 variant and deterministic correction tests.
+
+## P9 plan — output budgets/cleanup
+
+Add provider-independent per-mode output policy only where adapter support is explicit.
+
+Protect function/control payload capacity.
+
+Audit remaining internal text/model rounds.
+
+Retain limits only with correctness + measured benefit.
+
+Run quick benchmark + fast live matrix.
+
+## P10 plan — primary-only milestone
+
+Freeze final accepted primary-only candidate.
 
 Run:
-- affected deterministic/broad floors;
-- benchmark comparisons;
-- fast live gate;
-- frozen B2 once;
-- frozen C2 once.
+- affected deterministic floors;
+- typecheck/runner/broad;
+- quick/full benchmark;
+- selected agentic-context workload(s);
+- fast live matrix;
+- B2 exactly once;
+- C2 exactly once.
 
-Create Phase 10 primary-only optimization report and optimization ledger.
+Preserve every result.
 
-No repair-by-rerun.
+No repair between B2/C2.
 
-## P10 — bounded helper A/B
+Record cumulative deltas from P1 baseline.
 
-Run one non-authoritative helper experiment after P9.
+## P11 plan — helper A/B
 
-The helper gets exactly one evidence-preparation job.
+Use one narrow helper role, preferably evidence/result compression or relevance selection.
 
-Compare against the P9 primary-only baseline.
+Run the same bounded fixture primary-only and helper-assisted.
 
-Retain only as research evidence; do not make helper production authority or baseline behavior.
+Helper cannot own tools/permissions/TaskState/validation/completion.
 
-## P11 — closeout
+Do not promote helper to production in Phase 10.
 
-Evidence-only Phase 10 closeout.
+## P12 plan — closeout
 
-Summarize accepted/revised/reverted changes, final fast-gate and benchmark deltas, B2/C2 milestone outcomes, helper A/B, and Phase 11 handoff.
+Create `docs/phase-10-closeout.md`.
 
-## Regression emphasis
+Report:
+- optimization ledger;
+- accepted primary-only baseline;
+- cumulative deltas;
+- fast live state;
+- benchmark state;
+- B2/C2 milestone state;
+- helper A/B;
+- remaining gaps;
+- Phase 11 readiness.
 
-High priority:
-- canonical assistant commit buffering;
-- provider continuation/replay safety;
-- TaskState/StackState authority;
-- validation/correction;
-- permission/effect classification;
-- cancellation;
-- duplicate/no-progress;
-- deterministic event ordering;
-- benchmark schema compatibility;
-- fast-gate immutability.
+Do not owner-close Phase 10.

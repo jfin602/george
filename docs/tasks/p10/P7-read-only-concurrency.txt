@@ -1,78 +1,117 @@
-TASK: Phase 10 / P7 — Dependency-safe read-only concurrency
+GEORGE TASK FORMAT: 1
 
-MODEL / REASONING / USAGE
+STACK: p10
+TASK: Phase 10 / P7 — Dependency-safe read-only tool concurrency
+KIND: implementation
+
+VERSIONING
+
+The assigned project version is `0.10.7`.
+
 - Recommended configuration: `Sol High`.
 - Browser required: no.
 
-VERSIONING
-- This prompt's assigned project version is `0.10.7`.
-
 GOAL
 
-Execute proven-independent replay-safe observation calls concurrently while preserving deterministic George evidence and Phase 9 safety boundaries.
+Execute only proven-independent replay-safe local read observations concurrently inside a P6 tool batch, while preserving deterministic provider result ordering, per-call lifecycle evidence, cancellation, budgets, and all sequential side-effect boundaries.
 
-Read Phase 10 authority, P6 batch representation, ToolRegistry execution/effect metadata, cancellation/budget/recovery code, and tests.
+READ FIRST
 
-PARALLEL ELIGIBILITY
+- REQUIRED: BOOT.md
+- REQUIRED: docs/planning/p10-agent-loop-throughput/decision-record.md
+- REQUIRED: docs/planning/p10-agent-loop-throughput/qualification-plan.md
+- REQUIRED: docs/tasks/p10/optimization-ledger.md
+- REQUIRED: docs/stability-contract.md
 
-Initial eligible class is only independent replay-safe local observations, such as:
-- `read_file`;
-- `list_directory`;
-- `search_text`;
-- `git_status`;
-- `git_diff`;
-when canonical execution metadata and dependency analysis prove safe independence.
+INSPECT
 
-INELIGIBLE
+- P6 tool-batch abstraction and member validation/effect metadata
+- ToolExecutionMetadata effect/replay-safety contracts
+- local read/list/search/Git executors
+- cancellation/AbortSignal handling
+- budgets and duplicate/no-progress
+- progress/work event timing
+- independent-multi-tool benchmark fixture
+- existing delayed/fake executor test conventions
 
-Keep sequential:
-- workspace mutations;
-- processes with effects;
-- approval-bearing operations;
-- external/remote/browser mutations;
-- ambiguous/unknown effects;
-- calls whose arguments/meaning depend on another call's result.
+REQUIREMENTS
 
-EXECUTION
+- R1: Add a dependency-safety classifier/scheduler for batch members using canonical validated effect/replay metadata and explicit dependency rules, not raw model claims or tool-name heuristics alone.
+- R2: Initial concurrent eligibility is limited to independent replay-safe local reads/observations.
+- R3: Mutations, processes, approvals, remote/network/browser/MCP effects, unknown/ambiguous effects, and calls dependent on earlier batch results remain sequential.
+- R4: Eligible concurrent reads start without waiting for peer completion and support shared caller cancellation plus per-call bounded execution.
+- R5: Provider-visible result order remains original provider call order regardless of completion order.
+- R6: Every call retains unique tool.requested/started/completed/failed identity and normal effect/budget evidence.
+- R7: One member failure/cancellation cannot fabricate peer outcome; mixed results remain explicit.
+- R8: Duplicate/no-progress and mutation-epoch semantics remain correct when a concurrent read batch is formed.
+- R9: Add metrics for concurrent read batches, average/max width, member summed execution time, batch wall time, and observed overlap where deterministically measurable.
+- R10: Add deterministic delayed-executor tests proving overlap for independent reads and forced serialization for dependency/effect-unsafe combinations.
+- R11: Compare `independent-multi-tool-001` and a deterministic delayed read fixture against the accepted P6 baseline; use a fast efficacy subset only if necessary.
+- R12: Append `accept | revise | revert` disposition; revert concurrency if correctness or measured end-to-end benefit is absent/materially negative.
+- R13: Set package version to 0.10.7.
 
-A concurrent batch must:
-- share bounded cancellation;
-- retain one stable operation identity per call;
-- enforce each tool's normal validation/policy;
-- preserve original provider-call order in normalized results regardless of completion order;
-- isolate failures;
-- account budgets/tool execution exactly once;
-- leave recovery/ambiguous-effect semantics unchanged.
+INVARIANTS
 
-Do not create a second execution authority.
+- I1: No concurrent workspace mutation in P7.
+- I2: No concurrent process/external/approval/ambiguous effect in P7.
+- I3: Deterministic result ordering does not imply serialized execution.
+- I4: Cancellation and budgets remain George-owned.
+- I5: No B2/C2 run.
+- I6: No root package-lock.json.
 
-METRICS
+WORKFLOW
 
-Record:
-- concurrent read count;
-- batch wall time;
-- summed child tool runtime;
-- parallel efficiency;
-- provider-round count remains separately measured.
+W1 — Classify dependency-safe read members
+Covers: R1, R2, R3, R8
+Depends on: none
 
-PERMANENT REGRESSIONS
+W2 — Execute/read-project concurrently with deterministic ordering
+Covers: R4, R5, R6, R7, R9
+Depends on: W1
 
-Cover:
-- true parallel overlap under controlled fake tools;
-- deterministic result ordering;
-- cancellation fanout/cleanup;
-- one child failure with successful sibling evidence preserved;
-- no concurrency for mutations/process/approval/ambiguous tools;
-- duplicate/no-progress correctness;
-- TaskState/evidence freshness unaffected.
+W3 — Prove overlap and disposition
+Covers: R10, R11, R12, R13
+Depends on: W1, W2
 
 VALIDATION
 
-Run focused tool/execution/recovery/agent-loop tests, benchmark independent-multi-tool, fast live gate once, typecheck, runner, broad suite, and `git diff --check`.
+V1 — Concurrency scheduler/agent-loop tests
+Covers: R1, R2, R3, R4, R5, R6, R7, R8, R10
+Run: DISCOVER
+Scope: deterministic delayed-tool, agent-loop batching, cancellation, budget and effect-boundary tests affected by P7
 
-Classify accept/revise/revert. Retain only if end-to-end benefit is measurable or it materially reduces serialization in representative batches.
+V2 — Benchmark concurrency regressions
+Covers: R9, R11
+Run: DISCOVER
+Scope: benchmark tests/fixtures for independent multi-tool timing and correctness
 
-Do not:
-- parallelize dependent operations;
-- introduce multi-agent scheduling;
-- add helper inference.
+V3 — TypeScript
+Covers: R1, R9
+Run: npm run typecheck
+
+V4 — Runner regression
+Covers: R13
+Run: npm run test:runner
+
+V5 — Diff hygiene
+Covers: R13
+Run: git diff --check
+
+STOP CONDITIONS
+
+- S1: If independence cannot be established from canonical metadata/rules, execute sequentially.
+- S2: Do not add speculative dependency inference.
+- S3: Revert if concurrency yields no meaningful measured benefit on the target batch or creates lifecycle/evidence ambiguity.
+- S4: Do not run B2/C2.
+- S5: Do not claim completion while required validation fails.
+
+DELIVERABLES
+
+- D1: Dependency-safe replay-safe read concurrency or documented reverted experiment.
+- D2: Permanent overlap/serialization/lifecycle tests.
+- D3: P7 benchmark comparison and optimization-ledger disposition.
+- D4: package.json at 0.10.7.
+
+EVIDENCE
+
+Record deterministic overlap evidence, before/after batch wall time, summed member time, provider rounds, correctness, and disposition.

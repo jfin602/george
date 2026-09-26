@@ -1,78 +1,121 @@
-TASK: Phase 10 / P5 — Deterministic model-round elimination
+GEORGE TASK FORMAT: 1
 
-MODEL / REASONING / USAGE
+STACK: p10
+TASK: Phase 10 / P5 — Deterministic model-round elimination
+KIND: implementation
+
+VERSIONING
+
+The assigned project version is `0.10.5`.
+
 - Recommended configuration: `Sol High`.
 - Browser required: no.
 
-VERSIONING
-- This prompt's assigned project version is `0.10.5`.
-
 GOAL
 
-Remove primary-model calls for transitions George can already determine from canonical state.
+Remove provider/model rounds that exist only to confirm state transitions George already owns, while preserving every reasoning, approval, recovery, validation, cancellation, budget, and task-state decision that actually requires a boundary.
 
-Read Phase 10 authority and current structured-task/task-stack/coding-workflow/validation code and tests.
+READ FIRST
 
-AUDIT
+- REQUIRED: BOOT.md
+- REQUIRED: docs/planning/p10-agent-loop-throughput/decision-record.md
+- REQUIRED: docs/planning/p10-agent-loop-throughput/qualification-plan.md
+- REQUIRED: docs/tasks/p10/optimization-ledger.md
+- REQUIRED: docs/tasks/p10/P1-baseline.md
+- REQUIRED: docs/stability-contract.md
 
-Trace every provider invocation inside:
-- structured inspection;
-- implementation;
-- validation discovery;
-- validation execution;
-- correction;
-- work-unit completion;
-- stack progression;
-- final workflow completion.
+INSPECT
 
-CLASSIFICATION
+- every StructuredTaskApplicationService provider call and transition around INSPECT, implementation, validation, correction and completion
+- StructuredTaskStackApplicationService progression
+- AgentLoopApplicationService completion/handoff semantics after P4
+- TaskState/StackState transition helpers
+- validation/discovery behavior
+- progress/work/session persistence events
+- cancellation/budget/permission/recovery checkpoints
 
-For each invocation classify:
-- inference-required;
-- deterministic orchestration;
-- legacy/duplicate.
+REQUIREMENTS
 
-Move deterministic orchestration into George-owned code.
+- R1: Produce an explicit audit of current structured provider boundaries identifying which require model inference and which are deterministic George orchestration.
+- R2: Remove only provider rounds for transitions where George already has all canonical data and authority needed to proceed.
+- R3: George may directly advance from completed work to declared validation when the work-unit completion condition is deterministically satisfied by current task/evidence state.
+- R4: George may directly advance from a passing validation to the next validation/work unit/stack task without asking the model to confirm.
+- R5: After a completed correction repair, George may rerun the failed declared validation directly.
+- R6: Do not remove provider rounds needed for semantic code understanding, action selection, mutation design/production, genuine repair reasoning, approval, ambiguous recovery, or unresolved completion.
+- R7: Preserve cancellation, stop conditions, hard stage/run budgets, permission denials, ambiguous effects, recovery planning, and evidence durability at every removed boundary.
+- R8: Add explicit `modelRoundsAvoided` metrics with bounded reason categories tied to deterministic orchestration decisions.
+- R9: Ensure lifecycle/progress/session evidence makes every direct George transition explainable without model narration.
+- R10: Add permanent regressions showing deterministic round removal cannot skip failed validation, required approval, stale evidence reinspection, cancellation, or outcome-unknown recovery.
+- R11: Measure focused structured workflows plus B3/C3 or an equivalent fast subset against the accepted P4 baseline; record provider-round/elapsed/task-efficacy deltas.
+- R12: Append `accept | revise | revert` disposition to the optimization ledger and revert production changes if correctness or efficacy regresses.
+- R13: Set package version to 0.10.5.
 
-EXPECTED DIRECT GEORGE TRANSITIONS
+INVARIANTS
 
-Where current authored state/evidence is sufficient:
-- validation pass/fail state;
-- next declared validation;
-- begin correction;
-- rerun failed validation after repair;
-- work-unit/stack advancement;
-- evidence freshness/staleness;
-- stop-condition/permission decisions;
-- final internal stage completion.
+- I1: George never infers semantic task correctness merely to avoid a model round.
+- I2: Model-round elimination cannot expand permissions or suppress approvals.
+- I3: Validation truth remains George-owned observed execution evidence.
+- I4: Recovery/outcome-unknown decisions are never skipped for speed.
+- I5: No B2/C2 run.
+- I6: No root package-lock.json.
 
-Do not invent semantic completion when authored completion conditions are not deterministically satisfied.
+WORKFLOW
 
-OPERATION MODE
+W1 — Audit provider boundaries
+Covers: R1, R6
+Depends on: none
 
-Use the P4 protocol. A successful operation should transition directly when George knows the next action.
+W2 — Remove deterministic boundaries
+Covers: R2, R3, R4, R5, R7, R8, R9
+Depends on: W1
 
-Do not add a provider round merely for `handoff` or "done".
+W3 — Protect authority with regressions
+Covers: R10
+Depends on: W2
 
-OBSERVABILITY
-
-Add bounded evidence for model rounds avoided by deterministic orchestration.
-
-Tests must prove removed rounds do not hide:
-- validation;
-- approvals;
-- recovery checkpoints;
-- failures;
-- canonical assistant output that actually belongs to Human mode.
+W4 — Measure and disposition
+Covers: R11, R12, R13
+Depends on: W2, W3
 
 VALIDATION
 
-Run focused structured-task/task-stack/coding-workflow/recovery/session tests, Phase 9 integration floors, benchmark multi-round/edit cases, fast live gate once, typecheck, runner, broad suite, and `git diff --check`.
+V1 — Structured orchestration transition tests
+Covers: R2, R3, R4, R5, R7, R8, R9, R10
+Run: DISCOVER
+Scope: structured-task, task-state, task-stack, validation, recovery and progress tests affected by P5
 
-Record before/after logical provider rounds and efficacy; classify accept/revise/revert.
+V2 — Phase 5/9 integration
+Covers: R6, R7, R10
+Run: DISCOVER
+Scope: inherited Phase 5 recovery and Phase 9 qualification tests affected by model-round removal
 
-Do not:
-- loosen task completion authority;
-- remove inference-required rounds;
-- parallelize tools yet;
-- add helper inference.
+V3 — TypeScript
+Covers: R8, R9
+Run: npm run typecheck
+
+V4 — Runner regression
+Covers: R13
+Run: npm run test:runner
+
+V5 — Diff hygiene
+Covers: R13
+Run: git diff --check
+
+STOP CONDITIONS
+
+- S1: If a proposed removed round currently carries genuine reasoning/approval/recovery semantics, preserve it.
+- S2: Do not replace model reasoning with brittle string/prose heuristics.
+- S3: Revert if task efficacy, hidden acceptance, recovery, or permission floors regress.
+- S4: Do not run B2/C2.
+- S5: Do not claim completion while required validation fails.
+
+DELIVERABLES
+
+- D1: Deterministic model-round elimination or documented reverted experiment.
+- D2: Boundary audit and permanent transition regressions.
+- D3: P5 optimization-ledger disposition and measured rounds avoided.
+- D4: package.json at 0.10.5.
+
+EVIDENCE
+
+Record exact provider rounds avoided by reason, before/after provider attempts/rounds/elapsed time, validation/hidden acceptance, and exact disposition.
