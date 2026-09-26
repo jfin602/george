@@ -29,14 +29,18 @@ After Gate A Green, `greenfield-express-v1` remained historically **Not Green** 
 
 The one official `greenfield-express-v2` Gate B2 attempt is also **Not Green**, but for a different reason. P1 top-level INSPECT completed correctly. The implementation round first proposed an existing-file `package.json` overwrite without the required `expectedSha256`; that mutation was correctly rejected. The same provider response then proposed `write_file("src/app.js")` while `src/` did not exist. Current pre-dispatch mutation-path preparation requires an existing parent, so that request did not reach normal `tool.started`/terminal tool execution and the work unit failed. George also has no explicit directory-creation tool in the structured coding surface. No mutation succeeded, V1 did not run, StackState failed at P1, hidden acceptance did not run, and Gate C2 remained unspent.
 
-This establishes the next production correction boundary: **`c9-mutation-precondition-convergence`**. It must preserve SHA/precondition safety while making ordinary local mutation prerequisite/path failures normal bounded tool results that the model can react to, and it must add an explicit workspace-native `create_directory` capability rather than silently teaching `write_file` to create parents.
+`c9-mutation-precondition-convergence` subsequently implemented and deterministically qualified that production boundary: explicit `create_directory`, recoverable no-side-effect mutation prerequisite/path failures, permission/recovery integration, structured tool exposure, and inherited affected floors are Green. Its qualification P2 did not spend fresh Gate A/B2/C2 because the authored prompt incorrectly made aggregate broad `npm test` Green a hard prerequisite. The broad Node 26 run remained Not Green with five OpenTUI renderer failures and one native-TTY skip; those counts match the immediately preceding broad characterization, but counts alone do not prove candidate non-regression because P1 changed application-loop/progress code consumed by the TUI.
+
+The current correction boundary is **`c9-qualification-preflight-scope`**. It must compare the exact pre-P1 baseline `d7e565ccb0e694166e6fe4346b56f4746f0697f1` to production candidate `04405570b92680e6297b48391a7d0bdf0aa8ed5e` under equivalent supported conditions, keep aggregate broad state separate from candidate regression delta, and only then authorize live gates.
 
 Final Phase 9 qualification from here:
-- Gate A: rerun after the production mutation/tool/recovery correction; the prior Green result remains historical evidence but cannot be inherited across changed production execution behavior;
-- Gate B2: after Gate A Green, run one fresh official attempt against the unchanged `greenfield-express-v2` instrument/digest;
-- Gate C2: run one official `existing-express-feature-v2` attempt only after B2 Green;
-- preserve all prior v1 and B2 Not Green attempts as immutable longitudinal evidence;
-- Phase 9 is ready for owner closeout only after Gate A, B2, and C2 are Green and no new blocking regression appears.
+- hard affected-system preflight: Green;
+- controlled broad regression delta: Green, while retained aggregate broad failures keep their actual state;
+- Gate A: one fresh official attempt;
+- Gate B2: one fresh official attempt only after Gate A Green;
+- Gate C2: one official attempt only after B2 Green;
+- preserve every prior v1/v2/live/preflight result as immutable longitudinal evidence;
+- Phase 9 is ready for owner closeout only after the scoped preflight and all three live gates are Green with no new blocking regression.
 
 Correction evidence:
 - [`c9-structured-task-convergence`](tasks/c9-structured-task-convergence/closeout.md);
@@ -46,7 +50,8 @@ Correction evidence:
 - [`c9-text-file-edit-fidelity`](tasks/c9-text-file-edit-fidelity/closeout.md);
 - [`c9-mutation-intent-authority`](tasks/c9-mutation-intent-authority/closeout.md);
 - [`c9-greenfield-instrument-alignment`](tasks/c9-greenfield-instrument-alignment/closeout.md);
-- active planning: [`c9-mutation-precondition-convergence`](planning/c9-mutation-precondition-convergence/decision-record.md).
+- [`c9-mutation-precondition-convergence`](tasks/c9-mutation-precondition-convergence/closeout.md);
+- active planning: [`c9-qualification-preflight-scope`](planning/c9-qualification-preflight-scope/decision-record.md).
 
 Phase 10 remains gated on Phase 9 owner closeout.
 
