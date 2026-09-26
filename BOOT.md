@@ -103,25 +103,33 @@ Phase 9 moves deterministic requirements, work-unit/dependency state, validation
 
 The failed Phase 8 agentic edit/validation workload must remain visible longitudinal evidence. Phase 9 must not claim that structured execution fixes it until the Phase 9 live-work instruments and qualification evidence actually demonstrate improvement.
 
-### Current Phase 9 correction status — 2026-09-25
+### Current Phase 9 correction status — 2026-09-26
 
 Package remains `0.9.10`; Phase 9 remains open and Phase 10 is not opened.
 
-Post-closeout correction evidence now establishes:
-- `c9-structured-task-convergence`: production `StackState` / ordered fail-stop task-stack execution is implemented and deterministically qualified; structured stage evidence handoff, task-wide budgeting, direct George-owned validation, and bounded convergence controls are implemented;
-- `c9-qwen-workunit-convergence`: full-file `read_file.sha256` -> mutation `expectedSha256` is qualified, so a model can obtain the safe precondition required to modify an existing file;
-- `c9-inspection-execution`: provider-neutral first-round required tool choice for structured INSPECT and exception-safe live-attempt retention are qualified;
-- `c9-inspection-stage-completion`: application-owned completion after one successful INSPECT tool round is qualified, so live Gate A now reaches implementation, safe mutation, George-owned validation, and completed TaskState without inspection continuation/exhaustion;
-- `c9-text-file-edit-fidelity`: full-file text-framing evidence and recoverable existing-text framing preservation guards are qualified;
-- `c9-mutation-intent-authority`: model-requested framing changes are now subordinate to George-owned approval authority, the structured frozen-edit approval is fair to safe same-target patch/write choices, and the exact frozen Gate A is **Green** with the required 60-byte file, George-owned V1, completed/verified TaskState, hidden acceptance, zero intervention, and no exhaustion.
+Post-closeout correction evidence remains authoritative for structured task convergence, safe mutation preconditions, INSPECT execution/completion, text-file fidelity, mutation intent authority, v2 instrument alignment, explicit directory creation, and qualification-preflight scope.
 
-`c9-greenfield-instrument-alignment` has now qualified the versioned v2 instrument semantics and runner isolation while preserving the historical v1 inputs/results immutably. Its official `greenfield-express-v2` Gate B2 attempt is **Not Green**. Top-level INSPECT completed correctly, but implementation exposed the next production convergence boundary: the model first attempted to overwrite dependency-created `package.json` without the required `expectedSha256`, then a subsequent `write_file("src/app.js")` request could not reach normal tool execution because the `src/` parent did not exist. No mutation succeeded, validation did not run, StackState failed at P1, and Gate C2 remained unspent.
+`c9-qualification-preflight-scope` is now closed as **Not Green overall** at commit `d7804684801fa8418050c34d9ef097ca1adf80b6`:
+- qualification policy/preflight and controlled broad regression-delta handling are Green;
+- fresh Gate A is Green;
+- fresh `greenfield-express-v2` Gate B2 is Not Green;
+- Gate C2 remains unspent.
 
-`c9-mutation-precondition-convergence` is now implementation-complete and deterministically qualified at its production boundaries: missing/stale SHA convergence, recoverable missing-parent failures, explicit native `create_directory`, permission integration, recovery reconciliation, structured-stage exposure, and inherited regression floors are Green. Its P2 live qualification did **not** spend Gate A/B2/C2 because the generated qualification prompt accidentally promoted aggregate broad `npm test` Green into a hard prerequisite. The broad Node 26 characterization remained Not Green with five OpenTUI renderer failures and one native-TTY skip, matching the immediately preceding broad failure/skip counts.
+The official B2 attempt reached corrected mutation execution, including successful `create_directory("src")` and two successful small file writes, then failed because continuation context was estimated at 28,306 tokens against the frozen ordinary 8,192-token provider-input ceiling. Source review also shows mutation tool results currently carry internal Git working-tree snapshots into provider continuation. A separate ordinary interactive transcript reproduced frozen ordinary overshoot around 8.2-8.6k actual provider input and showed globally injected coding-workflow guidance causing a simple greeting to expand into repository inspection.
 
-The active correction is now `c9-qualification-preflight-scope`. It must restore the intended evidence model: affected-system hard gates must be Green, while broad-suite aggregate state remains separately truthful and live eligibility depends on a controlled baseline-vs-candidate regression delta rather than aggregate broad Green. Before spending any fresh live gate, compare the immutable pre-P1 baseline `d7e565ccb0e694166e6fe4346b56f4746f0697f1` against production candidate `04405570b92680e6297b48391a7d0bdf0aa8ed5e` under equivalent supported conditions.
+The active correction is now `c9-turn-context-convergence`.
 
-Current correction evidence:
+It must:
+- separate canonical/internal tool evidence from bounded provider-visible tool-result projections;
+- use provider-reported usage as continuation evidence when available;
+- preserve frozen source composition while allowing adaptive safety-envelope promotion ordinary -> medium -> large;
+- keep fixed profiles fixed and preserve >large fail-closed behavior;
+- wire ordinary production TUI turns through the base agent instead of globally injecting `CODING_WORKFLOW_GUIDANCE`;
+- leave the existing context profile constants, Task Prompt format 1, v1/v2 instruments, hidden acceptance, historical evidence, and package version unchanged.
+
+Correction baseline: `d7804684801fa8418050c34d9ef097ca1adf80b6`.
+
+Current correction evidence/planning:
 - `docs/tasks/c9-structured-task-convergence/closeout.md`;
 - `docs/tasks/c9-qwen-workunit-convergence/closeout.md`;
 - `docs/tasks/c9-inspection-execution/closeout.md`;
@@ -130,7 +138,8 @@ Current correction evidence:
 - `docs/tasks/c9-mutation-intent-authority/closeout.md`;
 - `docs/tasks/c9-greenfield-instrument-alignment/closeout.md`;
 - `docs/tasks/c9-mutation-precondition-convergence/closeout.md`;
-- active correction planning: `docs/planning/c9-qualification-preflight-scope/decision-record.md` and `docs/planning/c9-qualification-preflight-scope/qualification-plan.md`.
+- `docs/tasks/c9-qualification-preflight-scope/closeout.md`;
+- active correction planning: `docs/planning/c9-turn-context-convergence/decision-record.md` and `docs/planning/c9-turn-context-convergence/qualification-plan.md`.
 
 Historical Phase 1-8 prompts/evidence are not renumbered or rewritten.
 
@@ -169,7 +178,7 @@ Read:
 - stability/testing: `docs/stability-contract.md`;
 - roadmap: `docs/roadmap/mvp-roadmap.md`;
 - Living Project Map / Software Graph, when relevant: `docs/planning/living-project-map/decision-record.md` (then its graph, interaction, and qualification companions as needed);
-- current Phase 9 authority: `docs/planning/p9-structured-task-execution/decision-record.md`, `docs/planning/p9-structured-task-execution/task-format-v1.md`, and `docs/planning/p9-structured-task-execution/qualification-plan.md`; latest correction truth: `docs/tasks/c9-structured-task-convergence/closeout.md`, `docs/tasks/c9-qwen-workunit-convergence/closeout.md`, and `docs/tasks/c9-inspection-execution/closeout.md`, plus `docs/tasks/c9-inspection-stage-completion/closeout.md`, `docs/tasks/c9-text-file-edit-fidelity/closeout.md`, `docs/tasks/c9-mutation-intent-authority/closeout.md`, `docs/tasks/c9-greenfield-instrument-alignment/closeout.md`, and `docs/tasks/c9-mutation-precondition-convergence/closeout.md`; active correction planning: `docs/planning/c9-qualification-preflight-scope/decision-record.md` and `docs/planning/c9-qualification-preflight-scope/qualification-plan.md`;
+- current Phase 9 authority: `docs/planning/p9-structured-task-execution/decision-record.md`, `docs/planning/p9-structured-task-execution/task-format-v1.md`, and `docs/planning/p9-structured-task-execution/qualification-plan.md`; latest correction truth: `docs/tasks/c9-qualification-preflight-scope/closeout.md`; active correction planning: `docs/planning/c9-turn-context-convergence/decision-record.md` and `docs/planning/c9-turn-context-convergence/qualification-plan.md`;
 - Phase 8 closeout/history when needed: `docs/phase-8-closeout.md`, `docs/phase-8-owner-closeout.md`, `docs/tasks/c8-agentic-context/closeout.md`, `docs/planning/c8-agentic-context/decision-record.md`, `docs/planning/c8-agentic-context/qualification-plan.md`, `docs/planning/p8-context-throughput-optimization/decision-record.md`, `docs/planning/p8-context-throughput-optimization/initial-baseline.md`, and `docs/planning/performance-benchmarking-worksheet.md`;
 - Phase 7 closeout/history when needed: `docs/phase-7-closeout.md`, `docs/phase-7-owner-closeout.md`, `docs/planning/p7-inference-runtime-optimization/initial-baseline.md`;
 - Phase 6 closeout/history when needed: `docs/phase-6-closeout.md`, `docs/phase-6-owner-closeout.md`, `docs/planning/p6-plugins-external-adapters/decision-record.md`;

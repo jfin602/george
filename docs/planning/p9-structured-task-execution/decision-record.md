@@ -143,6 +143,23 @@ Phase 9 therefore locks these additional rules:
 
 This correction does not change George Task Prompt v1, weaken mutation preconditions, expose `run_process` to structured implementation merely to create directories, increase stage limits to obtain a pass, or infer execution semantics from work-unit titles.
 
+### Turn-context convergence after scoped requalification
+
+The scoped preflight correction is now historical evidence: its policy/preflight work is Green, fresh Gate A is Green, fresh `greenfield-express-v2` B2 is Not Green, and C2 remains unspent.
+
+The official B2 failure establishes a new production boundary. The implementation-stage context assembled at only 1,319 estimated tokens under ordinary, but one bounded mutation round produced an estimated 28,306-token continuation and exhausted the frozen 8,192 ceiling. Successful workspace mutation results currently include a complete pre-mutation Git working-tree snapshot, and the canonical loop forwards that entire result to the provider. George must therefore distinguish internal/canonical tool evidence from the bounded result projection required by the model.
+
+Phase 9 locks these additional rules:
+
+- **Canonical tool evidence is not automatically provider context.** Session/recovery/workflow evidence may retain complete bounded internal metadata. Provider continuation receives a deterministic bounded projection sufficient for model reasoning. In particular, internal mutation Git snapshots do not automatically enter `function_call_output`; successful mutation continuation retains path/bytes/resulting SHA and other explicitly required bounded facts.
+- **Actual provider usage is continuation evidence.** When the provider reports input/output usage, George uses it as the strongest available anchor for the next continuation safety calculation, together with newly projected tool results and bounded serialization/protocol overhead. The deterministic estimator remains the fallback when usage is unavailable.
+- **Adaptive source composition stays frozen while the safety envelope may promote.** The selected source set/rendered initial context is finalized before the first request and is not rebuilt mid-turn. Adaptive continuation may monotonically promote ordinary -> medium -> large when required. Promotion does not load new sources, call the provider, execute tools, demote, or trigger semantic compaction merely to remain small. Fixed mode never promotes. Continuation that cannot fit large still fails closed.
+- **Production ordinary TUI turns use the base agent.** The TUI must not instantiate a coding-workflow-guided agent merely to obtain the underlying loop. Explicit `CodingWorkflowApplicationService` callers retain `CODING_WORKFLOW_GUIDANCE`; ordinary TUI requests retain the normal tool/permission surface without that global coding-completion framing.
+- **Profile values stay unchanged.** This evidence does not authorize retuning the 8,192 / 16,384 / 24,576 provider-input ceilings or the 32,768 physical target. Remove avoidable context amplification and qualify convergence first.
+- **The v2 instruments stay frozen.** No v3 is created for this correction because the live instrument exposed a production defect rather than an instrument-authoring defect.
+
+Qualification authority: `docs/planning/c9-turn-context-convergence/decision-record.md` and `qualification-plan.md`. Correction baseline is `d7804684801fa8418050c34d9ef097ca1adf80b6`.
+
 ### Transcript and Task TUI pages
 
 Phase 9 supersedes the earlier presentation direction that permanently interleaved routine work-log rows into the conversation surface.

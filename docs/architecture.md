@@ -58,6 +58,16 @@ Only a completed provider round with no tool calls may commit assistant text as 
 
 OpenTUI may progressively reveal an already-committed final response at a fast bounded cadence so the final answer still feels streamed. Reveal/animation state is presentation-only and must not alter canonical transcript, durable session content, provider-facing history, cancellation truth, or completion evidence.
 
+### Canonical tool evidence versus provider continuation
+
+Tool execution may produce canonical George-owned evidence that is larger or richer than what the primary model needs for its next decision. Canonical/session/recovery evidence and provider-visible tool results are therefore distinct projections of one observed execution outcome.
+
+The canonical result may retain bounded internal metadata required for audit, Git dirty-state preservation, recovery, or application-owned workflow logic. Before tool output becomes provider continuation, the application/tool boundary produces a deterministic bounded provider projection.
+
+For built-in workspace mutations, the provider projection keeps the mutation receipt needed to reason safely (for example path, bytes, resulting SHA, or bounded directory-creation outcome) while internal Git working-tree snapshots remain George-owned evidence. Internal metadata must not enter model context merely because it exists in the canonical result.
+
+Projection never changes execution truth, permission/effect classification, replay safety, or recovery authority. Plugin/external tools remain subject to the same bounded-context principle.
+
 ## Structured task execution
 
 Phase 9 introduces a provider-independent structured-task layer between accepted user/task intent and ordinary model/tool orchestration.
@@ -204,6 +214,8 @@ Task/work visibility is a projection only. Rendering TaskState or work history m
 
 The supported Node host is Node.js 26.4.0 or later within the Node 26 major line. George remains ESM. Native OpenTUI launch paths must invoke Node with `--experimental-ffi`; package scripts/entrypoints should encode that requirement so normal users do not need to remember it manually.
 
+Production TUI startup constructs the canonical base agent directly. Structured task orchestration may wrap that agent, but ordinary free-form turns must not inherit `CODING_WORKFLOW_GUIDANCE` merely because the TUI supports coding workflows. Explicit `CodingWorkflowApplicationService` callers retain their coding-completion guidance.
+
 ## Workspace Autonomous execution
 
 Phase 9 adds an optional application-owned Workspace Autonomous profile over the existing ToolRegistry/effect/approval architecture.
@@ -323,6 +335,16 @@ The selected profile is fixed for the remainder of that user turn's provider/too
 Ordinary/medium profile pressure promotes before provider-backed semantic history compaction. Phase 5 semantic compaction remains a large-profile pressure mechanism so adaptive profiles do not add primary-model summarization calls merely to remain within a small operating envelope.
 
 Final context diagnostics should expose adaptive/fixed mode, selected profile identity, selected budgets/headroom, final estimated provider-facing size, and bounded promotion evidence. Diagnostics remain derived observability only.
+
+### Adaptive continuation safety envelope
+
+Adaptive source selection remains finalized before the first provider request. Source identities, trust/precedence, rendered guidance, routed documents, activated skills, and the current task slice do not change merely because a tool continuation grows.
+
+The effective provider-input safety envelope may promote monotonically through the existing ordinary -> medium -> large profiles. This is not context reassembly: promotion adds no source, changes no disposition, consumes no provider/tool call, and does not invoke semantic compaction merely to stay within a smaller profile. Fixed mode keeps its selected concrete profile and never promotes.
+
+When provider usage is reported, it is the strongest available evidence for subsequent continuation safety. The next estimate combines that observed chain usage with continuation-relevant output/new bounded tool projections and explicit conservative overhead. When usage is unavailable, the deterministic estimator remains the fallback.
+
+The existing profile values and 32,768 physical target remain unchanged until separate measured evidence authorizes retuning. Continuation beyond the large ceiling still fails closed.
 
 ### Phase 8 correction: effective agentic working set
 

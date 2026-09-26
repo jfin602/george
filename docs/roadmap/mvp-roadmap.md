@@ -417,7 +417,7 @@ Phase 8 is owner-closed because the deterministic context machinery and safety b
 
 ## Phase 9 — Structured Task Execution + Workspace Autonomy
 
-Status: CURRENT PHASE — package `0.9.10`; implementation substantially complete; live Qwen convergence still Not Green
+Status: CURRENT PHASE — package `0.9.10`; turn-context convergence correction active after scoped Gate B2 continuation failure
 
 Decision authority: `docs/planning/p9-structured-task-execution/decision-record.md`.  
 Task-format authority: `docs/planning/p9-structured-task-execution/task-format-v1.md`.  
@@ -426,21 +426,20 @@ Qualification authority: `docs/planning/p9-structured-task-execution/qualificati
 Current evidence after Phase 9 corrections:
 - production task-stack validation/order/fail-stop/durable resume is qualified deterministically;
 - Workspace Autonomous Bubblewrap containment remains Green;
-- full-file read SHA -> safe existing-file mutation precondition is qualified;
-- structured INSPECT now requires a read-only tool on its first provider round;
-- structured INSPECT now completes after the first successful tool round and live Gate A reaches implementation without an inspection continuation;
+- full-file read SHA -> safe existing-file mutation precondition, recoverable prerequisites, and explicit `create_directory` are qualified;
+- structured INSPECT first-round execution and application-owned completion are qualified;
 - official live-attempt evidence survives production-service exceptions;
-- full-file text-framing evidence and recoverable framing-preservation guards are qualified;
-- mutation-intent authority and fair frozen-edit approval are qualified;
-- the mandatory frozen edit-plus-validation Gate A is now Green on the corrected architecture;
-- `greenfield-express-v1` remains historically Not Green because its task stack duplicates application-owned preflight inspection inside ordinary workflow units; `c9-greenfield-instrument-alignment` preserves that history and deterministically qualifies the independently versioned v2 instrument semantics/runner;
-- the official `greenfield-express-v2` B2 attempt is Not Green after P1 implementation exposed a production mutation-precondition convergence gap: an existing-file write lacked `expectedSha256`, then a nested new-file write encountered a missing parent before normal terminal tool evidence, and no native directory-creation tool exists in the structured coding surface;
-- `c9-mutation-precondition-convergence` is implementation-complete and deterministically qualifies explicit native `create_directory`, recoverable mutation prerequisites, permissions, recovery, and structured-stage exposure; its fresh live gates were not spent because its P2 prompt accidentally required aggregate broad `npm test` Green;
-- active correction `c9-qualification-preflight-scope` separates hard affected-system Green gates from broad regression-delta qualification, compares the immutable pre-P1 baseline to production candidate `04405570b92680e6297b48391a7d0bdf0aa8ed5e`, and only then permits fresh Gate A -> B2 -> C2;
+- text-framing evidence/preservation and mutation-intent authority remain qualified;
+- `c9-qualification-preflight-scope` qualified hard-vs-broad preflight policy and produced a fresh Gate A Green;
+- its fresh `greenfield-express-v2` B2 is **Not Green**: P1 implementation reached successful directory/file mutations, then continuation estimate grew to 28,306 against the frozen ordinary 8,192 provider-input ceiling; C2 was correctly not run;
+- source review identifies internal mutation Git snapshots being forwarded in provider tool-result continuation as a concrete amplification path;
+- an ordinary interactive reproduction also observed provider input around 8.2-8.6k crossing the frozen ordinary ceiling and a simple greeting expanding into repository inspection because production startup globally injects coding-workflow guidance;
+- active correction `c9-turn-context-convergence` separates canonical tool evidence from provider-visible projections, grounds continuation safety in provider usage when available, permits monotonic adaptive envelope promotion without source reassembly, and restores base-agent ordinary TUI wiring;
+- profile constants, Task Prompt format 1, v1/v2 instruments, hidden acceptance, and historical attempts remain unchanged;
 - native Node-26 real-TTY/OpenTUI behavior remains an Evidence Gap;
 - Phase 9 is not owner-closed and Phase 10 remains unopened.
 
-Goal: make George execute rich software-development task stacks reliably with the local coding model by moving deterministic requirements/workflow/validation/permission orchestration into the harness rather than asking the model to infer it from frontier-model-style prose.
+Goal: make George execute rich software-development task stacks reliablyGoal: make George execute rich software-development task stacks reliably with the local coding model by moving deterministic requirements/workflow/validation/permission orchestration into the harness rather than asking the model to infer it from frontier-model-style prose.
 
 Scope:
 - versioned George Task Prompt v1 constrained-natural-language grammar;
@@ -467,7 +466,7 @@ Success condition:
 - Transcript/Task UI separation is usable without losing cancellation/approval/scrollback/draft behavior;
 - workspace-autonomous processes are demonstrably contained from disallowed host filesystem resources or the mode fails closed;
 - outside reject/ask behave exactly as configured and prompts cannot elevate policy;
-- both frozen v1 live-work baselines, the first v2 B2 Not Green attempt, and the mutation-precondition preflight-stopped result remain recorded; the corrected production path completes a scoped hard-preflight + broad-regression-delta check followed by fresh Gate A -> B2 -> C2 without rewriting historical failures;
+- all prior live-work failures remain recorded; the turn-context correction passes scoped hard-preflight + broad-regression-delta qualification, ordinary greeting and synthetic three-file live smokes, then fresh Gate A -> B2 -> C2 without rewriting historical failures;
 - inherited Phase 2-8 contracts remain Green or their accepted Not Green/Evidence Gap states remain explicitly classified.
 
 Non-goals:

@@ -206,6 +206,30 @@ Functional structured-task evidence may be collected when the pinned REST-visibl
 
 Phase 9 also freezes `greenfield-express-v1` and `existing-express-feature-v1` live-work instruments. Their raw acceptance/validation/intervention/provider/tool/context/time/permission dimensions are recorded without collapsing them into one score and should be rerun at later phase closeouts when available.
 
+### Turn-context convergence qualification
+
+Changes to tool-result projection, continuation accounting, adaptive envelope handling, or ordinary TUI agent wiring must preserve both context safety and canonical evidence.
+
+Deterministic coverage must prove:
+- canonical tool/session/recovery evidence remains intact when provider-visible tool output is reduced;
+- provider continuation never receives internal Git snapshots or other internal-only metadata merely because canonical evidence retained them;
+- provider-visible mutation receipts retain the path/bytes/SHA or bounded directory outcome needed for convergence;
+- provider-reported input/output usage informs the next continuation safety decision when available;
+- adaptive envelope promotion is monotonic ordinary -> medium -> large and leaves selected source composition/rendered initial context unchanged;
+- promotion itself performs no provider call, tool call, semantic compaction, or source activation;
+- fixed profiles never promote;
+- adaptive continuation above the large ceiling still fails closed;
+- ordinary production TUI construction does not inject coding-workflow guidance, while explicit coding-workflow construction still does;
+- ordinary turns retain their configured tools and permission ceiling.
+
+Live qualification must include:
+- one bounded ordinary `hi` smoke with one logical provider round, zero model-requested tools, a committed assistant response, and no exhaustion;
+- one bounded synthetic non-George three-file inspection smoke with a successful grounded response, no context exhaustion, and truthful promotion diagnostics if promotion occurs.
+
+These smokes supplement deterministic authority. They do not create a permanent file-count rule or authorize profile-value retuning.
+
+Because the correction changes production agent-loop/context behavior, preserve prior official attempts and rerun the gated Phase 9 sequence only after hard affected-system Green plus a Green controlled broad regression delta.
+
 ### Provider contract
 
 Use deterministic/mock provider fixtures for ordinary tests and bounded live LM Studio qualification when provider integration changes.
