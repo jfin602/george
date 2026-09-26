@@ -99,6 +99,8 @@ import {
   type SandboxProcessCapability,
   type SandboxProcessToolExecutor,
   type ToolDefinition,
+  type ToolCall,
+  type ToolResult,
   type ValidatedToolCall,
 } from '../tools/index.ts';
 
@@ -287,6 +289,30 @@ function stableJson(value: import('../core/index.ts').JsonValue): string {
     return `{${Object.keys(object).sort().map((key) => `${JSON.stringify(key)}:${stableJson(object[key]!)}`).join(',')}}`;
   }
   return JSON.stringify(value);
+}
+
+type ToolBatchMember = Readonly<{
+  ordinal: number;
+  call: ToolCall;
+  validation: ValidatedToolCall | ToolResult;
+}>;
+
+/** One completed provider response, validated up front and executed in provider order. */
+type ToolBatch = Readonly<{
+  responseId: string;
+  members: readonly ToolBatchMember[];
+}>;
+
+function toolBatch(responseId: string, calls: readonly ToolCall[], registry: ToolRegistry): ToolBatch {
+  const callIds = new Set<string>();
+  return Object.freeze({
+    responseId,
+    members: Object.freeze(calls.map((call, ordinal) => {
+      if (callIds.has(call.callId)) throw new GeorgeError('validation', `Provider tool batch contains duplicate call ID: ${call.callId}.`);
+      callIds.add(call.callId);
+      return Object.freeze({ ordinal, call, validation: registry.validate(call) });
+    })),
+  });
 }
 
 function operationControl(text: string, toolCallCount: number): GeorgeOperationControl | undefined {
@@ -1174,10 +1200,12 @@ export class AgentLoopApplicationService {
           throw new GeorgeError('tool', message);
         }
 
+        const batch = toolBatch(responseId, calls, registry);
         toolRounds += 1;
-        const results = [];
+        const results: ToolResult[] = [];
         const providerResults: ProviderToolResult[] = [];
-        for (const call of calls) {
+        for (const member of batch.members) {
+          const { call, validation: validated } = member;
           toolCalls += 1;
           if (toolCalls > stageToolLimit) {
             const code = requestedLimits === undefined ? 'tool' as const : 'budget' as const;
@@ -1186,9 +1214,8 @@ export class AgentLoopApplicationService {
             yield* emit({ type: 'tool.failed', turnId, callId: call.callId, name: call.name, result });
             throw new GeorgeError(result.error.code, result.error.message);
           }
-          const validated = duplicateLimit === undefined ? undefined : registry.validate(call);
-          const execution = validated && !('callId' in validated) ? validated.definition.execution : undefined;
-          const fingerprint = validated && !('callId' in validated) && execution?.effect === 'local_read' && execution.replaySafety === 'replay_safe'
+          const execution = !('callId' in validated) ? validated.definition.execution : registry.registration(call.name)?.execution;
+          const fingerprint = duplicateLimit !== undefined && !('callId' in validated) && execution?.effect === 'local_read' && execution.replaySafety === 'replay_safe'
             ? `${call.name}:${stableJson(validated.arguments)}` : undefined;
           if (duplicateLimit !== undefined && fingerprint !== undefined && successfulReads.get(fingerprint) === mutationEpoch) {
             duplicateReads += 1;
@@ -1226,7 +1253,7 @@ export class AgentLoopApplicationService {
           effectiveProfile = promoted;
         }
         requestEstimate = continuationEstimate;
-        continuation = { responseId, toolResults: providerResults };
+        continuation = { responseId: batch.responseId, toolResults: providerResults };
       }
       yield* this.invokeHooks(submission.session, { name: 'turn.completed', sessionId: submission.session.id, turnId, runId: budget.id }, budget, submission.signal);
       yield* emit({ type: 'turn.completed', turnId });

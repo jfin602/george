@@ -55,6 +55,8 @@ export type LiveWorkMetrics = Readonly<{
   estimatedInternalTextTokens: number | null;
   toolBatchCount: number;
   toolBatchWidths: readonly number[];
+  providerToolSelectionRounds: number;
+  toolBatchCompression: number;
   concurrentReadBatchCount: number;
   parallelBatchWallMs: number | null;
   summedChildToolRuntimeMs: number | null;
@@ -331,6 +333,8 @@ function metrics(events: readonly ApplicationEvent[], correctionCycles: number):
     estimatedInternalTextTokens: agentRounds.length ? agentRounds.reduce((total, event) => total + event.estimatedInternalTextTokens, 0) : null,
     toolBatchCount: toolBatchWidths.length,
     toolBatchWidths: Object.freeze(toolBatchWidths),
+    providerToolSelectionRounds: toolBatchWidths.length,
+    toolBatchCompression: toolBatchWidths.reduce((total, width) => total + width - 1, 0),
     concurrentReadBatchCount: 0,
     parallelBatchWallMs: null,
     summedChildToolRuntimeMs: null,

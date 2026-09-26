@@ -257,6 +257,8 @@ test('live telemetry records cached usage and completed tool batches with explic
   ], terminalStatus: 'failed', hiddenAcceptance: 'not_run', humanInterventions: 0 });
   assert.deepEqual(trace.metrics.toolBatchWidths, [2]);
   assert.equal(trace.metrics.toolBatchCount, 1);
+  assert.equal(trace.metrics.providerToolSelectionRounds, 1);
+  assert.equal(trace.metrics.toolBatchCompression, 1);
   assert.equal(trace.metrics.cachedInputTokens, 6);
   assert.deepEqual({ acceptance: trace.metrics.responseAcceptanceMs, useful: trace.metrics.firstUsefulOutputMs, active: trace.metrics.providerActiveMs }, { acceptance: 4, useful: 61_000, active: 61_010 });
   assert.deepEqual(trace.timing.providerAttempts, [{ attemptId: 'a', outcome: 'completed', responseAcceptanceMs: 4, firstUsefulOutputMs: 61_000, providerActiveMs: 61_010 }]);
