@@ -417,7 +417,7 @@ Phase 8 is owner-closed because the deterministic context machinery and safety b
 
 ## Phase 9 — Structured Task Execution + Workspace Autonomy
 
-Status: CURRENT PHASE — package `0.9.10`; turn-context convergence correction active after scoped Gate B2 continuation failure
+Status: CURRENT PHASE — package `0.9.10`; `c9-gen-op` active before the next final five-workload qualification rerun
 
 Decision authority: `docs/planning/p9-structured-task-execution/decision-record.md`.  
 Task-format authority: `docs/planning/p9-structured-task-execution/task-format-v1.md`.  
@@ -440,6 +440,10 @@ Current evidence after Phase 9 corrections:
 - helper/utility inference remains out of Phase 9 so final failure attribution stays primary-model/harness-only;
 - one final complete five-workload sweep determines owner-closeout readiness;
 - Phase 9 is not owner-closed and Phase 10 remains unopened.
+- `c9-provider-stall-recovery` is qualified and preserves a finite original -> retry -> rebase -> provider-failure recovery ladder.
+- the next attempted final sweep exposed false accepted-prefill stall semantics plus avoidable prefix/output-generation latency; that run remains historical/nonqualifying.
+- `c9-gen-op` is the active inserted correction: useful-output watchdog semantics, stable-prefix/late round context, tool/control-only internal structured rounds, and qualification-only workload deadlines.
+- after `c9-gen-op` closes Green, the official greeting -> three-file -> Gate A -> B2 -> C2 sweep restarts from greeting.
 
 Goal: make George execute rich software-development task stacks reliably with the local coding model by moving deterministic requirements/workflow/validation/permission orchestration into the harness rather than asking the model to infer it from frontier-model-style prose.
 
