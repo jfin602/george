@@ -49,6 +49,8 @@ This correction does **not** introduce a helper/utility model.
 
 Before every structured implementation/correction provider round, George must project a small deterministic **mission card** derived only from canonical George state and bounded observed evidence.
 
+This is a real round-to-round application/core seam, not merely richer stage-entry prose. The current structured service renders its task slice once and the canonical agent loop owns later provider continuations; therefore implementation must let structured execution supply/recompute bounded alignment context for **every** implementation/correction provider request, including continuations after tool results. The seam remains provider-independent and must not live in the LM Studio adapter.
+
 The mission card is provider-facing derived context, never authority.
 
 It should contain, when applicable:
@@ -105,6 +107,10 @@ For structured work:
 - after a work-unit completion condition is materially satisfied, the provider-facing projection should direct the model to stop proposing unrelated verification or mutations and allow George-owned validation to run;
 - mutation invalidates only evidence actually made stale; unaffected evidence should remain reusable.
 
+The current all-or-nothing `stageEvidence = []` behavior after any direct mutation is too coarse for this final alignment contract. Replace it with the smallest ephemeral typed evidence/freshness representation sufficient to preserve unaffected observations while invalidating stale path/resource evidence. At minimum retain bounded identity/source, affected path/resource where applicable, safe projected fact, and a freshness/mutation-epoch relationship.
+
+This freshness cache is derived runtime state, not durable TaskState authority. If a session/restart cannot reconstruct freshness safely from authoritative evidence, George must re-inspect rather than assume an old observation is current.
+
 ## Decision — call limits: safety ceiling versus efficiency target
 
 The historical tiny call ceilings were introduced to prove convergence against Phase 8-style looping. They are not permission boundaries.
@@ -130,6 +136,8 @@ The final Phase 9 qualification must report functional correctness and efficienc
 
 Exact revised hard-stage values must be selected from current observed workloads and deterministic tests, not by arbitrary inflation. The implementation must demonstrate that C2 can reach its first legitimate mutation without being blocked solely by redundant pre-edit inspection.
 
+Earlier correction authority that said not to raise structured stage limits remains historically correct for the correction that authored it. The final sweep provides new evidence and this record explicitly **supersedes that restriction for current Phase 9 final qualification**. Raising a hard ceiling is permitted only as part of the documented hard-budget/efficiency separation with permanent tests; it is not permission to delete convergence controls or inflate a number ad hoc until a gate passes.
+
 ## Decision — safe provider partial-response timeout convergence
 
 B2 exposed a separate provider-lifecycle defect class.
@@ -148,6 +156,8 @@ The correction must distinguish:
 - **canonical assistant commit observed**.
 
 A transport/provider attempt whose response is incomplete but for which George has executed no tool, committed no assistant response, and observed no ambiguous external side effect may be eligible for a bounded fresh provider retry/restart under an explicitly qualified rule.
+
+A safe fresh retry must discard the incomplete provider branch completely: provisional assistant text and streamed tool proposals from that attempt remain diagnostic evidence only, are never executed, and are never promoted into the canonical transcript or next continuation. The failed attempt's response ID must not be reused. The retry starts from the same canonical pre-round application state with a new provider-attempt identity.
 
 Do not:
 - blindly replay executed tool calls;
