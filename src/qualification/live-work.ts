@@ -1,14 +1,27 @@
-import { randomUUID } from 'node:crypto';
-import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
+import { createHash, randomUUID } from 'node:crypto';
+import { execFile } from 'node:child_process';
+import { copyFile, mkdir, readFile, readdir, rename, writeFile } from 'node:fs/promises';
 import { isAbsolute, join, relative, resolve } from 'node:path';
+import { promisify } from 'node:util';
 
 import type { StructuredTaskApplicationService, StructuredTaskStackApplicationService } from '../application/index.ts';
-import { asGeorgeError, type ApprovalPort, type ApplicationEvent, type RunBudgetDimension, type RunBudgetSnapshot, type Session, type ToolEffect } from '../core/index.ts';
+import { CONTEXT_PROFILE_ORDER, CONTEXT_PROFILE_REGISTRY, asGeorgeError, type ApprovalPort, type ApplicationEvent, type RunBudgetDimension, type RunBudgetSnapshot, type Session, type ToolEffect } from '../core/index.ts';
 import { projectStackState, projectTaskState, sanitizeTaskEvidence, type StackStateProjection, type TaskStateProjection } from '../tasks/index.ts';
 
 const MAX_LIVE_EVENTS = 4_096;
 const MAX_ARGUMENT_BYTES = 2_048;
 const SHA256 = /^[0-9a-f]{64}$/;
+const execFileAsync = promisify(execFile);
+
+export const THREE_FILE_INSPECTION_SMOKE = Object.freeze({
+  prompt: 'Inspect what you need in this repository, including the implementation, focused tests, and README task description. Explain how compileReleasePlan validates input, constructs stable execution waves, detects cycles, and satisfies the tested contract. Do not modify the repository.',
+  paths: Object.freeze(['README.md', 'plan.js', 'plan.test.js']),
+  sha256: Object.freeze({
+    'README.md': '4e3a3f35fa75c7f421809af3c209673de887a043e1107db16c5daf14908e1abb',
+    'plan.js': '2f15fd8d0ac3ed9f1c2e22d8f4561fd29444f018e07540ad2ac24aeb3d9968fb',
+    'plan.test.js': 'ced5709631a0014008b505029415cb93e1a0fa5527590467d67891a9aa1f270f',
+  }),
+});
 
 export type LiveWorkError = Readonly<{ code: string; message: string }>;
 
@@ -46,6 +59,8 @@ export type LiveWorkTrace = Readonly<{
   correctionCount: number;
   contexts: readonly Readonly<{ profileId: string | null; attemptedProfileIds: readonly string[]; promotionReasons: readonly string[]; estimatedTokens: number | null; providerInputBudget: number | null; remainingHeadroom: number | null }>[];
   envelopePromotions: readonly Readonly<{ turnId: string; fromProfileId: string; toProfileId: string; reason: 'continuation-estimate' | 'provider-usage'; tokens: number; providerInputBudget: number }>[];
+  observedReadPaths: readonly string[];
+  finalResponse: Readonly<{ present: boolean; bytes: number; sha256: string | null }>;
   budgets: Readonly<{
     latest: readonly Readonly<{ runId: string; snapshot: RunBudgetSnapshot }>[];
     pressure: readonly Readonly<{ runId: string; dimensions: readonly RunBudgetDimension[] }>[];
@@ -102,6 +117,31 @@ export type LiveWorkSubmission = Common & (
   | Readonly<{ kind: 'stack'; service: StructuredTaskStackApplicationService; prompts: readonly string[] }>
   | Readonly<{ kind: 'single'; service: StructuredTaskApplicationService; prompt: string }>
 );
+
+export type OrdinaryTurnQualificationSubmission = Readonly<{
+  attemptId: string;
+  humanInterventions: number;
+  service: StructuredTaskApplicationService;
+  session: Session;
+  input: string;
+  accept: (trace: LiveWorkTrace) => boolean;
+  onEvent?: (event: ApplicationEvent) => void | Promise<void>;
+}>;
+
+export type SmokeAcceptance = Readonly<{ accepted: boolean; reasons: readonly string[] }>;
+
+export async function prepareThreeFileInspectionFixture(fixtureRoot: string, workspace: string): Promise<void> {
+  const names = (await readdir(fixtureRoot)).sort();
+  if (JSON.stringify(names) !== JSON.stringify(THREE_FILE_INSPECTION_SMOKE.paths)) throw new Error('Three-file inspection fixture contents changed.');
+  await mkdir(workspace, { recursive: true });
+  if ((await readdir(workspace)).length > 0) throw new Error('Three-file inspection workspace must be empty.');
+  for (const name of names) {
+    const contents = await readFile(join(fixtureRoot, name));
+    if (createHash('sha256').update(contents).digest('hex') !== THREE_FILE_INSPECTION_SMOKE.sha256[name as keyof typeof THREE_FILE_INSPECTION_SMOKE.sha256]) throw new Error(`Three-file inspection fixture digest changed: ${name}.`);
+    await copyFile(join(fixtureRoot, name), join(workspace, name));
+  }
+  await execFileAsync('git', ['init', '--quiet'], { cwd: workspace });
+}
 
 /** Frozen Phase 9 edit gate only: exact target, ordinary mutation, exact validation. */
 export function createFrozenEditQualificationApproval(options: Readonly<{
@@ -182,6 +222,23 @@ function metrics(events: readonly ApplicationEvent[]): LiveWorkMetrics {
   };
 }
 
+function successfulReadPaths(events: readonly ApplicationEvent[]): readonly string[] {
+  const successful = new Set(events.flatMap((event) => event.type === 'tool.completed' && event.name === 'read_file' && event.result.ok ? [event.callId] : []));
+  return Object.freeze([...new Set(events.flatMap((event) => {
+    if (event.type !== 'tool.requested' || event.name !== 'read_file' || !successful.has(event.callId)) return [];
+    try {
+      const parsed: unknown = JSON.parse(event.arguments);
+      if (!record(parsed) || typeof parsed.path !== 'string') return [];
+      return [sanitizeTaskEvidence(parsed.path, 1024).text];
+    } catch { return []; }
+  }))].sort());
+}
+
+function responseEvidence(text = ''): LiveWorkTrace['finalResponse'] {
+  const bytes = Buffer.byteLength(text, 'utf8');
+  return Object.freeze({ present: bytes > 0, bytes, sha256: bytes > 0 ? createHash('sha256').update(text).digest('hex') : null });
+}
+
 /** Total, bounded derivation over the current event union; absent/future fields become unavailable evidence. */
 export function extractLiveWorkTrace(options: Readonly<{
   events: readonly ApplicationEvent[];
@@ -192,6 +249,7 @@ export function extractLiveWorkTrace(options: Readonly<{
   stackState?: Session['stackState'];
   hiddenAcceptance: LiveWorkResult['hiddenAcceptance'];
   humanInterventions: number;
+  finalAssistantResponse?: string;
   totalMs?: number;
   eventsOmitted?: number;
 }>): LiveWorkTrace {
@@ -241,10 +299,76 @@ export function extractLiveWorkTrace(options: Readonly<{
   try { taskState = options.taskState ? projectTaskState(options.taskState) : null; } catch { /* Invalid partial state is not safe qualification evidence. */ }
   try { stackState = options.stackState ? projectStackState(options.stackState) : null; } catch { /* Invalid partial state is not safe qualification evidence. */ }
   return Object.freeze({
-    terminalStatus: options.terminalStatus, terminalError: options.terminalError ?? null, observerError: options.observerError ?? null, taskState, stackState, metrics: Object.freeze(metrics(options.events)), toolCalls: Object.freeze(toolCalls), mutations: Object.freeze(mutations), validations: Object.freeze(validations), correctionCount: taskState?.corrections.length ?? 0, contexts: Object.freeze(contexts), envelopePromotions: Object.freeze(envelopePromotions),
+    terminalStatus: options.terminalStatus, terminalError: options.terminalError ?? null, observerError: options.observerError ?? null, taskState, stackState, metrics: Object.freeze(metrics(options.events)), toolCalls: Object.freeze(toolCalls), mutations: Object.freeze(mutations), validations: Object.freeze(validations), correctionCount: taskState?.corrections.length ?? 0, contexts: Object.freeze(contexts), envelopePromotions: Object.freeze(envelopePromotions), observedReadPaths: successfulReadPaths(options.events), finalResponse: responseEvidence(options.finalAssistantResponse),
     budgets: Object.freeze({ latest: Object.freeze([...snapshots].map(([runId, snapshot]) => ({ runId, snapshot }))), pressure: Object.freeze(pressure), exhaustion: Object.freeze(exhaustion), taskExhausted: options.terminalStatus === 'budget_exhausted' || taskState?.status === 'budget_exhausted' || stackState?.status === 'budget_exhausted', stageExhaustion: Object.freeze(stageExhaustion) }),
     timing: Object.freeze({ totalMs: number(options.totalMs), workflows: Object.freeze(workflows) }), hiddenAcceptance: options.hiddenAcceptance, humanInterventions: options.humanInterventions, eventsOmitted: options.eventsOmitted ?? 0,
   });
+}
+
+function exhaustion(trace: LiveWorkTrace): boolean {
+  return trace.budgets.taskExhausted || trace.budgets.exhaustion.length > 0 || trace.budgets.stageExhaustion.length > 0;
+}
+
+export function acceptGreetingSmoke(trace: LiveWorkTrace, providerInstructionsContainCodingWorkflowGuidance: boolean): SmokeAcceptance {
+  const reasons = [
+    ...(trace.terminalStatus === 'completed' ? [] : ['turn did not complete']),
+    ...(trace.metrics.providerRounds === 1 ? [] : ['provider round count is not one']),
+    ...(trace.metrics.toolCalls === 0 ? [] : ['model requested tools']),
+    ...(trace.finalResponse.present ? [] : ['final assistant response is absent']),
+    ...(!exhaustion(trace) ? [] : ['execution exhausted']),
+    ...(trace.humanInterventions === 0 ? [] : ['human intervention was recorded']),
+    ...(!providerInstructionsContainCodingWorkflowGuidance ? [] : ['coding-workflow guidance was present']),
+  ];
+  return Object.freeze({ accepted: reasons.length === 0, reasons: Object.freeze(reasons) });
+}
+
+export function acceptThreeFileSmoke(trace: LiveWorkTrace, requiredReadPaths: readonly string[]): SmokeAcceptance {
+  const observed = new Set(trace.observedReadPaths);
+  const promotions = trace.envelopePromotions;
+  const order = CONTEXT_PROFILE_ORDER.map((name) => CONTEXT_PROFILE_REGISTRY[name].id);
+  const monotonic = promotions.every((item, index) => order.indexOf(item.fromProfileId) >= 0
+    && order.indexOf(item.toProfileId) === order.indexOf(item.fromProfileId) + 1
+    && (index === 0 || promotions[index - 1]!.toProfileId === item.fromProfileId));
+  const missing = requiredReadPaths.filter((path) => !observed.has(path));
+  const reasons = [
+    ...(trace.terminalStatus === 'completed' ? [] : ['turn did not complete']),
+    ...(trace.finalResponse.present ? [] : ['final assistant response is absent']),
+    ...(!exhaustion(trace) ? [] : ['execution exhausted']),
+    ...(trace.humanInterventions === 0 ? [] : ['human intervention was recorded']),
+    ...(missing.length === 0 ? [] : [`required reads missing: ${missing.join(', ')}`]),
+    ...(monotonic ? [] : ['envelope promotion evidence is not monotonic']),
+  ];
+  return Object.freeze({ accepted: reasons.length === 0, reasons: Object.freeze(reasons) });
+}
+
+/** Bounded ordinary-turn qualification using the same trace and artifact schema as structured live work. */
+export async function runOrdinaryTurnQualification(submission: OrdinaryTurnQualificationSubmission): Promise<LiveWorkResult> {
+  if (!submission.attemptId || Buffer.byteLength(submission.attemptId, 'utf8') > 256) throw new Error('Live qualification attempt ID is required and must be bounded.');
+  if (!Number.isInteger(submission.humanInterventions) || submission.humanInterventions < 0) throw new Error('Human intervention count must be an explicit non-negative integer.');
+  const started = performance.now();
+  const events: ApplicationEvent[] = [];
+  let eventsOmitted = 0;
+  let observerError: LiveWorkError | null = null;
+  const onEvent = async (event: ApplicationEvent) => {
+    if (operationalEvent(event) && events.length < MAX_LIVE_EVENTS) events.push(event);
+    else eventsOmitted += 1;
+    if (submission.onEvent && observerError === null) {
+      try { await submission.onEvent(event); } catch (error) { observerError = safeError(error); }
+    }
+  };
+  let terminalStatus = 'failed';
+  let terminalError: LiveWorkError | null = null;
+  let finalAssistantResponse = '';
+  try {
+    const completion = await submission.service.run({ session: submission.session, input: submission.input, onEvent });
+    terminalStatus = completion.terminalState;
+    finalAssistantResponse = completion.finalAssistantResponse;
+  } catch (error) { terminalError = safeError(error); }
+  const frozenEvents = Object.freeze([...events]);
+  const provisional = extractLiveWorkTrace({ events: frozenEvents, terminalStatus, terminalError, observerError, hiddenAcceptance: 'not_run', humanInterventions: submission.humanInterventions, totalMs: performance.now() - started, eventsOmitted, finalAssistantResponse });
+  const accepted = terminalError === null && submission.accept(provisional);
+  const trace = extractLiveWorkTrace({ events: frozenEvents, terminalStatus, terminalError, observerError, hiddenAcceptance: accepted ? 'passed' : 'failed', humanInterventions: submission.humanInterventions, totalMs: provisional.timing.totalMs ?? undefined, eventsOmitted, finalAssistantResponse });
+  return Object.freeze({ attemptId: submission.attemptId, qualifying: accepted, terminalStatus, terminalError, observerError, hiddenAcceptance: trace.hiddenAcceptance, metrics: trace.metrics, trace, events: frozenEvents });
 }
 
 /** Qualification observer: production services own all task parsing, sequencing, fail-stop, and resume behavior. */

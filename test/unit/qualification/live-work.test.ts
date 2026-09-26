@@ -1,12 +1,13 @@
 import assert from 'node:assert/strict';
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
+import { mkdtemp, readFile, readdir, rm, stat } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 
-import { StructuredTaskApplicationService, StructuredTaskStackApplicationService, createCodingWorkflowApplicationService } from '../../../src/application/index.ts';
-import { createSession, type ApplicationEvent, type ApprovalDecision, type ApprovalPort, type ApprovalRequest, type ModelProvider, type ProviderEvent, type ProviderRequest } from '../../../src/core/index.ts';
-import { createFrozenEditQualificationApproval, extractLiveWorkTrace, runExistingExpressFeatureV1, runExistingExpressFeatureV2, runGreenfieldExpressV1, runGreenfieldExpressV2, runLiveWorkInstrument, writeLiveWorkArtifacts, type LiveWorkResult } from '../../../src/qualification/index.ts';
+import { StructuredTaskApplicationService, StructuredTaskStackApplicationService, createAgentLoopApplicationService, createCodingWorkflowApplicationService } from '../../../src/application/index.ts';
+import { CONTEXT_PROFILE_REGISTRY, createSession, type ApplicationEvent, type ApprovalDecision, type ApprovalPort, type ApprovalRequest, type ModelProvider, type ProviderEvent, type ProviderRequest } from '../../../src/core/index.ts';
+import { THREE_FILE_INSPECTION_SMOKE, acceptGreetingSmoke, acceptThreeFileSmoke, createFrozenEditQualificationApproval, extractLiveWorkTrace, prepareThreeFileInspectionFixture, runExistingExpressFeatureV1, runExistingExpressFeatureV2, runGreenfieldExpressV1, runGreenfieldExpressV2, runLiveWorkInstrument, runOrdinaryTurnQualification, writeLiveWorkArtifacts, type LiveWorkResult } from '../../../src/qualification/index.ts';
 import { createStackState, createTaskState, parseTaskPrompt } from '../../../src/tasks/index.ts';
 
 class Provider implements ModelProvider {
@@ -17,6 +18,15 @@ class NoInspectionProvider implements ModelProvider {
     yield { type: 'provider.response.started', responseId: 'inspection-without-tool' };
     yield { type: 'provider.text.delta', delta: 'raw-provider-secret=TOP_SECRET_PROVIDER_PAYLOAD' };
     yield { type: 'provider.response.completed', usage: { inputTokens: 7, outputTokens: 2 } };
+  }
+}
+class OrdinaryProvider implements ModelProvider {
+  readonly requests: ProviderRequest[] = [];
+  private readonly rounds: readonly (readonly ProviderEvent[])[];
+  constructor(rounds: readonly (readonly ProviderEvent[])[]) { this.rounds = rounds; }
+  async *stream(request: ProviderRequest): AsyncGenerator<ProviderEvent> {
+    this.requests.push(request);
+    yield* this.rounds[this.requests.length - 1] ?? [];
   }
 }
 class Allow implements ApprovalPort { async request(_request: ApprovalRequest): Promise<ApprovalDecision> { return 'allow_once'; } }
@@ -248,4 +258,74 @@ test('artifact envelope survives optional report rendering failure', async (t) =
   assert.equal(envelope.eventEvidence[0]?.promotion?.reason, 'provider-usage');
   assert.equal((JSON.parse(await readFile(join(root, 'trace.json'), 'utf8')) as { terminalStatus: string }).terminalStatus, 'failed');
   await assert.rejects(readFile(join(root, 'report.txt'), 'utf8'));
+});
+
+test('ordinary greeting qualification records one direct response without prose or fabricated tools', async (t) => {
+  const workspace = await mkdtemp(join(tmpdir(), 'george-ordinary-greeting-'));
+  const artifacts = await mkdtemp(join(tmpdir(), 'george-ordinary-greeting-artifacts-'));
+  t.after(() => Promise.all([rm(workspace, { recursive: true, force: true }), rm(artifacts, { recursive: true, force: true })]));
+  const provider = new OrdinaryProvider([[
+    { type: 'provider.response.started', responseId: 'greeting' },
+    { type: 'provider.text.delta', delta: 'SAFE_RESPONSE_PROSE_NOT_FOR_ARTIFACTS' },
+    { type: 'provider.response.completed', usage: { inputTokens: 40, outputTokens: 8 } },
+  ]]);
+  const agent = await createAgentLoopApplicationService({ provider, workspace });
+  const service = new StructuredTaskApplicationService(agent);
+  const result = await runOrdinaryTurnQualification({
+    attemptId: 'greeting', humanInterventions: 0, service, session: createSession({ workspace }), input: 'hi',
+    accept: (trace) => acceptGreetingSmoke(trace, provider.requests[0]?.instructions?.includes('For a coding completion') ?? false).accepted,
+  });
+
+  assert.equal(result.qualifying, true);
+  assert.equal(result.metrics.providerRounds, 1);
+  assert.equal(result.metrics.toolCalls, 0);
+  assert.deepEqual(result.trace.finalResponse, {
+    present: true,
+    bytes: Buffer.byteLength('SAFE_RESPONSE_PROSE_NOT_FOR_ARTIFACTS'),
+    sha256: createHash('sha256').update('SAFE_RESPONSE_PROSE_NOT_FOR_ARTIFACTS').digest('hex'),
+  });
+  await writeLiveWorkArtifacts({ directory: artifacts, workspace, result });
+  const evidence = `${await readFile(join(artifacts, 'attempt.json'), 'utf8')}${await readFile(join(artifacts, 'trace.json'), 'utf8')}`;
+  assert.equal(evidence.includes('SAFE_RESPONSE_PROSE_NOT_FOR_ARTIFACTS'), false);
+});
+
+test('three-file ordinary smoke observes frozen reads and applies modest deterministic acceptance', async (t) => {
+  const fixture = join(process.cwd(), 'test/fixtures/c9-turn-context-convergence/three-file-inspection');
+  const names = (await readdir(fixture)).sort();
+  assert.deepEqual(names, THREE_FILE_INSPECTION_SMOKE.paths);
+  for (const name of names) {
+    const path = join(fixture, name);
+    const contents = await readFile(path);
+    assert.equal(createHash('sha256').update(contents).digest('hex'), THREE_FILE_INSPECTION_SMOKE.sha256[name as keyof typeof THREE_FILE_INSPECTION_SMOKE.sha256]);
+    assert.equal((await stat(path)).size >= 4 * 1024 && (await stat(path)).size <= 8 * 1024, true);
+  }
+  assert.equal(/maximum\s+3\s+files/i.test(THREE_FILE_INSPECTION_SMOKE.prompt), false);
+
+  const workspace = await mkdtemp(join(tmpdir(), 'george-three-file-smoke-'));
+  t.after(() => rm(workspace, { recursive: true, force: true }));
+  await prepareThreeFileInspectionFixture(fixture, workspace);
+  assert.equal((await stat(join(workspace, '.git'))).isDirectory(), true);
+  assert.deepEqual((await readdir(workspace)).filter((name) => name !== '.git').sort(), THREE_FILE_INSPECTION_SMOKE.paths);
+  const calls = names.map((path) => ({ type: 'provider.tool.call' as const, callId: `read-${path}`, name: 'read_file', arguments: JSON.stringify({ path }) }));
+  const provider = new OrdinaryProvider([
+    [{ type: 'provider.response.started', responseId: 'inspect' }, ...calls, { type: 'provider.response.completed', usage: { inputTokens: 100, outputTokens: 20 } }],
+    [{ type: 'provider.response.started', responseId: 'answer' }, { type: 'provider.text.delta', delta: 'Grounded explanation.' }, { type: 'provider.response.completed', usage: { inputTokens: 4_000, outputTokens: 80 } }],
+  ]);
+  const service = new StructuredTaskApplicationService(await createAgentLoopApplicationService({ provider, workspace }));
+  const result = await runOrdinaryTurnQualification({
+    attemptId: 'three-file', humanInterventions: 0, service, session: createSession({ workspace }), input: THREE_FILE_INSPECTION_SMOKE.prompt,
+    accept: (trace) => acceptThreeFileSmoke(trace, THREE_FILE_INSPECTION_SMOKE.paths).accepted,
+  });
+
+  assert.equal(result.qualifying, true);
+  assert.deepEqual(result.trace.observedReadPaths, THREE_FILE_INSPECTION_SMOKE.paths);
+  assert.equal(result.trace.finalResponse.present, true);
+  assert.equal(acceptThreeFileSmoke({ ...result.trace, envelopePromotions: [
+    { turnId: 'turn', fromProfileId: CONTEXT_PROFILE_REGISTRY.ordinary.id, toProfileId: CONTEXT_PROFILE_REGISTRY.medium.id, reason: 'provider-usage', tokens: 9_000, providerInputBudget: CONTEXT_PROFILE_REGISTRY.medium.providerInputTokens },
+    { turnId: 'turn', fromProfileId: CONTEXT_PROFILE_REGISTRY.medium.id, toProfileId: CONTEXT_PROFILE_REGISTRY.large.id, reason: 'provider-usage', tokens: 17_000, providerInputBudget: CONTEXT_PROFILE_REGISTRY.large.providerInputTokens },
+  ] }, THREE_FILE_INSPECTION_SMOKE.paths).accepted, true);
+  assert.deepEqual(acceptThreeFileSmoke({ ...result.trace, observedReadPaths: ['plan.js'] }, THREE_FILE_INSPECTION_SMOKE.paths), {
+    accepted: false,
+    reasons: ['required reads missing: README.md, plan.test.js'],
+  });
 });

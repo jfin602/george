@@ -1,9 +1,9 @@
 import { createCliRenderer } from '@opentui/core';
 
-import { StructuredTaskApplicationService, createCodingWorkflowApplicationService } from '../application/index.ts';
 import { DiagnosticSink, LocalSessionStore, PendingApprovalPort, resolveGeorgeConfig } from '../core/index.ts';
 import { LmStudioResponsesProvider } from '../provider/index.ts';
 import { GeorgeTui } from './app.ts';
+import { createTuiApplicationService } from './composition.ts';
 
 async function main(): Promise<void> {
   const args = process.argv.slice(2);
@@ -25,7 +25,7 @@ async function main(): Promise<void> {
   const store = new LocalSessionStore();
   const diagnostics = new DiagnosticSink();
   const session = resume === undefined ? undefined : await store.open(resume, config.workspace);
-  const workflow = await createCodingWorkflowApplicationService({
+  const service = await createTuiApplicationService({
     provider: new LmStudioResponsesProvider(config.provider),
     workspace: config.workspace,
     approvalPort: approvals,
@@ -34,14 +34,10 @@ async function main(): Promise<void> {
     runBudget: config.runBudget,
     userConfigRoot: config.userConfigRoot,
     executionPolicy: config.executionPolicy,
-    sessionStore: store,
     diagnostics,
+    sessionStore: store,
+    session,
   });
-  const service = new StructuredTaskApplicationService(workflow.agent, store);
-  if (session) {
-    await service.agent.recover(session);
-    await store.save(session);
-  }
   const renderer = await createCliRenderer({ exitOnCtrlC: false, exitSignals: [] });
   let tui: GeorgeTui | undefined;
   try {
