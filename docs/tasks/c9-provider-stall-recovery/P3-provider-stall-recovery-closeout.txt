@@ -1,0 +1,99 @@
+TASK: Correction 9 / P3 — Provider stall recovery closeout
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Sol Medium`.
+- Browser required: no.
+
+VERSIONING
+- Required unchanged project version: `0.9.10`.
+
+GOAL
+
+Perform an evidence-only closeout of `c9-provider-stall-recovery`.
+
+Do not repair production behavior and do not run the official final five-workload live sweep.
+
+Read:
+- `BOOT.md`;
+- current workflow/stability/Phase 5/8/9 authority;
+- `docs/planning/c9-provider-stall-recovery/{decision-record,qualification-plan}.md`;
+- `docs/tasks/c9-provider-stall-recovery/{prompt-assessment,implementation-plan,qualification-report.md}`;
+- P1/P2 commits and focused regression tests;
+- `c9-final-live-convergence` planning plus completed P1/P2 permanent regressions;
+- preserved interrupted P3 evidence.
+
+AUDIT
+
+Verify:
+- provider stall policy is centralized/validated;
+- suspected-stall and recovery thresholds are distinct from the 120000 ms absolute timeout;
+- provider activity observation is bounded/provider-independent;
+- caller cancellation beats watchdog classification;
+- timers/controllers are cleaned up;
+- only one identical stall retry is possible;
+- repeated stall cannot spin generic retry forever;
+- canonical rebase does not reuse failed response ID;
+- structured rebase derives only from authoritative state/evidence;
+- low-pressure path does not compact;
+- high-pressure path has at most one bounded compaction/reduction;
+- semantic compactor cannot recursively enter stall recovery;
+- P2 provisional text/tool discard safety remains intact;
+- mission-card/evidence freshness/convergence protections remain intact;
+- strict duplicate/no-progress remains intact;
+- provider stall terminal failure is not mislabeled budget exhaustion;
+- actual budget exhaustion remains truthful;
+- TUI/diagnostics are bounded/derived;
+- no helper inference was introduced;
+- absolute timeout was not increased;
+- package remains `0.9.10`;
+- no root `package-lock.json`.
+
+CREATE
+
+`docs/tasks/c9-provider-stall-recovery/closeout.md`
+
+Decision table must include:
+- Provider Stall Watchdog Qualified;
+- First-Evidence Detection Qualified;
+- Post-Activity Inactivity Detection Qualified;
+- Absolute Timeout Preserved;
+- Replay-Safe Fresh Retry Qualified;
+- Canonical Rebase Qualified;
+- Low-Pressure No-Compaction Path Qualified;
+- High-Pressure Compaction Path Qualified;
+- Compactor Recursion Guard Qualified;
+- Provider-Stall Terminal Classification Qualified;
+- Duplicate/No-Progress Preservation Qualified;
+- Cancellation Qualified;
+- TUI/Observability Qualified;
+- Phase 5 Reliability Floors Green;
+- c9-final-live-convergence P1/P2 Floors Green;
+- Broad Suite;
+- Historical Interrupted P3 Preserved;
+- Remaining Blocking Failure Count;
+- Nonblocking Evidence Gaps;
+- Overall `c9-provider-stall-recovery` Qualified;
+- Final Five-Workload Sweep Ready To Rerun.
+
+READY RULE
+
+Final Five-Workload Sweep Ready To Rerun = Yes only if:
+- focused stall/recovery regressions Green;
+- replay/permission/recovery safety Green;
+- mission-card/evidence/convergence floors Green;
+- Phase 5/9 integration Green;
+- no blocking broad regression;
+- no blocking Evidence Gap in the correction's own deterministic behavior.
+
+If ready, state exactly:
+
+`next action: npm run codex:phase -- c9-final-live-convergence --closeout`
+
+Do not execute that command here.
+
+Do not:
+- change code;
+- rerun live qualification;
+- rewrite interrupted evidence;
+- owner-close Phase 9;
+- open Phase 10.

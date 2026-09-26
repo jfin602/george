@@ -51,7 +51,19 @@ Verify:
 - retries are bounded/cancellable/budgeted/auditable;
 - timeout was not simply inflated.
 
+AUDIT PROVIDER STALL RECOVERY
+
+Verify the inserted `c9-provider-stall-recovery` closeout and current code:
+- first-evidence/inactivity watchdog qualified;
+- 120000 ms absolute timeout preserved;
+- one identical stall retry maximum;
+- one canonical rebase maximum;
+- pressure-gated compaction and compactor recursion guard qualified;
+- repeated terminal stall remains provider-class failure;
+- duplicate/no-progress and P2 replay safety preserved.
+
 AUDIT P3
+
 
 Report exact:
 
@@ -90,6 +102,7 @@ Decision table must include:
 - Hard Convergence Budget Qualified;
 - Efficiency Metric Separation Qualified;
 - Partial Provider Timeout Recovery Qualified;
+- Provider Stall Watchdog / Recovery Qualified;
 - Broad Suite State;
 - Greeting;
 - Three-File;
