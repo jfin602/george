@@ -40,7 +40,7 @@ test('durable sessions bind a canonical workspace and reconstruct clean complete
   appendSessionEvent(session, { type: 'input.submitted', text: 'Inspect this workspace.' });
   appendSessionEvent(session, { type: 'provider.text.delta', delta: 'It is ' });
   appendSessionEvent(session, { type: 'provider.text.delta', delta: 'ready.' });
-  appendSessionEvent(session, { type: 'provider.response.completed', usage: { inputTokens: 3, outputTokens: 2 } });
+  appendSessionEvent(session, { type: 'provider.response.completed', usage: { inputTokens: 3, outputTokens: 2, cachedInputTokens: 1 } });
   appendSessionEvent(session, { type: 'assistant.response.completed', turnId: 'turn-1', text: 'It is ready.' });
   appendSessionEvent(session, { type: 'turn.completed', turnId: 'turn-1' });
   await store.save(session);
@@ -54,6 +54,7 @@ test('durable sessions bind a canonical workspace and reconstruct clean complete
     { role: 'assistant', text: 'It is ready.' },
   ]);
   assert.equal(reopened.events.some((event) => event.type === 'provider.text.delta'), false);
+  assert.deepEqual(reopened.events.find((event) => event.type === 'provider.response.completed'), { type: 'provider.response.completed', usage: { inputTokens: 3, outputTokens: 2, cachedInputTokens: 1 } });
 
   const other = join(state, '..', 'other-workspace');
   await mkdir(other);

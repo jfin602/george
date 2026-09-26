@@ -5,6 +5,25 @@ export type SweepObservedResult = 'Green' | 'Not Green' | 'Evidence Gap' | 'Not 
 export type SweepQualificationStatus = 'qualifying' | 'diagnostic-only' | 'not-run';
 export type SweepCommonState = 'Green' | 'Not Green' | 'Evidence Gap';
 
+export const PHASE10_FAST_LIVE_MATRIX = Object.freeze([
+  Object.freeze({ id: 'greeting', prerequisites: Object.freeze([]), deadlineMs: 120_000 }),
+  Object.freeze({ id: 'three-file', prerequisites: Object.freeze(['greeting']), deadlineMs: 240_000 }),
+  Object.freeze({ id: 'gate-a', prerequisites: Object.freeze(['three-file']), deadlineMs: 360_000 }),
+  Object.freeze({ id: 'b3', prerequisites: Object.freeze(['gate-a']), deadlineMs: 300_000 }),
+  Object.freeze({ id: 'c3', prerequisites: Object.freeze(['b3']), deadlineMs: 240_000 }),
+] as const);
+
+export type Phase10FastLiveWorkloadId = typeof PHASE10_FAST_LIVE_MATRIX[number]['id'];
+
+/** Each callback owns one fresh isolated workspace/session; B2/C2 are intentionally absent. */
+export function phase10FastLiveWorkloads(runners: Readonly<Record<Phase10FastLiveWorkloadId, (deadlineMs: number) => Promise<Exclude<SweepObservedResult, 'Not Run'>>>>) {
+  return PHASE10_FAST_LIVE_MATRIX.map((item) => Object.freeze({
+    id: item.id,
+    prerequisites: item.prerequisites,
+    run: () => runners[item.id](item.deadlineMs),
+  }));
+}
+
 export type FunctionalEfficiencyResult = Readonly<{
   functionalResult: Exclude<SweepObservedResult, 'Not Run'>;
   efficiencyTarget: 'met' | 'missed' | 'not-measured';

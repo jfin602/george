@@ -21,6 +21,7 @@ export type ContextCheckpointEvidence = Readonly<{
 export type ProviderUsage = Readonly<{
   inputTokens?: number;
   outputTokens?: number;
+  cachedInputTokens?: number;
 }>;
 
 export type ProviderStallPhase = 'awaiting_first_evidence' | 'response_active' | 'response_completed';

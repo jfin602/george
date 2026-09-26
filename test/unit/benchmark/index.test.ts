@@ -122,7 +122,7 @@ test('event-derived records retain correctness separately from timing and failed
     { type: 'provider.attempt.started', turnId: 't', runId: 'r', attemptId: 'a' },
     { type: 'provider.response.started', responseId: 'response' },
     { type: 'provider.text.delta', delta: '42' },
-    { type: 'provider.response.completed', usage: { inputTokens: 12, outputTokens: 1 } },
+    { type: 'provider.response.completed', usage: { inputTokens: 12, outputTokens: 1, cachedInputTokens: 5 } },
     { type: 'assistant.response.completed', turnId: 't', text: '42' },
     { type: 'turn.completed', turnId: 't' },
   ];
@@ -131,10 +131,26 @@ test('event-derived records retain correctness separately from timing and failed
   assert.equal(record.responseStartLatencyMs, 4);
   assert.equal(record.firstOutputLatencyMs, 7);
   assert.equal(record.actualInputTokens, 12);
+  assert.equal(record.cachedInputTokens, 5);
+  assert.deepEqual({ internalTextBytes: record.internalTextBytes, concurrentReadBatchCount: record.concurrentReadBatchCount, modelRoundsAvoided: record.modelRoundsAvoided, humanModeRounds: record.humanModeRounds }, { internalTextBytes: null, concurrentReadBatchCount: 0, modelRoundsAvoided: 0, humanModeRounds: null });
   const failed = deriveBenchmarkRecord(case_, pass.slice(0, -1), 25, 1, 'warm-repeat', 'model', 'http://127.0.0.1:1234');
   assert.equal(failed.passed, false);
   const tooManyTools = deriveBenchmarkRecord(BENCHMARK_CASES.find((item) => item.id === 'structured-tool-use-001')!, [...pass.slice(0, -1), { type: 'tool.requested', turnId: 't', callId: 'extra', name: 'read_file', arguments: '{"path":"answer.txt"}' }, { type: 'turn.completed', turnId: 't' }], 1, 1, 'warm-repeat', 'model', 'http://127.0.0.1:1234');
   assert.equal(tooManyTools.passed, false);
+});
+
+test('benchmark telemetry records completed tool batches and never fabricates unavailable Phase 10 producers', () => {
+  const record = deriveBenchmarkRecord(BENCHMARK_CASES[0]!, [
+    { type: 'provider.attempt.started', turnId: 't', runId: 'r', attemptId: 'a' },
+    { type: 'provider.tool.call', callId: 'one', name: 'read_file', arguments: '{}' },
+    { type: 'provider.tool.call', callId: 'two', name: 'read_file', arguments: '{}' },
+    { type: 'provider.response.completed', usage: { inputTokens: 10, outputTokens: 2 } },
+    { type: 'turn.failed', turnId: 't', error: { code: 'validation', message: 'fixture' } },
+  ], 5, 1, 'warm-repeat', 'model', 'http://127.0.0.1:1234');
+  assert.deepEqual(record.toolBatchWidths, [2]);
+  assert.equal(record.toolBatchCount, 1);
+  assert.equal(record.cachedInputTokens, null);
+  assert.deepEqual({ internal: record.internalTextBytes, parallel: record.parallelBatchWallMs, child: record.summedChildToolRuntimeMs, controls: record.georgeControlCount, human: record.humanModeRounds, operation: record.operationModeRounds, corrections: record.correctionCycles }, { internal: null, parallel: null, child: null, controls: 0, human: null, operation: null, corrections: 0 });
 });
 
 test('code-understanding requires one read and its exact deterministic answer', () => {
@@ -229,6 +245,11 @@ test('JSON artifacts, report, aggregates, and comparison remain stable', async (
   await assert.rejects(compareBenchmark(join(root, 'v1.json'), results), /Cannot compare benchmark schema\/suite/);
   await writeFile(join(root, 'v2.json'), JSON.stringify({ ...results, schemaVersion: 2, suiteVersion: 'v2' }));
   assert.match(await compareBenchmark(join(root, 'v2.json'), results), /Legacy v2 artifact/);
+  const legacyV3 = JSON.parse(JSON.stringify(results));
+  for (const item of legacyV3.records) for (const key of ['cachedInputTokens', 'internalTextBytes', 'estimatedInternalTextTokens', 'toolBatchCount', 'toolBatchWidths', 'concurrentReadBatchCount', 'parallelBatchWallMs', 'summedChildToolRuntimeMs', 'modelRoundsAvoided', 'georgeControlCount', 'humanModeRounds', 'operationModeRounds', 'correctionCycles']) delete item[key];
+  await writeFile(join(root, 'legacy-v3.json'), JSON.stringify(legacyV3));
+  assert.match(await compareBenchmark(join(root, 'legacy-v3.json'), results), /tool batches delta/);
+  assert.match(report(legacyV3), /Phase 10 telemetry/);
 });
 
 test('benchmark progress and result formatting is readable without terminal control sequences', () => {

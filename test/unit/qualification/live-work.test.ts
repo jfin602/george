@@ -7,7 +7,7 @@ import test from 'node:test';
 
 import { StructuredTaskApplicationService, StructuredTaskStackApplicationService, createAgentLoopApplicationService, createCodingWorkflowApplicationService } from '../../../src/application/index.ts';
 import { CONTEXT_PROFILE_REGISTRY, createSession, type ApplicationEvent, type ApprovalDecision, type ApprovalPort, type ApprovalRequest, type ModelProvider, type ProviderEvent, type ProviderRequest } from '../../../src/core/index.ts';
-import { THREE_FILE_INSPECTION_SMOKE, acceptGreetingSmoke, acceptThreeFileSmoke, createFrozenEditQualificationApproval, extractLiveWorkTrace, prepareThreeFileInspectionFixture, recognizeLiveWorkArtifactSchema, runExistingExpressFeatureV1, runExistingExpressFeatureV2, runGreenfieldExpressV1, runGreenfieldExpressV2, runLiveWorkInstrument, runOrdinaryTurnQualification, writeLiveWorkArtifacts, type LiveWorkResult } from '../../../src/qualification/index.ts';
+import { THREE_FILE_INSPECTION_SMOKE, acceptGreetingSmoke, acceptThreeFileSmoke, createFrozenEditQualificationApproval, extractLiveWorkTrace, preparePhase10CoreWorkspace, prepareThreeFileInspectionFixture, recognizeLiveWorkArtifactSchema, runExistingCoreEditV1, runExistingExpressFeatureV1, runExistingExpressFeatureV2, runGreenfieldCoreV1, runGreenfieldExpressV1, runGreenfieldExpressV2, runLiveWorkInstrument, runOrdinaryTurnQualification, writeLiveWorkArtifacts, type LiveWorkResult } from '../../../src/qualification/index.ts';
 import { createStackState, createTaskState, parseTaskPrompt } from '../../../src/tasks/index.ts';
 
 class Provider implements ModelProvider {
@@ -218,6 +218,41 @@ test('versioned live-work runners load only matching instruments at the producti
   await runExistingExpressFeatureV1({ ...singleCommon, attemptId: 'existing-v1', session: createSession({ workspace }), instrumentRoot: join(fixtures, 'existing-express-feature-v1'), acceptancePath: join(acceptance, 'existing-express-feature-v1.test.mjs') });
   await runExistingExpressFeatureV2({ ...singleCommon, attemptId: 'existing-v2', session: createSession({ workspace }), instrumentRoot: join(fixtures, 'existing-express-feature-v2'), acceptancePath: join(acceptance, 'existing-express-feature-v1.test.mjs') });
   assert.deepEqual(singleRuns, ['existing-express-feature-v1', 'existing-express-feature-v2']);
+});
+
+test('Phase 10 B3/C3 runners select only their frozen pure-Node instruments', async (t) => {
+  const parent = await mkdtemp(join(tmpdir(), 'george-p10-live-runner-'));
+  const greenfieldWorkspace = join(parent, 'greenfield');
+  const existingWorkspace = join(parent, 'existing');
+  t.after(() => rm(parent, { recursive: true, force: true }));
+  const fixtures = join(process.cwd(), 'test/fixtures/p10-live-work');
+  const acceptance = join(process.cwd(), 'test/acceptance/p10-live-work');
+  await preparePhase10CoreWorkspace({ workspace: greenfieldWorkspace });
+  await preparePhase10CoreWorkspace({ workspace: existingWorkspace, fixtureBase: join(fixtures, 'existing-core-edit-v1/base') });
+  assert.deepEqual((await readdir(existingWorkspace)).sort(), ['.git', 'README.md', 'package.json', 'src', 'test']);
+
+  let stackPrompts: readonly string[] = [];
+  const stackService = { run: async ({ prompts }: { prompts: readonly string[] }) => { stackPrompts = prompts; return { state: { status: 'completed' }, taskCompletions: [] }; } } as unknown as StructuredTaskStackApplicationService;
+  await runGreenfieldCoreV1({ attemptId: 'b3', humanInterventions: 0, service: stackService, session: createSession({ workspace: greenfieldWorkspace }), instrumentRoot: join(fixtures, 'greenfield-core-v1'), acceptancePath: join(acceptance, 'greenfield-core-v1.test.mjs'), runHiddenAcceptance: async () => true });
+  assert.deepEqual(stackPrompts.map((value) => value.match(/STACK: ([^\n]+)/)?.[1]), ['greenfield-core-v1', 'greenfield-core-v1']);
+
+  let singlePrompt = '';
+  const singleService = { run: async ({ input }: { input: string }) => { singlePrompt = input; throw new Error('captured'); } } as unknown as StructuredTaskApplicationService;
+  await runExistingCoreEditV1({ attemptId: 'c3', humanInterventions: 0, service: singleService, session: createSession({ workspace: existingWorkspace }), instrumentRoot: join(fixtures, 'existing-core-edit-v1'), acceptancePath: join(acceptance, 'existing-core-edit-v1.test.mjs'), runHiddenAcceptance: async () => true });
+  assert.match(singlePrompt, /STACK: existing-core-edit-v1/);
+});
+
+test('live telemetry records cached usage and completed tool batches with explicit unavailable defaults', () => {
+  const trace = extractLiveWorkTrace({ events: [
+    { type: 'provider.attempt.started', turnId: 't', runId: 'r', attemptId: 'a' },
+    { type: 'provider.tool.call', callId: 'one', name: 'read_file', arguments: '{}' },
+    { type: 'provider.tool.call', callId: 'two', name: 'read_file', arguments: '{}' },
+    { type: 'provider.response.completed', usage: { inputTokens: 10, outputTokens: 2, cachedInputTokens: 6 } },
+  ], terminalStatus: 'failed', hiddenAcceptance: 'not_run', humanInterventions: 0 });
+  assert.deepEqual(trace.metrics.toolBatchWidths, [2]);
+  assert.equal(trace.metrics.toolBatchCount, 1);
+  assert.equal(trace.metrics.cachedInputTokens, 6);
+  assert.deepEqual({ internal: trace.metrics.internalTextBytes, concurrent: trace.metrics.concurrentReadBatchCount, parallel: trace.metrics.parallelBatchWallMs, avoided: trace.metrics.modelRoundsAvoided, controls: trace.metrics.georgeControlCount, human: trace.metrics.humanModeRounds, operation: trace.metrics.operationModeRounds, corrections: trace.metrics.correctionCycles }, { internal: null, concurrent: 0, parallel: null, avoided: 0, controls: 0, human: null, operation: null, corrections: 0 });
 });
 
 test('live trace uses typed diagnostics, pairs tools, retains mutation and safe task projections, and tolerates missing or future evidence', () => {

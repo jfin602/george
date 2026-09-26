@@ -338,8 +338,8 @@ function durableEvent(event: ApplicationEvent): ApplicationEvent | undefined {
 }
 
 function safeUsage(usage: ProviderUsage): ProviderUsage {
-  const result: { inputTokens?: number; outputTokens?: number } = {};
-  for (const key of ['inputTokens', 'outputTokens'] as const) {
+  const result: { inputTokens?: number; outputTokens?: number; cachedInputTokens?: number } = {};
+  for (const key of ['inputTokens', 'outputTokens', 'cachedInputTokens'] as const) {
     const value = usage[key];
     if (value !== undefined) {
       if (!Number.isInteger(value) || value < 0 || value > 1_000_000_000) invalid(`provider ${key} is invalid.`);

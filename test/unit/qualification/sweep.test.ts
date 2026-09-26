@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { classifyFunctionalEfficiency, classifySweepAbortScope, normalizeFailureLedger, runQualificationSweep, sweepCommonFromAbortScope, type FailureLedgerEntryInput, type SweepObservedResult, type SweepPreflightKind, type SweepPreflightObservation } from '../../../src/qualification/index.ts';
+import { PHASE10_FAST_LIVE_MATRIX, classifyFunctionalEfficiency, classifySweepAbortScope, normalizeFailureLedger, phase10FastLiveWorkloads, runQualificationSweep, sweepCommonFromAbortScope, type FailureLedgerEntryInput, type Phase10FastLiveWorkloadId, type SweepObservedResult, type SweepPreflightKind, type SweepPreflightObservation } from '../../../src/qualification/index.ts';
 
 const ids = ['greeting', 'three-file', 'gate-a', 'b2', 'c2'] as const;
 
@@ -111,6 +111,20 @@ test('full sweep keeps ordered functional failures diagnostic without spending a
     assert.deepEqual(result.results.map(({ qualificationStatus }) => qualificationStatus), item.statuses);
     assert.deepEqual(result.results.map(({ attempts }) => attempts), [1, 1, 1, 1, 1]);
   }
+});
+
+test('Phase 10 fast live matrix freezes order/deadlines and excludes milestone B2/C2', async () => {
+  assert.deepEqual(PHASE10_FAST_LIVE_MATRIX.map(({ id, deadlineMs }) => [id, deadlineMs]), [
+    ['greeting', 120_000], ['three-file', 240_000], ['gate-a', 360_000], ['b3', 300_000], ['c3', 240_000],
+  ]);
+  const called: Array<[string, number]> = [];
+  const runners = Object.fromEntries(PHASE10_FAST_LIVE_MATRIX.map(({ id }) => [id, async (deadlineMs: number) => { called.push([id, deadlineMs]); return id === 'gate-a' ? 'Not Green' : 'Green'; }])) as Record<Phase10FastLiveWorkloadId, (deadlineMs: number) => Promise<'Green' | 'Not Green'>>;
+  const result = await runQualificationSweep({ common: { state: 'Green' }, workloads: phase10FastLiveWorkloads(runners) });
+  assert.deepEqual(called, PHASE10_FAST_LIVE_MATRIX.map(({ id, deadlineMs }) => [id, deadlineMs]));
+  assert.deepEqual(result.results.map(({ attempts }) => attempts), [1, 1, 1, 1, 1]);
+  assert.deepEqual(result.results.map(({ qualificationStatus }) => qualificationStatus), ['qualifying', 'qualifying', 'qualifying', 'diagnostic-only', 'diagnostic-only']);
+  assert.equal(JSON.stringify(result).includes('b2'), false);
+  assert.equal(JSON.stringify(result).includes('c2'), false);
 });
 
 test('common invalidity and evidence-writer failure abort later workload callbacks', async () => {

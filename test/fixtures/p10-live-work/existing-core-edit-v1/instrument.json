@@ -1,0 +1,13 @@
+{
+  "instrument": "existing-core-edit-v1",
+  "version": 1,
+  "taskFormat": 1,
+  "taskStackSha256": "a3f3628d8c4df48708cd96dae04710a8ccabcc4a6818102f92d56750327028df",
+  "fixtureVersion": 1,
+  "fixtureSourceSha256": "d455c41b7f6da50c322fd8e54a04241ad06f030284ef6bf5e4c08003ba5b8a7b",
+  "acceptance": "existing-core-edit-v1.test.mjs",
+  "acceptancePath": "test/acceptance/p10-live-work/existing-core-edit-v1.test.mjs",
+  "acceptanceVersion": 1,
+  "acceptanceSha256": "11d61eef45433f07514f10b19772139e813a245a9a7915def2c496193728d491",
+  "dependencyPrerequisite": "none; network and dependency installation prohibited"
+}

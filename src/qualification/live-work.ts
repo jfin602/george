@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { execFile } from 'node:child_process';
-import { copyFile, mkdir, readFile, readdir, rename, writeFile } from 'node:fs/promises';
+import { copyFile, cp, mkdir, readFile, readdir, rename, writeFile } from 'node:fs/promises';
 import { isAbsolute, join, relative, resolve } from 'node:path';
 import { promisify } from 'node:util';
 
@@ -46,7 +46,20 @@ export type LiveWorkMetrics = Readonly<{
   retries: number;
   providerInputTokens: number | null;
   providerOutputTokens: number | null;
+  cachedInputTokens: number | null;
   toolCalls: number;
+  internalTextBytes: number | null;
+  estimatedInternalTextTokens: number | null;
+  toolBatchCount: number;
+  toolBatchWidths: readonly number[];
+  concurrentReadBatchCount: number;
+  parallelBatchWallMs: number | null;
+  summedChildToolRuntimeMs: number | null;
+  modelRoundsAvoided: number;
+  georgeControlCount: number;
+  humanModeRounds: number | null;
+  operationModeRounds: number | null;
+  correctionCycles: number;
   contextAssemblies: number;
   sandboxedProcessCalls: number;
   taskUpdates: number;
@@ -161,6 +174,13 @@ export async function prepareThreeFileInspectionFixture(fixtureRoot: string, wor
   await execFileAsync('git', ['init', '--quiet'], { cwd: workspace });
 }
 
+export async function preparePhase10CoreWorkspace(options: Readonly<{ workspace: string; fixtureBase?: string }>): Promise<void> {
+  await mkdir(options.workspace, { recursive: true });
+  if ((await readdir(options.workspace)).length > 0) throw new Error('Phase 10 live-work workspace must be empty.');
+  if (options.fixtureBase) await cp(options.fixtureBase, options.workspace, { recursive: true });
+  await execFileAsync('git', ['init', '--quiet'], { cwd: options.workspace });
+}
+
 /** Frozen Phase 9 edit gate only: exact target, ordinary mutation, exact validation. */
 export function createFrozenEditQualificationApproval(options: Readonly<{
   targetPath: string;
@@ -269,17 +289,41 @@ function operationalEvent(event: ApplicationEvent): boolean {
   return event.type !== 'provider.text.delta' && event.type !== 'input.submitted' && event.type !== 'assistant.response.completed';
 }
 
-function metrics(events: readonly ApplicationEvent[]): LiveWorkMetrics {
+function metrics(events: readonly ApplicationEvent[], correctionCycles: number): LiveWorkMetrics {
   const completed = events.filter((event): event is Extract<ApplicationEvent, { type: 'provider.response.completed' }> => event.type === 'provider.response.completed');
   const input = completed.map((event) => number(event.usage?.inputTokens)).filter((value): value is number => value !== null);
   const output = completed.map((event) => number(event.usage?.outputTokens)).filter((value): value is number => value !== null);
+  const cachedInput = completed.map((event) => number(event.usage?.cachedInputTokens)).filter((value): value is number => value !== null);
+  let pendingToolBatchWidth = 0;
+  const toolBatchWidths: number[] = [];
+  for (const event of events) {
+    if (event.type === 'provider.attempt.started') pendingToolBatchWidth = 0;
+    else if (event.type === 'provider.tool.call') pendingToolBatchWidth += 1;
+    else if (event.type === 'provider.response.completed') {
+      if (pendingToolBatchWidth > 0) toolBatchWidths.push(pendingToolBatchWidth);
+      pendingToolBatchWidth = 0;
+    } else if (event.type === 'provider.error') pendingToolBatchWidth = 0;
+  }
   return {
     providerAttempts: events.filter((event) => event.type === 'provider.attempt.started').length,
     providerRounds: events.filter((event) => event.type === 'provider.response.completed' || event.type === 'provider.error').length,
     retries: events.filter((event) => event.type === 'provider.retry.scheduled').length,
     providerInputTokens: completed.length && input.length === completed.length ? input.reduce((total, value) => total + value, 0) : null,
     providerOutputTokens: completed.length && output.length === completed.length ? output.reduce((total, value) => total + value, 0) : null,
+    cachedInputTokens: completed.length && cachedInput.length === completed.length ? cachedInput.reduce((total, value) => total + value, 0) : null,
     toolCalls: events.filter((event) => event.type === 'tool.requested').length,
+    internalTextBytes: null,
+    estimatedInternalTextTokens: null,
+    toolBatchCount: toolBatchWidths.length,
+    toolBatchWidths: Object.freeze(toolBatchWidths),
+    concurrentReadBatchCount: 0,
+    parallelBatchWallMs: null,
+    summedChildToolRuntimeMs: null,
+    modelRoundsAvoided: 0,
+    georgeControlCount: 0,
+    humanModeRounds: null,
+    operationModeRounds: null,
+    correctionCycles,
     contextAssemblies: events.filter((event) => event.type === 'context.assembled').length,
     sandboxedProcessCalls: events.filter((event) => event.type === 'tool.started' && event.execution?.effect === 'sandboxed_workspace_process').length,
     taskUpdates: events.filter((event) => event.type === 'task.updated').length,
@@ -366,7 +410,7 @@ export function extractLiveWorkTrace(options: Readonly<{
   try { taskState = options.taskState ? projectTaskState(options.taskState) : null; } catch { /* Invalid partial state is not safe qualification evidence. */ }
   try { stackState = options.stackState ? projectStackState(options.stackState) : null; } catch { /* Invalid partial state is not safe qualification evidence. */ }
   return Object.freeze({
-    schemaVersion: 2, terminalStatus: options.terminalStatus, terminalError, observerError, failures: extractFailures(options.events, terminalError, observerError), taskState, stackState, metrics: Object.freeze(metrics(options.events)), toolCalls: Object.freeze(toolCalls), mutations: Object.freeze(mutations), validations: Object.freeze(validations), correctionCount: taskState?.corrections.length ?? 0, contexts: Object.freeze(contexts), envelopePromotions: Object.freeze(envelopePromotions), observedReadPaths: successfulReadPaths(options.events), finalResponse: responseEvidence(options.finalAssistantResponse),
+    schemaVersion: 2, terminalStatus: options.terminalStatus, terminalError, observerError, failures: extractFailures(options.events, terminalError, observerError), taskState, stackState, metrics: Object.freeze(metrics(options.events, taskState?.corrections.length ?? 0)), toolCalls: Object.freeze(toolCalls), mutations: Object.freeze(mutations), validations: Object.freeze(validations), correctionCount: taskState?.corrections.length ?? 0, contexts: Object.freeze(contexts), envelopePromotions: Object.freeze(envelopePromotions), observedReadPaths: successfulReadPaths(options.events), finalResponse: responseEvidence(options.finalAssistantResponse),
     budgets: Object.freeze({ latest: Object.freeze([...snapshots].map(([runId, snapshot]) => ({ runId, snapshot }))), pressure: Object.freeze(pressure), exhaustion: Object.freeze(exhaustion), taskExhausted: options.terminalStatus === 'budget_exhausted' || taskState?.status === 'budget_exhausted' || stackState?.status === 'budget_exhausted', stageExhaustion: Object.freeze(stageExhaustion) }),
     timing: Object.freeze({ totalMs: number(options.totalMs), workflows: Object.freeze(workflows) }), hiddenAcceptance: options.hiddenAcceptance, humanInterventions: options.humanInterventions, eventsOmitted: options.eventsOmitted ?? 0,
   });
@@ -500,7 +544,7 @@ function eventEvidence(event: ApplicationEvent): Readonly<Record<string, unknown
   if (event.type === 'provider.stall.terminal') safe.stall = { attemptId: event.attemptId, phase: event.phase, attempts: event.attempts, pressure: event.pressure, compaction: event.compaction, terminal: true };
   if (event.type === 'context.assembled') safe.diagnostics = { profileId: event.diagnostics?.profileId ?? null, attemptedProfileIds: event.diagnostics?.attemptedProfileIds ?? [], promotionReasons: event.diagnostics?.promotionReasons ?? [], estimatedTokens: event.diagnostics?.estimatedTokens ?? null, providerInputBudget: event.diagnostics?.providerInputBudget ?? null, remainingHeadroom: event.diagnostics?.remainingHeadroom ?? null };
   if (event.type === 'context.envelope.promoted') safe.promotion = { fromProfileId: event.fromProfileId, toProfileId: event.toProfileId, reason: event.reason, tokens: event.tokens, providerInputBudget: event.providerInputBudget };
-  if (event.type === 'provider.response.completed') safe.usage = { inputTokens: event.usage?.inputTokens ?? null, outputTokens: event.usage?.outputTokens ?? null };
+  if (event.type === 'provider.response.completed') safe.usage = { inputTokens: event.usage?.inputTokens ?? null, outputTokens: event.usage?.outputTokens ?? null, cachedInputTokens: event.usage?.cachedInputTokens ?? null };
   if (event.type === 'provider.error' || event.type === 'turn.failed' || event.type === 'turn.cancelled') safe.error = boundedFailureError(event.error);
   if (event.type === 'tool.failed') safe.error = boundedFailureError(event.result.error);
   if (event.type === 'validation.completed' && event.status !== 'passed') safe.error = { code: sanitizeTaskEvidence(event.error?.code ?? event.status, 128).text, message: sanitizeTaskEvidence(event.error?.message ?? `Validation ${event.status}.`, 1024).text, ...(event.outcome === undefined ? {} : { reason: event.outcome }) };
@@ -561,5 +605,15 @@ export async function runGreenfieldExpressV2(options: Omit<Extract<LiveWorkSubmi
 
 export async function runExistingExpressFeatureV2(options: Omit<Extract<LiveWorkSubmission, { kind: 'single' }>, 'kind' | 'prompt'> & Readonly<{ instrumentRoot: string }>): Promise<LiveWorkResult> {
   const prompt = await readFile(join(options.instrumentRoot, 'P1-tag-feature.task.txt'), 'utf8');
+  return runLiveWorkInstrument({ ...options, kind: 'single', prompt });
+}
+
+export async function runGreenfieldCoreV1(options: Omit<Extract<LiveWorkSubmission, { kind: 'stack' }>, 'kind' | 'prompts'> & Readonly<{ instrumentRoot: string }>): Promise<LiveWorkResult> {
+  const prompts = await Promise.all(['P1-core.task.txt', 'P2-store.task.txt'].map((name) => readFile(join(options.instrumentRoot, name), 'utf8')));
+  return runLiveWorkInstrument({ ...options, kind: 'stack', prompts });
+}
+
+export async function runExistingCoreEditV1(options: Omit<Extract<LiveWorkSubmission, { kind: 'single' }>, 'kind' | 'prompt'> & Readonly<{ instrumentRoot: string }>): Promise<LiveWorkResult> {
+  const prompt = await readFile(join(options.instrumentRoot, 'P1-release-label.task.txt'), 'utf8');
   return runLiveWorkInstrument({ ...options, kind: 'single', prompt });
 }

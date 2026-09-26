@@ -42,12 +42,18 @@ function usageFrom(value: unknown): ProviderUsage | undefined {
   const usage = value as Record<string, unknown>;
   const inputTokens = usage.input_tokens;
   const outputTokens = usage.output_tokens;
+  const cachedInputTokens = usage.input_tokens_details !== null && typeof usage.input_tokens_details === 'object'
+    ? (usage.input_tokens_details as Record<string, unknown>).cached_tokens
+    : undefined;
   const normalized = {
     ...(typeof inputTokens === 'number' && Number.isFinite(inputTokens)
       ? { inputTokens }
       : {}),
     ...(typeof outputTokens === 'number' && Number.isFinite(outputTokens)
       ? { outputTokens }
+      : {}),
+    ...(typeof cachedInputTokens === 'number' && Number.isSafeInteger(cachedInputTokens) && cachedInputTokens >= 0
+      ? { cachedInputTokens }
       : {}),
   };
   return Object.keys(normalized).length === 0 ? undefined : normalized;

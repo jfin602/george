@@ -52,7 +52,7 @@ test('LM Studio provider sends the Responses request shape and parses split CRLF
       'event: response.output_text.delta\r\ndata: {"type":"response.output_text.delta","delta":"hel',
       'lo"}\r\n\r\n',
       'event: response.output_text.delta\r\ndata: {"type":"response.output_text.delta",\r\ndata: "delta":" world"}\r\n\r\n',
-      'event: response.completed\r\ndata: {"type":"response.completed","response":{"usage":{"input_tokens":3,"output_tokens":2}}}\r\n\r\n',
+      'event: response.completed\r\ndata: {"type":"response.completed","response":{"usage":{"input_tokens":3,"output_tokens":2,"input_tokens_details":{"cached_tokens":1}}}}\r\n\r\n',
     ]));
   });
   t.after(() => close(server));
@@ -71,7 +71,7 @@ test('LM Studio provider sends the Responses request shape and parses split CRLF
     { type: 'provider.response.started', responseId: 'r-1' },
     { type: 'provider.text.delta', delta: 'hello' },
     { type: 'provider.text.delta', delta: ' world' },
-    { type: 'provider.response.completed', usage: { inputTokens: 3, outputTokens: 2 } },
+    { type: 'provider.response.completed', usage: { inputTokens: 3, outputTokens: 2, cachedInputTokens: 1 } },
   ]);
   assert.equal(activity, 4, 'valid SSE frames refresh liveness without adding semantic events');
 });

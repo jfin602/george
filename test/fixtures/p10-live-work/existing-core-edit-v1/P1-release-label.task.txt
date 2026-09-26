@@ -1,0 +1,66 @@
+GEORGE TASK FORMAT: 1
+
+STACK: existing-core-edit-v1
+TASK: P1 — Add release labels
+KIND: implementation
+
+GOAL
+
+Add one focused release-label feature while preserving the existing label contract.
+
+INSPECT
+
+- src/labels.js
+- focused baseline tests and package scripts
+- README and Git status
+
+REQUIREMENTS
+
+- R1: Preserve normalizeLabel and every baseline test.
+- R2: Export formatReleaseLabel(value, channel = 'stable') from src/labels.js.
+- R3: Reuse normalizeLabel for value and channel; allow only stable, beta, or next channels; return value@channel.
+- R4: Invalid channels throw and the default channel is stable.
+- R5: Add test/release-label.test.js without deleting or weakening baseline coverage.
+- R6: Update README.md with the release-label behavior and allowed channels.
+
+WORKFLOW
+
+W1 — Add the bounded release-label behavior
+Covers: R1, R2, R3, R4
+Depends on: none
+
+Keep the change in the existing module and reuse its normalization contract.
+
+W2 — Add feature coverage and usage
+Covers: R5, R6
+Depends on: W1
+
+Preserve baseline coverage and keep the documentation concise.
+
+VALIDATION
+
+V1 — Focused release labels
+Covers: R2, R3, R4, R5
+Run: node --test test/release-label.test.js
+
+V2 — Broad baseline and feature suite
+Covers: R1, R2, R3, R4, R5, R6
+Run: npm test
+
+STOP CONDITIONS
+
+- S1: Do not use the network or install packages.
+- S2: Do not claim completion while V1 or V2 is failing or unexecuted.
+
+DELIVERABLES
+
+- D1: Preserved label core plus the tested release-label feature.
+
+PERMISSIONS
+
+- Workspace: autonomous
+- Network: reject
+
+EVIDENCE
+
+After George runs V1 and V2, record inspected paths, changed files, literal results, zero dependency installation, and final task state.

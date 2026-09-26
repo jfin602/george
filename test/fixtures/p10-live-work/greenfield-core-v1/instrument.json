@@ -1,0 +1,12 @@
+{
+  "instrument": "greenfield-core-v1",
+  "version": 1,
+  "taskFormat": 1,
+  "taskStackSha256": "1e4db7e14cdbdfcf6711367c4b920a17caf819d8281e5bf82e0f59b2b85eb95e",
+  "acceptance": "greenfield-core-v1.test.mjs",
+  "acceptancePath": "test/acceptance/p10-live-work/greenfield-core-v1.test.mjs",
+  "acceptanceVersion": 1,
+  "acceptanceSha256": "6fae093f474006f0b097f38b900dfda39613719f6ae2e2e8e883193f987137c0",
+  "crossTaskDependency": "P2 imports normalizeTitle from the P1 src/title.js output",
+  "dependencyPrerequisite": "none; network and dependency installation prohibited"
+}
