@@ -119,25 +119,27 @@ Its live result:
 
 The three-file attempt successfully read all required files with no exhaustion or context promotion, then ended on `provider.error -> turn.failed` without a final answer. The bounded artifact retained the event category but not the provider error code/message, leaving a diagnostic Evidence Gap.
 
-The current qualification strategy is therefore being changed so Phase 9 can discover the complete safe failure surface before each repair wave.
+The diagnostic-sweep strategy then completed through `c9-live-sweep-convergence` and the final five-workload sweep. Current broad/deterministic state is strong: `npm test` is 417 passed / 0 failed / 1 non-TTY skip, greeting is Green, and three-file is Green. The old B2 P1 stage-limit defect and old C2 missing-INSPECT-evidence defect did not recur.
 
-The active correction is now `c9-live-sweep-convergence`.
+The final sweep exposed three fresh live blockers:
+- Gate A functionally succeeded (exact edit, V1, completed/verified TaskState, hidden acceptance) but exceeded the historical <=10 model-call efficiency ceiling with 12 calls;
+- B2 completed P1 and failed in P2 when LM Studio emitted partial response/tool-call evidence but never completed before the 120000 ms timeout;
+- C2 consumed the eight-call implementation-stage ceiling largely re-inspecting already observed state, so the first legitimate patch was rejected as call 9.
+
+The active correction is now `c9-final-live-convergence`.
 
 It must:
-- repair bounded failure-evidence diagnostics and version artifact schema when structurally necessary;
-- distinguish common validity/safety aborts from ordinary functional workload failures;
-- after common gates are Green, execute greeting, three-file, Gate A, B2, and C2 exactly once each even if an earlier functional workload fails;
-- use fresh isolated workspaces/sessions per workload;
-- record observed result separately from qualifying vs diagnostic-only status;
-- create one consolidated failure ledger covering deterministic, broad, and live failures;
-- repair the complete evidenced agent/provider/context defect wave;
-- separately repair evidenced TUI/test-stability failures;
-- run the complete matrix again after repairs without functional fail-fast;
-- preserve all historical attempts and gate semantics.
+- add a deterministic bounded mission-card/alignment projection from canonical TaskState and observed evidence;
+- make structured implementation reuse valid INSPECT evidence and avoid unnecessary repeated investigation;
+- separate hard runaway/no-progress controls from nonblocking efficiency targets;
+- qualify safe recovery/retry for incomplete provider responses only when no proposed tool executed, no assistant response committed, and no ambiguous side effect occurred;
+- preserve permissions, recovery, SHA/framing, containment, hidden acceptance, and TaskState authority;
+- run one final complete greeting -> three-file -> Gate A -> B2 -> C2 sweep;
+- keep helper/utility-model inference out of Phase 9.
 
 Current correction authority:
-- latest historical truth: `docs/tasks/c9-turn-context-live-qualification/closeout.md`;
-- active planning: `docs/planning/c9-live-sweep-convergence/decision-record.md` and `qualification-plan.md`.
+- latest full-sweep truth: `docs/tasks/c9-final-qualification/report.md` and `failure-ledger.json`;
+- active planning: `docs/planning/c9-final-live-convergence/decision-record.md` and `qualification-plan.md`.
 
 Historical Phase 1-8 prompts/evidence are not renumbered or rewritten.
 
