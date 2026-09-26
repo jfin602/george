@@ -432,10 +432,13 @@ Current evidence after Phase 9 corrections:
 - the first official three-file inspection attempt is Not Green: all three required reads completed, but the third provider round ended in provider failure without a final answer;
 - the current schema-1 live artifact did not preserve the provider diagnostic code/message, so failure observability must be strengthened before another repair cycle;
 - under the previous fail-fast strategy Gate A/B2/C2 were skipped, leaving the remainder of the live defect surface unknown;
-- active correction `c9-live-sweep-convergence` replaces functional fail-fast discovery with complete isolated diagnostic sweeps, consolidated failure ledgers, clustered repair waves, and a complete post-repair sweep;
-- final gate semantics remain strict: downstream observations after an upstream failure are diagnostic-only until a complete qualifying chain is Green;
-- the polish wave will also address actionable retained OpenTUI/test-stability failures rather than automatically carrying them forever;
-- profile constants, Task Prompt format 1, v1/v2 task instruments, hidden acceptance, and historical attempts remain immutable unless separately approved;
+`c9-live-sweep-convergence` completed the full diagnostic/repair cycle and produced a clean broad state plus a complete final failure surface. The current final Phase 9 correction is `c9-final-live-convergence`:
+- deterministic mission-card/alignment projection keeps the primary model focused on the active work unit, applicable requirements/invariants, valid observations, no-repeat evidence, next George-owned completion condition, and stop conditions;
+- structured implementation reuses valid INSPECT evidence rather than re-running broad investigation by default;
+- hard runaway/no-progress budgets remain safety controls, while historical tiny call ceilings become separately reported efficiency targets rather than standalone functional blockers;
+- safe partial-provider-response timeout recovery is qualified only when no proposed tool executed, no assistant response committed, and no ambiguous side effect occurred;
+- helper/utility inference remains out of Phase 9 so final failure attribution stays primary-model/harness-only;
+- one final complete five-workload sweep determines owner-closeout readiness;
 - Phase 9 is not owner-closed and Phase 10 remains unopened.
 
 Goal: make George execute rich software-development task stacks reliably with the local coding model by moving deterministic requirements/workflow/validation/permission orchestration into the harness rather than asking the model to infer it from frontier-model-style prose.
@@ -482,6 +485,7 @@ Non-goals:
 Goal: reduce serialized orchestration latency and unnecessary primary-model invocations on top of the Phase 9 structured execution model while preserving George-owned dependency ordering, permissions, transcript/task truth, recovery semantics, and deterministic evidence.
 
 Scope:
+- preserve and measure the Phase 9 deterministic mission-card/alignment contract while optimizing the loop;
 - dependency-safe concurrency for independent operations, beginning with read-only workspace/tool activity;
 - preserve model/task ordering whenever calls are dependent;
 - side-effecting or ambiguous operations remain sequential unless explicitly qualified otherwise;
@@ -490,7 +494,8 @@ Scope:
 - separately reduce redundant model turns where the model does not need intermediate reasoning;
 - preserve provider-round assistant commit and Phase 9 task-state authority;
 - track logical provider rounds separately from retries;
-- include frozen Phase 9 live-work instruments.
+- include frozen Phase 9 live-work instruments;
+- track tool calls per successful task, provider rounds per successful task, repeated-evidence requests, no-progress interventions, and task-completion rate in addition to wall time/tokens.
 
 Success condition:
 - independent-tool cases improve end-to-end performance without correctness/permission/evidence/task regressions;
@@ -498,11 +503,13 @@ Success condition:
 - live-work fixtures remain functionally equivalent or improve;
 - each optimization is independently accepted/reverted.
 
-Non-goals: concurrent ambiguous mutations, multi-agent scheduling, helper-model delegation, daemon/background ownership.
+Non-goals: concurrent ambiguous mutations, multi-agent scheduling, production helper-model delegation, daemon/background ownership.
+
+After the primary-only Phase 10 optimization pass, run one **bounded non-authoritative helper A/B experiment** before Phase 11 consolidation. The experiment gives a utility model exactly one narrow evidence-preparation job (prefer recent-history/tool-result compression or relevance selection) and compares it against the same primary-only frozen workloads. It must not own TaskState, permissions, tools, validation, completion, or canonical evidence. This experiment may inform Phase 12 design but does not replace the primary-only baseline.
 
 ## Phase 11 — Final Acceleration + Primary-Model Performance Qualification
 
-Goal: characterize remaining provider acceleration, then freeze a consolidated optimized single-primary-model baseline over the Phase 9 structured execution model and Phase 10 loop optimizations.
+Goal: characterize remaining provider acceleration, then freeze a consolidated optimized single-primary-model baseline over the Phase 9 structured execution model and Phase 10 loop optimizations, while retaining any post-Phase-10 helper A/B result as comparative research rather than baseline authority.
 
 Scope:
 - evaluate speculative decoding only if a compatible path is practical;
@@ -520,15 +527,15 @@ Non-goals: helper model, local web research, daemon/desktop.
 
 ## Phase 12 — Local Utility Model
 
-Goal: add a secondary local model only after the single-primary-model path is optimized, for narrow low-cost context preparation with demonstrated net benefit.
+Goal: promote a secondary local model only after the single-primary-model path is optimized and the bounded post-Phase-10 helper A/B evidence justifies it, for narrow low-cost context preparation with demonstrated net benefit.
 
 Scope:
 - provider-independent utility role;
-- evaluate candidates against Phase 11 optimized baseline;
+- begin from the bounded post-Phase-10 helper A/B evidence, then evaluate any production candidate against the Phase 11 optimized primary-only baseline;
 - context/log compaction, diff summarization, relevance extraction, result/file ranking, bounded classification/routing, structured extraction;
 - utility output remains derived context/evidence, never authoritative task/session truth;
 - utility model cannot grant permissions, invoke tools independently, expand capabilities, or override instruction precedence;
-- measure helper overhead, quality, primary-model savings, and frozen live-work results.
+- measure helper overhead, quality, primary-model savings, frozen live-work results, and whether primary tokens saved + primary rounds avoided + success-rate improvement outweigh helper inference cost + latency + new failure rate.
 
 Success condition:
 - at least one bounded helper use case has net benefit versus Phase 11 primary-only baseline;
