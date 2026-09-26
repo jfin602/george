@@ -426,16 +426,16 @@ Qualification authority: `docs/planning/p9-structured-task-execution/qualificati
 Current evidence after Phase 9 corrections:
 - production task-stack validation/order/fail-stop/durable resume is qualified deterministically;
 - Workspace Autonomous Bubblewrap containment remains Green;
-- mutation preconditions, recoverable prerequisites, explicit directory creation, text fidelity, and mutation-intent authority remain qualified;
-- structured INSPECT execution/completion and v2 instrument semantics remain qualified;
-- `c9-qualification-preflight-scope` established the hard-vs-broad evidence model and historical fresh Gate A Green / B2 Not Green result;
-- `c9-turn-context-convergence` repaired the B2 continuation failure class and is deterministically Green: mutation provider projection shrank internal-heavy receipts, provider usage now grounds continuation accounting, adaptive safety envelopes promote monotonically, and ordinary TUI turns use the base agent;
-- exact production candidate `25d51a93d229e9b8cc76f56eb4b7b9afae1a5723` passed the turn-context hard floor and controlled broad regression delta;
-- its live P4 stopped before any provider request because the pinned LM Studio model was listed but not loaded, leaving greeting, three-file, Gate A, B2, and C2 Not Run;
-- active correction `c9-turn-context-live-qualification` is qualification-only and will complete those live gates against the unchanged production candidate once loaded REST-visible runtime provenance is available;
-- UI-only GPU Offload 26 remains a performance-control observation, not a functional qualification blocker when the REST-visible pinned runtime is healthy;
-- profile constants, Task Prompt format 1, v1/v2 instruments, hidden acceptance, and historical attempts remain unchanged;
-- native Node-26 real-TTY/OpenTUI behavior remains an Evidence Gap;
+- mutation preconditions, explicit directory creation, text fidelity, mutation intent, INSPECT execution/completion, and v2 instrument semantics remain qualified;
+- turn-context provider projection, provider-grounded continuation accounting, adaptive safety-envelope promotion, and ordinary TUI base-agent wiring remain deterministically Green;
+- loaded pinned LM Studio runtime provenance and ordinary greeting are now Green;
+- the first official three-file inspection attempt is Not Green: all three required reads completed, but the third provider round ended in provider failure without a final answer;
+- the current schema-1 live artifact did not preserve the provider diagnostic code/message, so failure observability must be strengthened before another repair cycle;
+- under the previous fail-fast strategy Gate A/B2/C2 were skipped, leaving the remainder of the live defect surface unknown;
+- active correction `c9-live-sweep-convergence` replaces functional fail-fast discovery with complete isolated diagnostic sweeps, consolidated failure ledgers, clustered repair waves, and a complete post-repair sweep;
+- final gate semantics remain strict: downstream observations after an upstream failure are diagnostic-only until a complete qualifying chain is Green;
+- the polish wave will also address actionable retained OpenTUI/test-stability failures rather than automatically carrying them forever;
+- profile constants, Task Prompt format 1, v1/v2 task instruments, hidden acceptance, and historical attempts remain immutable unless separately approved;
 - Phase 9 is not owner-closed and Phase 10 remains unopened.
 
 Goal: make George execute rich software-development task stacks reliably with the local coding model by moving deterministic requirements/workflow/validation/permission orchestration into the harness rather than asking the model to infer it from frontier-model-style prose.
@@ -465,7 +465,7 @@ Success condition:
 - Transcript/Task UI separation is usable without losing cancellation/approval/scrollback/draft behavior;
 - workspace-autonomous processes are demonstrably contained from disallowed host filesystem resources or the mode fails closed;
 - outside reject/ask behave exactly as configured and prompts cannot elevate policy;
-- all prior live-work failures remain recorded; the unchanged turn-context production candidate passes its qualification-only greeting and synthetic three-file smokes, then fresh Gate A -> B2 -> C2 without rewriting historical failures;
+- all prior live-work failures remain recorded; complete diagnostic sweeps expose every safe workload result before repair, and the final post-repair qualifying chain has greeting, three-file, Gate A, B2, and C2 all Green without rewriting historical failures;
 - inherited Phase 2-8 contracts remain Green or their accepted Not Green/Evidence Gap states remain explicitly classified.
 
 Non-goals:

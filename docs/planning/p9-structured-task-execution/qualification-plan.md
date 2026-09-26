@@ -14,49 +14,44 @@ Qualification is split into deterministic correctness, bounded task-slice correc
 
 The original qualification sequence remains historical authority.
 
-`c9-turn-context-convergence` is now deterministically Green at its production boundaries but closed overall with a live Evidence Gap.
+`c9-turn-context-convergence` remains deterministically Green at its production boundaries.
 
-Its exact production candidate is:
-`25d51a93d229e9b8cc76f56eb4b7b9afae1a5723`.
-
-Qualified production boundaries include:
-- provider-result projection with canonical Git evidence retained internally;
-- provider-grounded continuation accounting;
-- monotonic adaptive continuation-envelope promotion;
-- fixed-profile / >large fail-closed safety;
-- ordinary TUI base-agent wiring;
-- hard affected-system preflight;
-- controlled broad regression delta.
-
-Its P4 live sequence did not begin because LM Studio exposed no loaded pinned model instance. Greeting, three-file inspection, fresh Gate A, B2, and C2 therefore remain Not Run for the post-correction production candidate.
-
-Current Phase 9 acceptance routes through `c9-turn-context-live-qualification`, a qualification-only follow-up.
-
-That correction must:
-1. prove the exact production candidate remains unchanged across later docs/evidence commits;
-2. rerun a fresh affected sanity floor and current broad characterization;
-3. require a non-empty loaded instance for the pinned Qwen model and capture REST-visible runtime controls;
-4. run one greeting -> three-file -> Gate A -> B2 -> C2 sequence with strict stop-on-first-failure semantics.
-
-The prior controlled broad comparison against baseline `d7804684801fa8418050c34d9ef097ca1adf80b6` may be reused while candidate identity is exact. Do not repeat the two-tree experiment solely because evidence/documentation commits moved HEAD.
-
-Historical P4 runtime Evidence Gap and all earlier live attempts remain immutable.
-
-Functional structured-task evidence may proceed when the pinned REST-visible runtime is healthy even if UI-only GPU Offload 26 remains unconfirmed. Such runs do not establish controlled latency/performance evidence.
-
-Phase 9 is ready for owner closeout only if the live-qualification follow-up confirms:
-- candidate identity preserved;
+`c9-turn-context-live-qualification` then established:
+- exact candidate identity Green;
 - fresh sanity preflight Green;
-- no new broad regression;
-- loaded runtime provenance sufficient;
+- loaded REST-visible runtime Green;
 - greeting Green;
-- three-file Green;
-- fresh Gate A Green;
-- B2 Green;
-- C2 Green;
-- no new blocking regression.
+- three-file inspection Not Green;
+- Gate A/B2/C2 Not Run under the then-current fail-fast functional gating rule.
 
-Aggregate retained broad failures remain separately Not Green.
+The three-file workload read all three required fixture files and did not exhaust context or budgets, but a third provider round ended `provider.error -> turn.failed` with no final response. Its schema-1 artifacts retained the event category but not bounded provider diagnostic code/message.
+
+Current Phase 9 acceptance now routes through `c9-live-sweep-convergence`.
+
+The active correction changes **qualification discovery strategy**, not final acceptance semantics:
+
+1. common environment/safety/evidence-validity gates remain fail-fast;
+2. after those are Green, isolated functional workloads all execute once per sweep even after an earlier functional failure;
+3. each workload records an observed result;
+4. downstream workloads whose prerequisites were Not Green are marked diagnostic-only rather than qualifying;
+5. one consolidated failure ledger captures every Not Green/Evidence Gap observation;
+6. an approved repair wave addresses the complete observed defect surface;
+7. the full matrix runs again after repairs.
+
+The live matrix remains:
+- greeting;
+- three-file;
+- Gate A;
+- B2;
+- C2.
+
+Historical prerequisite ordering remains the final qualification rule. Diagnostic-only downstream Green does not satisfy Phase 9 acceptance.
+
+The correction must also preserve bounded provider/turn/tool/validation failure diagnostics so failed workloads are actionable. Structural artifact changes must version the artifact schema rather than silently rewrite schema-1 meaning. This does not authorize new live-work task instrument versions.
+
+Phase 9 is ready for owner closeout only when the post-repair sweep's qualifying chain is Green, no blocking deterministic/broad regression remains, and historical evidence is preserved.
+
+Aggregate broad failures remain truthful observations; the current polish wave should repair actionable retained OpenTUI/test-stability failures rather than carrying them indefinitely when their causes can be established.
 
 ## Mutation-precondition convergence correction qualification
 

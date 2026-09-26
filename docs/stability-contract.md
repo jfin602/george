@@ -437,6 +437,44 @@ A test renderer remains useful deterministic evidence but is not automatically p
 
 For Phase 5, native-terminal qualification should additionally characterize responsiveness during representative long streaming plus accumulated execution/work-log history, including cancellation and terminal restoration under that load.
 
+## Complete diagnostic sweep rule
+
+For a correction explicitly designated as a diagnostic/convergence sweep, common environment, safety, and evidence-validity gates remain fail-fast, but ordinary isolated functional workload failures do not stop the remaining diagnostic matrix.
+
+A common abort is appropriate when later evidence would be invalid or unsafe, including unsupported/unloaded runtime, broken permission/recovery/security invariants, corrupted instrument identity, an unrunnable target, or failure to persist authoritative bounded evidence.
+
+After common gates are Green:
+- run each declared isolated workload once;
+- use a fresh workspace/session/fixture instance where side effects could leak;
+- do not repair between workloads;
+- record every observed Green / Not Green / Evidence Gap result;
+- separately label whether each downstream observation is qualifying or diagnostic-only based on the canonical prerequisite chain;
+- never convert diagnostic-only downstream success into qualifying success;
+- do not rerun the same failed candidate merely to fish for a pass.
+
+A fresh complete sweep is allowed after an approved repair wave changes the relevant implementation. Earlier failures remain immutable.
+
+### Failure diagnostic durability
+
+Live qualification evidence must preserve enough bounded information to make failures actionable.
+
+Sanitized durable evidence should retain, when present:
+- provider failure category/code/message/status already normalized by George;
+- terminal turn failure/cancellation code/message;
+- tool failure code/message and call identity;
+- validation failure identity/outcome;
+- harness/observer failure separately from application failure.
+
+Raw wire/provider payloads, assistant private reasoning, file/write/patch bodies, unrestricted environment data, secrets, and unbounded logs remain prohibited.
+
+When the durable artifact structure changes incompatibly, increment its schema version. Historical artifacts keep their original schema semantics. Artifact-schema version changes do not imply a new task/instrument version.
+
+### Consolidated failure ledger
+
+A full diagnostic sweep must produce one bounded failure ledger covering every Not Green/Evidence Gap observation from deterministic, broad, and live layers.
+
+The ledger must preserve individual identities while allowing repair-cluster grouping. It should retain enough provenance to distinguish new, retained, intermittent, environment-only, and unresolved failures and point to the supporting bounded artifacts.
+
 ## Official qualification attempt durability
 
 For official live qualification, evidence retention is part of correctness.

@@ -107,37 +107,37 @@ The failed Phase 8 agentic edit/validation workload must remain visible longitud
 
 Package remains `0.9.10`; Phase 9 remains open and Phase 10 is not opened.
 
-`c9-turn-context-convergence` is now closed at commit `d8c27d13e6c1c86d53aa4d0f2f42acc7d18d5939`.
+`c9-turn-context-live-qualification` is now closed at commit `12b1b81c332324566ab2ec409b3326c286009ccf`.
 
-Its deterministic production correction is **Green**:
-- canonical mutation evidence is separated from bounded provider-visible results;
-- provider-grounded continuation accounting is qualified;
-- adaptive ordinary -> medium -> large continuation-envelope promotion is qualified;
-- fixed-profile / >large fail-closed behavior is preserved;
-- ordinary production TUI turns use the base agent rather than global coding-workflow guidance;
-- hard affected-system qualification and controlled broad regression delta are Green.
+Its live result:
+- production candidate identity preserved;
+- deterministic turn-context correction remains Green;
+- loaded REST-visible pinned runtime Green;
+- ordinary greeting Green;
+- synthetic three-file inspection **Not Green**;
+- Gate A/B2/C2 Not Run under the historical stop-on-first-functional-failure policy.
 
-Its live qualification remains an **Evidence Gap / Not Run** because P4 found the exact pinned LM Studio model listed but not loaded. No correction-era greeting, three-file smoke, fresh Gate A, B2, or C2 attempt began.
+The three-file attempt successfully read all required files with no exhaustion or context promotion, then ended on `provider.error -> turn.failed` without a final answer. The bounded artifact retained the event category but not the provider error code/message, leaving a diagnostic Evidence Gap.
 
-The exact production candidate under live qualification remains:
-`25d51a93d229e9b8cc76f56eb4b7b9afae1a5723`.
+The current qualification strategy is therefore being changed so Phase 9 can discover the complete safe failure surface before each repair wave.
 
-Commits after that candidate through the turn-context closeout are evidence/documentation only.
+The active correction is now `c9-live-sweep-convergence`.
 
-The active correction is now `c9-turn-context-live-qualification`.
-
-It is qualification-only and must:
-- verify exact production-candidate identity is preserved;
-- reuse the already-qualified deterministic and controlled broad-delta evidence when identity is exact;
-- rerun a fresh affected sanity floor/current broad characterization;
-- require a genuinely loaded pinned LM Studio instance and REST-visible runtime provenance before provider work;
-- allow functional qualification to proceed if UI-only GPU Offload 26 remains unconfirmed while recording controlled-latency Evidence Gap;
-- run exactly one greeting -> three-file -> Gate A -> B2 -> C2 sequence, stopping on first Not Green result;
-- make no production, profile, fixture, instrument, acceptance, or runtime-setting change.
+It must:
+- repair bounded failure-evidence diagnostics and version artifact schema when structurally necessary;
+- distinguish common validity/safety aborts from ordinary functional workload failures;
+- after common gates are Green, execute greeting, three-file, Gate A, B2, and C2 exactly once each even if an earlier functional workload fails;
+- use fresh isolated workspaces/sessions per workload;
+- record observed result separately from qualifying vs diagnostic-only status;
+- create one consolidated failure ledger covering deterministic, broad, and live failures;
+- repair the complete evidenced agent/provider/context defect wave;
+- separately repair evidenced TUI/test-stability failures;
+- run the complete matrix again after repairs without functional fail-fast;
+- preserve all historical attempts and gate semantics.
 
 Current correction authority:
-- prior correction truth: `docs/tasks/c9-turn-context-convergence/closeout.md`;
-- active planning: `docs/planning/c9-turn-context-live-qualification/decision-record.md` and `qualification-plan.md`.
+- latest historical truth: `docs/tasks/c9-turn-context-live-qualification/closeout.md`;
+- active planning: `docs/planning/c9-live-sweep-convergence/decision-record.md` and `qualification-plan.md`.
 
 Historical Phase 1-8 prompts/evidence are not renumbered or rewritten.
 
@@ -176,7 +176,7 @@ Read:
 - stability/testing: `docs/stability-contract.md`;
 - roadmap: `docs/roadmap/mvp-roadmap.md`;
 - Living Project Map / Software Graph, when relevant: `docs/planning/living-project-map/decision-record.md` (then its graph, interaction, and qualification companions as needed);
-- current Phase 9 authority: `docs/planning/p9-structured-task-execution/decision-record.md`, `docs/planning/p9-structured-task-execution/task-format-v1.md`, and `docs/planning/p9-structured-task-execution/qualification-plan.md`; latest correction truth: `docs/tasks/c9-turn-context-convergence/closeout.md`; active correction planning: `docs/planning/c9-turn-context-live-qualification/decision-record.md` and `docs/planning/c9-turn-context-live-qualification/qualification-plan.md`;
+- current Phase 9 authority: `docs/planning/p9-structured-task-execution/decision-record.md`, `docs/planning/p9-structured-task-execution/task-format-v1.md`, and `docs/planning/p9-structured-task-execution/qualification-plan.md`; latest correction truth: `docs/tasks/c9-turn-context-live-qualification/closeout.md`; active correction planning: `docs/planning/c9-live-sweep-convergence/decision-record.md` and `docs/planning/c9-live-sweep-convergence/qualification-plan.md`;
 - Phase 8 closeout/history when needed: `docs/phase-8-closeout.md`, `docs/phase-8-owner-closeout.md`, `docs/tasks/c8-agentic-context/closeout.md`, `docs/planning/c8-agentic-context/decision-record.md`, `docs/planning/c8-agentic-context/qualification-plan.md`, `docs/planning/p8-context-throughput-optimization/decision-record.md`, `docs/planning/p8-context-throughput-optimization/initial-baseline.md`, and `docs/planning/performance-benchmarking-worksheet.md`;
 - Phase 7 closeout/history when needed: `docs/phase-7-closeout.md`, `docs/phase-7-owner-closeout.md`, `docs/planning/p7-inference-runtime-optimization/initial-baseline.md`;
 - Phase 6 closeout/history when needed: `docs/phase-6-closeout.md`, `docs/phase-6-owner-closeout.md`, `docs/planning/p6-plugins-external-adapters/decision-record.md`;

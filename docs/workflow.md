@@ -127,6 +127,24 @@ For current Phase 9 correction qualification, that replay is the strict Gate A. 
 
 After Phase 9 establishes `greenfield-express-v1` and `existing-express-feature-v1`, rerun those frozen live-work instruments at later phase closeouts when the supported environment is available. Preserve their prompt/fixture/hidden-acceptance versions so longitudinal results remain comparable.
 
+## Full-sweep convergence workflow
+
+For an approved correction whose purpose is to discover and repair a cluster of remaining failures, use a complete diagnostic sweep instead of discovering one functional defect per correction.
+
+After common safety/runtime/evidence-validity preflight is Green:
+- run all declared isolated functional workloads once even if an earlier workload is Not Green;
+- do not modify production between workloads;
+- collect one consolidated failure ledger;
+- distinguish each workload's observed result from whether that result is qualifying under the canonical prerequisite chain;
+- treat downstream results after an upstream failure as diagnostic-only;
+- repair the complete evidenced defect wave in bounded clusters;
+- run the complete matrix again after the repair wave;
+- preserve every earlier failure as historical evidence.
+
+Common safety/runtime/evidence-validity failures still stop the sweep because later results would be unsafe or non-representative.
+
+Do not repeatedly rerun the same failed candidate until it passes. A fresh sweep follows an approved implementation change.
+
 ## Qualification preflight scope
 
 Qualification must keep **aggregate suite state** separate from **candidate regression delta**.
