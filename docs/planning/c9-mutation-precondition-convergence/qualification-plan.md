@@ -223,3 +223,9 @@ Phase 9 is eligible for separate owner closeout only when:
 - no new blocking production or qualification regression exists.
 
 The correction closeout itself does not owner-close Phase 9 or open Phase 10.
+
+## Post-closeout preflight scoping correction
+
+The historical P2 correctly followed its authored prompt and stopped when aggregate `npm test` was Not Green. That result remains immutable. The prompt had accidentally strengthened this plan's intended broad characterization into an absolute Green prerequisite.
+
+Subsequent authority is `docs/planning/c9-qualification-preflight-scope/{decision-record,qualification-plan}.md`. It preserves this correction's production implementation and deterministic qualification, then requires a controlled broad baseline-vs-candidate regression delta before spending fresh Gate A/B2/C2. Aggregate broad failures remain Not Green even when the candidate regression delta is Green.
