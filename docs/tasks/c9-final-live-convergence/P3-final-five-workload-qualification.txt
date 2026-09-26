@@ -1,0 +1,166 @@
+TASK: Correction 9 / P3 — Final five-workload Phase 9 qualification
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Sol Medium`.
+- Browser required: no.
+
+VERSIONING
+- Required unchanged project version: `0.9.10`.
+
+GOAL
+
+Run the final Phase 9 qualification once against the P1/P2 corrected candidate.
+
+This is evidence/qualification work only. Do not repair production behavior during this prompt.
+
+Read:
+- `BOOT.md`;
+- current workflow/stability/Phase 9 authority;
+- `docs/planning/c9-final-live-convergence/{decision-record,qualification-plan}.md`;
+- `docs/tasks/c9-final-live-convergence/{prompt-assessment,implementation-plan}.md`;
+- final previous sweep report/ledger;
+- current P1/P2 code/tests;
+- qualification sweep/live-work helpers;
+- frozen greeting/three-file/Gate A/v2 instruments/hidden acceptance.
+
+COMMON HARD GATES
+
+Require enough Green evidence for a meaningful live sweep:
+
+- supported Node 26;
+- exact candidate/source identity;
+- pinned exact model loaded;
+- required REST-visible runtime controls;
+- application runnability;
+- schema-2 evidence writer;
+- permission/security/recovery floors;
+- Workspace Autonomous containment;
+- provider/tool contract;
+- mission-card/alignment deterministic floors;
+- partial-provider-retry deterministic floors;
+- frozen instrument/acceptance identity;
+- `npm run typecheck`;
+- `npm run test:runner`;
+- package/diff/root-lockfile hygiene.
+
+Run `npm test` exactly once and record total/pass/fail/skip.
+
+Functional test failures are ledgered under current sweep policy unless they invalidate safety/evidence/application runnability.
+
+RUNTIME
+
+Use exact local model:
+
+`qwen3-coder-30b-a3b-instruct@q4_k_m`
+
+Use the current qualified runtime settings; do not retune merely to obtain a pass.
+
+Print:
+
+`MANUAL CHECK: LM Studio GPU Offload must show 26`
+
+Record REST-visible runtime provenance. UI-only Offload 26 remains an explicit gap if not independently visible.
+
+LIVE MATRIX
+
+Use a fresh isolated workspace/session per workload.
+
+Run each exactly once, in order, without repair between workloads:
+
+1. greeting;
+2. three-file;
+3. Gate A;
+4. B2 `greenfield-express-v2`;
+5. C2 `existing-express-feature-v2`.
+
+Use the existing full-sweep orchestration: after common hard gates are Green, ordinary functional failure does not suppress later diagnostic attempts.
+
+GREETING
+
+Require final answer, no intervention/exhaustion, ordinary expected behavior.
+
+THREE-FILE
+
+Require frozen required files actually observed, final answer present, no hard exhaustion/intervention, bounded context behavior.
+
+GATE A
+
+Functional Green requires:
+- exact required 60-byte file;
+- exact acceptance/final SHA;
+- George-owned V1 Green;
+- completed/verified TaskState;
+- hidden acceptance Green;
+- zero human coding intervention;
+- no hard stage/task/run-budget exhaustion;
+- permission/recovery/framing/SHA authority preserved.
+
+Report separately:
+- model-requested tool calls;
+- logical provider rounds;
+- historical efficiency target <=10 tool calls and <=10 rounds: met/missed.
+
+A historical efficiency-target miss alone is NOT a functional Gate A failure under current authority.
+
+B2
+
+Use unchanged `greenfield-express-v2`, version/digest/acceptance and exact authorized Express prerequisite.
+
+Require:
+- P1/P2/P3 all complete;
+- declared validations Green;
+- completed StackState;
+- hidden acceptance Green;
+- zero human coding intervention;
+- no hard stage/task/run exhaustion;
+- no terminal provider failure.
+
+Record any safe provider retry with original failed-attempt and retry evidence.
+
+C2
+
+Use unchanged `existing-express-feature-v2`.
+
+Require:
+- completed/verified TaskState;
+- focused and broad declared validation Green;
+- baseline behavior preserved;
+- hidden acceptance Green;
+- zero intervention;
+- no hard convergence exhaustion.
+
+EVIDENCE
+
+Create/update only this correction's tracked evidence:
+
+- `docs/tasks/c9-final-live-convergence/P3-final-qualification-report.md`;
+- `docs/tasks/c9-final-live-convergence/failure-ledger.json`;
+- `docs/tasks/c9-final-live-convergence/evidence/runtime.json`;
+- schema-2 `attempt.json` + `trace.json` per reached workload.
+
+Record SHA-256 for committed evidence JSON.
+
+Keep functional and efficiency states separate.
+
+Do not commit:
+- raw provider streams;
+- assistant prose logs/private reasoning;
+- write/patch bodies;
+- unrestricted process output;
+- environment/secret dumps;
+- workspace copies;
+- node_modules/dependency trees.
+
+Preserve every historical Phase 8/9 attempt.
+
+FINAL READINESS IN P3
+
+Do not owner-close Phase 9.
+
+State whether the full qualifying chain is currently Green and leave final owner-closeout decision to P4.
+
+Do not:
+- repair/rerun a workload;
+- edit instruments/acceptance;
+- change runtime/context limits;
+- introduce helper inference.
