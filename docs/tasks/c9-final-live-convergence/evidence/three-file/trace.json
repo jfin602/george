@@ -1,0 +1,157 @@
+{
+  "schemaVersion": 2,
+  "terminalStatus": "completed",
+  "terminalError": null,
+  "observerError": null,
+  "failures": [
+    {
+      "source": "application",
+      "category": "tool",
+      "eventType": "tool.failed",
+      "code": "denied",
+      "message": "Approval denied for tool run_process.",
+      "turnId": "70c653ee-320c-4baf-bfc4-e569007635ed",
+      "callId": "call_2029258686870099",
+      "name": "run_process"
+    }
+  ],
+  "taskState": null,
+  "stackState": null,
+  "metrics": {
+    "providerAttempts": 5,
+    "providerRounds": 5,
+    "retries": 0,
+    "providerInputTokens": 21300,
+    "providerOutputTokens": 721,
+    "toolCalls": 6,
+    "contextAssemblies": 1,
+    "sandboxedProcessCalls": 0,
+    "taskUpdates": 0,
+    "stackUpdates": 0
+  },
+  "toolCalls": [
+    {
+      "callId": "call_2029258686870094",
+      "name": "git_status",
+      "requestedArguments": "{}",
+      "effect": "local_read",
+      "terminalState": "succeeded"
+    },
+    {
+      "callId": "call_2029258686870095",
+      "name": "list_directory",
+      "requestedArguments": "{\"path\":\"\"}",
+      "effect": "local_read",
+      "terminalState": "succeeded"
+    },
+    {
+      "callId": "call_2029258686870096",
+      "name": "read_file",
+      "requestedArguments": "{\"path\":\"README.md\"}",
+      "effect": "local_read",
+      "terminalState": "succeeded"
+    },
+    {
+      "callId": "call_2029258686870097",
+      "name": "read_file",
+      "requestedArguments": "{\"path\":\"plan.js\"}",
+      "effect": "local_read",
+      "terminalState": "succeeded"
+    },
+    {
+      "callId": "call_2029258686870098",
+      "name": "read_file",
+      "requestedArguments": "{\"path\":\"plan.test.js\"}",
+      "effect": "local_read",
+      "terminalState": "succeeded"
+    },
+    {
+      "callId": "call_2029258686870099",
+      "name": "run_process",
+      "requestedArguments": "{\"executable\":\"node\",\"arguments\":[\"plan.test.js\"]}",
+      "effect": "host_process",
+      "terminalState": "denied"
+    }
+  ],
+  "mutations": [],
+  "validations": [],
+  "correctionCount": 0,
+  "contexts": [
+    {
+      "profileId": "qwen3-coder-30b-a3b-instruct-q4_k_m-lm-studio-32k-ordinary",
+      "attemptedProfileIds": [
+        "qwen3-coder-30b-a3b-instruct-q4_k_m-lm-studio-32k-ordinary",
+        "qwen3-coder-30b-a3b-instruct-q4_k_m-lm-studio-32k-medium",
+        "qwen3-coder-30b-a3b-instruct-q4_k_m-lm-studio-32k"
+      ],
+      "promotionReasons": [],
+      "estimatedTokens": 1081,
+      "providerInputBudget": 8192,
+      "remainingHeadroom": 7111
+    }
+  ],
+  "envelopePromotions": [],
+  "observedReadPaths": [
+    "README.md",
+    "plan.js",
+    "plan.test.js"
+  ],
+  "finalResponse": {
+    "present": true,
+    "bytes": 3174,
+    "sha256": "4227fef12710f396c82a8e5712ba9d75c14c7574d1b74e81ade61af240e4e5e7"
+  },
+  "budgets": {
+    "latest": [
+      {
+        "runId": "f683b66d-c0ae-44ec-9f67-1916d793242a",
+        "snapshot": {
+          "runId": "f683b66d-c0ae-44ec-9f67-1916d793242a",
+          "limits": {
+            "providerAttempts": 128,
+            "toolExecutions": 128,
+            "retryAttempts": 32,
+            "compactionAttempts": 32,
+            "compactionCheckpoints": 32,
+            "processExecutions": 64,
+            "processRuntimeMs": 3600000,
+            "wallClockMs": 3600000,
+            "contextTokens": 1000000,
+            "providerInputTokens": 1000000,
+            "providerOutputTokens": 1000000
+          },
+          "consumed": {
+            "providerAttempts": 5,
+            "toolExecutions": 5,
+            "retryAttempts": 0,
+            "compactionAttempts": 0,
+            "compactionCheckpoints": 0,
+            "processExecutions": 0,
+            "processRuntimeMs": 0,
+            "wallClockMs": 146796,
+            "contextTokens": 1081,
+            "providerInputTokens": 21300,
+            "providerOutputTokens": 721
+          },
+          "elapsedMs": 146796
+        }
+      }
+    ],
+    "pressure": [],
+    "exhaustion": [],
+    "taskExhausted": false,
+    "stageExhaustion": []
+  },
+  "timing": {
+    "totalMs": 146810.104115,
+    "workflows": [
+      {
+        "turnId": "70c653ee-320c-4baf-bfc4-e569007635ed",
+        "totalMs": 146809
+      }
+    ]
+  },
+  "hiddenAcceptance": "passed",
+  "humanInterventions": 0,
+  "eventsOmitted": 723
+}
