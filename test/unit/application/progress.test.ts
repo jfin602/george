@@ -63,6 +63,8 @@ test('projection safely summarizes every built-in plus truthful denial, interrup
     { type: 'tool.failed', turnId: 't', callId: 'write', name: 'write_file', result: { ok: false, error: { code: 'denied', message: 'no' } } },
     { type: 'tool.requested', turnId: 't', callId: 'patch', name: 'apply_patch', arguments: '{"path":"a.txt","edits":[{"oldText":"SECRET_OLD","newText":"SECRET_NEW"}]}' },
     { type: 'tool.completed', turnId: 't', callId: 'patch', name: 'apply_patch', result: { ok: true, value: { bytes: 3 } } },
+    { type: 'tool.requested', turnId: 't', callId: 'directory', name: 'create_directory', arguments: '{"path":"src/routes"}' },
+    { type: 'tool.completed', turnId: 't', callId: 'directory', name: 'create_directory', result: { ok: true, value: { path: 'src/routes', created: true, createdDirectories: 2 } } },
     { type: 'tool.requested', turnId: 't', callId: 'process', name: 'run_process', arguments: '{"executable":"node","arguments":["-e","SECRET_ENV"],"cwd":"test"}' },
     { type: 'tool.completed', turnId: 't', callId: 'process', name: 'run_process', result: { ok: true, value: { executable: 'node', arguments: ['-e', 'SECRET_ENV'], cwd: 'test', stdout: 'SECRET_STDOUT', stderr: 'SECRET_STDERR', stdoutTruncated: true, stderrTruncated: false, exitCode: 7, signal: null, outcome: 'failed' } } },
     { type: 'validation.started', turnId: 't', callId: 'validation', label: 'typecheck', intent: 'check types' },
@@ -74,6 +76,7 @@ test('projection safely summarizes every built-in plus truthful denial, interrup
   const work = projection.snapshot().work;
   assert.equal(work.find((item) => item.operationId === 'write')?.status, 'denied');
   assert.equal(work.find((item) => item.operationId === 'process')?.status, 'failed');
+  assert.deepEqual(work.find((item) => item.operationId === 'directory'), { id: 't:tool:directory', turnId: 't', operationId: 'directory', category: 'editing', status: 'succeeded', summary: 'Directory src/routes ready (2 created)', details: { path: 'src/routes', count: 2 } });
   assert.equal(work.find((item) => item.operationId === 'validation')?.status, 'failed');
   assert.equal(work.find((item) => item.operationId === 'recovery')?.status, 'interrupted');
   const process = work.find((item) => item.operationId === 'process');

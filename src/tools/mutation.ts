@@ -6,6 +6,7 @@ import { basename, dirname, relative } from 'node:path';
 import {
   assertCanonicalWorkspace,
   cancellationError,
+  createWorkspaceDirectory,
   GeorgeError,
   resolveWorkspaceMutationPath,
   type JsonObject,
@@ -18,7 +19,7 @@ const SHA256_HEX = /^[a-f0-9]{64}$/;
 
 export const WORKSPACE_MUTATION_TOOL_DEFINITIONS = [
   {
-    name: 'write_file', description: 'Atomically create or exactly replace bounded workspace text using the latest read_file.sha256 for an existing target. Prefer apply_patch for localized existing-file edits. Existing text must preserve read_file.textFraming unless an intentional framing change is acknowledged; George never reformats content.', execution: { effect: 'workspace_mutation', replaySafety: 'not_replay_safe', source: { kind: 'builtin' } },
+    name: 'write_file', description: 'Atomically create or exactly replace workspace text using the latest read_file.sha256 for an existing target. Prefer apply_patch for localized edits. Existing text must preserve read_file.textFraming unless an intentional framing change is acknowledged; George never reformats content.', execution: { effect: 'workspace_mutation', replaySafety: 'not_replay_safe', source: { kind: 'builtin' } },
     inputSchema: {
       type: 'object', properties: {
         path: { type: 'string', minLength: 1 }, content: { type: 'string', maxLength: 1024 * 1024 },
@@ -28,7 +29,7 @@ export const WORKSPACE_MUTATION_TOOL_DEFINITIONS = [
     },
   },
   {
-    name: 'apply_patch', description: 'Preferred for localized existing-file edits: atomically apply bounded, unambiguous exact-text edits using the latest read_file.sha256 while preserving untouched bytes and read_file.textFraming unless an intentional framing change is acknowledged.', execution: { effect: 'workspace_mutation', replaySafety: 'not_replay_safe', source: { kind: 'builtin' } },
+    name: 'apply_patch', description: 'Preferred for localized edits: atomically apply unambiguous exact-text edits using the latest read_file.sha256 while preserving untouched bytes and read_file.textFraming unless an intentional framing change is acknowledged.', execution: { effect: 'workspace_mutation', replaySafety: 'not_replay_safe', source: { kind: 'builtin' } },
     inputSchema: {
       type: 'object', properties: {
         path: { type: 'string', minLength: 1 }, expectedSha256: { type: 'string', minLength: 64, maxLength: 64, description: 'Latest observed read_file.sha256 for the current target.' },
@@ -44,6 +45,12 @@ export const WORKSPACE_MUTATION_TOOL_DEFINITIONS = [
       }, required: ['path', 'expectedSha256', 'edits'], additionalProperties: false,
     },
   },
+  {
+    name: 'create_directory', description: 'Create workspace directory chains.', execution: { effect: 'workspace_mutation', replaySafety: 'not_replay_safe', source: { kind: 'builtin' } },
+    inputSchema: {
+      type: 'object', properties: { path: { type: 'string', minLength: 1, maxLength: 4096 } }, required: ['path'], additionalProperties: false,
+    },
+  },
 ] as const satisfies readonly Omit<ToolDefinition, 'execute'>[];
 
 export type GitWorkingTreeEntry = Readonly<{ path: string; indexStatus: string; worktreeStatus: string }>;
@@ -54,17 +61,14 @@ export type GitWorkingTreeSnapshot = Readonly<{
   target?: Readonly<{ path: string; dirty: boolean }>;
 }>;
 
-export type MutationToolResult = Readonly<{
-  name: 'write_file' | 'apply_patch';
-  path: string;
-  bytes: number;
-  sha256: string;
-  git: GitWorkingTreeSnapshot;
-}>;
+export type MutationToolResult =
+  | Readonly<{ name: 'write_file' | 'apply_patch'; path: string; bytes: number; sha256: string; git: GitWorkingTreeSnapshot }>
+  | Readonly<{ name: 'create_directory'; path: string; created: boolean; createdDirectories: number }>;
 
 export type MutationToolCall =
   | Readonly<{ name: 'write_file'; path: string; content: string; expectedSha256?: string; allowTextFramingChange?: boolean }>
-  | Readonly<{ name: 'apply_patch'; path: string; expectedSha256: string; edits: readonly Readonly<{ oldText: string; newText: string }>[]; allowTextFramingChange?: boolean }>;
+  | Readonly<{ name: 'apply_patch'; path: string; expectedSha256: string; edits: readonly Readonly<{ oldText: string; newText: string }>[]; allowTextFramingChange?: boolean }>
+  | Readonly<{ name: 'create_directory'; path: string }>;
 
 export type MutationToolLimits = Readonly<{
   maxContentBytes?: number;
@@ -243,6 +247,10 @@ export function createWorkspaceMutationToolExecutor(
   const limits = boundedLimits(configuredLimits);
   const executeRaw = async (call: MutationToolCall, options: Readonly<{ signal?: AbortSignal }> = {}): Promise<MutationToolResult> => {
     assertActive(options.signal);
+    if (call.name === 'create_directory') {
+      const result = await createWorkspaceDirectory(workspace, call.path, options);
+      return { name: call.name, ...result };
+    }
     const target = await resolveWorkspaceMutationPath(workspace, call.path);
     const gitSnapshot = executorOptions.captureGit === false
       ? { isRepository: false, repositoryRoot: null, entries: [], target: { path: target.relativePath, dirty: false } }
@@ -293,6 +301,10 @@ export function createWorkspaceMutationToolExecutor(
     {
       ...WORKSPACE_MUTATION_TOOL_DEFINITIONS[1],
       execute: async (arguments_, options) => executeRaw({ name: 'apply_patch', path: arguments_.path as string, expectedSha256: arguments_.expectedSha256 as string, edits: arguments_.edits as unknown as readonly Readonly<{ oldText: string; newText: string }>[], ...(typeof arguments_.allowTextFramingChange === 'boolean' ? { allowTextFramingChange: arguments_.allowTextFramingChange } : {}) }, options) as unknown as JsonObject,
+    },
+    {
+      ...WORKSPACE_MUTATION_TOOL_DEFINITIONS[2],
+      execute: async (arguments_, options) => executeRaw({ name: 'create_directory', path: arguments_.path as string }, options) as unknown as JsonObject,
     },
   ]);
   const execute = async (call: MutationToolCall, options: Readonly<{ signal?: AbortSignal }> = {}): Promise<MutationToolResult> => {

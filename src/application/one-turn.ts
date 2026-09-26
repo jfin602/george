@@ -12,6 +12,7 @@ import {
   GeorgeError,
   TEXT_FRAMING_CHANGE_WARNING,
   resolveWorkspaceRoot,
+  resolveWorkspaceDirectoryPath,
   resolveWorkspaceMutationPath,
   resolveWorkspacePath,
   resolveGeorgeUserConfigRoot,
@@ -156,6 +157,12 @@ function positive(value: number | undefined, fallback: number, name: string): nu
   const result = value ?? fallback;
   if (!Number.isInteger(result) || result < 1) throw new GeorgeError('configuration', `${name} must be a positive integer.`);
   return result;
+}
+
+function recoverablePreparationError(error: unknown): GeorgeError {
+  const normalized = asGeorgeError(error, 'validation');
+  if (!(error instanceof GeorgeError) || (normalized.code !== 'validation' && normalized.code !== 'tool')) throw normalized;
+  return normalized;
 }
 
 export type OneTurnSubmission = Readonly<{
@@ -483,7 +490,9 @@ export class AgentLoopApplicationService {
     if (definition.execution.effect === 'local_read') return undefined;
     if (definition.execution.effect === 'workspace_mutation') {
       if (policy.workspace === 'workspace_autonomous' && mutation === undefined) return undefined;
-      const target = await resolveWorkspaceMutationPath(this.workspace, arguments_.path as string);
+      const target = definition.name === 'create_directory'
+        ? await resolveWorkspaceDirectoryPath(this.workspace, arguments_.path as string)
+        : await resolveWorkspaceMutationPath(this.workspace, arguments_.path as string);
       const git = await captureGitWorkingTreeSnapshot(this.workspace, target.path, { signal });
       return {
         id: callId, toolName: definition.name, execution: definition.execution,
@@ -549,7 +558,7 @@ export class AgentLoopApplicationService {
     try {
       outside = await resolveOutsideFilesystemCapability(call, validation.definition.execution.effect === 'workspace_mutation');
     } catch (error) {
-      const normalized = asGeorgeError(error, 'validation');
+      const normalized = recoverablePreparationError(error);
       const result = { callId: call.callId, name: call.name, result: { ok: false as const, error: { code: normalized.code, message: normalized.message } } };
       yield* emit({ type: 'tool.failed', turnId, callId: call.callId, name: call.name, result: result.result, execution: validation.definition.execution, ...origin });
       return result;
@@ -572,8 +581,7 @@ export class AgentLoopApplicationService {
     try {
       request = await this.approvalRequest(call.callId, validation, policy, outside?.path, signal);
     } catch (error) {
-      const normalized = asGeorgeError(error, 'validation');
-      if (normalized.code === 'cancelled') throw normalized;
+      const normalized = recoverablePreparationError(error);
       const result = { callId: call.callId, name: call.name, result: { ok: false as const, error: { code: normalized.code, message: normalized.message } } };
       yield* emit({ type: 'tool.failed', turnId, callId: call.callId, name: call.name, result: result.result, execution: validation.definition.execution, ...origin });
       return result;
@@ -593,13 +601,25 @@ export class AgentLoopApplicationService {
       yield* this.consumeBudget(session, turnId, budget, 'toolExecutions', 1, signal);
       if (call.name === 'run_process') yield* this.consumeBudget(session, turnId, budget, 'processExecutions', 1, signal);
     }
-    if (!outside && (call.name === 'write_file' || call.name === 'apply_patch')) {
-      const target = await resolveWorkspaceMutationPath(this.workspace, validation.arguments.path as string);
-      const expected = validation.arguments.expectedSha256;
-      const intent = call.name === 'write_file' && target.exists && typeof expected !== 'string' ? undefined : call.name === 'write_file'
-        ? { name: 'write_file' as const, path: target.relativePath, desiredBytes: Buffer.byteLength(validation.arguments.content as string, 'utf8'), desiredSha256: createHash('sha256').update(validation.arguments.content as string).digest('hex'), precondition: target.exists ? expected as string : 'absent' as const }
-        : { name: 'apply_patch' as const, path: target.relativePath, precondition: validation.arguments.expectedSha256 as string, edits: (validation.arguments.edits as readonly unknown[]).length };
-      if (intent) yield* emit({ type: 'recovery.intent', turnId, callId: call.callId, intent });
+    if (!outside && (call.name === 'write_file' || call.name === 'apply_patch' || call.name === 'create_directory')) {
+      try {
+        if (call.name === 'create_directory') {
+          const target = await resolveWorkspaceDirectoryPath(this.workspace, validation.arguments.path as string);
+          yield* emit({ type: 'recovery.intent', turnId, callId: call.callId, intent: { name: 'create_directory', path: target.relativePath } });
+        } else {
+          const target = await resolveWorkspaceMutationPath(this.workspace, validation.arguments.path as string);
+          const expected = validation.arguments.expectedSha256;
+          const intent = call.name === 'write_file' && target.exists && typeof expected !== 'string' ? undefined : call.name === 'write_file'
+            ? { name: 'write_file' as const, path: target.relativePath, desiredBytes: Buffer.byteLength(validation.arguments.content as string, 'utf8'), desiredSha256: createHash('sha256').update(validation.arguments.content as string).digest('hex'), precondition: target.exists ? expected as string : 'absent' as const }
+            : { name: 'apply_patch' as const, path: target.relativePath, precondition: validation.arguments.expectedSha256 as string, edits: (validation.arguments.edits as readonly unknown[]).length };
+          if (intent) yield* emit({ type: 'recovery.intent', turnId, callId: call.callId, intent });
+        }
+      } catch (error) {
+        const normalized = recoverablePreparationError(error);
+        const result = { callId: call.callId, name: call.name, result: { ok: false as const, error: { code: normalized.code, message: normalized.message } } };
+        yield* emit({ type: 'tool.failed', turnId, callId: call.callId, name: call.name, result: result.result, execution: validation.definition.execution, ...origin });
+        return result;
+      }
     }
     yield* emit({ type: 'tool.started', turnId, callId: call.callId, name: call.name, execution: validation.definition.execution, ...origin });
     const startedAt = call.name === 'run_process' ? this.clock() : undefined;

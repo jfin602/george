@@ -10,7 +10,7 @@ import {
 import { CodingWorkflowApplicationService, type CodingWorkflowCompletion, type CodingWorkflowSubmission, type ValidationRequest } from './coding-workflow.ts';
 
 const INSPECTION_TOOLS = ['read_file', 'list_directory', 'search_text', 'git_status', 'git_diff'] as const;
-const CODING_TOOLS = [...INSPECTION_TOOLS, 'write_file', 'apply_patch'] as const;
+const CODING_TOOLS = [...INSPECTION_TOOLS, 'write_file', 'apply_patch', 'create_directory'] as const;
 const MAX_SLICE_EVIDENCE = 8;
 const MAX_STAGE_EVIDENCE_BYTES = 8 * 1024;
 const STAGE_LIMITS = Object.freeze({

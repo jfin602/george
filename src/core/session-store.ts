@@ -245,7 +245,7 @@ function safeWorkflowCompletion(value: Extract<ApplicationEvent, { type: 'workfl
 
 function safeRecoveryIntent(value: Extract<ApplicationEvent, { type: 'recovery.intent' }>['intent']): Extract<ApplicationEvent, { type: 'recovery.intent' }>['intent'] {
   const intent = record(value, 'recovery intent');
-  const name = oneOf(intent.name, 'recovery mutation name', ['write_file', 'apply_patch']);
+  const name = oneOf(intent.name, 'recovery mutation name', ['write_file', 'apply_patch', 'create_directory']);
   const path = string(intent.path, 'recovery target path', 4096);
   const hash = (item: unknown, name: string) => {
     const result = string(item, name, 64);
@@ -256,6 +256,10 @@ function safeRecoveryIntent(value: Extract<ApplicationEvent, { type: 'recovery.i
     exactKeys(intent, ['name', 'path', 'desiredBytes', 'desiredSha256', 'precondition'], 'write recovery intent');
     const precondition = intent.precondition === 'absent' ? 'absent' : hash(intent.precondition, 'write recovery precondition');
     return { name, path, desiredBytes: boundedInteger(intent.desiredBytes, 'write recovery bytes'), desiredSha256: hash(intent.desiredSha256, 'write recovery hash'), precondition };
+  }
+  if (name === 'create_directory') {
+    exactKeys(intent, ['name', 'path'], 'directory recovery intent');
+    return { name, path };
   }
   exactKeys(intent, ['name', 'path', 'precondition', 'edits'], 'patch recovery intent');
   return { name, path, precondition: hash(intent.precondition, 'patch recovery precondition'), edits: boundedInteger(intent.edits, 'patch recovery edit count', 128) };
@@ -681,7 +685,7 @@ export function classifySessionInterruptions(events: readonly ApplicationEvent[]
       : effect === 'host_process' || effect === 'sandboxed_workspace_process' ? 'process'
         : effect !== undefined && effect !== 'local_read' ? 'external'
           // Legacy durable events lack execution metadata; retain prior classification only for them.
-          : event.name === 'write_file' || event.name === 'apply_patch' ? 'mutation'
+          : event.name === 'write_file' || event.name === 'apply_patch' || event.name === 'create_directory' ? 'mutation'
             : event.name === 'run_process' ? 'process' : undefined;
     if (kind) interruptions.push({ kind, turnId: event.turnId, callId: event.callId, name: event.name });
   }

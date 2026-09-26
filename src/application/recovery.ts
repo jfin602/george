@@ -3,6 +3,7 @@ import { readFile } from 'node:fs/promises';
 
 import {
   resolveWorkspaceMutationPath,
+  resolveWorkspaceDirectoryPath,
   type ApplicationEvent,
   type RecoveryOutcome,
   type Session,
@@ -19,6 +20,16 @@ function intentFor(session: Session, callId: string | undefined): Extract<Applic
 }
 
 async function writeOutcome(workspace: Workspace, intent: Extract<ApplicationEvent, { type: 'recovery.intent' }>['intent']): Promise<readonly [RecoveryOutcome, string]> {
+  if (intent.name === 'create_directory') {
+    try {
+      const target = await resolveWorkspaceDirectoryPath(workspace, intent.path);
+      return target.exists
+        ? ['confirmed_complete', 'Canonical requested directory exists as a real in-workspace directory.']
+        : ['confirmed_incomplete', 'Canonical requested directory is absent.'];
+    } catch {
+      return ['outcome_unknown', 'Directory observation is unsafe, colliding, or otherwise ambiguous.'];
+    }
+  }
   if (intent.name !== 'write_file') return ['outcome_unknown', 'Patch body is intentionally not retained; final state cannot be proven.'];
   try {
     const target = await resolveWorkspaceMutationPath(workspace, intent.path);

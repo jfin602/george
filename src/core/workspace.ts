@@ -1,6 +1,7 @@
-import { lstat, open, realpath, stat } from 'node:fs/promises';
+import { lstat, mkdir, open, realpath, stat } from 'node:fs/promises';
 import { basename, dirname, isAbsolute, relative, resolve, sep } from 'node:path';
 
+import { cancellationError } from './cancellation.ts';
 import { GeorgeError } from './errors.ts';
 
 export const DEFAULT_INSTRUCTION_BYTES = 32 * 1024;
@@ -12,6 +13,12 @@ export type WorkspaceMutationPath = Readonly<{
   relativePath: string;
   exists: boolean;
   mode?: number;
+}>;
+
+export type WorkspaceDirectoryPath = Readonly<{
+  path: string;
+  relativePath: string;
+  exists: boolean;
 }>;
 
 /** A one-call capability target. It deliberately is not a Workspace. */
@@ -115,6 +122,75 @@ export async function resolveWorkspaceMutationPath(workspace: Workspace, path: s
   const name = basename(candidate);
   if (!name || name === '.') throw validationError('Path must name a file.');
   return { path: resolve(parent, name), relativePath: relative(workspace.root, resolve(parent, name)), exists: Boolean(target), ...(target ? { mode: target.mode & 0o777 } : {}) };
+}
+
+/** Resolves a directory target without following symlink components, including when part of the chain is absent. */
+export async function resolveWorkspaceDirectoryPath(workspace: Workspace, path: string): Promise<WorkspaceDirectoryPath> {
+  await assertCanonicalWorkspace(workspace);
+  if (Buffer.byteLength(path, 'utf8') > 4096) throw validationError('Workspace directory path exceeds its byte limit.');
+  const candidate = rejectWorkspaceEscape(workspace, path);
+  const relativePath = relative(workspace.root, candidate).split('\\').join('/') || '.';
+  let current = workspace.root;
+  for (const component of relative(workspace.root, candidate).split(sep).filter(Boolean)) {
+    current = resolve(current, component);
+    const entry = await lstat(current).catch((error: NodeJS.ErrnoException) => {
+      if (error.code === 'ENOENT') return undefined;
+      throw new GeorgeError('validation', 'Unable to inspect workspace directory path.', { cause: error });
+    });
+    if (!entry) return { path: candidate, relativePath, exists: false };
+    if (entry.isSymbolicLink()) throw validationError('Workspace directory path must not contain symbolic links.');
+    if (!entry.isDirectory()) throw validationError('Workspace directory path collides with a non-directory.');
+    const canonical = await realpath(current).catch((error) => {
+      throw new GeorgeError('validation', 'Unable to resolve workspace directory path.', { cause: error });
+    });
+    if (canonical !== current) throw validationError('Workspace directory path is not canonical.');
+  }
+  return { path: candidate, relativePath, exists: true };
+}
+
+/** Creates only missing real directory components; it never replaces or removes an entry. */
+export async function createWorkspaceDirectory(
+  workspace: Workspace,
+  path: string,
+  options: Readonly<{ signal?: AbortSignal }> = {},
+): Promise<Readonly<{ path: string; created: boolean; createdDirectories: number }>> {
+  const active = () => {
+    if (options.signal?.aborted) throw cancellationError(options.signal);
+  };
+  active();
+  const target = await resolveWorkspaceDirectoryPath(workspace, path);
+  if (target.exists) return { path: target.relativePath, created: false, createdDirectories: 0 };
+  let current = workspace.root;
+  let createdDirectories = 0;
+  for (const component of relative(workspace.root, target.path).split(sep).filter(Boolean)) {
+    active();
+    current = resolve(current, component);
+    let entry = await lstat(current).catch((error: NodeJS.ErrnoException) => {
+      if (error.code === 'ENOENT') return undefined;
+      throw new GeorgeError('validation', 'Unable to inspect workspace directory path.', { cause: error });
+    });
+    if (!entry) {
+      try {
+        await mkdir(current);
+        createdDirectories += 1;
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw new GeorgeError('tool', 'Unable to create workspace directory.', { cause: error });
+      }
+      entry = await lstat(current).catch((error) => {
+        throw new GeorgeError('validation', 'Unable to verify workspace directory creation.', { cause: error });
+      });
+    }
+    if (entry.isSymbolicLink()) throw validationError('Workspace directory path must not contain symbolic links.');
+    if (!entry.isDirectory()) throw validationError('Workspace directory path collides with a non-directory.');
+    const canonical = await realpath(current).catch((error) => {
+      throw new GeorgeError('validation', 'Unable to verify workspace directory creation.', { cause: error });
+    });
+    if (canonical !== current) throw validationError('Workspace directory path is not canonical.');
+  }
+  active();
+  const verified = await resolveWorkspaceDirectoryPath(workspace, path);
+  if (!verified.exists) throw new GeorgeError('tool', 'Workspace directory creation could not be verified.');
+  return { path: verified.relativePath, created: createdDirectories > 0, createdDirectories };
 }
 
 /** Resolves an absolute outside target without teaching workspace resolvers about it. */

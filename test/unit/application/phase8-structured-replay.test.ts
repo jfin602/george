@@ -113,10 +113,10 @@ test('frozen structured Phase 8 counterpart repairs the exact fixture and leaves
   assert.equal(events.some((event) => event.type === 'approval.allowed' && event.request.toolName === 'apply_patch'), true);
   assert.deepEqual(provider.requests.map((request) => request.tools.map((tool) => tool.name)), [
     ['read_file', 'list_directory', 'search_text', 'git_status', 'git_diff'],
-    ['read_file', 'list_directory', 'search_text', 'git_status', 'git_diff', 'write_file', 'apply_patch'],
-    ['read_file', 'list_directory', 'search_text', 'git_status', 'git_diff', 'write_file', 'apply_patch'],
-    ['read_file', 'list_directory', 'search_text', 'git_status', 'git_diff', 'write_file', 'apply_patch'],
-    ['read_file', 'list_directory', 'search_text', 'git_status', 'git_diff', 'write_file', 'apply_patch'],
+    ['read_file', 'list_directory', 'search_text', 'git_status', 'git_diff', 'write_file', 'apply_patch', 'create_directory'],
+    ['read_file', 'list_directory', 'search_text', 'git_status', 'git_diff', 'write_file', 'apply_patch', 'create_directory'],
+    ['read_file', 'list_directory', 'search_text', 'git_status', 'git_diff', 'write_file', 'apply_patch', 'create_directory'],
+    ['read_file', 'list_directory', 'search_text', 'git_status', 'git_diff', 'write_file', 'apply_patch', 'create_directory'],
   ]);
   assert.deepEqual(provider.requests.map((request) => request.toolChoice), ['required', undefined, undefined, undefined, undefined]);
   assert.equal(provider.requests.length, 5);

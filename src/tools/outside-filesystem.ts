@@ -13,6 +13,7 @@ export async function resolveOutsideFilesystemCapability(call: ToolCall, mutatio
   if (!arguments_ || typeof arguments_ !== 'object' || Array.isArray(arguments_)) return undefined;
   const path = (arguments_ as Record<string, unknown>).path;
   if (typeof path !== 'string' || !isAbsolute(path)) return undefined;
+  if (call.name === 'create_directory') return undefined; // No outside-workspace directory capability exists.
   const target = await resolveOutsideFilesystemPath(path, mutation);
   const directoryTool = call.name === 'list_directory' || call.name === 'search_text';
   return directoryTool

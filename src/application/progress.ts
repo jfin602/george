@@ -80,7 +80,7 @@ function detailsFor(name: string, arguments_: string): WorkDetails {
 }
 
 function category(name: string): WorkCategory {
-  if (name === 'write_file' || name === 'apply_patch') return 'editing';
+  if (name === 'write_file' || name === 'apply_patch' || name === 'create_directory') return 'editing';
   if (name === 'run_process') return 'process';
   return 'inspection';
 }
@@ -95,6 +95,7 @@ function requested(name: string, details: WorkDetails): string {
     case 'git_diff': return 'Inspect Git diff';
     case 'write_file': return `Write ${path}`;
     case 'apply_patch': return `Patch ${path}`;
+    case 'create_directory': return `Create directory ${path}`;
     case 'run_process': return `Run ${details.executable ?? 'process'}`;
     default: return `Run ${bounded(name)}`;
   }
@@ -108,6 +109,7 @@ function resultDetails(name: string, value: unknown, details: WorkDetails): Work
   if (name === 'read_file' || name === 'write_file' || name === 'apply_patch') {
     return { ...base, ...(number('bytes') === undefined ? {} : { bytes: number('bytes') }), ...(bool('truncated') === undefined ? {} : { truncated: bool('truncated') }) };
   }
+  if (name === 'create_directory') return { ...base, ...(number('createdDirectories') === undefined ? {} : { count: number('createdDirectories') }) };
   if (name === 'list_directory') return { ...base, ...(Array.isArray(result.entries) ? { count: result.entries.length } : {}), ...(bool('truncated') === undefined ? {} : { truncated: bool('truncated') }) };
   if (name === 'search_text') return { ...base, ...(Array.isArray(result.matches) ? { count: result.matches.length } : {}), ...(number('scannedFiles') === undefined ? {} : { scannedFiles: number('scannedFiles') }), ...(number('scannedBytes') === undefined ? {} : { scannedBytes: number('scannedBytes') }), ...(bool('truncated') === undefined ? {} : { truncated: bool('truncated') }) };
   if (name === 'git_status' || name === 'git_diff') return { ...base, ...(number('exitCode') === undefined ? {} : { exitCode: number('exitCode') }), ...(bool('stdoutTruncated') || bool('stderrTruncated') ? { truncated: true } : {}) };
@@ -128,6 +130,7 @@ function completed(name: string, details: WorkDetails): string {
   if (name === 'search_text') return `Searched ${details.path ?? '.'} (${details.count ?? 0} matches in ${details.scannedFiles ?? 0} files${suffix})`;
   if (name === 'write_file') return `Wrote ${details.path ?? 'file'} (${details.bytes ?? 0} bytes)`;
   if (name === 'apply_patch') return `Patched ${details.path ?? 'file'} (${details.bytes ?? 0} bytes)`;
+  if (name === 'create_directory') return `Directory ${details.path ?? '.'} ready (${details.count ?? 0} created)`;
   if (name === 'run_process') return `Ran ${details.executable ?? 'process'} (${details.outcome ?? 'completed'}${details.exitCode === undefined || details.exitCode === null ? '' : `, exit ${details.exitCode}`}${suffix})`;
   if (name === 'git_status') return `Inspected Git status${details.exitCode === undefined || details.exitCode === 0 ? '' : ` (exit ${details.exitCode})`}`;
   if (name === 'git_diff') return `Inspected Git diff${details.exitCode === undefined || details.exitCode === 0 ? '' : ` (exit ${details.exitCode})`}`;

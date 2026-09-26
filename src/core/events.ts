@@ -131,7 +131,8 @@ export type WorkItem = Readonly<{
 
 export type RecoveryIntent =
   | Readonly<{ name: 'write_file'; path: string; desiredBytes: number; desiredSha256: string; precondition: 'absent' | string }>
-  | Readonly<{ name: 'apply_patch'; path: string; precondition: string; edits: number }>;
+  | Readonly<{ name: 'apply_patch'; path: string; precondition: string; edits: number }>
+  | Readonly<{ name: 'create_directory'; path: string }>;
 
 export type RecoveryOutcome = 'confirmed_complete' | 'confirmed_incomplete' | 'interrupted' | 'outcome_unknown';
 export type HookOrigin = Readonly<{ hookId: string }>;

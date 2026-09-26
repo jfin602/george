@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { chmod, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { chmod, lstat, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
@@ -65,7 +65,7 @@ test('fixture repository completes read tool -> result -> final answer with orig
   const events = await collect(service.run({ session, input: 'Read the boot.', turnId: 'turn-read' }));
 
   assert.equal(provider.calls.length, 2);
-  assert.deepEqual(provider.calls[0]?.request.tools?.map((tool) => tool.name), ['read_file', 'list_directory', 'search_text', 'git_status', 'git_diff', 'write_file', 'apply_patch', 'run_process', 'parallel_search']);
+  assert.deepEqual(provider.calls[0]?.request.tools?.map((tool) => tool.name), ['read_file', 'list_directory', 'search_text', 'git_status', 'git_diff', 'write_file', 'apply_patch', 'create_directory', 'run_process', 'parallel_search']);
   assert.deepEqual(provider.calls[1]?.request.continuation?.toolResults[0]?.callId, 'call-read');
   assert.equal(provider.calls[1]?.request.continuation?.toolResults[0]?.result.ok, true);
   assert.equal(provider.calls[1]?.request.instructions, provider.calls[0]?.request.instructions);
@@ -203,6 +203,92 @@ test('executor failures recover, while every proposed call consumes the determin
   const roundEvents = await collect(roundService.run({ session: createSession({ workspace: root }), input: 'Rounds.' }));
   assert.deepEqual(roundEvents.filter((event) => event.type === 'tool.requested').map((event) => event.callId), ['round-first', 'round-second']);
   assert.equal(roundEvents.at(-1)?.type, 'turn.failed');
+});
+
+test('mutation prerequisites fail per call and converge through explicit read, directory creation, and retry', async (t) => {
+  const root = await fixture();
+  t.after(() => rm(root, { recursive: true, force: true }));
+  await writeFile(join(root, 'package.json'), 'before\n');
+  const requests: ProviderRequest[] = [];
+  const provider = new class implements ModelProvider {
+    async *stream(request: ProviderRequest): AsyncGenerator<ProviderEvent> {
+      requests.push(request);
+      if (requests.length === 1) {
+        yield { type: 'provider.response.started', responseId: 'bad-prerequisites' };
+        yield { type: 'provider.tool.call', callId: 'missing-sha', name: 'write_file', arguments: '{"path":"package.json","content":"after\\n"}' };
+        yield { type: 'provider.tool.call', callId: 'missing-parent', name: 'write_file', arguments: '{"path":"src/app.js","content":"app\\n"}' };
+        yield { type: 'provider.tool.call', callId: 'later-read', name: 'read_file', arguments: '{"path":"BOOT.md"}' };
+      } else if (requests.length === 2) {
+        assert.deepEqual(request.continuation?.toolResults.map((result) => [result.callId, result.result.ok]), [
+          ['missing-sha', false], ['missing-parent', false], ['later-read', true],
+        ]);
+        assert.equal(await readFile(join(root, 'package.json'), 'utf8'), 'before\n');
+        await assert.rejects(() => readFile(join(root, 'src/app.js')), /ENOENT/);
+        yield { type: 'provider.response.started', responseId: 'read-current' };
+        yield { type: 'provider.tool.call', callId: 'read-package', name: 'read_file', arguments: '{"path":"package.json"}' };
+      } else if (requests.length === 3) {
+        const result = request.continuation?.toolResults[0]?.result;
+        if (!result?.ok || !result.value || typeof result.value !== 'object' || Array.isArray(result.value)) throw new Error('Expected package read result.');
+        const sha256 = (result.value as { sha256?: string }).sha256;
+        assert.match(sha256 ?? '', /^[a-f0-9]{64}$/);
+        assert.equal(await readFile(join(root, 'package.json'), 'utf8'), 'before\n');
+        yield { type: 'provider.response.started', responseId: 'safe-retry' };
+        yield { type: 'provider.tool.call', callId: 'mkdir', name: 'create_directory', arguments: '{"path":"src"}' };
+        yield { type: 'provider.tool.call', callId: 'retry-package', name: 'write_file', arguments: JSON.stringify({ path: 'package.json', content: 'after\n', expectedSha256: sha256 }) };
+        yield { type: 'provider.tool.call', callId: 'nested-write', name: 'write_file', arguments: '{"path":"src/app.js","content":"app\\n"}' };
+      } else yield { type: 'provider.text.delta', delta: 'done' };
+      yield { type: 'provider.response.completed' };
+    }
+  }();
+  const approval = new ScriptedApproval(['allow_once', 'allow_once', 'allow_once', 'allow_once']);
+  const service = await createAgentLoopApplicationService({ provider, workspace: root, approvalPort: approval });
+  const events = await collect(service.run({ session: createSession({ workspace: root }), input: 'Repair prerequisites.' }));
+
+  assert.equal(events.at(-1)?.type, 'turn.completed');
+  assert.equal(events.some((event) => event.type === 'tool.failed' && event.callId === 'missing-parent' && event.result.error.message === 'Workspace mutation parent must exist.' && event.execution?.effect === 'workspace_mutation'), true);
+  assert.equal(events.some((event) => event.type === 'tool.started' && event.callId === 'missing-parent'), false);
+  assert.equal(events.some((event) => event.type === 'tool.completed' && event.callId === 'later-read'), true);
+  assert.deepEqual(events.filter((event) => event.type === 'tool.completed' && ['mkdir', 'retry-package', 'nested-write'].includes(event.callId)).map((event) => event.callId), ['mkdir', 'retry-package', 'nested-write']);
+  assert.equal(await readFile(join(root, 'package.json'), 'utf8'), 'after\n');
+  assert.equal(await readFile(join(root, 'src/app.js'), 'utf8'), 'app\n');
+});
+
+test('create_directory follows standard approval, autonomous workspace policy, and no outside broadening', async (t) => {
+  const root = await fixture();
+  const outside = await fixture();
+  t.after(() => Promise.all([rm(root, { recursive: true, force: true }), rm(outside, { recursive: true, force: true })]));
+  const call = (id: string, path: string) => new ScriptedProvider([
+    [{ type: 'provider.response.started', responseId: id }, { type: 'provider.tool.call', callId: id, name: 'create_directory', arguments: JSON.stringify({ path }) }, { type: 'provider.response.completed' }],
+    [{ type: 'provider.response.completed' }],
+  ]);
+
+  const allowedApproval = new ScriptedApproval(['allow_once']);
+  const allowed = await createAgentLoopApplicationService({ provider: call('allowed', 'allowed'), workspace: root, approvalPort: allowedApproval });
+  await collect(allowed.run({ session: createSession({ workspace: root }), input: 'create' }));
+  assert.deepEqual(allowedApproval.requests.map((request) => [request.toolName, request.target?.path]), [['create_directory', 'allowed']]);
+  assert.equal((await lstat(join(root, 'allowed'))).isDirectory(), true);
+
+  const deniedApproval = new ScriptedApproval(['deny']);
+  const denied = await createAgentLoopApplicationService({ provider: call('denied', 'denied'), workspace: root, approvalPort: deniedApproval });
+  const deniedEvents = await collect(denied.run({ session: createSession({ workspace: root }), input: 'deny' }));
+  assert.equal(deniedEvents.some((event) => event.type === 'tool.started'), false);
+  await assert.rejects(() => lstat(join(root, 'denied')), /ENOENT/);
+
+  const autonomousApproval = new ScriptedApproval([]);
+  const policy = { workspace: 'workspace_autonomous', outsideWorkspace: 'ask', network: 'reject', remoteMutation: 'reject', browserInteraction: 'reject', credentialsEnvironment: 'reject' } as const;
+  const autonomous = await createAgentLoopApplicationService({ provider: call('autonomous', 'autonomous'), workspace: root, approvalPort: autonomousApproval, executionPolicy: policy });
+  const autonomousEvents = await collect(autonomous.run({ session: createSession({ workspace: root }), input: 'auto' }));
+  assert.equal(autonomousApproval.requests.length, 0);
+  assert.equal(autonomousEvents.some((event) => event.type === 'tool.completed' && event.name === 'create_directory'), true);
+  assert.equal((await lstat(join(root, 'autonomous'))).isDirectory(), true);
+
+  const outsidePath = join(outside, 'not-created');
+  const outsideService = await createAgentLoopApplicationService({ provider: call('outside', outsidePath), workspace: root, approvalPort: autonomousApproval, executionPolicy: policy });
+  const outsideEvents = await collect(outsideService.run({ session: createSession({ workspace: root }), input: 'outside' }));
+  assert.equal(outsideEvents.some((event) => event.type === 'tool.failed' && event.callId === 'outside' && event.result.error.code === 'validation'), true);
+  assert.equal(outsideEvents.some((event) => event.type === 'tool.started' && event.callId === 'outside'), false);
+  assert.equal(autonomousApproval.requests.length, 0);
+  await assert.rejects(() => lstat(outsidePath), /ENOENT/);
 });
 
 test('submission convergence limits can reduce but never raise configured loop ceilings', async (t) => {

@@ -288,6 +288,7 @@ STOP CONDITIONS
   session.taskState = taskState;
   await new StructuredTaskApplicationService(workflow.agent).run({ session, input, turnId: 'resume' });
   assert.equal(provider.requests[0]?.toolChoice, undefined);
+  assert.deepEqual(provider.requests[0]?.tools.map((tool) => tool.name), ['read_file', 'list_directory', 'search_text', 'git_status', 'git_diff', 'write_file', 'apply_patch', 'create_directory']);
   assert.equal(session.taskState?.status, 'completed');
   assert.deepEqual(session.taskState?.validations.V1?.attempts.map((attempt) => attempt.status), ['failed', 'passed']);
   assert.equal(session.taskState?.validations.V1?.attempts[0]?.stderr, 'old diagnostic');

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
@@ -23,6 +23,15 @@ function interruptedWrite(workspace: string, id: string, path: string, desired: 
   appendSessionEvent(session, { type: 'tool.requested', turnId: 'turn', callId: id, name: 'write_file', arguments: '{}' });
   appendSessionEvent(session, { type: 'recovery.intent', turnId: 'turn', callId: id, intent: { name: 'write_file', path, desiredBytes: Buffer.byteLength(desired), desiredSha256: sha256(desired), precondition } });
   appendSessionEvent(session, { type: 'tool.started', turnId: 'turn', callId: id, name: 'write_file' });
+  session.interruptions = classifySessionInterruptions(session.events);
+  return session;
+}
+
+function interruptedDirectory(workspace: string, id: string, path: string) {
+  const session = createSession({ id, workspace });
+  appendSessionEvent(session, { type: 'tool.requested', turnId: 'turn', callId: id, name: 'create_directory', arguments: '{}', execution: { effect: 'workspace_mutation', replaySafety: 'not_replay_safe', source: { kind: 'builtin' } } });
+  appendSessionEvent(session, { type: 'recovery.intent', turnId: 'turn', callId: id, intent: { name: 'create_directory', path } });
+  appendSessionEvent(session, { type: 'tool.started', turnId: 'turn', callId: id, name: 'create_directory', execution: { effect: 'workspace_mutation', replaySafety: 'not_replay_safe', source: { kind: 'builtin' } } });
   session.interruptions = classifySessionInterruptions(session.events);
   return session;
 }
@@ -70,4 +79,34 @@ test('recovery confirms only exact writes, preserves history, and never replays 
   await assert.rejects(readFile(join(workspace, 'absent.txt')), /ENOENT/);
   const durable = await readFile(join(state, 'unknown.json'), 'utf8');
   assert.doesNotMatch(durable, /SECRET_WRITE_BODY|unknown patch body/i);
+});
+
+test('directory recovery observes complete, incomplete, and colliding state without replay', async (t) => {
+  const workspace = await mkdtemp(join(tmpdir(), 'george-directory-recovery-'));
+  const state = await mkdtemp(join(tmpdir(), 'george-directory-recovery-state-'));
+  t.after(() => Promise.all([rm(workspace, { recursive: true, force: true }), rm(state, { recursive: true, force: true })]));
+  await mkdir(join(workspace, 'complete'));
+  await writeFile(join(workspace, 'collision'), 'keep');
+  const provider = new NeverProvider();
+  const service = await createOneTurnApplicationService({ provider, workspace });
+  const store = new LocalSessionStore({ root: state });
+  const sessions = [
+    interruptedDirectory(workspace, 'directory-complete', 'complete'),
+    interruptedDirectory(workspace, 'directory-incomplete', 'absent'),
+    interruptedDirectory(workspace, 'directory-collision', 'collision/child'),
+  ];
+
+  for (const session of sessions) {
+    await store.save(session);
+    const reopened = await store.open(session.id, workspace);
+    await service.recover(reopened);
+    await store.save(reopened);
+  }
+
+  const outcome = async (id: string) => (await store.open(id, workspace)).events.find((event) => event.type === 'recovery.decision')?.outcome;
+  assert.equal(await outcome('directory-complete'), 'confirmed_complete');
+  assert.equal(await outcome('directory-incomplete'), 'confirmed_incomplete');
+  assert.equal(await outcome('directory-collision'), 'outcome_unknown');
+  assert.equal(provider.calls, 0);
+  assert.equal(await readFile(join(workspace, 'collision'), 'utf8'), 'keep');
 });

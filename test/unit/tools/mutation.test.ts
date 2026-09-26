@@ -27,6 +27,7 @@ test('workspace mutation creates safely and overwrites only with an exact precon
   const reader = createReadOnlyToolExecutor(workspace);
   assert.deepEqual(executor.registry.registrations.map(({ name, execution }) => ({ name, effect: execution.effect })), [
     { name: 'write_file', effect: 'workspace_mutation' }, { name: 'apply_patch', effect: 'workspace_mutation' },
+    { name: 'create_directory', effect: 'workspace_mutation' },
   ]);
   assert.match(executor.definitions[0]!.description, /latest read_file\.sha256/);
   assert.match(executor.definitions[1]!.description, /latest read_file\.sha256/);
@@ -34,6 +35,7 @@ test('workspace mutation creates safely and overwrites only with an exact precon
   assert.match(executor.definitions[0]!.description, /Prefer apply_patch.*preserve read_file\.textFraming.*never reformats/);
   assert.match(executor.definitions[1]!.description, /Preferred for localized.*preserving untouched bytes.*read_file\.textFraming/);
   assert.match(JSON.stringify(executor.definitions.map((definition) => definition.inputSchema)), /allowTextFramingChange.*Acknowledge an intentional change.*does not rewrite or format content/);
+  assert.deepEqual(executor.definitions[2]?.inputSchema, { type: 'object', properties: { path: { type: 'string', minLength: 1, maxLength: 4096 } }, required: ['path'], additionalProperties: false });
 
   const created = await executor.execute({ name: 'write_file', path: 'new.txt', content: 'first' });
   assert.equal(await readFile(join(root, 'new.txt'), 'utf8'), 'first');
@@ -56,6 +58,37 @@ test('workspace mutation creates safely and overwrites only with an exact precon
   );
   assert.equal(await readFile(join(root, 'new.txt'), 'utf8'), 'second');
   assert.deepEqual(await tempArtifacts(root), []);
+});
+
+test('directory mutation creates safe chains idempotently and never replaces collisions', async (t) => {
+  const root = await fixture();
+  const outside = await fixture();
+  t.after(() => Promise.all([rm(root, { recursive: true, force: true }), rm(outside, { recursive: true, force: true })]));
+  const executor = createWorkspaceMutationToolExecutor(await resolveWorkspaceRoot(root), {}, { captureGit: false });
+
+  const one = await executor.execute({ name: 'create_directory', path: 'one' });
+  assert.deepEqual(one, { name: 'create_directory', path: 'one', created: true, createdDirectories: 1 });
+  const nested = await executor.execute({ name: 'create_directory', path: 'src/routes/v1' });
+  assert.deepEqual(nested, { name: 'create_directory', path: 'src/routes/v1', created: true, createdDirectories: 3 });
+  assert.deepEqual(await executor.execute({ name: 'create_directory', path: 'src/routes/v1' }), { name: 'create_directory', path: 'src/routes/v1', created: false, createdDirectories: 0 });
+  await executor.execute({ name: 'write_file', path: 'src/routes/v1/app.js', content: 'ok' });
+  assert.equal(await readFile(join(root, 'src/routes/v1/app.js'), 'utf8'), 'ok');
+
+  await writeFile(join(root, 'collision'), 'keep');
+  await symlink(outside, join(root, 'escape'));
+  for (const path of ['collision', 'collision/child', '/tmp/outside', '../outside', 'bad\0path', 'escape', 'escape/child', 'x'.repeat(4097)]) {
+    await assert.rejects(() => executor.execute({ name: 'create_directory', path }), GeorgeError);
+  }
+  assert.equal(await readFile(join(root, 'collision'), 'utf8'), 'keep');
+  assert.equal((await lstat(join(root, 'escape'))).isSymbolicLink(), true);
+
+  const controller = new AbortController();
+  controller.abort(new GeorgeError('cancelled', 'stop'));
+  await assert.rejects(
+    () => executor.execute({ name: 'create_directory', path: 'cancelled/child' }, { signal: controller.signal }),
+    (error: unknown) => error instanceof GeorgeError && error.code === 'cancelled',
+  );
+  await assert.rejects(() => lstat(join(root, 'cancelled')), /ENOENT/);
 });
 
 test('existing text framing changes require explicit acknowledgement and never rewrite bytes', async (t) => {

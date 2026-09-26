@@ -693,7 +693,7 @@ test('a bounded service denies unselected tools while the default service keeps 
   const normal = await createOneTurnApplicationService({ provider: normalProvider, workspace: root });
   await collect(normal.run({ session: createSession({ workspace: root }), input: 'Inspect tools.' }));
   assert.deepEqual(normalProvider.calls[0]?.request.tools.map((tool) => tool.name), [
-    'read_file', 'list_directory', 'search_text', 'git_status', 'git_diff', 'write_file', 'apply_patch', 'run_process', 'parallel_search',
+    'read_file', 'list_directory', 'search_text', 'git_status', 'git_diff', 'write_file', 'apply_patch', 'create_directory', 'run_process', 'parallel_search',
   ]);
   await assert.rejects(
     () => createOneTurnApplicationService({ provider: normalProvider, workspace: root, toolNames: ['not_registered'] }),
