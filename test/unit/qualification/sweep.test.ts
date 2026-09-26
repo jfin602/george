@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { classifySweepAbortScope, normalizeFailureLedger, runQualificationSweep, sweepCommonFromAbortScope, type FailureLedgerEntryInput, type SweepObservedResult, type SweepPreflightKind, type SweepPreflightObservation } from '../../../src/qualification/index.ts';
+import { classifyFunctionalEfficiency, classifySweepAbortScope, normalizeFailureLedger, runQualificationSweep, sweepCommonFromAbortScope, type FailureLedgerEntryInput, type SweepObservedResult, type SweepPreflightKind, type SweepPreflightObservation } from '../../../src/qualification/index.ts';
 
 const ids = ['greeting', 'three-file', 'gate-a', 'b2', 'c2'] as const;
 
@@ -14,6 +14,15 @@ function workloads(outcomes: Partial<Record<(typeof ids)[number], Exclude<SweepO
 }
 
 const observation = (kind: SweepPreflightKind, state: SweepPreflightObservation['state'] = 'Not Green', identity = kind): SweepPreflightObservation => ({ identity, kind, state, message: `${identity} observed ${state}` });
+
+test('efficiency-target misses do not override functional Green, while hard exhaustion does', () => {
+  assert.deepEqual(classifyFunctionalEfficiency({ functionalResult: 'Green', hardBudgetExhausted: false, toolCalls: 12, providerRounds: 8, targetToolCalls: 10, targetProviderRounds: 10 }), {
+    functionalResult: 'Green', efficiencyTarget: 'missed', toolCalls: 12, providerRounds: 8,
+  });
+  assert.deepEqual(classifyFunctionalEfficiency({ functionalResult: 'Green', hardBudgetExhausted: true, toolCalls: 17, providerRounds: 8, targetToolCalls: 10, targetProviderRounds: 10 }), {
+    functionalResult: 'Not Green', efficiencyTarget: 'missed', toolCalls: 17, providerRounds: 8,
+  });
+});
 
 test('functional and environment observations are ledgered without aborting live work', () => {
   const observations = [

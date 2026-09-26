@@ -5,6 +5,34 @@ export type SweepObservedResult = 'Green' | 'Not Green' | 'Evidence Gap' | 'Not 
 export type SweepQualificationStatus = 'qualifying' | 'diagnostic-only' | 'not-run';
 export type SweepCommonState = 'Green' | 'Not Green' | 'Evidence Gap';
 
+export type FunctionalEfficiencyResult = Readonly<{
+  functionalResult: Exclude<SweepObservedResult, 'Not Run'>;
+  efficiencyTarget: 'met' | 'missed' | 'not-measured';
+  toolCalls: number | null;
+  providerRounds: number | null;
+}>;
+
+/** Keeps nonblocking efficiency measurements separate from functional/hard-budget truth. */
+export function classifyFunctionalEfficiency(options: Readonly<{
+  functionalResult: Exclude<SweepObservedResult, 'Not Run'>;
+  hardBudgetExhausted: boolean;
+  toolCalls?: number | null;
+  providerRounds?: number | null;
+  targetToolCalls: number;
+  targetProviderRounds: number;
+}>): FunctionalEfficiencyResult {
+  const toolCalls = options.toolCalls ?? null;
+  const providerRounds = options.providerRounds ?? null;
+  for (const [label, value] of [['tool calls', toolCalls], ['provider rounds', providerRounds], ['tool-call target', options.targetToolCalls], ['provider-round target', options.targetProviderRounds]] as const) {
+    if (value !== null && (!Number.isSafeInteger(value) || value < 0)) throw new Error(`Efficiency ${label} must be a non-negative safe integer.`);
+  }
+  const functionalResult = options.hardBudgetExhausted ? 'Not Green' : options.functionalResult;
+  const efficiencyTarget = toolCalls === null || providerRounds === null
+    ? 'not-measured'
+    : toolCalls <= options.targetToolCalls && providerRounds <= options.targetProviderRounds ? 'met' : 'missed';
+  return Object.freeze({ functionalResult, efficiencyTarget, toolCalls, providerRounds });
+}
+
 const SWEEP_PREFLIGHT_POLICY = Object.freeze({
   'supported-runtime': 'abort',
   'pinned-model': 'abort',

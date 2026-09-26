@@ -156,6 +156,7 @@ export type ProcessSubmission = Readonly<{
 const DEFAULT_MAX_TOOL_CALLS = 32;
 const DEFAULT_MAX_TOOL_ROUNDS = 32;
 const CONTINUATION_PROTOCOL_OVERHEAD_TOKENS = 32;
+const MAX_ALIGNMENT_BYTES = 8 * 1024;
 
 function estimatedTokens(value: unknown): number {
   return Math.ceil(JSON.stringify(value).length / 4);
@@ -209,6 +210,8 @@ export type OneTurnSubmission = Readonly<{
   completeAfterSuccessfulToolRound?: boolean;
   /** Application-owned bounded turns may omit transcript history when it would leak unrelated durable state. */
   omitHistory?: boolean;
+  /** Application-owned, provider-independent guidance recomputed before every provider round. */
+  alignment?: () => string | undefined;
   /** An application-owned, capability-reducing policy projection. */
   executionPolicy?: Partial<ExecutionPolicy>;
   budget?: RunBudget;
@@ -782,6 +785,16 @@ export class AgentLoopApplicationService {
       const successfulReads = new Map<string, number>();
       while (true) {
         if (stageRoundLimit !== undefined && providerRounds >= stageRoundLimit) throw new GeorgeError('budget', `Structured stage provider round limit of ${stageRoundLimit} exhausted.`);
+        const alignment = submission.alignment?.();
+        if (alignment !== undefined && (typeof alignment !== 'string' || alignment.includes('\0') || Buffer.byteLength(alignment, 'utf8') > MAX_ALIGNMENT_BYTES)) {
+          throw new GeorgeError('validation', `Provider-round alignment must be bounded to ${MAX_ALIGNMENT_BYTES} bytes.`);
+        }
+        const alignedRequestEstimate = requestEstimate + (alignment === undefined ? 0 : estimatedTokens(alignment));
+        for (const promoted of continuationPromotions(selection.mode, effectiveProfile, alignedRequestEstimate, 'continuation-estimate')) {
+          yield* emit({ type: 'context.envelope.promoted', turnId, fromProfileId: effectiveProfile.id, toProfileId: promoted.id, reason: 'continuation-estimate', tokens: alignedRequestEstimate, providerInputBudget: promoted.providerInputTokens });
+          effectiveProfile = promoted;
+        }
+        const instructions = alignment === undefined ? baseRequest.instructions : `${baseRequest.instructions}\n\n${alignment}`;
         let calls: Array<Extract<ApplicationEvent, { type: 'provider.tool.call' }>> = [];
         let text = '';
         let responseId: string | undefined;
@@ -806,6 +819,7 @@ export class AgentLoopApplicationService {
             for await (const event of this.provider.stream(
               {
                 ...baseRequest,
+                instructions,
                 ...(continuation === undefined && submission.initialToolChoice !== undefined ? { toolChoice: submission.initialToolChoice } : {}),
                 ...(continuation === undefined ? {} : { continuation }),
               },
@@ -857,7 +871,7 @@ export class AgentLoopApplicationService {
         // Formula: chain = max(local request estimate, reported input) +
         // (reported output ?? serialized response estimate). The provider input already contains
         // prior history, so max() keeps that evidence authoritative without counting it twice.
-        const chainAfterResponse = Math.max(requestEstimate, reportedInputTokens ?? 0)
+        const chainAfterResponse = Math.max(alignedRequestEstimate, reportedInputTokens ?? 0)
           + (reportedOutputTokens ?? estimatedTokens({ text, calls }));
         if (calls.length === 0) {
           if (text) yield* emit({ type: 'assistant.response.completed', turnId, text });

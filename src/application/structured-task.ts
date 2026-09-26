@@ -13,12 +13,33 @@ const INSPECTION_TOOLS = ['read_file', 'list_directory', 'search_text', 'git_sta
 const CODING_TOOLS = [...INSPECTION_TOOLS, 'write_file', 'apply_patch', 'create_directory'] as const;
 const MAX_SLICE_EVIDENCE = 8;
 const MAX_STAGE_EVIDENCE_BYTES = 8 * 1024;
-const STAGE_LIMITS = Object.freeze({
+const MAX_FRESHNESS_EVIDENCE = 32;
+export const STRUCTURED_CONVERGENCE_POLICY = Object.freeze({
   inspection: Object.freeze({ maxProviderRounds: 6, maxToolCalls: 4, maxDuplicateLocalReads: 2 }),
-  implementation: Object.freeze({ maxProviderRounds: 10, maxToolCalls: 8, maxDuplicateLocalReads: 2 }),
-  correction: Object.freeze({ maxProviderRounds: 8, maxToolCalls: 6, maxDuplicateLocalReads: 2 }),
+  implementation: Object.freeze({ maxProviderRounds: 16, maxToolCalls: 16, maxDuplicateLocalReads: 2, efficiencyTargetProviderRounds: 10, efficiencyTargetToolCalls: 10 }),
+  correction: Object.freeze({ maxProviderRounds: 12, maxToolCalls: 12, maxDuplicateLocalReads: 2, efficiencyTargetProviderRounds: 10, efficiencyTargetToolCalls: 10 }),
   discover: Object.freeze({ maxProviderRounds: 1, maxToolCalls: 1 }),
 });
+const STAGE_LIMITS = STRUCTURED_CONVERGENCE_POLICY;
+
+export const MISSION_CARD_LIMITS = Object.freeze({ maxBytes: 8 * 1024, maxEstimatedTokens: 2 * 1024, maxEvidence: 12 });
+
+export type StructuredFreshEvidence = Readonly<{
+  identity: string;
+  source: string;
+  kind: 'observation' | 'mutation' | 'failure';
+  resource?: string;
+  fact: string;
+  observedGeneration: number;
+  state: 'valid' | 'stale';
+  invalidatedGeneration?: number;
+}>;
+
+type EvidenceCache = {
+  generation: number;
+  items: Map<string, StructuredFreshEvidence>;
+  requests: Map<string, Readonly<{ name: string; resource?: string; query?: string; existingTarget?: boolean }>>;
+};
 
 export type StructuredTaskSlice = Readonly<{
   workUnit: string;
@@ -65,6 +86,63 @@ export function projectStructuredTaskSlice(state: TaskState, workId: `W${number}
   });
 }
 
+function missionSection(title: string, lines: readonly string[], maximum: number): string {
+  const body = lines.length ? lines.join('\n') : '(none)';
+  return `${title}\n${sanitizeTaskEvidence(body, maximum).text}`;
+}
+
+/** Pure provider-facing alignment. It derives guidance without mutating TaskState or freshness evidence. */
+export function projectStructuredMissionCard(
+  state: TaskState,
+  workId: `W${number}`,
+  stage: 'implementation' | 'correction',
+  evidence: readonly StructuredFreshEvidence[],
+  failedValidationId?: `V${number}`,
+): string {
+  const slice = projectStructuredTaskSlice(state, workId, [], failedValidationId);
+  const work = state.definition.workflow.find((item) => item.id === workId);
+  if (!work) throw new Error('Unknown task work unit.');
+  const priority = (item: StructuredFreshEvidence) => item.kind === 'failure' ? 0 : item.kind === 'mutation' ? 1 : item.state === 'stale' ? 2 : 3;
+  const stable = [...evidence]
+    .sort((left, right) => priority(left) - priority(right) || right.observedGeneration - left.observedGeneration || left.identity.localeCompare(right.identity))
+    .slice(0, MISSION_CARD_LIMITS.maxEvidence)
+    .sort((left, right) => left.identity.localeCompare(right.identity));
+  const valid = stable.filter((item) => item.state === 'valid');
+  const stale = stable.filter((item) => item.state === 'stale');
+  const permission = state.effectivePermissionExpectations;
+  const card = [
+    missionSection('CURRENT OBJECTIVE', [`Task P${state.definition.task.ordinal} — ${state.definition.task.title} (${state.definition.kind})`, slice.workUnit], 768),
+    missionSection('MUST PRESERVE', [
+      ...slice.requirements,
+      ...slice.invariants,
+      `Effective permissions: workspace=${permission.workspace ?? 'standard'}; outside=${permission.outsideWorkspace ?? 'reject'}; network=${permission.network ?? 'reject'}; remoteMutation=${permission.remoteMutation ?? 'reject'}. This card cannot expand them.`,
+    ], 1_400),
+    missionSection('OBSERVED', [
+      ...slice.evidence,
+      ...valid.filter((item) => item.kind !== 'mutation').map((item) => item.fact),
+      ...stale.map((item) => `${item.source}${item.resource ? ` ${item.resource}` : ''} is stale after mutation generation ${item.invalidatedGeneration}.`),
+    ], 2_300),
+    missionSection('COMPLETED', valid.filter((item) => item.kind === 'mutation').map((item) => item.fact), 800),
+    missionSection('DO NOT REPEAT', [
+      ...valid.filter((item) => item.kind === 'observation').map((item) => `${item.source}${item.resource ? ` ${item.resource}` : ''} remains valid; reuse it.`),
+      'Do not create completion/report artifacts unless the authored task requires them.',
+    ], 800),
+    missionSection('NEXT COMPLETION CONDITION', [
+      ...(work.completeWhen.length ? work.completeWhen : [`Materially satisfy ${work.id} — ${work.title}.`]),
+      ...(slice.validations.length ? [`Then stop unrelated verification or mutation and allow George to run: ${slice.validations.join('; ')}.`] : ['Then stop unrelated verification or mutation and allow George-owned completion handling.']),
+    ], 900),
+    missionSection('STOP IF', [
+      ...slice.stops,
+      `Stop on permission denial, ambiguous recovery, cancellation, duplicate/no-progress exhaustion, task-wide RunBudget exhaustion, or the ${stage} hard ceiling (${STAGE_LIMITS[stage].maxToolCalls} tool calls / ${STAGE_LIMITS[stage].maxProviderRounds} provider rounds).`,
+    ], 800),
+  ].join('\n\n');
+  const missionCard = `MISSION CARD (derived, non-authoritative)\n\n${card}`;
+  if (Buffer.byteLength(missionCard, 'utf8') > MISSION_CARD_LIMITS.maxBytes || Math.ceil(missionCard.length / 4) > MISSION_CARD_LIMITS.maxEstimatedTokens) {
+    throw new GeorgeError('validation', 'Structured mission card exceeded its explicit safety bound.');
+  }
+  return missionCard;
+}
+
 function renderSlice(slice: StructuredTaskSlice, stage: 'inspection' | 'implementation' | 'correction'): string {
   return [
     `Structured task ${stage} stage. Work only on this bounded slice.`,
@@ -76,7 +154,7 @@ function renderSlice(slice: StructuredTaskSlice, stage: 'inspection' | 'implemen
     ...(slice.evidence.length ? [`OBSERVED EVIDENCE\n${slice.evidence.join('\n')}`] : []),
     ...(stage === 'inspection' ? [`Use at most ${STAGE_LIMITS.inspection.maxToolCalls} local read/list/search/Git tool calls in this response. Start from observed paths or list the workspace; do not guess paths. George completes inspection after this first round has successful read-only evidence. Do not mutate files or run processes.`] : []),
     ...(stage === 'correction' ? ['Repair only the observed validation failure using the normal tool and permission policy. Do not claim validation passed; George reruns it.'] : []),
-    ...(stage === 'inspection' ? [] : [`Use supplied observed evidence and at most ${STAGE_LIMITS[stage].maxToolCalls} tool calls. Before changing an existing file, read it and pass its expectedSha256 while preserving its textFraming. Before writing beneath a missing parent, use create_directory. Perform only the current work unit and stop when its completion condition is satisfied. Do not run declared George-owned validation yourself.`]),
+    ...(stage === 'inspection' ? [] : [`Use supplied observed evidence. The hard ${stage} runaway ceiling is ${STAGE_LIMITS[stage].maxToolCalls} tool calls; the efficiency target is ${STAGE_LIMITS[stage].efficiencyTargetToolCalls}. Before changing an existing file, use a still-valid read or read it and pass its expectedSha256 while preserving its textFraming. Before writing beneath a missing parent, use create_directory. Perform only the current work unit and stop when its completion condition is satisfied. Do not run declared George-owned validation yourself.`]),
   ].join('\n\n');
 }
 
@@ -118,7 +196,7 @@ function text(value: unknown, maximum = 512): string | undefined {
   return sanitizeTaskEvidence(value, maximum).text;
 }
 
-function inspectionResult(event: Extract<ApplicationEvent, { type: 'tool.completed' }>): string | undefined {
+function inspectionResult(event: Extract<ApplicationEvent, { type: 'tool.completed' }>, request: Readonly<{ name: string; resource?: string; query?: string; existingTarget?: boolean }> | undefined, generation: number): StructuredFreshEvidence | undefined {
   if (!event.result.ok || !event.result.value || typeof event.result.value !== 'object' || Array.isArray(event.result.value)) return undefined;
   const value = event.result.value as Record<string, unknown>;
   const path = text(value.path);
@@ -133,39 +211,142 @@ function inspectionResult(event: Extract<ApplicationEvent, { type: 'tool.complet
       : undefined;
     projected = { path, sha256: value.sha256, text: body.text, bytes: typeof value.bytes === 'number' ? value.bytes : undefined, truncated: value.truncated === true || body.truncated, redacted: body.redacted, ...(textFraming === undefined ? {} : { textFraming }) };
   } else if (event.name === 'list_directory' && path !== undefined && Array.isArray(value.entries)) {
-    projected = { path, entries: value.entries.slice(0, 32).flatMap((entry) => {
+    const entries = value.entries.slice(0, 32).flatMap((entry) => {
       if (!entry || typeof entry !== 'object' || Array.isArray(entry)) return [];
       const item = entry as Record<string, unknown>; const name = text(item.name, 256);
       return name === undefined || !['file', 'directory', 'symlink', 'other'].includes(String(item.kind)) ? [] : [{ name, kind: item.kind }];
-    }), truncated: value.truncated === true || value.entries.length > 32 };
+    }).sort((left, right) => left.name.localeCompare(right.name) || String(left.kind).localeCompare(String(right.kind)));
+    projected = { path, entries, truncated: value.truncated === true || value.entries.length > 32 };
   } else if (event.name === 'search_text' && path !== undefined && Array.isArray(value.matches)) {
-    projected = { path, matches: value.matches.slice(0, 16).flatMap((match) => {
+    const matches = value.matches.slice(0, 16).flatMap((match) => {
       if (!match || typeof match !== 'object' || Array.isArray(match)) return [];
       const item = match as Record<string, unknown>; const matchPath = text(item.path); const line = item.line; const matchText = typeof item.text === 'string' ? sanitizeTaskEvidence(item.text, 512) : undefined;
       return matchPath === undefined || !Number.isInteger(line) || matchText === undefined ? [] : [{ path: matchPath, line, text: matchText.text, redacted: matchText.redacted }];
-    }), scannedFiles: typeof value.scannedFiles === 'number' ? value.scannedFiles : undefined, scannedBytes: typeof value.scannedBytes === 'number' ? value.scannedBytes : undefined, truncated: value.truncated === true || value.matches.length > 16 };
+    }).sort((left, right) => left.path.localeCompare(right.path) || Number(left.line) - Number(right.line) || left.text.localeCompare(right.text));
+    projected = { path, matches, scannedFiles: typeof value.scannedFiles === 'number' ? value.scannedFiles : undefined, scannedBytes: typeof value.scannedBytes === 'number' ? value.scannedBytes : undefined, truncated: value.truncated === true || value.matches.length > 16 };
   } else if ((event.name === 'git_status' || event.name === 'git_diff') && typeof value.stdout === 'string' && typeof value.stderr === 'string') {
     const stdout = sanitizeTaskEvidence(value.stdout, 2 * 1024); const stderr = sanitizeTaskEvidence(value.stderr, 1024);
     projected = { stdout: stdout.text, stderr: stderr.text, exitCode: typeof value.exitCode === 'number' ? value.exitCode : null, stdoutTruncated: value.stdoutTruncated === true || stdout.truncated, stderrTruncated: value.stderrTruncated === true || stderr.truncated, redacted: stdout.redacted || stderr.redacted };
   }
-  return projected === undefined ? undefined : `inspection result ${event.name}:${event.callId} ${JSON.stringify(projected)}`;
+  if (projected === undefined) return undefined;
+  const resource = path ?? request?.resource;
+  const qualifier = request?.query === undefined ? '' : `:${request.query}`;
+  const source = `${event.name}:${event.callId}${request?.query === undefined ? '' : ` query=${JSON.stringify(request.query)}`}`;
+  return Object.freeze({
+    identity: `${event.name}:${resource ?? '.'}${qualifier}`,
+    source,
+    kind: 'observation',
+    ...(resource === undefined ? {} : { resource }),
+    fact: sanitizeTaskEvidence(`inspection result ${event.name}:${event.callId} ${JSON.stringify(projected)}`, 3 * 1024).text,
+    observedGeneration: generation,
+    state: 'valid',
+  });
 }
 
-function observedInspection(events: readonly ApplicationEvent[]): Readonly<{ source?: string; evidence: readonly string[] }> {
-  const completed = events.filter((item): item is Extract<ApplicationEvent, { type: 'tool.completed' }> => item.type === 'tool.completed' && INSPECTION_TOOLS.includes(item.name as typeof INSPECTION_TOOLS[number]) && item.execution?.effect === 'local_read');
+function requested(arguments_: string): Readonly<{ resource?: string; query?: string; existingTarget?: boolean }> {
+  try {
+    const value = JSON.parse(arguments_) as unknown;
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+    const path = (value as Record<string, unknown>).path;
+    const query = (value as Record<string, unknown>).query;
+    return Object.freeze({
+      ...(typeof path === 'string' ? { resource: path || '.' } : {}),
+      ...(typeof query === 'string' ? { query: sanitizeTaskEvidence(query, 256).text } : {}),
+      ...('expectedSha256' in value ? { existingTarget: true } : {}),
+    });
+  } catch { return {}; }
+}
+
+function retainEvidence(cache: EvidenceCache, item: StructuredFreshEvidence): void {
+  const identity = sanitizeTaskEvidence(item.identity, 512).text;
+  const safe = Object.freeze({
+    ...item,
+    identity,
+    source: sanitizeTaskEvidence(item.source, 512).text,
+    ...(item.resource === undefined ? {} : { resource: sanitizeTaskEvidence(item.resource, 512).text }),
+    fact: sanitizeTaskEvidence(item.fact, 3 * 1024).text,
+  });
+  cache.items.delete(identity);
+  cache.items.set(identity, safe);
+  while (cache.items.size > MAX_FRESHNESS_EVIDENCE) cache.items.delete(cache.items.keys().next().value!);
+}
+
+function within(root: string, path: string): boolean {
+  const normalizedRoot = root.replaceAll('\\', '/').replace(/\/$/, '') || '.';
+  const normalizedPath = path.replaceAll('\\', '/').replace(/\/$/, '') || '.';
+  return normalizedRoot === '.' || normalizedPath === normalizedRoot || normalizedPath.startsWith(`${normalizedRoot}/`);
+}
+
+function parent(path: string): string {
+  const normalized = path.replaceAll('\\', '/').replace(/\/$/, '');
+  const index = normalized.lastIndexOf('/');
+  return index < 0 ? '.' : normalized.slice(0, index) || '.';
+}
+
+function mutationAffects(item: StructuredFreshEvidence, path: string, topologyChanged: boolean): boolean {
+  if (item.kind !== 'observation') return item.resource === path;
+  if (item.source.startsWith('git_')) return true;
+  if (item.resource === undefined) return false;
+  if (item.source.startsWith('read_file:')) return item.resource === path;
+  if (item.source.startsWith('list_directory:')) return topologyChanged && item.resource === parent(path);
+  if (item.source.startsWith('search_text:')) return within(item.resource, path);
+  return false;
+}
+
+function observeFreshness(cache: EvidenceCache, event: ApplicationEvent): void {
+  if (event.type === 'tool.requested') {
+    cache.requests.set(event.callId, Object.freeze({ name: event.name, ...requested(event.arguments) }));
+    return;
+  }
+  if (event.type !== 'tool.completed' && event.type !== 'tool.failed') return;
+  const request = cache.requests.get(event.callId);
+  cache.requests.delete(event.callId);
+  if (event.type === 'tool.failed') {
+    const safe = sanitizeTaskEvidence(event.result.error.message, 512).text;
+    retainEvidence(cache, Object.freeze({
+      identity: `failure:${event.name}:${request?.resource ?? event.callId}`,
+      source: `${event.name}:${event.callId}`,
+      kind: 'failure',
+      ...(request?.resource === undefined ? {} : { resource: request.resource }),
+      fact: `tool failure ${event.name}:${event.callId} code=${event.result.error.code}: ${safe}`,
+      observedGeneration: cache.generation,
+      state: 'valid',
+    }));
+    return;
+  }
+  if (INSPECTION_TOOLS.includes(event.name as typeof INSPECTION_TOOLS[number])) {
+    const item = inspectionResult(event, request, cache.generation);
+    if (item) retainEvidence(cache, item);
+    return;
+  }
+  if (!['write_file', 'apply_patch', 'create_directory'].includes(event.name) || !event.result.value || typeof event.result.value !== 'object' || Array.isArray(event.result.value)) return;
+  const value = event.result.value as Record<string, unknown>;
+  const path = text(value.path);
+  if (path === undefined) return;
+  cache.generation += 1;
+  const topologyChanged = event.name === 'create_directory' || (event.name === 'write_file' && request?.existingTarget !== true);
+  for (const [identity, item] of cache.items) {
+    if (item.state === 'valid' && mutationAffects(item, path, topologyChanged)) cache.items.set(identity, Object.freeze({ ...item, state: 'stale', invalidatedGeneration: cache.generation }));
+  }
+  const receipt = event.name === 'create_directory'
+    ? `George observed directory mutation ${path} at generation ${cache.generation}.`
+    : `George observed ${event.name} ${path}${typeof value.sha256 === 'string' ? ` sha256=${value.sha256}` : ''} at generation ${cache.generation}.`;
+  retainEvidence(cache, Object.freeze({ identity: `mutation:${path}`, source: `${event.name}:${event.callId}`, kind: 'mutation', resource: path, fact: receipt, observedGeneration: cache.generation, state: 'valid' }));
+}
+
+function observedInspection(events: readonly ApplicationEvent[], cache: EvidenceCache): Readonly<{ source?: string; evidence: readonly string[] }> {
+  for (const event of events) observeFreshness(cache, event);
+  const observed = [...cache.items.values()].filter((item) => item.kind === 'observation' && item.state === 'valid').sort((left, right) => left.identity.localeCompare(right.identity));
   const evidence: string[] = [];
-  let source: string | undefined;
   let bytes = 0;
-  for (const event of completed) {
-    const item = inspectionResult(event);
-    if (!item || evidence.length === MAX_SLICE_EVIDENCE) continue;
+  for (const item of observed) {
+    if (evidence.length === MAX_SLICE_EVIDENCE) break;
     const remaining = MAX_STAGE_EVIDENCE_BYTES - bytes;
     if (remaining <= 3) break;
-    const bounded = sanitizeTaskEvidence(item, remaining).text;
-    source ??= `${event.name}:${event.callId}`;
+    const bounded = sanitizeTaskEvidence(item.fact, remaining).text;
     evidence.push(bounded); bytes += Buffer.byteLength(bounded, 'utf8');
   }
-  return { source, evidence: Object.freeze(evidence) };
+  return { source: observed[0]?.source, evidence: Object.freeze(evidence) };
 }
 
 /** Provider-independent structured orchestration over the canonical coding workflow. */
@@ -224,7 +405,9 @@ export class StructuredTaskApplicationService extends CodingWorkflowApplicationS
     catch (error) { state = blockTask(state, 'blocked', error instanceof Error ? error.message : 'READ FIRST failed.'); submission.session.taskState = state; await this.lifecycle(submission, state, 'Structured task blocked: READ FIRST failed.'); throw error; }
 
     let last: CodingWorkflowCompletion | undefined;
-    let stageEvidence: readonly string[] = [];
+    const freshness: EvidenceCache = { generation: 0, items: new Map(), requests: new Map() };
+    const validEvidence = () => [...freshness.items.values()].filter((item) => item.state === 'valid');
+    const observeStage = async (event: ApplicationEvent) => { observeFreshness(freshness, event); await submission.onEvent?.(event); };
     for (const unit of definition.workflow) {
       if (state.workUnits[unit.id] === 'addressed') continue;
       if (state.workUnits[unit.id] === 'blocked') break;
@@ -233,12 +416,12 @@ export class StructuredTaskApplicationService extends CodingWorkflowApplicationS
       submission.session.taskState = state;
       await this.lifecycle(submission, state, `Structured task started ${unit.id}.`);
       const slice = projectStructuredTaskSlice(state, unit.id);
-      if (definition.inspect.length && stageEvidence.length === 0) {
+      if (definition.inspect.length && validEvidence().every((item) => item.kind !== 'observation')) {
         const events: ApplicationEvent[] = [];
         for await (const event of this.agent.run({ session: submission.session, input: renderSlice(slice, 'inspection'), turnId: `${submission.turnId ?? randomUUID()}-inspect`, routedDocuments: routed, toolNames: INSPECTION_TOOLS, initialToolChoice: 'required', completeAfterSuccessfulToolRound: true, omitHistory: true, signal: submission.signal, executionPolicy, budget, limits: STAGE_LIMITS.inspection })) {
           events.push(event); await submission.onEvent?.(event);
         }
-        const observed = observedInspection(events);
+        const observed = observedInspection(events, freshness);
         const failure = events.findLast((event): event is Extract<ApplicationEvent, { type: 'turn.failed' | 'turn.cancelled' }> => event.type === 'turn.failed' || event.type === 'turn.cancelled');
         if (failure || !observed.source || observed.evidence.length === 0) {
           const exhausted = failure?.type === 'turn.failed' && failure.error.code === 'budget';
@@ -247,12 +430,17 @@ export class StructuredTaskApplicationService extends CodingWorkflowApplicationS
           await this.lifecycle(submission, state, 'Structured task blocked: inspection evidence is missing.');
           throw new GeorgeError('validation', 'Structured INSPECT preflight produced no read-only evidence.');
         }
-        stageEvidence = observed.evidence;
         for (const item of definition.inspect) state = recordTaskInspection(state, { item, source: observed.source });
         submission.session.taskState = state;
       }
-      last = await super.run({ ...submission, input: renderSlice(projectStructuredTaskSlice(state, unit.id, stageEvidence), 'implementation'), routedDocuments: routed, toolNames: CODING_TOOLS, omitHistory: true, validations: [], executionPolicy, budget, limits: STAGE_LIMITS.implementation });
-      if (last.directMutations.length > 0) stageEvidence = [];
+      const currentEvidence = validEvidence();
+      last = await super.run({
+        ...submission,
+        input: renderSlice(projectStructuredTaskSlice(state, unit.id, currentEvidence.map((item) => item.fact)), 'implementation'),
+        alignment: () => projectStructuredMissionCard(state, unit.id, 'implementation', [...freshness.items.values()]),
+        onEvent: observeStage,
+        routedDocuments: routed, toolNames: CODING_TOOLS, omitHistory: true, validations: [], executionPolicy, budget, limits: STAGE_LIMITS.implementation,
+      });
       if (last.terminalState !== 'completed') {
         state = blockTask(state, outcomeFor(last), `Work unit ${unit.id} did not complete.`);
         submission.session.taskState = state;
@@ -280,8 +468,13 @@ export class StructuredTaskApplicationService extends CodingWorkflowApplicationS
         if (pendingCorrection?.validationId !== undefined && pendingCorrection.validationId !== validation.id) throw new GeorgeError('validation', 'A different structured correction is active.');
         if (pendingCorrection?.status === 'active') {
           const repair = correctionWork(state, validation);
-          const repaired = await super.run({ ...submission, input: renderSlice(projectStructuredTaskSlice(state, repair, [], validation.id), 'correction'), routedDocuments: routed, toolNames: CODING_TOOLS, omitHistory: true, validations: [], executionPolicy, budget, limits: STAGE_LIMITS.correction });
-          if (repaired.directMutations.length > 0) stageEvidence = [];
+          const repaired = await super.run({
+            ...submission,
+            input: renderSlice(projectStructuredTaskSlice(state, repair, validEvidence().map((item) => item.fact), validation.id), 'correction'),
+            alignment: () => projectStructuredMissionCard(state, repair, 'correction', [...freshness.items.values()], validation.id),
+            onEvent: observeStage,
+            routedDocuments: routed, toolNames: CODING_TOOLS, omitHistory: true, validations: [], executionPolicy, budget, limits: STAGE_LIMITS.correction,
+          });
           if (repaired.terminalState !== 'completed') {
             state = blockTask(state, outcomeFor(repaired), `Correction for ${validation.id} did not complete.`);
             submission.session.taskState = state; await this.lifecycle(submission, state, `Structured correction stopped at ${validation.id}.`); return repaired;

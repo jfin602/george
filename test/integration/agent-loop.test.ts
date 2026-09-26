@@ -7,7 +7,7 @@ import { join } from 'node:path';
 import test from 'node:test';
 
 import { createAgentLoopApplicationService } from '../../src/application/index.ts';
-import { createSession, GeorgeError, LocalSessionStore, PendingApprovalPort, type ApprovalDecision, type ApprovalPort, type ApprovalRequest, type ApplicationEvent, type ModelProvider, type ProviderEvent, type ProviderRequest, type ProviderStreamOptions } from '../../src/core/index.ts';
+import { CONTEXT_PROFILE_REGISTRY, createSession, GeorgeError, LocalSessionStore, PendingApprovalPort, type ApprovalDecision, type ApprovalPort, type ApprovalRequest, type ApplicationEvent, type ModelProvider, type ProviderEvent, type ProviderRequest, type ProviderStreamOptions } from '../../src/core/index.ts';
 
 class ScriptedProvider implements ModelProvider {
   readonly calls: Array<{ request: ProviderRequest; options: ProviderStreamOptions }> = [];
@@ -73,6 +73,43 @@ test('fixture repository completes read tool -> result -> final answer with orig
   assert.deepEqual(events.filter((event) => event.type.startsWith('tool.')).map((event) => event.type), ['tool.requested', 'tool.started', 'tool.completed']);
   assert.deepEqual(session.events, events);
   assert.deepEqual(session.transcript, [{ role: 'user', text: 'Read the boot.' }, { role: 'assistant', text: 'The fixture boot was read.' }]);
+});
+
+test('optional provider-round alignment refreshes on continuation while ordinary requests remain unchanged', async (t) => {
+  const root = await fixture();
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const provider = new ScriptedProvider([
+    [{ type: 'provider.response.started', responseId: 'aligned-1' }, { type: 'provider.tool.call', callId: 'read', name: 'read_file', arguments: '{"path":"BOOT.md"}' }, { type: 'provider.response.completed' }],
+    [{ type: 'provider.response.completed' }],
+    [{ type: 'provider.response.completed' }],
+  ]);
+  const service = await createAgentLoopApplicationService({ provider, workspace: root });
+  let projection = 0;
+  await collect(service.run({ session: createSession({ workspace: root }), input: 'Aligned.', alignment: () => `MISSION CARD ROUND ${++projection}` }));
+  await collect(service.run({ session: createSession({ workspace: root }), input: 'Ordinary.' }));
+
+  assert.match(provider.calls[0]?.request.instructions ?? '', /MISSION CARD ROUND 1/);
+  assert.match(provider.calls[1]?.request.instructions ?? '', /MISSION CARD ROUND 2/);
+  assert.doesNotMatch(provider.calls[2]?.request.instructions ?? '', /MISSION CARD ROUND/);
+  assert.equal(provider.calls[1]?.request.continuation?.toolResults[0]?.callId, 'read');
+});
+
+test('provider-visible alignment participates in continuation safety accounting', async (t) => {
+  const root = await fixture();
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const input = 'x'.repeat(28_000);
+  const baselineProvider = new ScriptedProvider([[{ type: 'provider.response.completed' }]]);
+  const baseline = await createAgentLoopApplicationService({ provider: baselineProvider, workspace: root, contextMode: 'fixed', contextProfile: CONTEXT_PROFILE_REGISTRY.ordinary });
+  const baselineEvents = await collect(baseline.run({ session: createSession({ workspace: root }), input }));
+  assert.equal(baselineEvents.at(-1)?.type, 'turn.completed');
+  assert.equal(baselineProvider.calls.length, 1);
+
+  const alignedProvider = new ScriptedProvider([[{ type: 'provider.response.completed' }]]);
+  const aligned = await createAgentLoopApplicationService({ provider: alignedProvider, workspace: root, contextMode: 'fixed', contextProfile: CONTEXT_PROFILE_REGISTRY.ordinary });
+  const alignedEvents = await collect(aligned.run({ session: createSession({ workspace: root }), input, alignment: () => 'a'.repeat(8 * 1024) }));
+  assert.equal(alignedProvider.calls.length, 0);
+  assert.equal(alignedEvents.at(-1)?.type, 'turn.failed');
+  assert.match(alignedEvents.findLast((event) => event.type === 'turn.failed')?.error.message ?? '', /cannot continue safely/);
 });
 
 test('a mixed provider round never commits provisional text, including after durable reopen', async (t) => {

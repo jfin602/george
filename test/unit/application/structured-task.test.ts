@@ -1,10 +1,11 @@
 import assert from 'node:assert/strict';
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 
-import { StructuredTaskApplicationService, createCodingWorkflowApplicationService } from '../../../src/application/index.ts';
+import { MISSION_CARD_LIMITS, StructuredTaskApplicationService, createCodingWorkflowApplicationService, projectStructuredMissionCard, type StructuredFreshEvidence } from '../../../src/application/index.ts';
 import { createSession, DEFAULT_RUN_BUDGET, RunBudget, type ApplicationEvent, type ApprovalDecision, type ApprovalPort, type ApprovalRequest, type ModelProvider, type ProviderEvent, type ProviderRequest } from '../../../src/core/index.ts';
 import { addressTaskWorkUnit, beginTaskCorrection, beginTaskWorkUnit, createTaskState, parseTaskPrompt, recordTaskInspection, recordTaskValidationAttempt } from '../../../src/tasks/index.ts';
 
@@ -105,6 +106,35 @@ STOP CONDITIONS
 - S1: Stop truthfully.
 `;
 
+test('mission card is deterministic, bounded, non-authoritative, and hands completed work to George validation', async (t) => {
+  const root = await workspace();
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const parsed = parseTaskPrompt(singleWorkTask('Mission card'));
+  if (parsed.kind !== 'structured') throw new Error('Expected structured task.');
+  const state = beginTaskWorkUnit(createTaskState({
+    sessionId: 'mission', workspace: root, definition: parsed.task,
+    effectivePermissionExpectations: { workspace: 'standard', outsideWorkspace: 'reject', network: 'reject', remoteMutation: 'reject' },
+  }), 'W1');
+  const before = structuredClone(state);
+  const evidence: StructuredFreshEvidence[] = [
+    { identity: 'read_file:target.txt', source: 'read_file:read-1', kind: 'observation', resource: 'target.txt', fact: `target.txt sha256=${'a'.repeat(64)} textFraming=lf/final-lf`, observedGeneration: 0, state: 'valid' },
+    { identity: 'failure:apply_patch:target.txt', source: 'apply_patch:patch-1', kind: 'failure', resource: 'target.txt', fact: 'tool failure apply_patch:patch-1 code=validation: stale SHA', observedGeneration: 0, state: 'valid' },
+  ];
+  const first = projectStructuredMissionCard(state, 'W1', 'implementation', evidence);
+  const second = projectStructuredMissionCard(state, 'W1', 'implementation', [...evidence].reverse());
+
+  assert.equal(first, second);
+  assert.deepEqual(state, before);
+  assert.ok(Buffer.byteLength(first, 'utf8') <= MISSION_CARD_LIMITS.maxBytes);
+  assert.ok(Math.ceil(first.length / 4) <= MISSION_CARD_LIMITS.maxEstimatedTokens);
+  assert.match(first, /CURRENT OBJECTIVE[\s\S]*MUST PRESERVE[\s\S]*OBSERVED[\s\S]*COMPLETED[\s\S]*DO NOT REPEAT[\s\S]*NEXT COMPLETION CONDITION[\s\S]*STOP IF/);
+  assert.match(first, /Effective permissions: workspace=standard; outside=reject; network=reject; remoteMutation=reject/);
+  assert.match(first, /target\.txt sha256=.*textFraming/);
+  assert.match(first, /stale SHA/);
+  assert.match(first, /Do not create completion\/report artifacts unless the authored task requires them/);
+  assert.match(first, /stop unrelated verification or mutation and allow George to run: V1: Node check/);
+});
+
 test('structured service preflights with local reads, progresses task state, and omits unrelated ledger text', async (t) => {
   const root = await workspace();
   t.after(() => rm(root, { recursive: true, force: true }));
@@ -137,9 +167,8 @@ test('structured service preflights with local reads, progresses task state, and
   assert.doesNotMatch(provider.requests[0]?.input ?? '', /W2 — Second work/);
   assert.match(provider.requests[1]?.input ?? '', /inspection result read_file:read/);
   assert.match(provider.requests[1]?.input ?? '', /inspection result list_directory:list/);
-  // live:b2:structured-stage-tool-limit — expose the existing safe mutation prerequisites before they consume the eight-call stage budget.
-  assert.match(provider.requests[1]?.input ?? '', /at most 8 tool calls/);
-  assert.match(provider.requests[1]?.input ?? '', /read it and pass its expectedSha256.*preserving its textFraming/);
+  assert.match(provider.requests[1]?.input ?? '', /hard implementation runaway ceiling is 16 tool calls; the efficiency target is 10/);
+  assert.match(provider.requests[1]?.input ?? '', /use a still-valid read or read it and pass its expectedSha256.*preserving its textFraming/);
   assert.match(provider.requests[1]?.input ?? '', /missing parent.*create_directory/);
   assert.match(provider.requests[2]?.input ?? '', /W2 — Second work/);
   assert.doesNotMatch(provider.requests[2]?.input ?? '', /W1 — First work|First work is bounded/);
@@ -295,6 +324,8 @@ STOP CONDITIONS
   await new StructuredTaskApplicationService(workflow.agent).run({ session, input, turnId: 'resume' });
   assert.equal(provider.requests[0]?.toolChoice, undefined);
   assert.deepEqual(provider.requests[0]?.tools.map((tool) => tool.name), ['read_file', 'list_directory', 'search_text', 'git_status', 'git_diff', 'write_file', 'apply_patch', 'create_directory']);
+  assert.match(provider.requests[0]?.instructions ?? '', /MISSION CARD/);
+  assert.match(provider.requests[0]?.instructions ?? '', /validation V1: failed outcome=failed exit=1/);
   assert.equal(session.taskState?.status, 'completed');
   assert.deepEqual(session.taskState?.validations.V1?.attempts.map((attempt) => attempt.status), ['failed', 'passed']);
   assert.equal(session.taskState?.validations.V1?.attempts[0]?.stderr, 'old diagnostic');
@@ -424,7 +455,7 @@ test('successful workspace mutation advances the structured read epoch', async (
 test('structured stage tool ceiling reduces execution without changing ordinary loop defaults', async (t) => {
   const root = await workspace();
   t.after(() => rm(root, { recursive: true, force: true }));
-  const calls = Array.from({ length: 9 }, (_, index) => ({ type: 'provider.tool.call' as const, callId: `read-${index}`, name: 'read_file', arguments: JSON.stringify({ path: `missing-${index}.txt` }) }));
+  const calls = Array.from({ length: 17 }, (_, index) => ({ type: 'provider.tool.call' as const, callId: `read-${index}`, name: 'read_file', arguments: JSON.stringify({ path: `missing-${index}.txt` }) }));
   const round = [{ type: 'provider.response.started' as const, responseId: 'many' }, ...calls, { type: 'provider.response.completed' as const }];
   const input = singleWorkTask('Stage ceiling');
   const structuredProvider = new Provider([round]);
@@ -432,7 +463,7 @@ test('structured stage tool ceiling reduces execution without changing ordinary 
   const structuredSession = createSession({ workspace: root });
   const structuredEvents: ApplicationEvent[] = [];
   await new StructuredTaskApplicationService(structuredWorkflow.agent).run({ session: structuredSession, input, onEvent: (event) => { structuredEvents.push(event); } });
-  assert.equal(structuredEvents.filter((event) => event.type === 'tool.started').length, 8);
+  assert.equal(structuredEvents.filter((event) => event.type === 'tool.started').length, 16);
   assert.equal(structuredSession.taskState?.status, 'budget_exhausted');
 
   const ordinaryProvider = new Provider([round, [{ type: 'provider.response.completed' }]]);
@@ -442,10 +473,16 @@ test('structured stage tool ceiling reduces execution without changing ordinary 
   assert.equal(ordinaryProvider.requests.length, 2);
 });
 
-test('workspace mutation invalidates inspection evidence before the next work unit', async (t) => {
+test('path-aware freshness invalidates only affected observations and refreshes the next provider round', async (t) => {
   const root = await workspace();
   t.after(() => rm(root, { recursive: true, force: true }));
-  await writeFile(join(root, 'target.txt'), 'STALE_STAGE_EVIDENCE');
+  await Promise.all([mkdir(join(root, 'src')), mkdir(join(root, 'test'))]);
+  await Promise.all([
+    writeFile(join(root, 'package.json'), '{"name":"fixture"}\n'),
+    writeFile(join(root, 'src/app.js'), 'OLD_APP\n'),
+    writeFile(join(root, 'test/notes.test.js'), 'UNCHANGED_TEST\n'),
+  ]);
+  const appSha = createHash('sha256').update('OLD_APP\n').digest('hex');
   const input = `GEORGE TASK FORMAT: 1
 
 TASK: P2 — Mutation invalidation
@@ -453,15 +490,15 @@ KIND: implementation
 
 GOAL
 
-Reinspect after mutation.
+Reuse unaffected observations after mutation.
 
 INSPECT
 
-- target
+- package, source, and test paths
 
 REQUIREMENTS
 
-- R1: First work mutates the target.
+- R1: First work mutates the source.
 - R2: Second work sees current evidence.
 
 WORKFLOW
@@ -485,20 +522,33 @@ STOP CONDITIONS
 - S1: Stop truthfully.
 `;
   const provider = new Provider([
-    [{ type: 'provider.response.started', responseId: 'inspect-old' }, { type: 'provider.tool.call', callId: 'read-old', name: 'read_file', arguments: '{"path":"target.txt"}' }, { type: 'provider.response.completed' }],
-    [{ type: 'provider.response.started', responseId: 'mutate' }, { type: 'provider.tool.call', callId: 'write-new', name: 'write_file', arguments: '{"path":"new.txt","content":"CURRENT_STAGE_EVIDENCE"}' }, { type: 'provider.response.completed' }],
-    [{ type: 'provider.response.completed' }],
-    [{ type: 'provider.response.started', responseId: 'inspect-new' }, { type: 'provider.tool.call', callId: 'read-new', name: 'read_file', arguments: '{"path":"new.txt"}' }, { type: 'provider.response.completed' }],
+    [{ type: 'provider.response.started', responseId: 'inspect-old' },
+      { type: 'provider.tool.call', callId: 'read-package', name: 'read_file', arguments: '{"path":"package.json"}' },
+      { type: 'provider.tool.call', callId: 'read-app', name: 'read_file', arguments: '{"path":"src/app.js"}' },
+      { type: 'provider.tool.call', callId: 'read-test', name: 'read_file', arguments: '{"path":"test/notes.test.js"}' },
+      { type: 'provider.tool.call', callId: 'list-src', name: 'list_directory', arguments: '{"path":"src"}' },
+      { type: 'provider.response.completed' }],
+    [{ type: 'provider.response.started', responseId: 'mutate' }, { type: 'provider.tool.call', callId: 'write-app', name: 'write_file', arguments: JSON.stringify({ path: 'src/app.js', content: 'NEW_APP\n', expectedSha256: appSha }) }, { type: 'provider.response.completed' }],
     [{ type: 'provider.response.completed' }],
     [{ type: 'provider.response.completed' }],
   ]);
   const workflow = await createCodingWorkflowApplicationService({ provider, workspace: root, approvalPort: new Allow() });
-  await new StructuredTaskApplicationService(workflow.agent).run({ session: createSession({ workspace: root }), input });
+  const events: ApplicationEvent[] = [];
+  await new StructuredTaskApplicationService(workflow.agent).run({ session: createSession({ workspace: root }), input, onEvent: (event) => { events.push(event); } });
 
-  assert.match(provider.requests[3]?.input ?? '', /Structured task inspection stage/);
-  assert.doesNotMatch(provider.requests[3]?.input ?? '', /STALE_STAGE_EVIDENCE/);
-  assert.match(provider.requests[4]?.input ?? '', /CURRENT_STAGE_EVIDENCE/);
-  assert.doesNotMatch(provider.requests[4]?.input ?? '', /STALE_STAGE_EVIDENCE/);
+  const refreshed = provider.requests[2]?.instructions ?? '';
+  assert.match(refreshed, /MISSION CARD/);
+  assert.match(refreshed, /read_file:read-app src\/app\.js is stale after mutation generation 1/);
+  assert.match(refreshed, /read_file:read-package package\.json remains valid; reuse it/);
+  assert.match(refreshed, /read_file:read-test test\/notes\.test\.js remains valid; reuse it/);
+  assert.match(refreshed, /list_directory:list-src src remains valid; reuse it/);
+  assert.match(refreshed, /George observed write_file src\/app\.js sha256=/);
+  assert.doesNotMatch(refreshed, /"text":"OLD_APP/);
+  assert.match(provider.requests[3]?.input ?? '', /Structured task implementation stage/);
+  assert.doesNotMatch(provider.requests[3]?.input ?? '', /Structured task inspection stage/);
+  assert.match(provider.requests[3]?.input ?? '', /fixture|UNCHANGED_TEST/);
+  assert.doesNotMatch(provider.requests[3]?.input ?? '', /OLD_APP/);
+  assert.deepEqual(events.filter((event) => event.type === 'tool.started' && event.name !== 'run_process').map((event) => event.callId), ['read-package', 'read-app', 'read-test', 'list-src', 'write-app']);
 });
 
 test('reopened structured work without ephemeral evidence re-inspects', async (t) => {

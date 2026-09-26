@@ -120,6 +120,9 @@ test('frozen structured Phase 8 counterpart repairs the exact fixture and leaves
   ]);
   assert.deepEqual(provider.requests.map((request) => request.toolChoice), ['required', undefined, undefined, undefined, undefined]);
   assert.equal(provider.requests.length, 5);
+  assert.match(provider.requests[4]?.instructions ?? '', /Do not create completion\/report artifacts unless the authored task requires them/);
+  assert.match(provider.requests[4]?.instructions ?? '', /stop unrelated verification or mutation and allow George to run: V1:/);
+  assert.equal(requested.some((event) => /completion/i.test(event.name)), false);
   assert.equal(events.filter((event) => event.type === 'validation.started').length, 1);
 });
 
