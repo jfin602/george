@@ -1,0 +1,72 @@
+TASK: Phase 10 / P11 — Phase 10 closeout
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Sol Medium`.
+- Browser required: no.
+
+VERSIONING
+- This prompt's assigned project version is `0.10.11`.
+
+GOAL
+
+Perform evidence-only formal Phase 10 closeout.
+
+Do not repair production behavior in closeout.
+
+Read:
+- Phase 9 owner closeout;
+- all Phase 10 planning authority;
+- P1 baseline;
+- P2-P8 implementation/evidence;
+- P9 primary qualification and optimization ledger;
+- P10 helper A/B report;
+- current source/tests/version/hygiene.
+
+CREATE
+
+`docs/phase-10-closeout.md`
+
+DECISION TABLE
+
+Include at minimum:
+- Phase 10 Baseline Established;
+- Fast B3/C3 Instruments Qualified;
+- Benchmark/Live Telemetry Qualified;
+- Useful-Output Liveness;
+- Stable Prefix / Late Dynamic Context;
+- George Operation Protocol v1;
+- Human/Operation Mode Separation;
+- Deterministic Model-Round Elimination;
+- Multi-Operation Read Batching;
+- Read-Only Concurrency;
+- Focused Correction Frame;
+- Operation Output-Budget Policy;
+- Response-Completion Side-Effect Boundary Preserved;
+- TaskState/StackState/Validation Authority Preserved;
+- Permission/Containment/Recovery Floors Green;
+- Fast Live Gate Result;
+- Benchmark Delta;
+- B2 Milestone Result;
+- C2 Milestone Result;
+- Optimization Ledger Complete;
+- Helper A/B Result;
+- Broad Suite;
+- Evidence Gaps / Not Green Retained;
+- Phase 10 Stability Qualified;
+- Phase 11 Ready For Owner Review.
+
+CLOSEOUT PRINCIPLES
+
+- Do not relabel Phase 9 B2/C2 history.
+- Faster failures are not performance wins.
+- Distinguish accepted production optimizations from revised/reverted experiments.
+- The helper experiment remains research evidence, not baseline authority.
+- Preserve all historical artifacts.
+
+VALIDATION
+
+Re-run only bounded deterministic closeout checks needed to verify current repository identity, package `0.10.11`, typecheck, runner, affected critical floors, hygiene, and evidence references.
+
+Do not rerun long B2/C2 merely for closeout if P9 already recorded their milestone attempts.
+
+Phase 11 progression remains an explicit owner decision.

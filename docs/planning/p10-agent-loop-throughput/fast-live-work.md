@@ -1,102 +1,59 @@
 # Phase 10 Fast Live Work
 
-Status: APPROVED INSTRUMENT DIRECTION
+Status: APPROVED DESIGN
 
 ## Purpose
 
-Provide a fast live efficacy loop for Phase 10 optimization without repeatedly spending 20–30 minutes on Phase 9 B2/C2.
+Provide a repeatable live efficacy loop that is fast enough to run after meaningful agent-loop changes.
 
-Routine live matrix:
+Routine order:
 
 `greeting -> three-file -> Gate A -> B3 -> C3`
 
-B2/C2 remain frozen milestone instruments.
+The sequence should initially fit roughly 5-10 minutes on the pinned local runtime and be optimized downward.
 
 ## B3 — compact greenfield stack
 
-Working name: `greenfield-core-v1`.
+Pure Node fixture; no external dependency installation.
 
-Constraints:
-- pure Node;
-- no npm dependency installation;
-- no network;
-- small fixture;
-- Task Prompt v1;
-- multiple ordered tasks;
-- one meaningful cross-task dependency;
-- workspace-autonomous mutation;
-- literal validations;
+Suggested shape:
+- P1 creates a tiny module and package/test script;
+- P2 adds one bounded behavior/API function;
+- P3 adds focused test/docs or a second small integration behavior.
+
+Must exercise:
+- TaskStack ordering;
+- multiple tasks;
+- mutation;
+- declared validation;
+- correction capability;
+- StackState;
 - hidden acceptance.
 
-Recommended shape:
-
-### P1 — create a tiny in-memory module
-
-Create a small ESM module with one deterministic data operation and minimal package/test scaffolding.
-
-### P2 — extend behavior and test it
-
-Add one additional behavior that depends on P1 state/API, add focused tests, and preserve P1 behavior.
-
-The exact feature should be deliberately simple enough that the instrument measures George's loop rather than domain knowledge.
-
-Hidden acceptance checks exact behavior independently of model prose.
-
-A separate deterministic test fixture may induce one validation failure to exercise the correction path without making the ordinary B3 happy path intentionally fail.
-
-Initial target runtime: 2–5 minutes.
+Avoid framework/package-manager/network cost.
 
 ## C3 — compact existing edit
 
-Working name: `existing-core-edit-v1`.
+Pure Node prebuilt fixture with a few files and existing tests.
 
-Constraints:
-- pure Node;
-- no network;
-- pre-existing small repository fixture;
-- baseline tests already Green;
-- one focused feature;
-- focused + broad validation;
-- README/docs only if needed to prove a work-unit transition; do not add documentation merely to make the fixture larger;
+Suggested task:
+- inspect one implementation plus focused test;
+- add one small behavior while preserving baseline;
+- update/add one focused test;
+- run focused validation then broad `npm test`.
+
+Must exercise:
+- existing-repo evidence;
+- focused mutation;
+- preservation;
+- two validation scopes;
+- TaskState;
 - hidden acceptance.
 
-Recommended fixture:
-- `src/math.js` or similarly tiny deterministic module;
-- baseline `node:test` regression file;
-- one new feature such as `multiply(a,b)`, clamp, normalization, or another small deterministic behavior.
+## Frozen B2/C2
 
-The task must require:
-- INSPECT;
-- preservation of existing behavior;
-- one mutation;
-- one focused validation;
-- one broad validation.
+B2/C2 stay immutable and are not rewritten into B3/C3.
 
-Initial target runtime: 1–3 minutes.
+B3/C3 are new Phase 10 instruments.
 
-## Instrument immutability
-
-Once officially exercised:
-- task files are immutable for that instrument version;
-- hidden acceptance identity is independently versioned;
-- structural changes require B4/C4 or a new named instrument version;
-- historical result states remain unchanged.
-
-## Fast-gate timing
-
-Phase 10 should initially record, not assume, the complete matrix runtime.
-
-Desired initial envelope: approximately 5–10 minutes for all five workloads.
-
-If the baseline exceeds it, record the baseline truth and optimize from there rather than weakening acceptance.
-
-## What B3/C3 do not replace
-
-They do not replace:
-- B2/C2 historical evidence;
-- B2/C2 milestone runs;
-- full benchmark;
-- affected deterministic regression;
-- security/permission/recovery gates.
-
-They exist to make optimization iteration fast enough to be practical.
+B2/C2 run only at milestone qualification after the primary-only campaign and at later consolidation as justified.

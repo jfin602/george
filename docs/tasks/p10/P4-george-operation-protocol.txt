@@ -1,0 +1,84 @@
+TASK: Phase 10 / P4 — George Operation Protocol v1
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Sol High`.
+- Browser required: no.
+
+VERSIONING
+- This prompt's assigned project version is `0.10.4`.
+
+GOAL
+
+Separate operator-facing conversation from internal agent-loop machine communication.
+
+Introduce provider-independent Human mode and Operation mode.
+
+HUMAN MODE
+
+Preserve ordinary operator-facing natural-language behavior.
+
+OPERATION MODE
+
+Use for structured inspection, implementation, correction, and internal continuation.
+
+Routine internal narration is forbidden by protocol:
+- no "I will inspect";
+- no progress prose;
+- no internal summaries;
+- no model-generated "done" merely to hand control back.
+
+Allowed internal outputs:
+- canonical executable tool calls;
+- minimal George-owned control calls when explicit yield/blocking is necessary.
+
+GEORGE CONTROL
+
+Add a small versioned application-owned control schema, initially `handoff` and only add `blocked` if implementation evidence justifies it.
+
+Control:
+- is provider-visible;
+- is not registered in ToolRegistry;
+- executes no filesystem/process/network action;
+- grants no permission;
+- cannot validate or complete TaskState;
+- cannot replace canonical evidence.
+
+NO MANDATORY HANDOFF ROUND
+
+When George can deterministically advance after a successful operation, it must do so without another provider call merely asking whether the model is done.
+
+SIDE-EFFECT BOUNDARY
+
+Do not execute a tool or accept a control from an incomplete provider response.
+
+Response completion remains the Phase 9 commitment boundary.
+
+FAIL CLOSED
+
+Define deterministic handling for:
+- malformed control;
+- unknown control;
+- control mixed with executable calls;
+- multiple conflicting controls;
+- free-form text in Operation mode.
+
+TELEMETRY
+
+Record:
+- Human vs Operation logical rounds;
+- internal text bytes/estimated tokens;
+- George control count.
+
+Do not persist hidden prose bodies merely for measurement.
+
+VALIDATION
+
+Run focused provider/agent-loop/structured-task/recovery/permission tests, fast gate once, benchmark structured-tool/multi-tool/edit cases, typecheck, runner, broad suite, and `git diff --check`.
+
+Classify accept/revise/revert.
+
+Do not:
+- weaken ToolRegistry/approval;
+- require handoff after every tool;
+- parallelize operations yet;
+- add helper inference.

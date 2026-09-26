@@ -1,0 +1,74 @@
+TASK: Phase 10 / P2 — Useful-output provider liveness
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Sol High`.
+- Browser required: no.
+
+VERSIONING
+- This prompt's assigned project version is `0.10.2`.
+
+GOAL
+
+Repair provider liveness so response acceptance/prefill is not confused with active useful generation.
+
+Read Phase 10 authority, the unexecuted `c9-gen-op` precursor, current provider-stall/application/provider-adapter code, and P1 telemetry.
+
+REQUIRED SEMANTICS
+
+Model attempt lifecycle must distinguish:
+- request/awaiting response;
+- response accepted / prefill or awaiting first useful output;
+- useful output active;
+- completed.
+
+`provider.response.started` or wire response creation establishes identity/acceptance only.
+
+It must NOT by itself switch onto the shorter post-output inactivity threshold.
+
+Useful output includes provider text generation and function/control-call generation progress.
+
+Keep application-owned recovery policy and provider-adapter wire normalization separate.
+
+PRESERVE
+
+- existing absolute provider timeout unless current authority says otherwise;
+- one replay-safe stall retry and one canonical structured rebase;
+- provisional branch discard;
+- cancellation priority;
+- one-shot pressure compaction guard;
+- provider-class terminal failure after exhausted recovery.
+
+PROVIDER ACTIVITY
+
+Replace/refine the payload-free activity seam with a typed provider-independent classification sufficient to distinguish acceptance from useful output progress.
+
+Do not expose raw SSE payloads or LM Studio developer logs.
+
+PERMANENT REGRESSIONS
+
+Use fake time.
+
+Cover:
+- accepted response alive beyond active-inactivity threshold while still awaiting first useful output;
+- first-useful-output threshold still enforced;
+- text/tool generation activates/refreshes output inactivity;
+- completion cleans timers;
+- cancellation wins;
+- retry/rebase remains finite;
+- incomplete proposals never execute/commit.
+
+TELEMETRY
+
+Populate response acceptance / first useful output timing when actually observable.
+
+VALIDATION
+
+Run focused provider, agent-loop, retry/recovery, Phase 5/9 integration, benchmark/live-work telemetry, typecheck, runner, broad suite, and `git diff --check`.
+
+Run the Phase 10 fast live gate once for characterization. Do not rerun until Green.
+
+Do not:
+- add operation protocol yet;
+- change B3/C3 identities;
+- parallelize tools;
+- add helper inference.

@@ -485,64 +485,66 @@ Non-goals:
 
 ## Phase 10 — Agent Loop Throughput
 
-Status: CURRENT PHASE — baseline `0.10.0`
+Status: CURRENT PHASE — approved design; baseline transition to `0.10.0` pending
 
 Decision authority: `docs/planning/p10-agent-loop-throughput/decision-record.md`.  
 Qualification authority: `docs/planning/p10-agent-loop-throughput/qualification-plan.md`.  
 Metrics authority: `docs/planning/p10-agent-loop-throughput/optimization-metrics.md`.  
 Fast live-work authority: `docs/planning/p10-agent-loop-throughput/fast-live-work.md`.
 
-Goal: reduce the number, input cost, output cost, and serialization cost of primary-model rounds while preserving or improving task completion efficacy and all Phase 9 task/permission/evidence/recovery authority.
+Goal: reduce the number, input cost, output cost, and serialization cost of primary-model rounds while preserving Phase 9 task, permission, validation, recovery, and evidence authority.
+
+Primary design rule:
+
+> Human language at the human boundary; machine protocol inside the agent loop.
 
 Optimization priority:
-1. fewer primary-model rounds;
-2. less prefill/input work per round;
-3. less unnecessary generated output;
-4. better batching between rounds;
+1. fewer provider rounds;
+2. less prompt/prefill work per round;
+3. less generated output per internal round;
+4. better batching between provider rounds;
 5. dependency-safe read-only concurrency;
-6. lower-level tool/runtime micro-optimization.
+6. lower-level tool micro-optimization.
 
 Scope:
 - explicit Human mode versus internal Operation mode;
-- George Operation Protocol v1 using typed tool calls plus bounded non-executable application controls rather than routine internal prose;
-- deterministic elimination of model turns for state transitions George already owns;
-- useful-output provider timing that distinguishes response acceptance/prefill from useful generation;
-- stable provider instruction prefix with late dynamic mission-card/control context;
-- per-mode output budgets only when correctness is preserved and measured benefit exists;
-- multi-tool batching and deterministic result batching;
-- dependency-safe concurrency for independent replay-safe local reads;
+- George Operation Protocol v1 using typed tools plus minimal non-authoritative control rather than routine internal prose;
+- useful-output-aware provider liveness that distinguishes response acceptance/prefill from active generation;
+- stable provider prefix plus late dynamic task/evidence/control context;
+- deterministic removal of model rounds for transitions George already owns;
+- bounded multi-operation observation batches;
+- dependency-safe concurrency for independent replay-safe local observations with deterministic normalized result ordering;
 - focused validation-correction frames with direct George-owned revalidation;
-- benchmark/live-work telemetry for provider rounds, attempts, input/cached/output tokens where available, internal text, batching, concurrency, rounds avoided, correction cycles, and task efficacy;
-- new compact B3/C3 pure-Node live instruments for routine fast iteration;
-- frozen Phase 9 B2/C2 retained as milestone-only longitudinal gates;
-- explicit keep/revise/revert disposition for every bounded optimization;
-- one bounded non-authoritative helper A/B experiment only after the primary-only optimization campaign.
+- provider-independent output-budget intent by round class where safely supported;
+- extend the existing benchmark/live-work metrics rather than creating a parallel performance system;
+- new immutable fast B3 compact-greenfield and C3 compact-existing-edit live instruments with no network/dependency-install cost;
+- routine fast gate: greeting -> three-file -> Gate A -> B3 -> C3;
+- frozen Phase 9 B2/C2 retained byte-for-byte as milestone/longitudinal gates rather than inner-loop tests;
+- keep/revise/revert evidence discipline for every optimization;
+- one bounded non-authoritative helper A/B experiment only after the optimized primary-only baseline is frozen.
 
-Routine fast live gate:
-
-`greeting -> three-file -> Gate A -> B3 -> C3`
-
-B2/C2 are not rerun after every optimization. They are milestone gates after the primary-only campaign and at closeout/consolidation boundaries.
+Performance authority tracks provider rounds/attempts, provider-active and total time, input/output/cached tokens when available, Human/Operation rounds, internal prose, meaningful actions, batch/concurrency metrics, duplicate/rejected reads, corrections, and task-completion efficacy.
 
 Success condition:
-- primary-model rounds and/or per-round cost materially decrease on comparable workloads;
-- fast live efficacy remains Green or improves;
-- benchmark correctness remains Green;
-- dependency-safe batches/concurrency preserve permissions, cancellation, deterministic result ordering, evidence, and replay rules;
-- model-call reduction never removes required reasoning/approval/recovery decisions;
-- rejected optimizations are reverted and retained as evidence;
-- primary-only optimized baseline is recorded before the helper A/B experiment.
+- fast live efficacy gates preserve or improve functional correctness while becoming materially faster than Phase 9 long-form iteration;
+- accepted changes reduce provider rounds, prefill/generation cost, serialization, or measured latency without permission/evidence/task regressions;
+- Operation mode removes routine hidden narration while Human mode preserves operator-facing output;
+- deterministic orchestration avoids model calls where George already owns the transition;
+- independent observation batching/concurrency preserves effect and recovery boundaries;
+- correction loops reuse fresh evidence and directly revalidate rather than broad rediscovery;
+- benchmark comparisons and the optimization ledger show accepted/revised/reverted changes explicitly;
+- frozen B2/C2 are rerun at the primary-only milestone, not after every implementation slice;
+- helper A/B remains derived/non-authoritative research and does not replace the primary-only Phase 10 baseline.
 
 Non-goals:
-- speculative decoding;
-- production helper-model delegation;
+- concurrent ambiguous mutations;
 - multi-agent scheduling;
 - daemon/background ownership;
-- concurrent ambiguous mutations;
-- unrestricted concurrent process/external effects;
-- dense custom George DSL before the typed operation protocol is qualified.
+- unrestricted helper autonomy;
+- speculative decoding as a Phase 10 baseline;
+- opaque compressed machine language without measured efficacy.
 
-The unexecuted `c9-gen-op` planning remains historical precursor material and is not an active Phase 10 stack.
+The approved implementation order is baseline/fast-gate instrumentation -> useful-output liveness -> stable prefix -> Operation Protocol -> deterministic round elimination -> read batching -> read-only concurrency -> focused correction/output budgets -> primary-only qualification with B2/C2 milestone -> helper A/B -> closeout.
 
 ## Phase 11 — Final Acceleration + Primary-Model Performance Qualification
 

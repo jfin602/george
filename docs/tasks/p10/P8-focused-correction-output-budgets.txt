@@ -1,0 +1,79 @@
+TASK: Phase 10 / P8 — Focused correction path and operation output budgets
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Sol High`.
+- Browser required: no.
+
+VERSIONING
+- This prompt's assigned project version is `0.10.8`.
+
+GOAL
+
+Make validation-repair loops focused and cheap, and bound unnecessary model generation by operation type.
+
+Read Phase 10 authority, Phase 9 correction state/evidence logic, P4 Operation Protocol, P5 deterministic transitions, provider configuration seams, and B2 historical evidence.
+
+PART A — CORRECTION FRAME V1
+
+When declared validation fails, construct a bounded correction frame from canonical state containing only what is needed:
+- current work unit;
+- failed validation identity;
+- bounded stdout/stderr/error/outcome;
+- current valid changed-file/mutation evidence;
+- current valid relevant observations;
+- applicable requirements/invariants;
+- repair completion condition.
+
+Do not ask the model to broad-rediscover unchanged repository state.
+
+Fresh evidence remains reusable until invalidated by mutation.
+
+After a completed repair operation, George directly reruns the failed validation.
+
+No extra model "done" round.
+
+PART B — OUTPUT-BUDGET INTENT
+
+Add provider-independent output-budget intent for model rounds where the provider supports it.
+
+Define conservative per-mode categories, for example:
+- small operation selection/continuation;
+- normal mutation/correction;
+- Human response/deep planning.
+
+Do not hardcode token numbers without checking actual provider capability/current workload evidence.
+
+Structured function/control arguments must never be truncated merely to satisfy a prose budget.
+
+If LM Studio Responses cannot enforce a useful limit safely, retain the provider-independent seam and classify live enforcement as unavailable rather than faking it.
+
+METRICS
+
+Measure:
+- correction provider rounds;
+- duplicate/rejected reads during correction;
+- correction frame size;
+- operation output tokens/internal prose;
+- validation-to-repair-to-revalidation elapsed time.
+
+PERMANENT REGRESSIONS
+
+Prove:
+- failing validation flows into focused correction;
+- unchanged fresh evidence is reused;
+- broad root rediscovery is not required by George;
+- repair directly revalidates;
+- failures remain truthful when repair cannot complete;
+- output budget does not truncate tool/control payloads;
+- Human mode remains unaffected.
+
+VALIDATION
+
+Run structured correction/recovery/evidence tests, a deterministic failing-validation fixture, fast live gate once, relevant benchmark repair case, typecheck, runner, broad suite, and `git diff --check`.
+
+Classify accept/revise/revert.
+
+Do not:
+- alter B2/C2 frozen fixtures;
+- weaken correctionLimit;
+- add helper inference.

@@ -1,0 +1,111 @@
+TASK: Phase 10 / P9 — Primary-only optimization qualification and milestone live gates
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Sol Medium`.
+- Browser required: no.
+
+VERSIONING
+- This prompt's assigned project version is `0.10.9`.
+
+GOAL
+
+Freeze and qualify the optimized single-primary-model Phase 10 path before any helper-model experiment.
+
+This is qualification/evidence work. Do not repair production behavior during the measured runs.
+
+Read all Phase 10 planning authority, P1-P8 implementation/evidence, Phase 9 owner closeout/final evidence, benchmark harness, fast-gate instruments, and frozen B2/C2.
+
+DETERMINISTIC FLOOR
+
+Run:
+- affected provider/agent-loop/tool/concurrency/context/recovery tests;
+- structured task/task-stack/validation/correction tests;
+- benchmark/live-work/sweep/instrument tests;
+- Phase 5 replay/recovery integration;
+- Phase 9 permission/task/evidence integration;
+- typecheck;
+- runner tests;
+- broad suite exactly once;
+- `git diff --check`.
+
+PRIMARY-ONLY BENCHMARK
+
+Run a bounded benchmark comparison against the P1 Phase 10 baseline using the current accepted/revised production path.
+
+Include representative:
+- structured tool use;
+- independent multi-tool inspection;
+- multi-round repository investigation;
+- coding edit;
+- repair workflow;
+- extended agent loop;
+- selected agentic-context cases where practical.
+
+Do not retune LM Studio during the comparison.
+
+FAST LIVE GATE
+
+Run once in order with fresh workspace/session per workload:
+
+`greeting -> three-file -> Gate A -> B3 -> C3`
+
+Record:
+- functionality/hidden acceptance;
+- provider attempts/rounds;
+- retries/rebases;
+- input/cached/output tokens where available;
+- Human vs Operation rounds;
+- internal prose;
+- tool calls;
+- batches/width;
+- concurrent reads;
+- model rounds avoided;
+- corrections;
+- useful action density;
+- provider/total timing;
+- human intervention.
+
+MILESTONE B2/C2
+
+After fast gate, run frozen B2 exactly once and frozen C2 exactly once.
+
+These are milestone/longitudinal characterization gates, not inner-loop retries.
+
+Preserve Phase 9 historical results. Report whether each improved, regressed, or remains Not Green.
+
+Do not repair between B2 and C2.
+
+OPTIMIZATION LEDGER
+
+Create/update a Phase 10 optimization ledger covering P2-P8:
+
+For each:
+- target;
+- baseline evidence;
+- final evidence;
+- efficacy effect;
+- performance effect;
+- disposition: accept / revise / revert;
+- retained production behavior.
+
+If an optimization was already reverted in its prompt, preserve that truth.
+
+ARTIFACTS
+
+Create:
+- `docs/tasks/p10/P9-primary-qualification-report.md`;
+- `docs/tasks/p10/optimization-ledger.md`;
+- bounded evidence/artifact references.
+
+Do not store raw hidden model prose, secrets, unrestricted environment dumps, or workspace copies.
+
+READINESS
+
+State whether the optimized primary-only Phase 10 baseline is qualified for the bounded helper A/B experiment.
+
+Helper readiness requires no blocking safety/evidence regression and a coherent primary-only baseline. B2/C2 need not become Green merely because Phase 9 owner-accepted them, but their current outcomes must be explicit.
+
+Do not:
+- add helper inference in this prompt;
+- repair/rerun failed live workloads;
+- rewrite Phase 9 evidence.

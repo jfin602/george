@@ -4,389 +4,286 @@ Status: APPROVED DIRECTION
 
 Date: 2026-09-26
 
-Phase: 10 — Agent Loop Throughput
+Phase: 10 — Agent Loop Throughput  
+Baseline: Phase 9 owner-closed at package `0.9.10`  
+Phase 10 baseline target: `0.10.0`
 
-Baseline package: `0.10.0`
+## Premise
 
-Primary inherited authority:
-- `BOOT.md`;
-- `AGENTS.md`;
-- `docs/workflow.md`;
-- `docs/stability-contract.md`;
-- `docs/phase-9-owner-closeout.md`;
-- Phase 9 Task Prompt v1 / TaskState / StackState / permission / recovery / evidence contracts;
-- frozen Phase 9 live-work instruments and historical evidence;
-- `docs/planning/c9-gen-op/{decision-record,qualification-plan}.md` as an unexecuted design precursor only.
+Phase 9 established George-owned task, validation, permission, recovery, evidence, and convergence authority. Phase 10 optimizes the loop around that authority.
 
-## Goal
+The primary rule is:
 
-Reduce the number, input cost, output cost, and serialization cost of primary-model rounds while preserving or improving task completion efficacy.
+> Human language at the human boundary; machine protocol inside the agent loop.
 
-Phase 10 optimizes the agent loop, not the intelligence of the underlying model.
+George should call the primary model only when inference adds value. Deterministic orchestration stays in George.
 
-George should call the primary model only where inference adds value and should own deterministic orchestration itself.
+## Optimization priority
 
-Optimization priority:
+Phase 10 prioritizes:
 
-1. fewer provider/model rounds;
-2. less prompt/prefill work per provider round;
-3. less unnecessary generated output per provider round;
+1. fewer primary-model rounds;
+2. less prompt/prefill work per round;
+3. less generated output per internal round;
 4. better batching between provider rounds;
-5. dependency-safe read-only tool concurrency;
-6. lower-level tool/runtime micro-optimization.
+5. dependency-safe read-only concurrency;
+6. lower-level tool micro-optimization.
 
-Provider/model latency dominates current local workloads. Tool parallelism is useful primarily when it removes serialization boundaries or shortens a provider-to-provider cycle.
+This replaces the earlier tool-parallelism-first ordering.
 
 ## Human mode and Operation mode
 
-Phase 10 introduces an explicit provider-facing distinction.
+Introduce an explicit provider-independent execution mode.
 
 ### Human mode
 
-Used when the developer/operator is expected to read the model response.
+Used when model text is intended for the operator.
 
-Natural-language output is allowed.
-
-Examples:
-- ordinary chat;
-- explanations;
-- final user-facing answers;
-- explicitly requested planning prose.
+Natural-language output remains allowed.
 
 ### Operation mode
 
-Used for internal structured-agent work where prose is not itself a deliverable.
+Used for structured inspection, implementation, correction, and internal continuation.
 
-Examples:
-- structured inspection/action selection;
-- implementation;
-- correction;
-- tool-result continuation;
-- internal task handoff.
+The model should produce typed operations, not narration:
+- executable tool calls;
+- a small George-owned control signal when explicit handoff/blocking is required.
 
-Operation-mode output must use a typed machine protocol:
-- executable tool calls; and/or
-- bounded George application-control output.
-
-Routine narration, progress prose, explanations, and completion prose are not useful internal outputs and should not be generated.
-
-Human language remains at the human boundary. Machine protocol is used inside the agent loop.
+Routine "I will inspect", progress prose, summaries, and "done" prose are not useful operation output.
 
 ## George Operation Protocol v1
 
-The initial operation protocol should build on existing function/tool calls rather than inventing a dense custom DSL.
+Phase 10 owns a versioned internal protocol, initially built from:
+- existing tool/function calls;
+- bounded structured round context;
+- a minimal George control schema.
 
-Add a small versioned George-owned control surface.
+Do not begin with an opaque compressed DSL. First eliminate unnecessary prose and stabilize provider context. A compact encoding may be benchmarked later only if efficacy is preserved.
 
-The initial required control is:
+George control is application control, not a ToolRegistry capability. Initial surface should remain minimal, such as:
+- `handoff`: return control to George;
+- optionally `blocked`: cannot make legitimate progress with supplied state/capabilities.
 
-`handoff` — return authority to George because no further model action is required for the current bounded stage.
+Control cannot grant permission, mutate, execute processes, validate, or complete TaskState.
 
-A later `blocked` control may be added only if implementation evidence justifies it.
+## No mandatory handoff round
 
-George controls are:
-- provider-visible;
-- application-owned;
-- non-executable;
-- not ToolRegistry capabilities;
-- unable to grant permissions;
-- unable to mutate files or run processes;
-- unable to mark TaskState complete;
-- unable to mark validation Green.
+George must not ask the model whether work is done when George already knows the deterministic next transition.
 
-Malformed or mixed-invalid controls fail closed.
+Example:
+- model performs required mutation;
+- George-owned completion condition is satisfied;
+- George runs declared validation directly.
 
-A handoff must not become mandatory overhead. When George can deterministically infer the next transition from a successful tool result and canonical TaskState, it should advance without another model round.
+A handoff control exists only where explicit yielding is useful.
 
-## Deterministic orchestration before inference
+## Stable prefix / dynamic tail
 
-Phase 10 must audit structured provider calls and remove model invocations for transitions George already owns.
-
-George should not call the model merely to decide:
-- whether a validation passed;
-- whether to rerun a failed validation after a completed correction;
-- whether to advance to the next validation;
-- whether to advance to the next work unit or stack task when deterministic completion state is already satisfied;
-- whether evidence is fresh/stale;
-- whether effective permission allows an action;
-- whether a declared literal validation should run;
-- whether a deterministic stop/budget/cancellation condition is terminal.
-
-Model inference remains appropriate for:
-- choosing what to inspect;
-- understanding code;
-- selecting/designing a mutation;
-- producing a mutation;
-- repairing an observed failure;
-- resolving genuine semantic ambiguity.
-
-## Stable provider prefix and late dynamic control context
-
-Current structured alignment changes every provider round.
-
-Phase 10 should preserve mission-card authority while changing provider placement.
-
-Provider-facing layout should prefer:
+Provider-visible data should be arranged for locality:
 
 ```text
-stable George instructions
+stable George invariants
 stable operation protocol
 stable tool definitions / stable task semantics
-provider-native continuation and tool results
-late dynamic round-control context
+provider-native continuation + tool results
+late dynamic task/evidence/control frame
 ```
 
-The dynamic tail may include:
-- current work unit;
-- current fresh evidence;
-- stale evidence markers;
-- failed validation evidence;
-- mutation generation;
-- next completion condition;
-- stop conditions.
+Changing mission-card/task evidence remains deterministic and George-owned, but should not rewrite the stable request prefix when avoidable.
 
-Stable instruction content should remain byte-stable across continuation rounds when semantics are unchanged.
+Provider adapters translate wire shape; they do not own TaskState.
 
-Provider adapters translate wire format only. TaskState logic remains application/core authority.
+## Useful-output liveness
 
-Canonical George state never depends solely on provider-native cache state.
+Carry forward the unexecuted `c9-gen-op` finding.
 
-## Useful-output provider timing
-
-Response acceptance is not useful output.
-
-Provider attempt state must distinguish at least:
-- request sent;
-- response accepted/prefilling;
+Provider liveness must distinguish:
+- request/response acceptance;
+- prefill/awaiting first useful output;
 - useful output active;
 - completed.
 
-`response.started` / response creation establishes response identity/acceptance, not active generation.
+Response acceptance alone must not activate a short post-output inactivity timer.
 
-The first-useful-output allowance continues through accepted prefill.
+The existing absolute provider timeout and Phase 9 replay/rebase safety remain unless separately justified by evidence.
 
-Text generation and function/control-call generation progress are useful output.
+## Deterministic round elimination
 
-Once useful output begins, the shorter active-output inactivity policy may apply.
+Audit every provider invocation.
 
-Caller cancellation remains authoritative.
+George should directly own transitions it can already determine from canonical state:
+- validation pass/fail;
+- validation sequencing;
+- begin correction;
+- rerun validation after repair;
+- work-unit/stack progression where deterministic completion conditions permit;
+- evidence freshness/staleness;
+- permission and stop-condition decisions.
 
-The existing finite retry/rebase safety contract remains unless separately requalified.
+The model remains responsible for inference-heavy work:
+- what to inspect;
+- code understanding;
+- mutation design;
+- mutation generation;
+- repairing observed failures;
+- resolving genuine ambiguity.
 
-## Output budgets by round type
+## Multi-operation batching
 
-Phase 10 may add provider-independent output/generation policy by round type.
+One provider response may propose multiple independent operations.
 
-Initial policy should be conservative and empirical.
+George should batch independent replay-safe observations into one execution group and return one normalized result continuation.
 
-Candidate ranges:
-- simple operation/action selection: roughly 128–256 tokens;
-- ordinary mutation/correction selection: roughly 256–512 tokens;
-- short continuation: roughly 128–256 tokens;
-- human-facing response: normal existing behavior;
-- deep planning: explicitly larger when requested.
-
-Structured function-call arguments must not be accidentally truncated by prose-oriented limits.
-
-Every retained limit must have correctness evidence.
-
-## Multi-tool batching
-
-The current provider can already propose multiple tool calls in one provider response.
-
-Phase 10 should exploit that rather than forcing one model round per observation.
-
-One provider round may propose multiple independent reads.
-
-George should:
-- validate all calls through canonical ToolRegistry/policy;
-- identify dependency-safe operations;
-- execute the safe batch;
-- return one deterministic normalized result batch in original provider-call order;
-- continue with one provider round.
-
-Batching and concurrency are separate decisions.
-
-A batch may still execute sequentially before concurrency is introduced.
+The objective is fewer provider turns, not merely faster filesystem calls.
 
 ## Read-only concurrency
 
-The first concurrent execution class is narrow:
+First concurrency class is intentionally narrow:
+- independent replay-safe local observations such as `read_file`, `list_directory`, `search_text`, `git_status`, and `git_diff` when dependency analysis proves independence.
 
-- local read-only;
-- replay-safe;
-- independently validatable;
-- no declared dependency between calls;
-- no shared mutation/process/approval/external-effect boundary.
+Execution may be concurrent, but:
+- original provider-call identity/order is preserved in normalized results;
+- cancellation is shared and deterministic;
+- failures remain isolated and attributable;
+- mutations, approvals, processes with effects, ambiguous operations, and dependency-linked calls remain sequential.
 
-Candidate tools:
-- `read_file`;
-- `list_directory`;
-- `search_text`;
-- `git_status`;
-- `git_diff`.
+## Focused correction path
 
-Execution may be concurrent while provider-visible result ordering remains deterministic.
-
-Mutations, processes, approvals, remote effects, ambiguous effects, or dependency-linked calls remain sequential unless a later contract explicitly qualifies them.
-
-Failure/cancellation of one concurrent call cannot fabricate success for another.
-
-## Focused correction loop
-
-Validation correction should not reopen a broad exploration loop when current evidence is still valid.
-
-Introduce a bounded correction frame derived from canonical state, containing only what is necessary:
-- active work unit;
-- failed validation identity;
-- bounded stdout/stderr/error evidence;
-- relevant fresh file/mutation evidence;
-- applicable requirement/invariant;
+Validation failure should produce a compact correction frame containing only:
+- current work unit;
+- failed validation;
+- bounded failure stdout/stderr/error;
+- current valid mutation/evidence;
+- applicable invariant;
 - repair completion condition.
 
-The model repairs the observed failure only.
+The correction model must repair the observed failure without broad rediscovery.
 
-George then reruns the failed validation directly.
+George then reruns validation directly.
 
-No extra completion round is required when George already knows the next transition.
+## Output budgets by mode
 
-Broad rediscovery is allowed only when freshness/recovery evidence actually requires it.
+Add provider-independent output-budget intent where supported.
 
-## Fast live efficacy instruments
+Internal operation rounds should have bounded generation allowances appropriate to their job; operator-facing and deep-planning responses may be larger.
 
-Phase 10 creates two new immutable live-work instruments for routine optimization.
+Tool/control payload correctness outranks token ceilings. No output budget may truncate required structured arguments.
 
-They supplement rather than rewrite Phase 9 B2/C2.
+## Fast efficacy gates
+
+Create new immutable Phase 10 fast live-work instruments.
 
 ### B3 — compact greenfield stack
 
-Pure Node; no network or dependency installation.
+Pure Node, no network/dependency installation.
 
-It must prove:
-- structured stack ordering;
-- multiple tasks;
-- workspace mutation;
-- validation;
+Must still prove:
+- ordered TaskStack execution;
+- 2-3 tasks;
+- mutation;
+- declared validation;
 - bounded correction;
 - StackState completion;
-- hidden acceptance;
-- zero human coding intervention.
+- hidden acceptance.
 
-Target runtime for the initial local Qwen path: approximately 2–5 minutes, then improve from measured baseline.
+Initial target: 2-5 minutes.
 
 ### C3 — compact existing-repository edit
 
-Pure Node; no network or dependency installation.
+Pure Node existing fixture.
 
-It must prove:
-- inspection of existing code;
-- preservation of baseline behavior;
+Must prove:
+- inspect existing code;
+- preserve baseline behavior;
 - focused mutation;
-- focused validation;
-- broad validation;
+- focused + broad validation;
 - TaskState completion;
-- hidden acceptance;
-- zero human coding intervention.
+- hidden acceptance.
 
-Target runtime: approximately 1–3 minutes.
+Initial target: 1-3 minutes.
 
-B3/C3 instrument contents and hidden acceptance become immutable once officially exercised.
+## B2/C2 become milestone gates
 
-## Phase 9 B2/C2 become milestone gates
-
-Do not delete or rewrite:
-- `greenfield-express-v2` (B2);
-- `existing-express-feature-v2` (C2).
-
-They remain frozen longitudinal evidence.
+Frozen B2/C2 remain immutable historical/longitudinal instruments.
 
 Do not run them after every optimization.
 
-Use them at milestone boundaries:
-- inherited Phase 9 baseline is already recorded and is not rerun merely to start Phase 10;
+Run them:
 - after the primary-only Phase 10 optimization campaign;
-- Phase 10 closeout;
-- Phase 11 consolidated qualification where applicable.
+- at Phase 10 closeout when useful;
+- later in Phase 11 consolidation.
+
+Their Phase 9 Not Green state remains historical truth.
 
 ## Gate hierarchy
 
 ### Deterministic micro-floor
-
-Run continuously for the affected seams.
+Run affected unit/integration tests continuously.
 
 ### Fast live efficacy gate
-
-Routine Phase 10 live gate:
+Routine live sequence:
 
 `greeting -> three-file -> Gate A -> B3 -> C3`
 
-Use isolated workspaces/sessions.
-
-The initial target is roughly 5–10 minutes for the complete live gate, then improve from baseline.
+Initial whole-sequence target: 5-10 minutes, then optimize downward.
 
 ### Milestone qualification
+Use full benchmark, selected agentic-context cases, B2/C2, and broader inherited gates only at meaningful checkpoints.
 
-Run less frequently:
-- full benchmark suite;
-- selected `agentic-context` cases;
-- B2;
-- C2;
-- other inherited frozen Phase 9 evidence only when relevant.
+## Performance authority
 
-## Benchmark authority
+Extend the existing benchmark harness rather than creating a second benchmark system.
 
-Extend the existing `npm run benchmark` harness rather than creating a parallel performance subsystem.
+Add metrics where observable:
+- cached input tokens;
+- operation-mode vs human-mode rounds;
+- internal prose bytes/tokens;
+- George control calls;
+- useful actions per logical provider round;
+- operation batch count and width;
+- parallel tool wall time vs summed runtime;
+- duplicate/rejected reads;
+- model rounds avoided by deterministic orchestration;
+- correction cycles;
+- successful-task provider rounds;
+- task completion rate;
+- response acceptance and first useful output timing.
 
-Existing benchmark identities remain immutable.
+Derived comparison metric:
 
-Phase 10 may add new case versions/suites and schema fields with explicit versioning.
+`Useful Action Density = successful meaningful actions / logical provider rounds`
 
-Every optimization follows:
+It is comparative evidence, not initially a hard product threshold.
 
-`baseline -> one bounded change -> correctness/performance comparison -> accept | revise | revert -> new accepted baseline`
+## Keep / revise / revert discipline
 
-Do not stack multiple unmeasured optimizations into one acceptance decision.
+Every optimization is independently classified:
+- accept: measurable benefit with efficacy/safety preserved or improved;
+- revise: promising but bounded defect remains;
+- revert: no material benefit or correctness declines.
 
-## Primary optimization versus helper experiment
+Do not retain clever infrastructure merely because it is theoretically attractive.
 
-Production Phase 10 remains single-primary-model.
+## Functional authority outranks performance
 
-After the primary-only optimization campaign and milestone qualification, run one bounded non-authoritative helper A/B experiment.
+A faster failure is still failure.
 
-The helper may perform one narrow evidence-preparation function.
+Permissions, containment, TaskState/StackState truth, validation, recovery, evidence integrity, replay safety, and side-effect boundaries remain stronger gates than throughput.
 
-It cannot own:
-- TaskState;
-- permissions;
-- tool execution;
-- validation;
-- completion;
-- canonical evidence.
+## Helper A/B
 
-The helper experiment is comparative research only and does not replace the primary-only Phase 10 baseline.
+Only after the primary-only optimization campaign, run one bounded non-authoritative helper experiment.
 
-## Preserved Phase 9 authority
+The helper may prepare/reduce evidence but cannot own TaskState, permissions, tools, validation, completion, or canonical evidence.
 
-Phase 10 must preserve:
-- Task Prompt v1 semantics;
-- canonical TaskState/StackState;
-- George-owned validation/completion truth;
-- permission and containment ceilings;
-- replay safety and ambiguous-effect handling;
-- response-completion-before-side-effect semantics unless separately redesigned/requalified;
-- mission-card/evidence freshness semantics;
-- strict duplicate/no-progress;
-- session/evidence durability;
-- historical B2/C2 Not Green truth;
-- functional correctness outranking performance.
+The helper result is comparative research for later utility-model work, not the Phase 10 baseline.
 
-## Non-goals
+## Deferred
 
-Phase 10 does not include:
-- speculative decoding;
-- production helper-model delegation;
-- multi-agent scheduling;
-- daemon/background ownership;
+Phase 10 does not add:
 - concurrent ambiguous mutations;
-- unrestricted concurrent process/external effects;
-- a dense custom George DSL before the typed operation protocol is qualified.
+- multi-agent execution;
+- daemon/background ownership;
+- unrestricted helper autonomy;
+- speculative decoding as baseline;
+- opaque custom machine language without benchmark evidence.
