@@ -1,0 +1,234 @@
+{
+  "schemaVersion": 2,
+  "terminalStatus": "budget_exhausted",
+  "terminalError": {
+    "code": "validation",
+    "message": "Structured INSPECT preflight produced no read-only evidence."
+  },
+  "observerError": null,
+  "failures": [
+    {
+      "source": "application",
+      "category": "tool",
+      "eventType": "tool.failed",
+      "code": "validation",
+      "message": "Workspace path must exist.",
+      "turnId": "e90d85db-42df-4aae-9e42-d77d01253873-inspect",
+      "callId": "call_2029258686870037",
+      "name": "read_file"
+    },
+    {
+      "source": "application",
+      "category": "tool",
+      "eventType": "tool.failed",
+      "code": "budget",
+      "message": "Structured stage tool call limit of 4 exhausted.",
+      "turnId": "e90d85db-42df-4aae-9e42-d77d01253873-inspect",
+      "callId": "call_2029258686870038",
+      "name": "read_file"
+    },
+    {
+      "source": "application",
+      "category": "turn",
+      "eventType": "turn.failed",
+      "code": "budget",
+      "message": "Structured stage tool call limit of 4 exhausted.",
+      "turnId": "e90d85db-42df-4aae-9e42-d77d01253873-inspect"
+    },
+    {
+      "source": "harness",
+      "category": "harness",
+      "eventType": "harness.error",
+      "code": "validation",
+      "message": "Structured INSPECT preflight produced no read-only evidence."
+    }
+  ],
+  "taskState": {
+    "fingerprint": "fdc635e281657ab801a9038f899532f4eee32f75aa9fc5238eb9291c29bf94e5",
+    "status": "budget_exhausted",
+    "requirements": [
+      {
+        "id": "R1",
+        "status": "pending"
+      },
+      {
+        "id": "R2",
+        "status": "pending"
+      },
+      {
+        "id": "R3",
+        "status": "pending"
+      },
+      {
+        "id": "R4",
+        "status": "pending"
+      },
+      {
+        "id": "R5",
+        "status": "pending"
+      },
+      {
+        "id": "R6",
+        "status": "pending"
+      }
+    ],
+    "workUnits": [
+      {
+        "id": "W1",
+        "status": "active"
+      },
+      {
+        "id": "W2",
+        "status": "pending"
+      }
+    ],
+    "validations": [
+      {
+        "id": "V1",
+        "status": "pending",
+        "attempts": 0
+      },
+      {
+        "id": "V2",
+        "status": "pending",
+        "attempts": 0
+      }
+    ],
+    "corrections": [],
+    "blockerCount": 1,
+    "terminalOutcome": "budget_exhausted",
+    "effectivePermissionExpectations": {
+      "workspace": "autonomous",
+      "outsideWorkspace": "reject",
+      "network": "ask",
+      "remoteMutation": "ask"
+    }
+  },
+  "stackState": null,
+  "metrics": {
+    "providerAttempts": 1,
+    "providerRounds": 1,
+    "retries": 0,
+    "providerInputTokens": 803,
+    "providerOutputTokens": 190,
+    "toolCalls": 5,
+    "contextAssemblies": 1,
+    "sandboxedProcessCalls": 0,
+    "taskUpdates": 2,
+    "stackUpdates": 0
+  },
+  "toolCalls": [
+    {
+      "callId": "call_2029258686870034",
+      "name": "git_status",
+      "requestedArguments": "{}",
+      "effect": "local_read",
+      "terminalState": "succeeded"
+    },
+    {
+      "callId": "call_2029258686870035",
+      "name": "git_diff",
+      "requestedArguments": "{}",
+      "effect": "local_read",
+      "terminalState": "succeeded"
+    },
+    {
+      "callId": "call_2029258686870036",
+      "name": "list_directory",
+      "requestedArguments": "{\"path\":\".\"}",
+      "effect": "local_read",
+      "terminalState": "succeeded"
+    },
+    {
+      "callId": "call_2029258686870037",
+      "name": "read_file",
+      "requestedArguments": "{\"path\":\"app.py\"}",
+      "effect": "local_read",
+      "terminalState": "failed"
+    },
+    {
+      "callId": "call_2029258686870038",
+      "name": "read_file",
+      "requestedArguments": "{\"path\":\"test_app.py\"}",
+      "effect": null,
+      "terminalState": "failed"
+    }
+  ],
+  "mutations": [],
+  "validations": [],
+  "correctionCount": 0,
+  "contexts": [
+    {
+      "profileId": "qwen3-coder-30b-a3b-instruct-q4_k_m-lm-studio-32k-ordinary",
+      "attemptedProfileIds": [
+        "qwen3-coder-30b-a3b-instruct-q4_k_m-lm-studio-32k-ordinary",
+        "qwen3-coder-30b-a3b-instruct-q4_k_m-lm-studio-32k-medium",
+        "qwen3-coder-30b-a3b-instruct-q4_k_m-lm-studio-32k"
+      ],
+      "promotionReasons": [],
+      "estimatedTokens": 625,
+      "providerInputBudget": 8192,
+      "remainingHeadroom": 7567
+    }
+  ],
+  "envelopePromotions": [],
+  "observedReadPaths": [],
+  "finalResponse": {
+    "present": false,
+    "bytes": 0,
+    "sha256": null
+  },
+  "budgets": {
+    "latest": [
+      {
+        "runId": "72abd5a1-70c1-4001-a8c6-50be692648c9",
+        "snapshot": {
+          "runId": "72abd5a1-70c1-4001-a8c6-50be692648c9",
+          "limits": {
+            "providerAttempts": 128,
+            "toolExecutions": 128,
+            "retryAttempts": 32,
+            "compactionAttempts": 32,
+            "compactionCheckpoints": 32,
+            "processExecutions": 64,
+            "processRuntimeMs": 3600000,
+            "wallClockMs": 3600000,
+            "contextTokens": 1000000,
+            "providerInputTokens": 1000000,
+            "providerOutputTokens": 1000000
+          },
+          "consumed": {
+            "providerAttempts": 1,
+            "toolExecutions": 4,
+            "retryAttempts": 0,
+            "compactionAttempts": 0,
+            "compactionCheckpoints": 0,
+            "processExecutions": 0,
+            "processRuntimeMs": 0,
+            "wallClockMs": 16796,
+            "contextTokens": 625,
+            "providerInputTokens": 803,
+            "providerOutputTokens": 190
+          },
+          "elapsedMs": 16796
+        }
+      }
+    ],
+    "pressure": [],
+    "exhaustion": [],
+    "taskExhausted": true,
+    "stageExhaustion": [
+      {
+        "turnId": "e90d85db-42df-4aae-9e42-d77d01253873-inspect",
+        "message": "Structured stage tool call limit of 4 exhausted."
+      }
+    ]
+  },
+  "timing": {
+    "totalMs": 16805.776102,
+    "workflows": []
+  },
+  "hiddenAcceptance": "not_run",
+  "humanInterventions": 0,
+  "eventsOmitted": 1
+}

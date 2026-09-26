@@ -1,0 +1,25 @@
+{
+  "commit": "cccf662ffd47de0f5255d70452fe00b4b1332299",
+  "packageVersion": "0.9.10",
+  "nodeVersion": "v26.10.0",
+  "npmVersion": "11.19.1",
+  "focusedFloor": {
+    "state": "green",
+    "passed": 223,
+    "failed": 0,
+    "skipped": 0
+  },
+  "typecheck": "green",
+  "runner": {
+    "state": "green",
+    "passed": 90,
+    "failed": 0,
+    "skipped": 0
+  },
+  "applicationRunnable": "green",
+  "p1EvidenceWriter": "green",
+  "fixtureInstrumentAcceptanceImmutability": "green",
+  "rootPackageLockAbsent": true,
+  "initialDiffCheck": "green",
+  "liveSweepEligible": true
+}

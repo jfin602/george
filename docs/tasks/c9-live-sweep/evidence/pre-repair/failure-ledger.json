@@ -1,0 +1,216 @@
+{
+  "schemaVersion": 1,
+  "entries": [
+    {
+      "identity": "broad:draft-preservation-rendering",
+      "layer": "broad",
+      "workload": "npm test",
+      "observedState": "Not Green",
+      "qualificationStatus": "not-run",
+      "failureClass": "test",
+      "code": "opentui-renderer",
+      "message": "streaming does not overwrite draft input and returns the composer to ready state: frame did not match /streamed answer/.",
+      "classification": "retained",
+      "evidence": [
+        {
+          "path": "docs/tasks/c9-live-sweep/evidence/pre-repair/broad-suite.json",
+          "sha256": "75d6121f2f91e93988208fbdff996ebbabedb0b31c38aba7ef30e4019566b21d"
+        }
+      ],
+      "repairCluster": "ui-test-stability"
+    },
+    {
+      "identity": "broad:inactive-task-text-rendering",
+      "layer": "broad",
+      "workload": "npm test",
+      "observedState": "Not Green",
+      "qualificationStatus": "not-run",
+      "failureClass": "test",
+      "code": "opentui-renderer",
+      "message": "Transcript and Task pages switch without changing session state or the composer draft: frame did not match /No structured task is active/.",
+      "classification": "retained",
+      "evidence": [
+        {
+          "path": "docs/tasks/c9-live-sweep/evidence/pre-repair/broad-suite.json",
+          "sha256": "75d6121f2f91e93988208fbdff996ebbabedb0b31c38aba7ef30e4019566b21d"
+        }
+      ],
+      "repairCluster": "ui-test-stability"
+    },
+    {
+      "identity": "broad:native-real-tty",
+      "layer": "broad",
+      "workload": "npm test",
+      "observedState": "Evidence Gap",
+      "qualificationStatus": "not-run",
+      "failureClass": "environment",
+      "code": "native-tty-unavailable",
+      "message": "native OpenTUI launches and restores a real Node 26 terminal was skipped in the non-TTY qualification environment.",
+      "classification": "environment-only",
+      "evidence": [
+        {
+          "path": "docs/tasks/c9-live-sweep/evidence/pre-repair/broad-suite.json",
+          "sha256": "75d6121f2f91e93988208fbdff996ebbabedb0b31c38aba7ef30e4019566b21d"
+        }
+      ],
+      "repairCluster": "environment-only"
+    },
+    {
+      "identity": "broad:progressive-final-answer-reveal",
+      "layer": "broad",
+      "workload": "npm test",
+      "observedState": "Not Green",
+      "qualificationStatus": "not-run",
+      "failureClass": "test",
+      "code": "opentui-renderer",
+      "message": "committed final answers reveal progressively without delaying canonical durability, and cancellation stops the reveal: timed out waiting for frame predicate after 20 passes.",
+      "classification": "retained",
+      "evidence": [
+        {
+          "path": "docs/tasks/c9-live-sweep/evidence/pre-repair/broad-suite.json",
+          "sha256": "75d6121f2f91e93988208fbdff996ebbabedb0b31c38aba7ef30e4019566b21d"
+        }
+      ],
+      "repairCluster": "ui-test-stability"
+    },
+    {
+      "identity": "broad:streamed-answer-visibility",
+      "layer": "broad",
+      "workload": "npm test",
+      "observedState": "Not Green",
+      "qualificationStatus": "not-run",
+      "failureClass": "test",
+      "code": "opentui-renderer",
+      "message": "test renderer shows identity, configuration, streamed text, and read-only activity: frame did not match /streamed answer/.",
+      "classification": "retained",
+      "evidence": [
+        {
+          "path": "docs/tasks/c9-live-sweep/evidence/pre-repair/broad-suite.json",
+          "sha256": "75d6121f2f91e93988208fbdff996ebbabedb0b31c38aba7ef30e4019566b21d"
+        }
+      ],
+      "repairCluster": "ui-test-stability"
+    },
+    {
+      "identity": "deterministic:sandbox-process-historical-intermittent",
+      "layer": "deterministic",
+      "workload": "historical affected floor",
+      "observedState": "Evidence Gap",
+      "qualificationStatus": "not-run",
+      "failureClass": "test",
+      "code": "historical-intermittent",
+      "message": "Historical observation only: a nested sandbox-process test invocation previously did not complete; it did not reproduce in the P2 focused floor or the single P2 broad run.",
+      "classification": "intermittent",
+      "evidence": [
+        {
+          "path": "docs/tasks/c9-turn-context-live-qualification/P1-live-evidence.md",
+          "sha256": "3fb4aebec2c4b81cf3ad7f183507e485ce91713ea9397eb5a8886449aa112628"
+        }
+      ],
+      "repairCluster": "ui-test-stability"
+    },
+    {
+      "identity": "live:b2:structured-stage-tool-limit",
+      "layer": "live",
+      "workload": "b2",
+      "observedState": "Not Green",
+      "qualificationStatus": "qualifying",
+      "failureClass": "turn",
+      "code": "budget",
+      "message": "Structured stage tool call limit of 8 exhausted during P1; P1 and StackState ended budget_exhausted, validations and hidden acceptance did not run.",
+      "provider": {
+        "attempts": 4,
+        "rounds": 4,
+        "inputTokens": 6597,
+        "outputTokens": 918
+      },
+      "toolCount": 13,
+      "profile": {
+        "selected": "qwen3-coder-30b-a3b-instruct-q4_k_m-lm-studio-32k-ordinary",
+        "promotions": []
+      },
+      "taskState": {
+        "fingerprint": "1e35ad70f1a35bbdf2a1fc3af1bef5604923af67b60bdc155085884713f7973e",
+        "status": "budget_exhausted"
+      },
+      "stackState": {
+        "fingerprint": "b4115722914fac5e5b254c80f69b75b8394cd4fcfa6c1a319120c7cf758a3c72",
+        "status": "budget_exhausted",
+        "currentTaskOrdinal": 1
+      },
+      "hiddenAcceptance": "not_run",
+      "interventions": 0,
+      "exhausted": true,
+      "classification": "new",
+      "evidence": [
+        {
+          "path": "docs/tasks/c9-live-sweep/evidence/pre-repair/b2/attempt.json",
+          "sha256": "a090a956c32c381e7b1ee68810c0c75f16e21d8ce7db13fffbafe716297ae848"
+        },
+        {
+          "path": "docs/tasks/c9-live-sweep/evidence/pre-repair/b2/trace.json",
+          "sha256": "140f147bb5532ad9a0d2e0871fe32463f8739b1d965823fe125a91d004a61083"
+        }
+      ],
+      "repairCluster": "agent-provider-context"
+    },
+    {
+      "identity": "live:c2:inspect-no-evidence",
+      "layer": "live",
+      "workload": "c2",
+      "observedState": "Not Green",
+      "qualificationStatus": "diagnostic-only",
+      "failureClass": "harness",
+      "code": "validation",
+      "message": "Structured INSPECT preflight produced no read-only evidence. The 4-call INSPECT limit exhausted after requests for nonexistent app.py and test_app.py; validations and hidden acceptance did not run.",
+      "provider": {
+        "attempts": 1,
+        "rounds": 1,
+        "inputTokens": 803,
+        "outputTokens": 190
+      },
+      "toolCount": 5,
+      "profile": {
+        "selected": "qwen3-coder-30b-a3b-instruct-q4_k_m-lm-studio-32k-ordinary",
+        "promotions": []
+      },
+      "taskState": {
+        "fingerprint": "fdc635e281657ab801a9038f899532f4eee32f75aa9fc5238eb9291c29bf94e5",
+        "status": "budget_exhausted"
+      },
+      "hiddenAcceptance": "not_run",
+      "interventions": 0,
+      "exhausted": true,
+      "classification": "new",
+      "evidence": [
+        {
+          "path": "docs/tasks/c9-live-sweep/evidence/pre-repair/c2/attempt.json",
+          "sha256": "b541545f7fb2cd33543309254729282920a4bed59b8b37b12acd9c1b83d42239"
+        },
+        {
+          "path": "docs/tasks/c9-live-sweep/evidence/pre-repair/c2/trace.json",
+          "sha256": "a40d36087d231bc069e53916a66b2b2ceb33829982816ba9ed3e47c3e00d83a5"
+        }
+      ],
+      "repairCluster": "agent-provider-context"
+    },
+    {
+      "identity": "runtime:gpu-offload-26",
+      "layer": "deterministic",
+      "workload": "runtime controlled-latency evidence",
+      "observedState": "Evidence Gap",
+      "qualificationStatus": "not-run",
+      "failureClass": "environment",
+      "code": "ui-only-control-unobserved",
+      "message": "LM Studio GPU Offload 26 was not independently observed; no controlled-latency claim is made.",
+      "classification": "environment-only",
+      "evidence": [
+        {
+          "path": "docs/tasks/c9-live-sweep/evidence/pre-repair/runtime.json",
+          "sha256": "bfc0aac0b60475f29f9a9db522d0fba8ad01fb9281078350ea31d582ccefa88b"
+        }
+      ],
+      "repairCluster": "environment-only"
+    }
+  ]
+}

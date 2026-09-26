@@ -1,0 +1,374 @@
+{
+  "schemaVersion": 2,
+  "terminalStatus": "budget_exhausted",
+  "terminalError": null,
+  "observerError": null,
+  "failures": [
+    {
+      "source": "application",
+      "category": "tool",
+      "eventType": "tool.failed",
+      "code": "validation",
+      "message": "Tool search_text arguments do not match its input schema.",
+      "turnId": "64a572b8-9de1-4b3d-8bcc-d3dea5843590-inspect",
+      "callId": "call_2029258686870022",
+      "name": "search_text"
+    },
+    {
+      "source": "application",
+      "category": "tool",
+      "eventType": "tool.failed",
+      "code": "validation",
+      "message": "Tool search_text arguments do not match its input schema.",
+      "turnId": "64a572b8-9de1-4b3d-8bcc-d3dea5843590-inspect",
+      "callId": "call_2029258686870023",
+      "name": "search_text"
+    },
+    {
+      "source": "application",
+      "category": "tool",
+      "eventType": "tool.failed",
+      "code": "validation",
+      "message": "A lowercase SHA-256 current-content precondition is required.",
+      "turnId": "55bd94fa-e4a6-45fd-b536-23650218c73d",
+      "callId": "call_2029258686870024",
+      "name": "write_file"
+    },
+    {
+      "source": "application",
+      "category": "tool",
+      "eventType": "tool.failed",
+      "code": "validation",
+      "message": "Workspace mutation parent must exist.",
+      "turnId": "55bd94fa-e4a6-45fd-b536-23650218c73d",
+      "callId": "call_2029258686870025",
+      "name": "write_file"
+    },
+    {
+      "source": "application",
+      "category": "tool",
+      "eventType": "tool.failed",
+      "code": "validation",
+      "message": "Workspace mutation parent must exist.",
+      "turnId": "55bd94fa-e4a6-45fd-b536-23650218c73d",
+      "callId": "call_2029258686870026",
+      "name": "write_file"
+    },
+    {
+      "source": "application",
+      "category": "tool",
+      "eventType": "tool.failed",
+      "code": "validation",
+      "message": "Workspace path must exist.",
+      "turnId": "55bd94fa-e4a6-45fd-b536-23650218c73d",
+      "callId": "call_2029258686870029",
+      "name": "read_file"
+    },
+    {
+      "source": "application",
+      "category": "tool",
+      "eventType": "tool.failed",
+      "code": "validation",
+      "message": "Workspace path must exist.",
+      "turnId": "55bd94fa-e4a6-45fd-b536-23650218c73d",
+      "callId": "call_2029258686870030",
+      "name": "read_file"
+    },
+    {
+      "source": "application",
+      "category": "tool",
+      "eventType": "tool.failed",
+      "code": "validation",
+      "message": "Text framing change requires explicit acknowledgement: current lineEnding=lf finalNewline=lf; proposed lineEnding=lf finalNewline=none.",
+      "turnId": "55bd94fa-e4a6-45fd-b536-23650218c73d",
+      "callId": "call_2029258686870031",
+      "name": "write_file"
+    },
+    {
+      "source": "application",
+      "category": "tool",
+      "eventType": "tool.failed",
+      "code": "budget",
+      "message": "Structured stage tool call limit of 8 exhausted.",
+      "turnId": "55bd94fa-e4a6-45fd-b536-23650218c73d",
+      "callId": "call_2029258686870032",
+      "name": "write_file"
+    },
+    {
+      "source": "application",
+      "category": "turn",
+      "eventType": "turn.failed",
+      "code": "budget",
+      "message": "Structured stage tool call limit of 8 exhausted.",
+      "turnId": "55bd94fa-e4a6-45fd-b536-23650218c73d"
+    }
+  ],
+  "taskState": {
+    "fingerprint": "1e35ad70f1a35bbdf2a1fc3af1bef5604923af67b60bdc155085884713f7973e",
+    "status": "budget_exhausted",
+    "requirements": [
+      {
+        "id": "R1",
+        "status": "pending"
+      },
+      {
+        "id": "R2",
+        "status": "pending"
+      },
+      {
+        "id": "R3",
+        "status": "pending"
+      }
+    ],
+    "workUnits": [
+      {
+        "id": "W1",
+        "status": "active"
+      }
+    ],
+    "validations": [
+      {
+        "id": "V1",
+        "status": "pending",
+        "attempts": 0
+      }
+    ],
+    "corrections": [],
+    "blockerCount": 1,
+    "terminalOutcome": "budget_exhausted",
+    "effectivePermissionExpectations": {
+      "workspace": "autonomous",
+      "outsideWorkspace": "reject",
+      "network": "ask",
+      "remoteMutation": "ask"
+    }
+  },
+  "stackState": {
+    "stackId": "greenfield-express-v2",
+    "fingerprint": "b4115722914fac5e5b254c80f69b75b8394cd4fcfa6c1a319120c7cf758a3c72",
+    "status": "budget_exhausted",
+    "currentTaskIndex": 0,
+    "currentTaskOrdinal": 1,
+    "tasks": [
+      {
+        "ordinal": 1,
+        "title": "Scaffold the service",
+        "status": "budget_exhausted"
+      },
+      {
+        "ordinal": 2,
+        "title": "Implement task API",
+        "status": "pending"
+      },
+      {
+        "ordinal": 3,
+        "title": "Test and document the service",
+        "status": "pending"
+      }
+    ],
+    "completedTaskOrdinals": [],
+    "terminalOutcome": "budget_exhausted",
+    "blockerSummary": "Work unit W1 did not complete."
+  },
+  "metrics": {
+    "providerAttempts": 4,
+    "providerRounds": 4,
+    "retries": 0,
+    "providerInputTokens": 6597,
+    "providerOutputTokens": 918,
+    "toolCalls": 13,
+    "contextAssemblies": 2,
+    "sandboxedProcessCalls": 0,
+    "taskUpdates": 2,
+    "stackUpdates": 2
+  },
+  "toolCalls": [
+    {
+      "callId": "call_2029258686870020",
+      "name": "git_status",
+      "requestedArguments": "{}",
+      "effect": "local_read",
+      "terminalState": "succeeded"
+    },
+    {
+      "callId": "call_2029258686870021",
+      "name": "list_directory",
+      "requestedArguments": "{\"path\":\"\"}",
+      "effect": "local_read",
+      "terminalState": "succeeded"
+    },
+    {
+      "callId": "call_2029258686870022",
+      "name": "search_text",
+      "requestedArguments": "{\"query\":\"package.json\",\"path\":\"\"}",
+      "effect": "local_read",
+      "terminalState": "failed"
+    },
+    {
+      "callId": "call_2029258686870023",
+      "name": "search_text",
+      "requestedArguments": "{\"query\":\"src/\",\"path\":\"\"}",
+      "effect": "local_read",
+      "terminalState": "failed"
+    },
+    {
+      "callId": "call_2029258686870024",
+      "name": "write_file",
+      "requestedArguments": "{\"path\":\"package.json\",\"content\":\"[omitted 231 bytes]\"}",
+      "effect": "workspace_mutation",
+      "terminalState": "failed"
+    },
+    {
+      "callId": "call_2029258686870025",
+      "name": "write_file",
+      "requestedArguments": "{\"path\":\"src/app.js\",\"content\":\"[omitted 169 bytes]\"}",
+      "effect": "workspace_mutation",
+      "terminalState": "failed"
+    },
+    {
+      "callId": "call_2029258686870026",
+      "name": "write_file",
+      "requestedArguments": "{\"path\":\"src/server.js\",\"content\":\"[omitted 183 bytes]\"}",
+      "effect": "workspace_mutation",
+      "terminalState": "failed"
+    },
+    {
+      "callId": "call_2029258686870027",
+      "name": "git_status",
+      "requestedArguments": "{}",
+      "effect": "local_read",
+      "terminalState": "succeeded"
+    },
+    {
+      "callId": "call_2029258686870028",
+      "name": "read_file",
+      "requestedArguments": "{\"path\":\"package.json\"}",
+      "effect": "local_read",
+      "terminalState": "succeeded"
+    },
+    {
+      "callId": "call_2029258686870029",
+      "name": "read_file",
+      "requestedArguments": "{\"path\":\"src/app.js\"}",
+      "effect": "local_read",
+      "terminalState": "failed"
+    },
+    {
+      "callId": "call_2029258686870030",
+      "name": "read_file",
+      "requestedArguments": "{\"path\":\"src/server.js\"}",
+      "effect": "local_read",
+      "terminalState": "failed"
+    },
+    {
+      "callId": "call_2029258686870031",
+      "name": "write_file",
+      "requestedArguments": "{\"path\":\"package.json\",\"content\":\"[omitted 231 bytes]\",\"expectedSha256\":\"f3dee37c3a5a1214c8b6bb2099697560d7c8d8be6e21cbb0d60920d7083cdb6c\"}",
+      "effect": "workspace_mutation",
+      "terminalState": "failed"
+    },
+    {
+      "callId": "call_2029258686870032",
+      "name": "write_file",
+      "requestedArguments": "{\"path\":\"src/app.js\",\"content\":\"[omitted 169 bytes]\",\"expectedSha256\":\"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\"}",
+      "effect": null,
+      "terminalState": "failed"
+    }
+  ],
+  "mutations": [],
+  "validations": [],
+  "correctionCount": 0,
+  "contexts": [
+    {
+      "profileId": "qwen3-coder-30b-a3b-instruct-q4_k_m-lm-studio-32k-ordinary",
+      "attemptedProfileIds": [
+        "qwen3-coder-30b-a3b-instruct-q4_k_m-lm-studio-32k-ordinary",
+        "qwen3-coder-30b-a3b-instruct-q4_k_m-lm-studio-32k-medium",
+        "qwen3-coder-30b-a3b-instruct-q4_k_m-lm-studio-32k"
+      ],
+      "promotionReasons": [],
+      "estimatedTokens": 577,
+      "providerInputBudget": 8192,
+      "remainingHeadroom": 7615
+    },
+    {
+      "profileId": "qwen3-coder-30b-a3b-instruct-q4_k_m-lm-studio-32k-ordinary",
+      "attemptedProfileIds": [
+        "qwen3-coder-30b-a3b-instruct-q4_k_m-lm-studio-32k-ordinary",
+        "qwen3-coder-30b-a3b-instruct-q4_k_m-lm-studio-32k-medium",
+        "qwen3-coder-30b-a3b-instruct-q4_k_m-lm-studio-32k"
+      ],
+      "promotionReasons": [],
+      "estimatedTokens": 1239,
+      "providerInputBudget": 8192,
+      "remainingHeadroom": 6953
+    }
+  ],
+  "envelopePromotions": [],
+  "observedReadPaths": [
+    "package.json"
+  ],
+  "finalResponse": {
+    "present": false,
+    "bytes": 0,
+    "sha256": null
+  },
+  "budgets": {
+    "latest": [
+      {
+        "runId": "12f19eda-960f-4bea-8019-edc2e51e062b",
+        "snapshot": {
+          "runId": "12f19eda-960f-4bea-8019-edc2e51e062b",
+          "limits": {
+            "providerAttempts": 128,
+            "toolExecutions": 128,
+            "retryAttempts": 32,
+            "compactionAttempts": 32,
+            "compactionCheckpoints": 32,
+            "processExecutions": 64,
+            "processRuntimeMs": 3600000,
+            "wallClockMs": 3600000,
+            "contextTokens": 1000000,
+            "providerInputTokens": 1000000,
+            "providerOutputTokens": 1000000
+          },
+          "consumed": {
+            "providerAttempts": 4,
+            "toolExecutions": 10,
+            "retryAttempts": 0,
+            "compactionAttempts": 0,
+            "compactionCheckpoints": 0,
+            "processExecutions": 0,
+            "processRuntimeMs": 0,
+            "wallClockMs": 103641,
+            "contextTokens": 1816,
+            "providerInputTokens": 6597,
+            "providerOutputTokens": 918
+          },
+          "elapsedMs": 103641
+        }
+      }
+    ],
+    "pressure": [],
+    "exhaustion": [],
+    "taskExhausted": true,
+    "stageExhaustion": [
+      {
+        "turnId": "55bd94fa-e4a6-45fd-b536-23650218c73d",
+        "message": "Structured stage tool call limit of 8 exhausted."
+      }
+    ]
+  },
+  "timing": {
+    "totalMs": 103679.940796,
+    "workflows": [
+      {
+        "turnId": "55bd94fa-e4a6-45fd-b536-23650218c73d",
+        "totalMs": 89869
+      }
+    ]
+  },
+  "hiddenAcceptance": "not_run",
+  "humanInterventions": 0,
+  "eventsOmitted": 2
+}
