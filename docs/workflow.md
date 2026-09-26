@@ -127,6 +127,23 @@ For current Phase 9 correction qualification, that replay is the strict Gate A. 
 
 After Phase 9 establishes `greenfield-express-v1` and `existing-express-feature-v1`, rerun those frozen live-work instruments at later phase closeouts when the supported environment is available. Preserve their prompt/fixture/hidden-acceptance versions so longitudinal results remain comparable.
 
+## Qualification preflight scope
+
+Qualification must keep **aggregate suite state** separate from **candidate regression delta**.
+
+A correction or phase may define a hard preflight consisting of focused tests, directly affected inherited floors, phase integration, security/recovery invariants, frozen replay, and repository hygiene. Those checks must be Green before a live gate can be spent.
+
+A broader suite may be required as characterization without being an absolute Green prerequisite. When the broad suite is already historically Not Green, compare the candidate against a documented pre-change baseline under equivalent runtime/command conditions:
+
+- preserve aggregate broad Green / Not Green / Evidence Gap exactly as observed;
+- separately classify whether the candidate introduced or materially worsened a regression;
+- unchanged baseline failures remain Not Green but do not by themselves constitute a new candidate regression;
+- counts alone are insufficient when failure identity/signature can be compared;
+- new failures, worsened retained failures, newly skipped affected tests, or inability to reproduce the baseline under equivalent conditions block live qualification;
+- missing or ambiguous comparison evidence is an Evidence Gap and must not be assumed safe.
+
+A passing regression delta never relabels the aggregate suite Green and never erases historical failure evidence.
+
 ## Stability questions
 
 Every substantial task should answer:
