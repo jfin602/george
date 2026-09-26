@@ -433,7 +433,9 @@ Current evidence after Phase 9 corrections:
 - full-file text-framing evidence and recoverable framing-preservation guards are qualified;
 - mutation-intent authority and fair frozen-edit approval are qualified;
 - the mandatory frozen edit-plus-validation Gate A is now Green on the corrected architecture;
-- `greenfield-express-v1` remains historically Not Green because its task stack duplicates application-owned preflight inspection inside ordinary workflow units, causing P1 to exhaust duplicate/no-progress before implementation; the remaining Phase 9 live work is v2 instrument alignment rather than production-loop repair;
+- `greenfield-express-v1` remains historically Not Green because its task stack duplicates application-owned preflight inspection inside ordinary workflow units; `c9-greenfield-instrument-alignment` preserves that history and deterministically qualifies the independently versioned v2 instrument semantics/runner;
+- the official `greenfield-express-v2` B2 attempt is Not Green after P1 implementation exposed a production mutation-precondition convergence gap: an existing-file write lacked `expectedSha256`, then a nested new-file write encountered a missing parent before normal terminal tool evidence, and no native directory-creation tool exists in the structured coding surface;
+- active correction `c9-mutation-precondition-convergence` preserves SHA authority, adds explicit native `create_directory`, and requires ordinary no-side-effect local prerequisite failures to remain recoverable tool results rather than aborting the provider turn;
 - native Node-26 real-TTY/OpenTUI behavior remains an Evidence Gap;
 - Phase 9 is not owner-closed and Phase 10 remains unopened.
 
@@ -464,7 +466,7 @@ Success condition:
 - Transcript/Task UI separation is usable without losing cancellation/approval/scrollback/draft behavior;
 - workspace-autonomous processes are demonstrably contained from disallowed host filesystem resources or the mode fails closed;
 - outside reject/ask behave exactly as configured and prompts cannot elevate policy;
-- both frozen v1 live-work baselines remain recorded with raw outcome/performance/intervention dimensions, and the aligned v2 instruments complete their final Phase 9 qualification gates;
+- both frozen v1 live-work baselines and the first v2 B2 Not Green attempt remain recorded with raw outcome/performance/intervention dimensions, and the corrected production path completes fresh Gate A -> B2 -> C2 qualification without rewriting those historical failures;
 - inherited Phase 2-8 contracts remain Green or their accepted Not Green/Evidence Gap states remain explicitly classified.
 
 Non-goals:
