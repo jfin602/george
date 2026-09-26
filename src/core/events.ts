@@ -24,6 +24,12 @@ export type ProviderUsage = Readonly<{
   cachedInputTokens?: number;
 }>;
 
+export type ProviderAttemptTiming = Readonly<{
+  responseAcceptanceMs?: number;
+  firstUsefulOutputMs?: number;
+  providerActiveMs: number;
+}>;
+
 export type ProviderStallPhase = 'awaiting_first_evidence' | 'response_active' | 'response_completed';
 export type ProviderPressure = 'low' | 'high';
 
@@ -159,6 +165,7 @@ export type ApplicationEvent =
   | ProviderEvent
   | Readonly<{ type: 'reliability.run.started'; turnId: string; runId: string; budget: RunBudgetSnapshot }>
   | Readonly<{ type: 'provider.attempt.started'; turnId: string; runId: string; attemptId: string }>
+  | Readonly<{ type: 'provider.attempt.finished'; turnId: string; runId: string; attemptId: string; outcome: 'completed' | 'failed' | 'cancelled'; timing: ProviderAttemptTiming }>
   | Readonly<{ type: 'provider.stall.suspected'; turnId: string; runId: string; attemptId: string; phase: Exclude<ProviderStallPhase, 'response_completed'>; inactivityMs: number }>
   | Readonly<{ type: 'provider.stall.detected'; turnId: string; runId: string; attemptId: string; phase: Exclude<ProviderStallPhase, 'response_completed'>; inactivityMs: number }>
   | Readonly<{ type: 'provider.rebase.started'; turnId: string; runId: string; attemptId: string; pressure: ProviderPressure; estimatedTokens: number; profileId: string; compaction: 'not_needed' | 'completed' | 'failed' | 'unavailable' }>

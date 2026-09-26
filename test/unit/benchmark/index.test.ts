@@ -123,15 +123,17 @@ test('event-derived records retain correctness separately from timing and failed
     { type: 'provider.response.started', responseId: 'response' },
     { type: 'provider.text.delta', delta: '42' },
     { type: 'provider.response.completed', usage: { inputTokens: 12, outputTokens: 1, cachedInputTokens: 5 } },
+    { type: 'provider.attempt.finished', turnId: 't', runId: 'r', attemptId: 'a', outcome: 'completed', timing: { responseAcceptanceMs: 4, firstUsefulOutputMs: 7, providerActiveMs: 14 } },
     { type: 'assistant.response.completed', turnId: 't', text: '42' },
     { type: 'turn.completed', turnId: 't' },
   ];
-  const record = deriveBenchmarkRecord(case_, pass, 25, 1, 'first-run-in-benchmark-process', 'model', 'http://127.0.0.1:1234', undefined, [0, 1, 5, 8, 15, 16, 25]);
+  const record = deriveBenchmarkRecord(case_, pass, 25, 1, 'first-run-in-benchmark-process', 'model', 'http://127.0.0.1:1234', undefined, [0, 1, 5, 8, 15, 16, 17, 25]);
   assert.equal(record.passed, true);
   assert.equal(record.responseStartLatencyMs, 4);
   assert.equal(record.firstOutputLatencyMs, 7);
   assert.equal(record.actualInputTokens, 12);
   assert.equal(record.cachedInputTokens, 5);
+  assert.deepEqual(record.providerAttemptTimings, [{ attemptId: 'a', outcome: 'completed', responseAcceptanceMs: 4, firstUsefulOutputMs: 7, providerActiveMs: 14 }]);
   assert.deepEqual({ internalTextBytes: record.internalTextBytes, concurrentReadBatchCount: record.concurrentReadBatchCount, modelRoundsAvoided: record.modelRoundsAvoided, humanModeRounds: record.humanModeRounds }, { internalTextBytes: null, concurrentReadBatchCount: 0, modelRoundsAvoided: 0, humanModeRounds: null });
   const failed = deriveBenchmarkRecord(case_, pass.slice(0, -1), 25, 1, 'warm-repeat', 'model', 'http://127.0.0.1:1234');
   assert.equal(failed.passed, false);

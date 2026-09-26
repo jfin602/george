@@ -6,7 +6,7 @@ import { basename, isAbsolute, join, resolve } from 'node:path';
 import { GeorgeError } from './errors.ts';
 import { TEXT_FRAMING_CHANGE_WARNING } from './approval.ts';
 import type { ContextProfile } from './config.ts';
-import type { ApplicationEvent, ContextCheckpointEvidence, ContextDiagnostics, ProviderUsage } from './events.ts';
+import type { ApplicationEvent, ContextCheckpointEvidence, ContextDiagnostics, ProviderAttemptTiming, ProviderUsage } from './events.ts';
 import type { RunBudgetDimension, RunBudgetSnapshot } from './run-budget.ts';
 import type { ToolExecutionMetadata } from './execution.ts';
 import type { TranscriptEntry, Session, SessionInterruption } from './session.ts';
@@ -270,6 +270,7 @@ function durableEvent(event: ApplicationEvent): ApplicationEvent | undefined {
   switch (event.type) {
     case 'reliability.run.started': return { type: event.type, turnId: string(event.turnId, 'turn ID', 256), runId: identifier(event.runId, 'run ID'), budget: safeBudget(event.budget) };
     case 'provider.attempt.started': return { type: event.type, turnId: string(event.turnId, 'turn ID', 256), runId: identifier(event.runId, 'run ID'), attemptId: identifier(event.attemptId, 'provider attempt ID') };
+    case 'provider.attempt.finished': return { type: event.type, turnId: string(event.turnId, 'turn ID', 256), runId: identifier(event.runId, 'run ID'), attemptId: identifier(event.attemptId, 'provider attempt ID'), outcome: oneOf(event.outcome, 'provider attempt outcome', ['completed', 'failed', 'cancelled']), timing: safeProviderAttemptTiming(event.timing) };
     case 'provider.stall.suspected': case 'provider.stall.detected': return { type: event.type, turnId: string(event.turnId, 'turn ID', 256), runId: identifier(event.runId, 'run ID'), attemptId: identifier(event.attemptId, 'provider attempt ID'), phase: oneOf(event.phase, 'provider stall phase', ['awaiting_first_evidence', 'response_active']), inactivityMs: boundedInteger(event.inactivityMs, 'provider stall inactivity') };
     case 'provider.rebase.started': return { type: event.type, turnId: string(event.turnId, 'turn ID', 256), runId: identifier(event.runId, 'run ID'), attemptId: identifier(event.attemptId, 'provider attempt ID'), pressure: oneOf(event.pressure, 'provider pressure', ['low', 'high']), estimatedTokens: boundedInteger(event.estimatedTokens, 'provider rebase estimate'), profileId: string(event.profileId, 'provider rebase profile ID', 256), compaction: oneOf(event.compaction, 'provider rebase compaction', ['not_needed', 'completed', 'failed', 'unavailable']) };
     case 'provider.stall.terminal': return { type: event.type, turnId: string(event.turnId, 'turn ID', 256), runId: identifier(event.runId, 'run ID'), attemptId: identifier(event.attemptId, 'provider attempt ID'), phase: oneOf(event.phase, 'provider stall phase', ['awaiting_first_evidence', 'response_active']), attempts: boundedInteger(event.attempts, 'provider stall attempts', 32), pressure: oneOf(event.pressure, 'provider pressure', ['low', 'high']), compaction: oneOf(event.compaction, 'provider stall compaction', ['not_attempted', 'completed', 'failed', 'unavailable']) };
@@ -346,6 +347,15 @@ function safeUsage(usage: ProviderUsage): ProviderUsage {
       result[key] = value;
     }
   }
+  return result;
+}
+
+function safeProviderAttemptTiming(timing: ProviderAttemptTiming): ProviderAttemptTiming {
+  const result: { responseAcceptanceMs?: number; firstUsefulOutputMs?: number; providerActiveMs: number } = {
+    providerActiveMs: boundedInteger(timing.providerActiveMs, 'provider active time'),
+  };
+  if (timing.responseAcceptanceMs !== undefined) result.responseAcceptanceMs = boundedInteger(timing.responseAcceptanceMs, 'provider response acceptance time');
+  if (timing.firstUsefulOutputMs !== undefined) result.firstUsefulOutputMs = boundedInteger(timing.firstUsefulOutputMs, 'provider first useful output time');
   return result;
 }
 

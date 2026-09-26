@@ -25,6 +25,7 @@ export type ProviderContinuation = Readonly<{
 }>;
 
 export type ProviderToolChoice = 'auto' | 'required' | 'none';
+export type ProviderActivity = 'accepted' | 'output_progress';
 
 export type ProviderRequest = Readonly<{
   instructions?: string;
@@ -38,7 +39,7 @@ export type ProviderStreamOptions = Readonly<{
   signal?: AbortSignal;
   timeoutMs?: number;
   /** Non-authoritative liveness only; no payload crosses this seam. */
-  onActivity?: () => void;
+  onActivity?: (activity: ProviderActivity) => void;
 }>;
 
 export interface ModelProvider {

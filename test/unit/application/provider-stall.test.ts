@@ -12,6 +12,7 @@ import {
   createSession,
   type ContextProfile,
   type ModelProvider,
+  type ProviderActivity,
   type ProviderEvent,
   type ProviderRequest,
   type ProviderStreamOptions,
@@ -114,21 +115,27 @@ test('stall policy keeps the 120000 ms absolute ceiling and watchdog activity ow
 
   const scheduler = new FakeScheduler();
   const watchdog = new ProviderAttemptWatchdog(POLICY, scheduler);
-  scheduler.advance(4); watchdog.activity();
-  scheduler.advance(4); watchdog.activity();
+  scheduler.advance(4); watchdog.activity('output_progress');
+  scheduler.advance(4); watchdog.activity('output_progress');
   scheduler.advance(4);
   assert.equal(watchdog.controller.signal.aborted, false, 'bounded activity refreshes liveness');
   watchdog.complete(); watchdog.stop();
   assert.equal(scheduler.pending, 0);
   scheduler.advance(100);
   assert.equal(watchdog.controller.signal.aborted, false, 'a stale timer cannot abort a completed/later attempt');
+
+  const accepted = new ProviderAttemptWatchdog(POLICY, scheduler);
+  scheduler.advance(4); accepted.activity('accepted'); scheduler.advance(6);
+  assert.equal(accepted.controller.signal.aborted, true, 'acceptance neither starts active-output timing nor resets the first-useful-output ceiling');
+  accepted.stop();
+  assert.equal(scheduler.pending, 0);
 });
 
-test('provider activity heartbeats prevent a false application stall without becoming events', async (t) => {
+test('payload-free useful-output progress prevents a false application stall without becoming provider events', async (t) => {
   const root = await workspace();
   t.after(() => rm(root, { recursive: true, force: true }));
   const scheduler = new FakeScheduler();
-  let pulse: (() => void) | undefined;
+  let pulse: ((activity: ProviderActivity) => void) | undefined;
   let finish: (() => void) | undefined;
   const provider = new ScriptedProvider([async function* (_request, options) {
     pulse = options.onActivity;
@@ -138,11 +145,45 @@ test('provider activity heartbeats prevent a false application stall without bec
   const service = await createOneTurnApplicationService({ provider, workspace: root, providerStallPolicy: POLICY, providerStallScheduler: scheduler });
   const pending = collect(service.run({ session: createSession({ workspace: root }), input: 'heartbeat' }));
   await waitFor(() => pulse !== undefined && finish !== undefined);
-  for (let count = 0; count < 3; count += 1) { scheduler.advance(4); pulse!(); }
+  for (let count = 0; count < 3; count += 1) { scheduler.advance(4); pulse!('output_progress'); }
   finish!();
   const events = await pending;
   assert.equal(events.some((event) => event.type.startsWith('provider.stall.')), false);
   assert.equal(events.at(-1)?.type, 'turn.completed');
+  assert.equal(scheduler.pending, 0);
+});
+
+test('accepted prefill may exceed 60000 ms before first useful output and still completes within the unchanged ceilings', async (t) => {
+  const root = await workspace();
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const scheduler = new FakeScheduler();
+  let releasePrefill: (() => void) | undefined;
+  let attemptSignal: AbortSignal | undefined;
+  const provider = new ScriptedProvider([async function* (_request, options) {
+    attemptSignal = options.signal;
+    yield { type: 'provider.response.started', responseId: 'accepted-prefill' };
+    await new Promise<void>((resolve) => { releasePrefill = resolve; });
+    yield { type: 'provider.text.delta', delta: 'Useful output.' };
+    yield { type: 'provider.response.completed' };
+  }]);
+  const session = createSession({ workspace: root });
+  const service = await createOneTurnApplicationService({ provider, workspace: root, providerStallScheduler: scheduler });
+  const pending = collect(service.run({ session, input: 'devlog-shaped prefill' }));
+  await waitFor(() => releasePrefill !== undefined);
+  scheduler.advance(60_001);
+  await waitFor(() => session.events.some((event) => event.type === 'provider.stall.suspected'));
+  assert.equal(attemptSignal?.aborted, false, 'acceptance does not activate the 60000 ms output-inactivity cutoff');
+  releasePrefill!();
+  const events = await pending;
+  assert.equal(events.some((event) => event.type === 'provider.stall.detected'), false);
+  assert.equal(events.at(-1)?.type, 'turn.completed');
+  assert.deepEqual(events.find((event) => event.type === 'provider.attempt.finished'), {
+    type: 'provider.attempt.finished', turnId: events.find((event) => event.type === 'turn.started')?.turnId,
+    runId: events.find((event) => event.type === 'reliability.run.started')?.runId,
+    attemptId: events.find((event) => event.type === 'provider.attempt.started')?.attemptId,
+    outcome: 'completed',
+    timing: { responseAcceptanceMs: 0, firstUsefulOutputMs: 60_001, providerActiveMs: 60_001 },
+  });
   assert.equal(scheduler.pending, 0);
 });
 
@@ -151,7 +192,7 @@ test('no-evidence and active-response stalls get one fresh retry; provisional ou
   t.after(() => rm(root, { recursive: true, force: true }));
   for (const [name, provisional, threshold] of [
     ['no evidence', [], 10],
-    ['response start', [{ type: 'provider.response.started', responseId: 'partial' }], 5],
+    ['response start', [{ type: 'provider.response.started', responseId: 'partial' }], 10],
     ['provisional text', [{ type: 'provider.response.started', responseId: 'partial' }, { type: 'provider.text.delta', delta: 'SECRET_PROVISIONAL' }], 5],
   ] as const) await t.test(name, async () => {
     const scheduler = new FakeScheduler();

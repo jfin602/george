@@ -1,4 +1,4 @@
-import { DEFAULT_PROVIDER_TIMEOUT_MS, GeorgeError, type ProviderStallPhase } from '../core/index.ts';
+import { DEFAULT_PROVIDER_TIMEOUT_MS, GeorgeError, type ProviderActivity, type ProviderStallPhase } from '../core/index.ts';
 
 export type ProviderStallPolicy = Readonly<{
   suspectedInactivityMs: number;
@@ -77,8 +77,9 @@ export class ProviderAttemptWatchdog {
 
   get stalled(): boolean { return this.controller.signal.aborted && this.phase !== 'response_completed'; }
 
-  activity(): void {
+  activity(activity: ProviderActivity): void {
     if (this.controller.signal.aborted || this.phase === 'response_completed') return;
+    if (activity === 'accepted') return;
     this.phase = 'response_active';
     this.lastActivityAt = this.scheduler.now();
     this.arm();
@@ -107,7 +108,7 @@ export class ProviderAttemptWatchdog {
   error(notice?: ProviderStallNotice): GeorgeError {
     const phase = notice?.phase ?? (this.phase === 'response_completed' ? 'response_active' : this.phase);
     const inactivityMs = notice?.inactivityMs ?? Math.max(0, this.scheduler.now() - this.lastActivityAt);
-    return new GeorgeError('provider', `Provider stalled while ${phase === 'awaiting_first_evidence' ? 'awaiting first evidence' : 'the response was active'} after ${inactivityMs} ms of inactivity.`, {
+    return new GeorgeError('provider', `Provider stalled while ${phase === 'awaiting_first_evidence' ? 'awaiting first useful output' : 'the response was active'} after ${inactivityMs} ms of inactivity.`, {
       cause: { kind: 'stall', phase, inactivityMs },
     });
   }

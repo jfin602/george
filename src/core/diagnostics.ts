@@ -90,6 +90,7 @@ function eventRecord(session: Session, event: ApplicationEvent, sequence: number
     case 'provider.text.delta': fields.provisional = true; fields.bytes = Buffer.byteLength(event.delta, 'utf8'); break;
     case 'provider.response.started': fields.responseStarted = true; break;
     case 'provider.response.completed': fields.completed = true; if (event.usage?.inputTokens !== undefined) fields.inputTokens = event.usage.inputTokens; if (event.usage?.outputTokens !== undefined) fields.outputTokens = event.usage.outputTokens; break;
+    case 'provider.attempt.finished': correlation.providerAttemptId = event.attemptId; fields.outcome = event.outcome; fields.providerActiveMs = event.timing.providerActiveMs; if (event.timing.responseAcceptanceMs !== undefined) fields.responseAcceptanceMs = event.timing.responseAcceptanceMs; if (event.timing.firstUsefulOutputMs !== undefined) fields.firstUsefulOutputMs = event.timing.firstUsefulOutputMs; break;
     case 'provider.error': Object.assign(fields, safeProviderError(event.error)); break;
     case 'provider.tool.call': correlation.operationId = event.callId; fields.name = bounded(event.name, 128); fields.requestedArguments = safeArguments(event.name, event.arguments); break;
     case 'tool.requested': correlation.operationId = event.callId; fields.name = bounded(event.name, 128); fields.requestedArguments = safeArguments(event.name, event.arguments); break;
@@ -154,7 +155,11 @@ export class PerformanceMeasurements {
     if (event.type === 'provider.attempt.started') this.attempts.set(`${key}:${event.attemptId}`, { started: now, hadToolCalls: false });
     const attempt = [...this.attempts.entries()].reverse().find(([id]) => id.startsWith(`${key}:`));
     if (attempt && event.type === 'provider.response.started' && attempt[1].responseStarted === undefined) { attempt[1].responseStarted = now; add('provider.time_to_response_started', now - attempt[1].started, 'ms'); }
-    if (attempt && event.type === 'provider.text.delta' && attempt[1].firstToken === undefined) { attempt[1].firstToken = now; add('provider.time_to_first_token', now - attempt[1].started, 'ms'); }
+    if (attempt && (event.type === 'provider.text.delta' || event.type === 'provider.tool.call') && attempt[1].firstToken === undefined) {
+      attempt[1].firstToken = now;
+      add('provider.time_to_first_useful_output', now - attempt[1].started, 'ms');
+      if (event.type === 'provider.text.delta') add('provider.time_to_first_token', now - attempt[1].started, 'ms');
+    }
     if (attempt && event.type === 'provider.tool.call') attempt[1].hadToolCalls = true;
     if (attempt && event.type === 'provider.response.completed') {
       attempt[1].completedAt = now;

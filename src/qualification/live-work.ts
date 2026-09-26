@@ -47,6 +47,9 @@ export type LiveWorkMetrics = Readonly<{
   providerInputTokens: number | null;
   providerOutputTokens: number | null;
   cachedInputTokens: number | null;
+  responseAcceptanceMs: number | null;
+  firstUsefulOutputMs: number | null;
+  providerActiveMs: number | null;
   toolCalls: number;
   internalTextBytes: number | null;
   estimatedInternalTextTokens: number | null;
@@ -98,7 +101,11 @@ export type LiveWorkTrace = Readonly<{
     taskExhausted: boolean;
     stageExhaustion: readonly Readonly<{ turnId: string; message: string }>[];
   }>;
-  timing: Readonly<{ totalMs: number | null; workflows: readonly Readonly<{ turnId: string; totalMs: number | null }>[] }>;
+  timing: Readonly<{
+    totalMs: number | null;
+    workflows: readonly Readonly<{ turnId: string; totalMs: number | null }>[];
+    providerAttempts: readonly Readonly<{ attemptId: string; outcome: 'completed' | 'failed' | 'cancelled'; responseAcceptanceMs: number | null; firstUsefulOutputMs: number | null; providerActiveMs: number }>[];
+  }>;
   hiddenAcceptance: 'passed' | 'failed' | 'not_run';
   humanInterventions: number;
   eventsOmitted: number;
@@ -291,6 +298,8 @@ function operationalEvent(event: ApplicationEvent): boolean {
 
 function metrics(events: readonly ApplicationEvent[], correctionCycles: number): LiveWorkMetrics {
   const completed = events.filter((event): event is Extract<ApplicationEvent, { type: 'provider.response.completed' }> => event.type === 'provider.response.completed');
+  const attemptTimings = events.filter((event): event is Extract<ApplicationEvent, { type: 'provider.attempt.finished' }> => event.type === 'provider.attempt.finished');
+  const attemptCount = events.filter((event) => event.type === 'provider.attempt.started').length;
   const input = completed.map((event) => number(event.usage?.inputTokens)).filter((value): value is number => value !== null);
   const output = completed.map((event) => number(event.usage?.outputTokens)).filter((value): value is number => value !== null);
   const cachedInput = completed.map((event) => number(event.usage?.cachedInputTokens)).filter((value): value is number => value !== null);
@@ -311,6 +320,9 @@ function metrics(events: readonly ApplicationEvent[], correctionCycles: number):
     providerInputTokens: completed.length && input.length === completed.length ? input.reduce((total, value) => total + value, 0) : null,
     providerOutputTokens: completed.length && output.length === completed.length ? output.reduce((total, value) => total + value, 0) : null,
     cachedInputTokens: completed.length && cachedInput.length === completed.length ? cachedInput.reduce((total, value) => total + value, 0) : null,
+    responseAcceptanceMs: attemptTimings.find((event) => event.timing.responseAcceptanceMs !== undefined)?.timing.responseAcceptanceMs ?? null,
+    firstUsefulOutputMs: attemptTimings.find((event) => event.timing.firstUsefulOutputMs !== undefined)?.timing.firstUsefulOutputMs ?? null,
+    providerActiveMs: attemptCount > 0 && attemptTimings.length === attemptCount ? attemptTimings.reduce((total, event) => total + event.timing.providerActiveMs, 0) : null,
     toolCalls: events.filter((event) => event.type === 'tool.requested').length,
     internalTextBytes: null,
     estimatedInternalTextTokens: null,
@@ -396,12 +408,14 @@ export function extractLiveWorkTrace(options: Readonly<{
   const exhaustion: { runId: string; dimension: RunBudgetDimension }[] = [];
   const stageExhaustion: { turnId: string; message: string }[] = [];
   const workflows: { turnId: string; totalMs: number | null }[] = [];
+  const providerAttempts: Array<{ attemptId: string; outcome: 'completed' | 'failed' | 'cancelled'; responseAcceptanceMs: number | null; firstUsefulOutputMs: number | null; providerActiveMs: number }> = [];
   for (const event of options.events) {
     if (event.type === 'reliability.run.started' || event.type === 'budget.state' || event.type === 'budget.pressure' || event.type === 'budget.exhausted') snapshots.set(event.runId, event.budget);
     if (event.type === 'budget.pressure') pressure.push({ runId: event.runId, dimensions: event.dimensions });
     else if (event.type === 'budget.exhausted') exhaustion.push({ runId: event.runId, dimension: event.dimension });
     else if (event.type === 'turn.failed' && event.error.code === 'budget') stageExhaustion.push({ turnId: event.turnId, message: sanitizeTaskEvidence(event.error.message, 512).text });
     else if (event.type === 'workflow.completed') workflows.push({ turnId: event.turnId, totalMs: number(event.completion.timing?.totalMs) });
+    else if (event.type === 'provider.attempt.finished') providerAttempts.push({ attemptId: event.attemptId, outcome: event.outcome, responseAcceptanceMs: event.timing.responseAcceptanceMs ?? null, firstUsefulOutputMs: event.timing.firstUsefulOutputMs ?? null, providerActiveMs: event.timing.providerActiveMs });
   }
   let taskState: TaskStateProjection | null = null;
   let stackState: StackStateProjection | null = null;
@@ -412,7 +426,7 @@ export function extractLiveWorkTrace(options: Readonly<{
   return Object.freeze({
     schemaVersion: 2, terminalStatus: options.terminalStatus, terminalError, observerError, failures: extractFailures(options.events, terminalError, observerError), taskState, stackState, metrics: Object.freeze(metrics(options.events, taskState?.corrections.length ?? 0)), toolCalls: Object.freeze(toolCalls), mutations: Object.freeze(mutations), validations: Object.freeze(validations), correctionCount: taskState?.corrections.length ?? 0, contexts: Object.freeze(contexts), envelopePromotions: Object.freeze(envelopePromotions), observedReadPaths: successfulReadPaths(options.events), finalResponse: responseEvidence(options.finalAssistantResponse),
     budgets: Object.freeze({ latest: Object.freeze([...snapshots].map(([runId, snapshot]) => ({ runId, snapshot }))), pressure: Object.freeze(pressure), exhaustion: Object.freeze(exhaustion), taskExhausted: options.terminalStatus === 'budget_exhausted' || taskState?.status === 'budget_exhausted' || stackState?.status === 'budget_exhausted', stageExhaustion: Object.freeze(stageExhaustion) }),
-    timing: Object.freeze({ totalMs: number(options.totalMs), workflows: Object.freeze(workflows) }), hiddenAcceptance: options.hiddenAcceptance, humanInterventions: options.humanInterventions, eventsOmitted: options.eventsOmitted ?? 0,
+    timing: Object.freeze({ totalMs: number(options.totalMs), workflows: Object.freeze(workflows), providerAttempts: Object.freeze(providerAttempts) }), hiddenAcceptance: options.hiddenAcceptance, humanInterventions: options.humanInterventions, eventsOmitted: options.eventsOmitted ?? 0,
   });
 }
 
@@ -537,6 +551,7 @@ function eventEvidence(event: ApplicationEvent): Readonly<Record<string, unknown
   if ('name' in event && typeof event.name === 'string') safe.name = event.name;
   if ('status' in event && typeof event.status === 'string') safe.status = event.status;
   if (event.type === 'provider.attempt.started') safe.attemptId = event.attemptId;
+  if (event.type === 'provider.attempt.finished') safe.attempt = { attemptId: event.attemptId, outcome: event.outcome, responseAcceptanceMs: event.timing.responseAcceptanceMs ?? null, firstUsefulOutputMs: event.timing.firstUsefulOutputMs ?? null, providerActiveMs: event.timing.providerActiveMs };
   if (event.type === 'provider.retry.scheduled') safe.retry = { attemptId: event.attemptId, count: event.retry, delayMs: event.delayMs };
   if (event.type === 'provider.retry.exhausted') safe.retry = { attemptId: event.attemptId, count: event.retries, exhausted: true };
   if (event.type === 'provider.stall.suspected' || event.type === 'provider.stall.detected') safe.stall = { attemptId: event.attemptId, phase: event.phase, inactivityMs: event.inactivityMs, detected: event.type === 'provider.stall.detected' };

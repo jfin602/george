@@ -248,10 +248,13 @@ test('live telemetry records cached usage and completed tool batches with explic
     { type: 'provider.tool.call', callId: 'one', name: 'read_file', arguments: '{}' },
     { type: 'provider.tool.call', callId: 'two', name: 'read_file', arguments: '{}' },
     { type: 'provider.response.completed', usage: { inputTokens: 10, outputTokens: 2, cachedInputTokens: 6 } },
+    { type: 'provider.attempt.finished', turnId: 't', runId: 'r', attemptId: 'a', outcome: 'completed', timing: { responseAcceptanceMs: 4, firstUsefulOutputMs: 61_000, providerActiveMs: 61_010 } },
   ], terminalStatus: 'failed', hiddenAcceptance: 'not_run', humanInterventions: 0 });
   assert.deepEqual(trace.metrics.toolBatchWidths, [2]);
   assert.equal(trace.metrics.toolBatchCount, 1);
   assert.equal(trace.metrics.cachedInputTokens, 6);
+  assert.deepEqual({ acceptance: trace.metrics.responseAcceptanceMs, useful: trace.metrics.firstUsefulOutputMs, active: trace.metrics.providerActiveMs }, { acceptance: 4, useful: 61_000, active: 61_010 });
+  assert.deepEqual(trace.timing.providerAttempts, [{ attemptId: 'a', outcome: 'completed', responseAcceptanceMs: 4, firstUsefulOutputMs: 61_000, providerActiveMs: 61_010 }]);
   assert.deepEqual({ internal: trace.metrics.internalTextBytes, concurrent: trace.metrics.concurrentReadBatchCount, parallel: trace.metrics.parallelBatchWallMs, avoided: trace.metrics.modelRoundsAvoided, controls: trace.metrics.georgeControlCount, human: trace.metrics.humanModeRounds, operation: trace.metrics.operationModeRounds, corrections: trace.metrics.correctionCycles }, { internal: null, concurrent: 0, parallel: null, avoided: 0, controls: 0, human: null, operation: null, corrections: 0 });
 });
 

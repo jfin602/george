@@ -41,6 +41,7 @@ import {
   type DiagnosticObserver,
   type GeorgeErrorShape,
   type ModelProvider,
+  type ProviderActivity,
   type ProviderContinuation,
   type ProviderPressure,
   type ProviderRequest,
@@ -924,6 +925,11 @@ export class AgentLoopApplicationService {
           let providerFailureBoundary = true;
           let stallDetectedEmitted = false;
           let watchdog: ProviderAttemptWatchdog | undefined;
+          let attemptStartedAt: number | undefined;
+          let responseAcceptedAt: number | undefined;
+          let firstUsefulOutputAt: number | undefined;
+          let responseCompletedAt: number | undefined;
+          let attemptFinishedEmitted = false;
           calls = [];
           text = '';
           responseId = undefined;
@@ -932,6 +938,7 @@ export class AgentLoopApplicationService {
           reportedOutputTokens = undefined;
           try {
             yield* this.consumeBudget(submission.session, turnId, budget, 'providerAttempts', 1, submission.signal);
+            attemptStartedAt = this.stallScheduler.now();
             yield* emit({ type: 'provider.attempt.started', turnId, runId: budget.id, attemptId });
             yield* this.invokeHooks(submission.session, { name: 'provider.requested', sessionId: submission.session.id, turnId, runId: budget.id }, budget, submission.signal);
             if (submission.signal?.aborted) throw cancellationError(submission.signal);
@@ -942,7 +949,14 @@ export class AgentLoopApplicationService {
               ...(attemptContinuation === undefined && toolRounds === 0 && submission.initialToolChoice !== undefined ? { toolChoice: submission.initialToolChoice } : {}),
               ...(attemptContinuation === undefined ? {} : { continuation: attemptContinuation }),
             };
-            const iterator = this.provider.stream(request, { signal: attemptSignal, timeoutMs: submission.timeoutMs, onActivity: () => watchdog?.activity() })[Symbol.asyncIterator]();
+            const observeActivity = (activity: ProviderActivity) => {
+              if (responseCompletedAt !== undefined) return;
+              const now = this.stallScheduler.now();
+              if (activity === 'accepted') responseAcceptedAt ??= now;
+              else firstUsefulOutputAt ??= now;
+              watchdog?.activity(activity);
+            };
+            const iterator = this.provider.stream(request, { signal: attemptSignal, timeoutMs: submission.timeoutMs, onActivity: observeActivity })[Symbol.asyncIterator]();
             let pending = iterator.next().then((value) => ({ kind: 'next' as const, value }), (error: unknown) => ({ kind: 'error' as const, error }));
             try {
               while (true) {
@@ -963,8 +977,11 @@ export class AgentLoopApplicationService {
                 const event = outcome.value.value;
                 if (submission.signal?.aborted) throw cancellationError(submission.signal);
                 if (event.type === 'provider.error' && watchdog.stalled) throw watchdog.error();
-                if (event.type === 'provider.response.completed') watchdog.complete();
-                else if (event.type !== 'provider.error') watchdog.activity();
+                if (event.type === 'provider.response.completed') {
+                  responseCompletedAt = this.stallScheduler.now();
+                  watchdog.complete();
+                } else if (event.type === 'provider.response.started') observeActivity('accepted');
+                else if ((event.type === 'provider.text.delta' && event.delta.length > 0) || event.type === 'provider.tool.call') observeActivity('output_progress');
                 yield* emit(event);
                 if (event.type === 'provider.response.started') {
                   responseId = event.responseId;
@@ -1002,8 +1019,15 @@ export class AgentLoopApplicationService {
               watchdog.stop();
               void iterator.return?.().catch(() => undefined);
             }
-            yield* this.consumeBudget(submission.session, turnId, budget, 'wallClockMs', 0, submission.signal);
             if (!completed) throw new GeorgeError('provider', 'Provider stream ended without a completion event.');
+            const completedAt = responseCompletedAt ?? this.stallScheduler.now();
+            yield* emit({ type: 'provider.attempt.finished', turnId, runId: budget.id, attemptId, outcome: 'completed', timing: {
+              ...(responseAcceptedAt === undefined ? {} : { responseAcceptanceMs: Math.max(0, responseAcceptedAt - attemptStartedAt!) }),
+              ...(firstUsefulOutputAt === undefined ? {} : { firstUsefulOutputMs: Math.max(0, firstUsefulOutputAt - attemptStartedAt!) }),
+              providerActiveMs: Math.max(0, completedAt - attemptStartedAt!),
+            } });
+            attemptFinishedEmitted = true;
+            yield* this.consumeBudget(submission.session, turnId, budget, 'wallClockMs', 0, submission.signal);
             providerFailureBoundary = false;
             providerRounds += 1;
             yield* this.invokeHooks(submission.session, { name: 'provider.responded', sessionId: submission.session.id, turnId, runId: budget.id, provider: { ...(responseId === undefined ? {} : { responseId }), completed, hadToolCalls: calls.length > 0 } }, budget, submission.signal);
@@ -1011,8 +1035,21 @@ export class AgentLoopApplicationService {
             break;
           } catch (error) {
             let normalized = asGeorgeError(error);
-            if (submission.signal?.aborted) throw cancellationError(submission.signal);
-            if (watchdog?.stalled) normalized = watchdog.error();
+            const callerCancelled = submission.signal?.aborted === true;
+            if (callerCancelled) normalized = cancellationError(submission.signal) ?? new GeorgeError('cancelled', 'Operation cancelled.');
+            else if (watchdog?.stalled) normalized = watchdog.error();
+            if (attemptStartedAt !== undefined && !attemptFinishedEmitted) {
+              const finishedAt = this.stallScheduler.now();
+              yield* emit({
+                type: 'provider.attempt.finished', turnId, runId: budget.id, attemptId, outcome: normalized.code === 'cancelled' ? 'cancelled' : 'failed',
+                timing: {
+                  ...(responseAcceptedAt === undefined ? {} : { responseAcceptanceMs: Math.max(0, responseAcceptedAt - attemptStartedAt) }),
+                  ...(firstUsefulOutputAt === undefined ? {} : { firstUsefulOutputMs: Math.max(0, firstUsefulOutputAt - attemptStartedAt) }),
+                  providerActiveMs: Math.max(0, finishedAt - attemptStartedAt),
+                },
+              });
+            }
+            if (normalized.code === 'cancelled') throw normalized;
             const detectedStall = providerStall(normalized);
             if (detectedStall && !stallDetectedEmitted) yield* emit({ type: 'provider.stall.detected', turnId, runId: budget.id, attemptId, phase: detectedStall.phase, inactivityMs: detectedStall.inactivityMs });
             if (providerFailureBoundary && normalized.code === 'provider' && !providerErrorEmitted) yield* emit({ type: 'provider.error', error: normalized });

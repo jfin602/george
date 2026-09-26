@@ -234,6 +234,7 @@ test('durable sessions retain only bounded normalized run-budget evidence', asyn
     consumed: { providerAttempts: 2, toolExecutions: 0, retryAttempts: 0, compactionAttempts: 0, compactionCheckpoints: 0, processExecutions: 0, processRuntimeMs: 0, wallClockMs: 4, contextTokens: 4, providerInputTokens: 0, providerOutputTokens: 0 },
   } as const;
   appendSessionEvent(session, { type: 'reliability.run.started', turnId: 'turn-1', runId: 'run-1', budget });
+  appendSessionEvent(session, { type: 'provider.attempt.finished', turnId: 'turn-1', runId: 'run-1', attemptId: 'p1a1-run-1', outcome: 'completed', timing: { responseAcceptanceMs: 7, firstUsefulOutputMs: 61_000, providerActiveMs: 61_004 } });
   appendSessionEvent(session, { type: 'provider.retry.scheduled', turnId: 'turn-1', runId: 'run-1', attemptId: 'p1a1-run-1', retry: 1, delayMs: 7, category: 'provider' });
   appendSessionEvent(session, { type: 'provider.retry.exhausted', turnId: 'turn-1', runId: 'run-1', attemptId: 'p1a3-run-1', retries: 2, category: 'provider' });
   appendSessionEvent(session, { type: 'provider.stall.suspected', turnId: 'turn-1', runId: 'run-1', attemptId: 'p1a2-run-1', phase: 'response_active', inactivityMs: 60_000 });
@@ -243,7 +244,8 @@ test('durable sessions retain only bounded normalized run-budget evidence', asyn
   appendSessionEvent(session, { type: 'budget.exhausted', turnId: 'turn-1', runId: 'run-1', dimension: 'providerAttempts', budget });
   await store.save(session);
   const reopened = await store.open('budget-session', workspace);
-  assert.deepEqual(reopened.events.map((event) => event.type), ['reliability.run.started', 'provider.retry.scheduled', 'provider.retry.exhausted', 'provider.stall.suspected', 'provider.rebase.started', 'provider.stall.terminal', 'budget.pressure', 'budget.exhausted']);
+  assert.deepEqual(reopened.events.map((event) => event.type), ['reliability.run.started', 'provider.attempt.finished', 'provider.retry.scheduled', 'provider.retry.exhausted', 'provider.stall.suspected', 'provider.rebase.started', 'provider.stall.terminal', 'budget.pressure', 'budget.exhausted']);
+  assert.deepEqual(reopened.events.find((event) => event.type === 'provider.attempt.finished'), session.events[1]);
   const serialized = await readFile(join(state, 'budget-session.json'), 'utf8');
   assert.doesNotMatch(serialized, /provider payload|stdout|environment/i);
 });

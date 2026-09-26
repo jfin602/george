@@ -7,6 +7,7 @@ import {
   validateProviderBaseUrl,
   type ModelProvider,
   type ProviderEvent,
+  type ProviderActivity,
   type ProviderRequest,
   type ProviderStreamOptions,
   type ProviderUsage,
@@ -246,7 +247,11 @@ class FunctionCallAssembler {
   }
 }
 
-function normalizeMessage(message: SseMessage, functionCalls: FunctionCallAssembler): ProviderEvent | undefined {
+function normalizeMessage(
+  message: SseMessage,
+  functionCalls: FunctionCallAssembler,
+  onActivity?: (activity: ProviderActivity) => void,
+): ProviderEvent | undefined {
   if (message.data === '[DONE]') return undefined;
 
   let payload: unknown;
@@ -265,6 +270,10 @@ function normalizeMessage(message: SseMessage, functionCalls: FunctionCallAssemb
   const eventPayload = payload as Record<string, unknown>;
   const response = eventPayload.response;
   const functionCall = functionCalls.consume(wireType, payload);
+  if (wireType === 'response.created') onActivity?.('accepted');
+  if ((wireType === 'response.output_item.added' && stringAt(eventPayload.item, 'type') === 'function_call')
+    || (wireType === 'response.function_call_arguments.delta' && (stringAt(payload, 'delta')?.length ?? 0) > 0)
+    || wireType === 'response.function_call_arguments.done') onActivity?.('output_progress');
   if (functionCall) return functionCall;
   switch (wireType) {
     case 'response.created':
@@ -275,6 +284,7 @@ function normalizeMessage(message: SseMessage, functionCalls: FunctionCallAssemb
     case 'response.output_text.delta': {
       const delta = stringAt(payload, 'delta');
       if (delta === undefined) throw providerError('LM Studio sent a text delta without text.');
+      if (delta.length > 0) onActivity?.('output_progress');
       return { type: 'provider.text.delta', delta };
     }
     case 'response.completed': {
@@ -442,8 +452,7 @@ export class LmStudioResponsesProvider implements ModelProvider {
       const functionCalls = new FunctionCallAssembler();
       try {
         for await (const message of parseSse(response.body)) {
-          options.onActivity?.();
-          const event = normalizeMessage(message, functionCalls);
+          const event = normalizeMessage(message, functionCalls, options.onActivity);
           if (!event) continue;
           if (event.type === 'provider.response.completed') completed = true;
           if (event.type === 'provider.tool.call') {

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { createServer, type Server } from 'node:http';
 import test from 'node:test';
 
-import { GeorgeError, resolveGeorgeConfig } from '../../../src/core/index.ts';
+import { GeorgeError, resolveGeorgeConfig, type ProviderActivity } from '../../../src/core/index.ts';
 import { LmStudioResponsesProvider } from '../../../src/provider/index.ts';
 
 type RequestHandler = (request: import('node:http').IncomingMessage, response: import('node:http').ServerResponse) => void;
@@ -58,8 +58,8 @@ test('LM Studio provider sends the Responses request shape and parses split CRLF
   t.after(() => close(server));
 
   const provider = new LmStudioResponsesProvider({ baseUrl, model: 'local-model' });
-  let activity = 0;
-  const events = await eventsFrom(provider.stream({ instructions: 'Be brief.', input: 'Hello' }, { onActivity: () => { activity += 1; } }));
+  const activity: ProviderActivity[] = [];
+  const events = await eventsFrom(provider.stream({ instructions: 'Be brief.', input: 'Hello' }, { onActivity: (item) => { activity.push(item); } }));
 
   assert.deepEqual(JSON.parse(requestBody), {
     model: 'local-model',
@@ -73,7 +73,7 @@ test('LM Studio provider sends the Responses request shape and parses split CRLF
     { type: 'provider.text.delta', delta: ' world' },
     { type: 'provider.response.completed', usage: { inputTokens: 3, outputTokens: 2, cachedInputTokens: 1 } },
   ]);
-  assert.equal(activity, 4, 'valid SSE frames refresh liveness without adding semantic events');
+  assert.deepEqual(activity, ['accepted', 'output_progress', 'output_progress'], 'only acceptance and useful generation cross the payload-free activity seam');
 });
 
 test('LM Studio provider maps provider-neutral tool choice without changing tools or continuation', async (t) => {
@@ -128,10 +128,12 @@ test('LM Studio provider assembles a function call from output-item and argument
   t.after(() => close(server));
 
   const provider = new LmStudioResponsesProvider({ baseUrl, model: 'local-model' });
-  assert.deepEqual(await eventsFrom(provider.stream({ input: 'Read a.ts' })), [
+  const activity: ProviderActivity[] = [];
+  assert.deepEqual(await eventsFrom(provider.stream({ input: 'Read a.ts' }, { onActivity: (item) => { activity.push(item); } })), [
     { type: 'provider.tool.call', callId: 'call-1', name: 'read_file', arguments: '{"path":"a.ts"}' },
     { type: 'provider.response.completed' },
   ]);
+  assert.deepEqual(activity, ['output_progress', 'output_progress', 'output_progress', 'output_progress']);
 });
 
 test('LM Studio provider completes arguments-done calls from earlier output-item state', async (t) => {
