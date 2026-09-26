@@ -26,6 +26,8 @@ The original qualification sequence remains historical authority. `c9-greenfield
    - Run one official attempt only after fresh Gate B2 Green.
    - Must preserve baseline behavior, pass focused/broad validation and hidden acceptance, finish with completed TaskState, use zero human coding intervention, and avoid task/stage/correction/run-budget exhaustion.
 
+Before spending the next fresh live gate, `c9-qualification-preflight-scope` must qualify the preflight itself. The hard affected-system floor must be Green. Broad Node 26 `npm test` remains separately characterized, and live eligibility depends on a controlled pre-change-vs-candidate regression delta rather than requiring the aggregate broad suite to be Green. Historical broad failures remain Not Green and are not waived.
+
 Historical `greenfield-express-v1` / `existing-express-feature-v1` remain immutable evidence. `greenfield-express-v1` is Not Green because its task-stack authoring duplicates preflight inspection as ordinary workflow and exhausted the duplicate/no-progress guard before implementation. That result is not reclassified or erased.
 
 Instrument alignment rules:
@@ -37,7 +39,7 @@ Instrument alignment rules:
 
 Current qualified sub-boundaries remain Green: production StackState/task-stack execution; Bubblewrap containment; read SHA/mutation preconditions; mandatory first-round INSPECT; application-owned INSPECT completion; exception-safe live evidence; text-framing evidence/guard; mutation-intent authority; and fair frozen-edit approval.
 
-Phase 9 is ready for owner closeout only if the fresh corrected Gate A, Gate B2, and Gate C2 are all Green and no new blocking regression appears.
+Phase 9 is ready for owner closeout only if qualification-preflight scope is Green, the hard affected-system floor is Green, the broad regression delta is Green, the fresh corrected Gate A, Gate B2, and Gate C2 are all Green, and no new blocking regression appears. Aggregate retained broad failures remain separately classified.
 
 ## Mutation-precondition convergence correction qualification
 
