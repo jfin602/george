@@ -14,6 +14,7 @@ import {
   PendingApprovalPort,
   appendSessionEvent,
   createSession,
+  type ApprovalRequest,
   type ModelProvider,
   type ProviderEvent,
   type ProviderRequest,
@@ -99,6 +100,15 @@ class FakeThinkingClock implements ThinkingClock {
   tick(): void { for (const callback of [...this.callbacks.values()]) callback(); }
 }
 
+class ObservedApprovalPort extends PendingApprovalPort {
+  readonly requested = Promise.withResolvers<ApprovalRequest>();
+
+  override request(request: ApprovalRequest, options: Readonly<{ signal?: AbortSignal }> = {}) {
+    this.requested.resolve(request);
+    return super.request(request, options);
+  }
+}
+
 class ThinkingToolProvider implements ModelProvider {
   calls: Array<{ request: ProviderRequest; options: ProviderStreamOptions }> = [];
   releaseThinking = Promise.withResolvers<void>();
@@ -133,8 +143,9 @@ async function tui(
 ) {
   const workspace = await mkdtemp(join(tmpdir(), 'george-tui-'));
   await writeFile(join(workspace, 'BOOT.md'), 'fixture boot');
-  const setup = await createTestRenderer({ width: 72, height: 18, kittyKeyboard: true, exitOnCtrlC: false });
-  const approvals = new PendingApprovalPort();
+  // Phase 9 added persistent task/page chrome; constrained layouts are exercised explicitly by resize tests.
+  const setup = await createTestRenderer({ width: 72, height: 24, kittyKeyboard: true, exitOnCtrlC: false });
+  const approvals = new ObservedApprovalPort();
   const service = await createOneTurnApplicationService({ provider, workspace, approvalPort: approvals, ...options });
   const app = new GeorgeTui({ renderer: setup.renderer, service, provider: 'LM Studio', model: 'test-model', approvals, ...uiOptions });
   return { workspace, setup, app, approvals };
@@ -322,6 +333,7 @@ test('tool activity, provider failure, cancellation, and teardown clear the thin
   await tool.setup.waitForFrame((frame) => frame.includes('Thinking'));
   assert.equal(toolClock.size, 1);
   toolProvider.releaseThinking.resolve();
+  await tool.approvals.requested.promise;
   await tool.setup.waitForFrame((frame) => frame.includes('Awaiting approval for write_file'));
   assert.equal(toolClock.size, 0);
   tool.setup.mockInput.pressKey('d', { ctrl: true });
@@ -990,7 +1002,7 @@ test('test renderer presents normalized approvals and allow, deny, and Esc keep 
   const allowed = await write('allow', 'allowed.txt', 'yes');
   await allowed.setup.mockInput.typeText('write it');
   allowed.setup.mockInput.pressEnter();
-  await new Promise<void>((resolve) => setTimeout(resolve, 50));
+  await allowed.approvals.requested.promise;
   await allowed.setup.waitForFrame((frame) => frame.includes('Approval required'));
   assert.match(allowed.setup.captureCharFrame(), /Target: allowed.txt/);
   await allowed.setup.mockInput.typeText('next draft');
@@ -1004,7 +1016,7 @@ test('test renderer presents normalized approvals and allow, deny, and Esc keep 
   await writeFile(join(denied.workspace, 'denied.txt'), 'before');
   await denied.setup.mockInput.typeText('deny it');
   denied.setup.mockInput.pressEnter();
-  await new Promise<void>((resolve) => setTimeout(resolve, 50));
+  await denied.approvals.requested.promise;
   await denied.setup.waitForFrame((frame) => frame.includes('[Ctrl+A]llow once'));
   assert.match(denied.setup.captureCharFrame(), /Target: denied.txt \(already dirty\)/);
   denied.setup.mockInput.pressKey('d', { ctrl: true });
@@ -1016,6 +1028,7 @@ test('test renderer presents normalized approvals and allow, deny, and Esc keep 
   t.after(() => cleanup(framing));
   await framing.setup.mockInput.typeText('show exceptional intent');
   framing.setup.mockInput.pressEnter();
+  await framing.approvals.requested.promise;
   await framing.setup.waitForFrame((frame) => frame.includes('Existing text framing will change'));
   assert.match(framing.setup.captureCharFrame(), /Target: framing.txt/);
   framing.setup.mockInput.pressKey('d', { ctrl: true });
@@ -1024,7 +1037,7 @@ test('test renderer presents normalized approvals and allow, deny, and Esc keep 
   const cancelled = await write('cancel', 'cancelled.txt', 'never');
   await cancelled.setup.mockInput.typeText('cancel it');
   cancelled.setup.mockInput.pressEnter();
-  await new Promise<void>((resolve) => setTimeout(resolve, 50));
+  await cancelled.approvals.requested.promise;
   await cancelled.setup.waitForFrame((frame) => frame.includes('Approval required'));
   cancelled.setup.resize(48, 12);
   cancelled.setup.mockInput.pressEscape();
@@ -1037,7 +1050,7 @@ test('test renderer presents normalized approvals and allow, deny, and Esc keep 
   t.after(() => cleanup(process));
   await process.setup.mockInput.typeText('show process');
   process.setup.mockInput.pressEnter();
-  await new Promise<void>((resolve) => setTimeout(resolve, 50));
+  await process.approvals.requested.promise;
   await process.setup.waitForFrame((frame) => frame.includes('not OS/workspace sandboxed'));
   assert.match(process.setup.captureCharFrame(), /Executable: node/);
   process.setup.mockInput.pressKey('d', { ctrl: true });
@@ -1054,6 +1067,7 @@ test('test renderer presents bounded generic external approval details', async (
   t.after(() => cleanup(item));
   await item.setup.mockInput.typeText('show external');
   item.setup.mockInput.pressEnter();
+  await item.approvals.requested.promise;
   await item.setup.waitForFrame((frame) => frame.includes('External effect is unknown'));
   const frame = item.setup.captureCharFrame();
   assert.match(frame, /Service: Fixture[\s\S]*Origin: https:\/\/fixture\.invalid[\s\S]*Credential configured: yes/);
@@ -1071,6 +1085,7 @@ test('test renderer warns before authenticated Chrome browser access', async (t)
   t.after(() => cleanup(item));
   await item.setup.mockInput.typeText('reproduce it');
   item.setup.mockInput.pressEnter();
+  await item.approvals.requested.promise;
   await item.setup.waitForFrame((frame) => frame.includes('logged-in browser'));
   item.setup.mockInput.pressKey('d', { ctrl: true });
   await item.app.waitForIdle();
