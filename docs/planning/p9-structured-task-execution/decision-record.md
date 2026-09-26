@@ -125,6 +125,24 @@ Phase 9 correction evidence makes several originally directional decisions concr
 
 **Versioned qualification instruments.** Once a live-work instrument version has been exercised officially, structural task-stack corrections create a new instrument version rather than rewriting the old fixture. Historical v1 inputs/results remain immutable longitudinal evidence. A newer instrument may reuse the same product behavior acceptance suite when the required software behavior is unchanged; its metadata must record the new task-stack version/digest separately.
 
+### Mutation-precondition convergence and explicit directory creation
+
+The aligned `greenfield-express-v2` attempt exposed a production convergence boundary after INSPECT semantics were corrected. Dependency setup created `package.json`; Qwen then requested an overwrite without `expectedSha256`, which George correctly rejected. A later same-round request targeted `src/app.js` while `src/` did not exist. Current mutation-path preparation requires the parent directory to exist and can fail before ordinary terminal tool evidence is produced. The structured coding tool surface also lacks an explicit directory-creation capability.
+
+Phase 9 therefore locks these additional rules:
+
+- **Existing-file SHA authority is unchanged.** George must never invent, inject, or silently refresh `expectedSha256` for model-originated writes/patches. The model obtains the current precondition from `read_file.sha256` and retries explicitly.
+- **Recoverable local prerequisite failures stay inside the tool loop.** A model-originated tool request that is schema-valid but encounters an ordinary local validation/precondition/path prerequisite failure must produce bounded per-call `tool.failed` evidence when the outcome is known to be no side effect. It must not abort the whole provider turn merely because pre-dispatch preparation failed.
+- Cancellation, configuration faults, task/stage/run-budget exhaustion, policy-denied operations, ambiguous side effects, and outcome-unknown external effects keep their existing stronger stop/recovery semantics and are not downgraded into ordinary retryable failures.
+- **Directory creation is explicit.** George gains a native `create_directory` workspace mutation tool rather than silently teaching `write_file` to manufacture parent directories. It accepts only bounded relative workspace paths, rejects traversal/absolute/symlink escapes, may create the requested missing directory chain, is idempotent when the requested directory already exists, and fails on regular-file or unsafe collisions. It never deletes, replaces, or moves existing entries.
+- Standard workspace mode applies the normal mutation approval boundary. Workspace Autonomous may auto-run qualified in-workspace directory creation under the existing user ceiling. Repository/task/model text cannot raise that ceiling.
+- Directory creation must remain observable in tool/progress evidence and recoverable after interruption. Reconciliation may classify the operation from canonical directory existence/type evidence; it must not blindly replay an ambiguous mutation.
+- Same-response tool calls retain model order. One ordinary recoverable local failure must not leave later safe calls in an unexplained nonterminal state solely because the harness threw outside the per-call tool boundary.
+- The v2 qualification instruments remain frozen. This is production-loop/tool recovery work, not another instrument authoring change, so `greenfield-express-v3` is not created unless the task/instrument structure itself later changes.
+- Because production agent-loop/tool/recovery behavior changes, the exact Gate A must be rerun before a fresh B2 attempt. Historical Gate A Green and prior B2 Not Green evidence remain immutable.
+
+This correction does not change George Task Prompt v1, weaken mutation preconditions, expose `run_process` to structured implementation merely to create directories, increase stage limits to obtain a pass, or infer execution semantics from work-unit titles.
+
 ### Transcript and Task TUI pages
 
 Phase 9 supersedes the earlier presentation direction that permanently interleaved routine work-log rows into the conversation surface.
