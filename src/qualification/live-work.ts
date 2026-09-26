@@ -492,6 +492,9 @@ function eventEvidence(event: ApplicationEvent): Readonly<Record<string, unknown
   if ('callId' in event && typeof event.callId === 'string') safe.callId = event.callId;
   if ('name' in event && typeof event.name === 'string') safe.name = event.name;
   if ('status' in event && typeof event.status === 'string') safe.status = event.status;
+  if (event.type === 'provider.attempt.started') safe.attemptId = event.attemptId;
+  if (event.type === 'provider.retry.scheduled') safe.retry = { attemptId: event.attemptId, count: event.retry, delayMs: event.delayMs };
+  if (event.type === 'provider.retry.exhausted') safe.retry = { attemptId: event.attemptId, count: event.retries, exhausted: true };
   if (event.type === 'context.assembled') safe.diagnostics = { profileId: event.diagnostics?.profileId ?? null, attemptedProfileIds: event.diagnostics?.attemptedProfileIds ?? [], promotionReasons: event.diagnostics?.promotionReasons ?? [], estimatedTokens: event.diagnostics?.estimatedTokens ?? null, providerInputBudget: event.diagnostics?.providerInputBudget ?? null, remainingHeadroom: event.diagnostics?.remainingHeadroom ?? null };
   if (event.type === 'context.envelope.promoted') safe.promotion = { fromProfileId: event.fromProfileId, toProfileId: event.toProfileId, reason: event.reason, tokens: event.tokens, providerInputBudget: event.providerInputBudget };
   if (event.type === 'provider.response.completed') safe.usage = { inputTokens: event.usage?.inputTokens ?? null, outputTokens: event.usage?.outputTokens ?? null };

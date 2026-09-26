@@ -962,7 +962,7 @@ test('one-turn service reports cancellation and configured no-retry provider fai
     { type: 'provider.text.delta', delta: 'Do not commit me.' },
     { type: 'provider.error', error: { code: 'provider', message: 'offline after text' } },
   ]);
-  const partialService = await createOneTurnApplicationService({ provider: partial, workspace: root });
+  const partialService = await createOneTurnApplicationService({ provider: partial, workspace: root, providerRetryPolicy: { maxRetries: 0, initialDelayMs: 0, maxDelayMs: 0 } });
   const partialSession = createSession({ workspace: root });
   const partialEvents = await collect(partialService.run({ session: partialSession, input: 'Fail after text', turnId: 'turn-5' }));
   assert.equal(partialEvents.some((event) => event.type === 'assistant.response.completed'), false);
@@ -1148,30 +1148,199 @@ test('provider and retry budget exhaustion remain explicit during retry', async 
   assert.equal(providerEvents.some((event) => event.type === 'budget.exhausted' && event.dimension === 'providerAttempts'), true);
 });
 
-test('provider failures after response evidence never retry or commit provisional output', async (t) => {
+test('incomplete provider retry exhaustion terminates truthfully without committing provisional text', async (t) => {
   const root = await workspace();
   t.after(() => rm(root, { recursive: true, force: true }));
   const provider = new class implements ModelProvider {
     calls = 0;
     async *stream(): AsyncGenerator<ProviderEvent> {
       this.calls += 1;
-      yield { type: 'provider.response.started', responseId: 'partial' };
-      yield { type: 'provider.text.delta', delta: 'Do not commit me.' };
-      yield { type: 'provider.tool.call', callId: 'write', name: 'write_file', arguments: '{"path":"later.txt","content":"x"}' };
-      yield { type: 'provider.tool.call', callId: 'patch', name: 'apply_patch', arguments: '{"path":"later.txt","patch":""}' };
-      yield { type: 'provider.tool.call', callId: 'process', name: 'run_process', arguments: '{"executable":"node","arguments":[]}' };
-      throw new GeorgeError('provider', 'offline after output');
+      yield { type: 'provider.response.started', responseId: `incomplete-${this.calls}` };
+      yield { type: 'provider.text.delta', delta: `provisional-${this.calls}` };
+      throw new GeorgeError('provider', 'still offline');
     }
   }();
   const session = createSession({ workspace: root });
-  const service = await createOneTurnApplicationService({ provider, workspace: root, retrySleeper: async () => { throw new Error('must not sleep'); } });
-  const events = await collect(service.run({ session, input: 'partial' }));
-  assert.equal(provider.calls, 1);
-  assert.equal(events.some((event) => event.type === 'provider.retry.scheduled'), false);
+  const service = await createOneTurnApplicationService({ provider, workspace: root, providerRetryPolicy: { maxRetries: 1, initialDelayMs: 0, maxDelayMs: 0 }, retrySleeper: async () => {} });
+  const events = await collect(service.run({ session, input: 'exhaust' }));
+  assert.equal(provider.calls, 2);
+  assert.equal(events.filter((event) => event.type === 'provider.error').length, 2);
+  assert.equal(events.filter((event) => event.type === 'provider.retry.scheduled').length, 1);
+  const exhausted = events.find((event) => event.type === 'provider.retry.exhausted');
+  assert.match(exhausted?.attemptId ?? '', /^p1a2-/);
+  assert.equal(exhausted?.retries, 1);
+  assert.equal(events.at(-1)?.type === 'turn.failed' && events.at(-1).error.code, 'provider');
   assert.equal(events.some((event) => event.type === 'assistant.response.completed'), false);
+  assert.deepEqual(session.transcript, [{ role: 'user', text: 'exhaust' }]);
+});
+
+test('incomplete provider branches retry from canonical pre-round state and discard provisional output', async (t) => {
+  const root = await workspace();
+  t.after(() => rm(root, { recursive: true, force: true }));
+  for (const [name, provisional] of [
+    ['no response evidence', []],
+    ['response start', [{ type: 'provider.response.started', responseId: 'incomplete-start' }]],
+    ['provisional text', [{ type: 'provider.response.started', responseId: 'incomplete-text' }, { type: 'provider.text.delta', delta: 'Do not commit me.' }]],
+  ] as const) await t.test(name, async () => {
+    const requests: ProviderRequest[] = [];
+    const provider = new class implements ModelProvider {
+      async *stream(request: ProviderRequest): AsyncGenerator<ProviderEvent> {
+        requests.push(request);
+        if (requests.length === 1) {
+          yield* provisional;
+          throw new GeorgeError('provider', 'timed out');
+        }
+        yield { type: 'provider.response.started', responseId: 'complete' };
+        yield { type: 'provider.text.delta', delta: 'Recovered.' };
+        yield { type: 'provider.response.completed' };
+      }
+    }();
+    const session = createSession({ workspace: root });
+    const service = await createOneTurnApplicationService({ provider, workspace: root, providerRetryPolicy: { maxRetries: 1, initialDelayMs: 0, maxDelayMs: 0 }, retrySleeper: async () => {} });
+    const events = await collect(service.run({ session, input: name, turnId: `retry-${name.replaceAll(' ', '-')}` }));
+    assert.equal(requests.length, 2);
+    assert.equal(requests[0]?.continuation, undefined);
+    assert.equal(requests[1]?.continuation, undefined, 'an incomplete response ID never becomes a continuation');
+    assert.equal(events.filter((event) => event.type === 'provider.error').length, 1);
+    assert.equal(events.filter((event) => event.type === 'provider.retry.scheduled').length, 1);
+    assert.deepEqual(events.filter((event) => event.type === 'assistant.response.completed').map((event) => event.text), ['Recovered.']);
+    assert.deepEqual(session.transcript, [{ role: 'user', text: name }, { role: 'assistant', text: 'Recovered.' }]);
+  });
+});
+
+test('incomplete tool proposals are diagnostic only and never execute or become continuations', async (t) => {
+  const root = await workspace();
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const requests: ProviderRequest[] = [];
+  let executions = 0;
+  const tool: ToolDefinition = {
+    name: 'provisional_effect', description: 'Must not execute an incomplete proposal.',
+    inputSchema: { type: 'object', properties: {}, additionalProperties: false },
+    execution: { effect: 'workspace_mutation', replaySafety: 'not_replay_safe', source: { kind: 'builtin' } },
+    execute: async () => { executions += 1; return {}; },
+  };
+  const provider = new class implements ModelProvider {
+    async *stream(request: ProviderRequest): AsyncGenerator<ProviderEvent> {
+      requests.push(request);
+      if (requests.length === 1) {
+        yield { type: 'provider.response.started', responseId: 'incomplete-with-tools' };
+        yield { type: 'provider.tool.call', callId: 'never-run', name: tool.name, arguments: '{}' };
+        throw new GeorgeError('provider', 'timed out after proposals');
+      }
+      yield { type: 'provider.text.delta', delta: 'Fresh response.' };
+      yield { type: 'provider.response.completed' };
+    }
+  }();
+  const session = createSession({ workspace: root });
+  const service = await createOneTurnApplicationService({ provider, workspace: root, additionalTools: [tool], providerRetryPolicy: { maxRetries: 1, initialDelayMs: 0, maxDelayMs: 0 }, retrySleeper: async () => {} });
+  const events = await collect(service.run({ session, input: 'retry proposals' }));
+  assert.equal(executions, 0);
   assert.equal(events.some((event) => event.type === 'tool.requested'), false);
-  assert.equal(events.some((event) => event.type === 'approval.requested'), false);
-  assert.deepEqual(session.transcript, [{ role: 'user', text: 'partial' }]);
+  assert.equal(requests[1]?.continuation, undefined);
+  assert.deepEqual(session.transcript, [{ role: 'user', text: 'retry proposals' }, { role: 'assistant', text: 'Fresh response.' }]);
+});
+
+test('cancellation after provisional response evidence prevents retry', async (t) => {
+  const root = await workspace();
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const controller = new AbortController();
+  let calls = 0;
+  const provider = new class implements ModelProvider {
+    async *stream(): AsyncGenerator<ProviderEvent> {
+      calls += 1;
+      yield { type: 'provider.response.started', responseId: 'cancelled-incomplete' };
+      controller.abort(new GeorgeError('cancelled', 'Stopped'));
+      throw new GeorgeError('provider', 'transport closed');
+    }
+  }();
+  const service = await createOneTurnApplicationService({ provider, workspace: root, providerRetryPolicy: { maxRetries: 2, initialDelayMs: 0, maxDelayMs: 0 }, retrySleeper: async () => { throw new Error('must not retry'); } });
+  const events = await collect(service.run({ session: createSession({ workspace: root }), input: 'cancel', signal: controller.signal }));
+  assert.equal(calls, 1);
+  assert.equal(events.some((event) => event.type === 'provider.retry.scheduled'), false);
+  assert.equal(events.at(-1)?.type, 'turn.cancelled');
+});
+
+test('a later incomplete continuation retries without replaying an already executed tool', async (t) => {
+  const root = await workspace();
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const requests: ProviderRequest[] = [];
+  let executions = 0;
+  const tool: ToolDefinition = {
+    name: 'one_effect', description: 'Execute once.', inputSchema: { type: 'object', properties: {}, additionalProperties: false },
+    execution: { effect: 'remote_mutation', replaySafety: 'not_replay_safe', source: { kind: 'adapter', id: 'fixture' } },
+    execute: async () => { executions += 1; return { executions }; },
+  };
+  const provider = new class implements ModelProvider {
+    async *stream(request: ProviderRequest): AsyncGenerator<ProviderEvent> {
+      requests.push(request);
+      if (requests.length === 1) {
+        yield { type: 'provider.response.started', responseId: 'completed-tool-round' };
+        yield { type: 'provider.tool.call', callId: 'effect-once', name: tool.name, arguments: '{}' };
+        yield { type: 'provider.response.completed' };
+      } else if (requests.length === 2) {
+        yield { type: 'provider.response.started', responseId: 'incomplete-continuation' };
+        throw new GeorgeError('provider', 'continuation timed out');
+      } else {
+        yield { type: 'provider.text.delta', delta: 'Done once.' };
+        yield { type: 'provider.response.completed' };
+      }
+    }
+  }();
+  const service = await createOneTurnApplicationService({
+    provider, workspace: root, additionalTools: [tool], approvalPort: { request: async () => 'allow_once' },
+    providerRetryPolicy: { maxRetries: 1, initialDelayMs: 0, maxDelayMs: 0 }, retrySleeper: async () => {},
+  });
+  const session = createSession({ workspace: root });
+  const events = await collect(service.run({ session, input: 'effect once' }));
+  assert.equal(executions, 1);
+  assert.equal(events.filter((event) => event.type === 'tool.started' && event.name === tool.name).length, 1);
+  assert.deepEqual(requests.slice(1).map((request) => request.continuation?.responseId), ['completed-tool-round', 'completed-tool-round']);
+  assert.equal(requests.some((request) => request.continuation?.responseId === 'incomplete-continuation'), false);
+  assert.equal(events.at(-1)?.type, 'turn.completed');
+});
+
+test('ambiguous effects and non-provider failures prevent transparent provider retry', async (t) => {
+  const root = await workspace();
+  t.after(() => rm(root, { recursive: true, force: true }));
+  let executions = 0;
+  const ambiguous: ToolDefinition = {
+    name: 'ambiguous_remote', description: 'Return an unknown remote outcome.', inputSchema: { type: 'object', properties: {}, additionalProperties: false },
+    execution: { effect: 'remote_mutation', replaySafety: 'not_replay_safe', source: { kind: 'adapter', id: 'fixture' } },
+    execute: async () => { executions += 1; throw new GeorgeError('outcome_unknown', 'Remote outcome is unknown.'); },
+  };
+  const requests: ProviderRequest[] = [];
+  const provider = new class implements ModelProvider {
+    async *stream(request: ProviderRequest): AsyncGenerator<ProviderEvent> {
+      requests.push(request);
+      if (requests.length === 1) {
+        yield { type: 'provider.response.started', responseId: 'ambiguous-round' };
+        yield { type: 'provider.tool.call', callId: 'ambiguous', name: ambiguous.name, arguments: '{}' };
+        yield { type: 'provider.response.completed' };
+        return;
+      }
+      throw new GeorgeError('provider', 'offline after ambiguous effect');
+    }
+  }();
+  const service = await createOneTurnApplicationService({
+    provider, workspace: root, additionalTools: [ambiguous], approvalPort: { request: async () => 'allow_once' },
+    providerRetryPolicy: { maxRetries: 2, initialDelayMs: 0, maxDelayMs: 0 }, retrySleeper: async () => { throw new Error('must not retry'); },
+  });
+  const events = await collect(service.run({ session: createSession({ workspace: root }), input: 'ambiguous' }));
+  assert.equal(executions, 1);
+  assert.equal(requests.length, 2);
+  assert.equal(events.some((event) => event.type === 'provider.retry.scheduled'), false);
+  assert.equal(events.some((event) => event.type === 'recovery.decision' && event.outcome === 'outcome_unknown'), true);
+
+  for (const code of ['configuration', 'validation'] as const) {
+    let calls = 0;
+    const failing = new class implements ModelProvider {
+      async *stream(): AsyncGenerator<ProviderEvent> { calls += 1; throw new GeorgeError(code, `${code} failure`); }
+    }();
+    const blocked = await createOneTurnApplicationService({ provider: failing, workspace: root, providerRetryPolicy: { maxRetries: 2, initialDelayMs: 0, maxDelayMs: 0 }, retrySleeper: async () => { throw new Error('must not retry'); } });
+    const blockedEvents = await collect(blocked.run({ session: createSession({ workspace: root }), input: code }));
+    assert.equal(calls, 1);
+    assert.equal(blockedEvents.some((event) => event.type === 'provider.retry.scheduled'), false);
+  }
 });
 
 test('external effects stay approval-gated, carry bounded George metadata, and cancel while waiting', async (t) => {

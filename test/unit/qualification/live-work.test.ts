@@ -261,6 +261,9 @@ test('schema-2 artifacts retain bounded authoritative failures without raw paylo
     { type: 'turn.started', turnId: 'turn-1' },
     { type: 'provider.attempt.started', turnId: 'turn-1', runId: 'run-1', attemptId: 'attempt-1' },
     { type: 'provider.error', error: { code: 'provider', message: 'LM Studio returned HTTP 422. token=TOP_SECRET', cause: { providerCode: 'context_length_exceeded', providerReason: 'input_too_large', status: 422, rawBody: 'RAW_PROVIDER_PAYLOAD' } } },
+    { type: 'provider.retry.scheduled', turnId: 'turn-1', runId: 'run-1', attemptId: 'attempt-1', retry: 1, delayMs: 7, category: 'provider' },
+    { type: 'provider.attempt.started', turnId: 'turn-1', runId: 'run-1', attemptId: 'attempt-2' },
+    { type: 'provider.retry.exhausted', turnId: 'turn-1', runId: 'run-1', attemptId: 'attempt-2', retries: 1, category: 'provider' },
     { type: 'turn.failed', turnId: 'turn-1', error: { code: 'provider', message: 'Continuation failed.' } },
     { type: 'turn.cancelled', turnId: 'turn-2', error: { code: 'cancelled', message: 'Operator cancelled.' } },
     { type: 'tool.requested', turnId: 'turn-2', callId: 'tool-1', name: 'write_file', arguments: JSON.stringify({ path: 'secret.txt', content: 'FILE_BODY', password: 'PASSWORD_VALUE' }) },
@@ -283,7 +286,11 @@ test('schema-2 artifacts retain bounded authoritative failures without raw paylo
   const attempt = await readFile(join(root, 'attempt.json'), 'utf8');
   const durableTrace = await readFile(join(root, 'trace.json'), 'utf8');
   const evidence = `${attempt}${durableTrace}`;
-  assert.equal(recognizeLiveWorkArtifactSchema(JSON.parse(attempt)), 2);
+  const envelope = JSON.parse(attempt) as { eventEvidence: Array<Record<string, unknown>> };
+  assert.equal(recognizeLiveWorkArtifactSchema(envelope), 2);
+  assert.deepEqual(envelope.eventEvidence.filter((event) => event.type === 'provider.attempt.started').map((event) => event.attemptId), ['attempt-1', 'attempt-2']);
+  assert.deepEqual(envelope.eventEvidence.filter((event) => event.type === 'provider.retry.scheduled').map((event) => event.retry), [{ attemptId: 'attempt-1', count: 1, delayMs: 7 }]);
+  assert.deepEqual(envelope.eventEvidence.filter((event) => event.type === 'provider.retry.exhausted').map((event) => event.retry), [{ attemptId: 'attempt-2', count: 1, exhausted: true }]);
   for (const unsafe of ['RAW_PROVIDER_PAYLOAD', 'FULL_ASSISTANT_PROSE', 'FILE_BODY', 'OLD_FILE_BODY', 'NEW_FILE_BODY', 'PASSWORD_VALUE', 'TOP_SECRET', 'TOOL_SECRET', 'VALIDATION_SECRET', 'HARNESS_SECRET', 'OBSERVER_SECRET']) assert.equal(evidence.includes(unsafe), false, unsafe);
 });
 

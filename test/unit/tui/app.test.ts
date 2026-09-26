@@ -657,7 +657,7 @@ test('provider failure stays visible once with safe metadata and never enters la
       yield { type: 'provider.response.completed' };
     }
   }();
-  const item = await tui(provider);
+  const item = await tui(provider, { providerRetryPolicy: { maxRetries: 0, initialDelayMs: 0, maxDelayMs: 0 } });
   t.after(() => cleanup(item));
 
   await item.setup.mockInput.typeText('first turn');

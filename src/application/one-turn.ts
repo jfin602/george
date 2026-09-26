@@ -194,6 +194,22 @@ function recoverablePreparationError(error: unknown): GeorgeError {
   return normalized;
 }
 
+type ProviderAttemptState = {
+  responseEvidence: 'none' | 'started' | 'text' | 'tool_proposals';
+  completed: boolean;
+  toolExecuted: boolean;
+  assistantCommitted: boolean;
+  ambiguousEffect: boolean;
+};
+
+function canRetryProviderFailure(error: GeorgeErrorShape, state: ProviderAttemptState): boolean {
+  return error.code === 'provider'
+    && !state.completed
+    && !state.toolExecuted
+    && !state.assistantCommitted
+    && !state.ambiguousEffect;
+}
+
 export type OneTurnSubmission = Readonly<{
   session: Session;
   input: string;
@@ -782,6 +798,7 @@ export class AgentLoopApplicationService {
       let providerRounds = 0;
       let mutationEpoch = 0;
       let duplicateReads = 0;
+      let ambiguousEffect = false;
       const successfulReads = new Map<string, number>();
       while (true) {
         if (stageRoundLimit !== undefined && providerRounds >= stageRoundLimit) throw new GeorgeError('budget', `Structured stage provider round limit of ${stageRoundLimit} exhausted.`);
@@ -802,9 +819,12 @@ export class AgentLoopApplicationService {
         let reportedInputTokens: number | undefined;
         let reportedOutputTokens: number | undefined;
         let retries = 0;
+        let attemptState: ProviderAttemptState;
         for (;;) {
           const attemptId = `p${toolRounds + 1}a${retries + 1}-${budget.id.slice(0, 110)}`;
-          let observedResponseEvidence = false;
+          attemptState = { responseEvidence: 'none', completed: false, toolExecuted: false, assistantCommitted: false, ambiguousEffect };
+          let providerErrorEmitted = false;
+          let providerFailureBoundary = true;
           calls = [];
           text = '';
           responseId = undefined;
@@ -826,12 +846,23 @@ export class AgentLoopApplicationService {
               { signal: submission.signal, timeoutMs: submission.timeoutMs },
             )) {
               if (submission.signal?.aborted) throw cancellationError(submission.signal);
-              if (event.type === 'provider.response.started' || event.type === 'provider.text.delta' || event.type === 'provider.tool.call') observedResponseEvidence = true;
               yield* emit(event);
-              if (event.type === 'provider.response.started') responseId = event.responseId;
-              if (event.type === 'provider.text.delta') text += event.delta;
-              if (event.type === 'provider.tool.call') calls.push(event);
-              if (event.type === 'provider.response.completed') completed = true;
+              if (event.type === 'provider.response.started') {
+                responseId = event.responseId;
+                if (attemptState.responseEvidence === 'none') attemptState.responseEvidence = 'started';
+              }
+              if (event.type === 'provider.text.delta') {
+                text += event.delta;
+                if (attemptState.responseEvidence !== 'tool_proposals') attemptState.responseEvidence = 'text';
+              }
+              if (event.type === 'provider.tool.call') {
+                calls.push(event);
+                attemptState.responseEvidence = 'tool_proposals';
+              }
+              if (event.type === 'provider.response.completed') {
+                completed = true;
+                attemptState.completed = true;
+              }
               if (event.type === 'provider.response.completed') {
                 reportedInputTokens = event.usage?.inputTokens;
                 reportedOutputTokens = event.usage?.outputTokens;
@@ -844,10 +875,14 @@ export class AgentLoopApplicationService {
                   effectiveProfile = promoted;
                 }
               }
-              if (event.type === 'provider.error') throw event.error;
+              if (event.type === 'provider.error') {
+                providerErrorEmitted = true;
+                throw new GeorgeError(event.error.code, event.error.message, { cause: event.error.cause });
+              }
             }
             yield* this.consumeBudget(submission.session, turnId, budget, 'wallClockMs', 0, submission.signal);
-            if (!completed) throw { code: 'provider', message: 'Provider stream ended without a completion event.' } satisfies GeorgeErrorShape;
+            if (!completed) throw new GeorgeError('provider', 'Provider stream ended without a completion event.');
+            providerFailureBoundary = false;
             providerRounds += 1;
             yield* this.invokeHooks(submission.session, { name: 'provider.responded', sessionId: submission.session.id, turnId, runId: budget.id, provider: { ...(responseId === undefined ? {} : { responseId }), completed, hadToolCalls: calls.length > 0 } }, budget, submission.signal);
             if (submission.signal?.aborted) throw cancellationError(submission.signal);
@@ -855,7 +890,8 @@ export class AgentLoopApplicationService {
           } catch (error) {
             const normalized = asGeorgeError(error);
             if (submission.signal?.aborted) throw cancellationError(submission.signal);
-            if (normalized.code !== 'provider' || observedResponseEvidence) throw normalized;
+            if (providerFailureBoundary && normalized.code === 'provider' && !providerErrorEmitted) yield* emit({ type: 'provider.error', error: normalized });
+            if (!providerFailureBoundary || !canRetryProviderFailure(normalized, attemptState)) throw normalized;
             if (retries >= this.providerRetryPolicy.maxRetries) {
               yield* emit({ type: 'provider.retry.exhausted', turnId, runId: budget.id, attemptId, retries, category: 'provider' });
               throw normalized;
@@ -874,7 +910,10 @@ export class AgentLoopApplicationService {
         const chainAfterResponse = Math.max(alignedRequestEstimate, reportedInputTokens ?? 0)
           + (reportedOutputTokens ?? estimatedTokens({ text, calls }));
         if (calls.length === 0) {
-          if (text) yield* emit({ type: 'assistant.response.completed', turnId, text });
+          if (text) {
+            yield* emit({ type: 'assistant.response.completed', turnId, text });
+            attemptState.assistantCommitted = true;
+          }
           break;
         }
         if (!responseId) throw { code: 'provider', message: 'Provider response with tool calls did not include a response ID.' } satisfies GeorgeErrorShape;
@@ -918,6 +957,7 @@ export class AgentLoopApplicationService {
           const iterator = this.executeTool(submission.session, turnId, call, submission.signal, budget, undefined, undefined, registry, submission.executionPolicy);
           let next = await iterator.next();
           while (!next.done) {
+            if (next.value.type === 'tool.started') attemptState.toolExecuted = true;
             yield next.value;
             next = await iterator.next();
           }
@@ -925,6 +965,10 @@ export class AgentLoopApplicationService {
           providerResults.push(registry.projectProviderResult(next.value));
           if (next.value.result.ok && execution?.effect === 'workspace_mutation') mutationEpoch += 1;
           if (next.value.result.ok && fingerprint !== undefined) successfulReads.set(fingerprint, mutationEpoch);
+          if (!next.value.result.ok && next.value.result.error.code === 'outcome_unknown') {
+            ambiguousEffect = true;
+            attemptState.ambiguousEffect = true;
+          }
         }
         if (submission.completeAfterSuccessfulToolRound && results.some((result) => result.result.ok)) break;
         // Next request = chain + newly projected results + a fixed 32-token protocol margin.
