@@ -133,6 +133,18 @@ Structured execution also has these qualified boundaries:
 
 The current live evidence qualifies the INSPECT transition and text-framing detector/guard, and leaves mutation-intent authority as the active Phase 9 boundary. `write_file` is an exact full-replacement primitive and must write the caller-supplied text without silent newline normalization. `apply_patch` preserves untouched current-file bytes and is the preferred localized-edit primitive. Existing UTF-8 text framing metadata may be exposed through read evidence so the model can preserve final-newline state and line-ending convention. The low-level mutation executor may accept an explicit framing-change acknowledgement from a trusted caller, but a model-originated acknowledgement is only requested intent. The application layer must convert that exceptional intent into a bounded ApprovalRequest before dispatch, including in Workspace Autonomous mode; ordinary autonomous mutations remain auto-runnable. Approval presentation receives target/effect plus a bounded mutation-intent warning, never raw mutation bodies.
 
+### Recoverable mutation prerequisites and directory creation
+
+The structured coding path must distinguish a failed tool request from a failed provider turn. Once a model-originated local tool call is schema-valid and its outcome is known to have produced no side effect, ordinary workspace validation/precondition/path failures are returned as bounded terminal `tool.failed` evidence so provider continuation can reason over the failure. Pre-dispatch helpers such as approval/recovery/path preparation must not leak ordinary recoverable local errors outside the per-call tool boundary.
+
+This rule does not weaken stronger stop semantics. Cancellation, configuration errors, permission/policy denial, task/stage/run-budget exhaustion, ambiguous local side effects, and outcome-unknown external effects keep their existing fail-closed/recovery behavior.
+
+Existing-file mutation authority remains explicit: `read_file.sha256` is still the provider-visible current-content precondition for `write_file` and `apply_patch`. George never invents or silently refreshes that hash.
+
+Greenfield work also needs an explicit native directory capability. `create_directory` is a George-owned `workspace_mutation` tool that operates only on bounded relative paths inside the canonical workspace, rejects traversal/absolute/symlink escapes, may create the requested missing directory chain, is idempotent when the requested directory already exists, and fails on file/unsafe collisions. It never deletes, replaces, renames, or moves entries. `write_file` continues to require an already-valid parent and does not silently create directories.
+
+Standard mode uses the normal mutation approval boundary for `create_directory`; Workspace Autonomous may auto-run it only under the existing qualified workspace ceiling. Directory creation is observable in application events/progress and participates in interruption reconciliation from canonical filesystem evidence rather than blind replay.
+
 ## Progress and status events
 
 George's normalized application event stream is the presentation-independent source for visible work state.
