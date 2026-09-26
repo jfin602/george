@@ -1,0 +1,30 @@
+{
+  "state": "green_with_environment_skip",
+  "commit": "518cc8e7c20e04b8ed8cc6badd897a5e8825e18a",
+  "nodeVersion": "v26.10.0",
+  "npmVersion": "11.19.1",
+  "command": "npm test",
+  "environment": "non-TTY",
+  "total": 414,
+  "passed": 413,
+  "failed": 0,
+  "skipped": 1,
+  "durationMs": 8585.839343,
+  "observations": [
+    {
+      "identity": "native OpenTUI launches and restores a real Node 26 terminal",
+      "outcome": "skipped",
+      "category": "native-environment",
+      "signature": "SKIP: non-TTY qualification environment"
+    }
+  ],
+  "intermittentObservations": [
+    {
+      "identity": "committed final answers reveal progressively without delaying canonical durability, and cancellation stops the reveal",
+      "focusedOutcome": "failed",
+      "broadOutcome": "passed",
+      "category": "opentui-renderer-timeout",
+      "signature": "Timed out waiting for frame predicate after 20 passes in the earlier common floor."
+    }
+  ]
+}

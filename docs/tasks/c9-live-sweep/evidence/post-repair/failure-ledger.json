@@ -1,0 +1,182 @@
+{
+  "schemaVersion": 1,
+  "entries": [
+    {
+      "identity": "broad:native-real-tty",
+      "layer": "broad",
+      "workload": "npm test",
+      "observedState": "Evidence Gap",
+      "qualificationStatus": "not-run",
+      "failureClass": "environment",
+      "code": "native-tty-unavailable",
+      "message": "native OpenTUI launches and restores a real Node 26 terminal was skipped in the non-TTY qualification environment.",
+      "classification": "environment-only",
+      "evidence": [
+        {
+          "path": "docs/tasks/c9-live-sweep/evidence/post-repair/broad-suite.json",
+          "sha256": "449878b794d4ae8b9504de112cab3d398903f615265685f9ef362a4f12a5560f"
+        }
+      ],
+      "repairCluster": "environment-only"
+    },
+    {
+      "identity": "broad:progressive-final-answer-reveal",
+      "layer": "deterministic",
+      "workload": "supported-runtime affected floor",
+      "observedState": "Not Green",
+      "qualificationStatus": "not-run",
+      "failureClass": "test",
+      "code": "opentui-renderer-timeout",
+      "message": "committed final answers reveal progressively without delaying canonical durability, and cancellation stops the reveal: timed out waiting for frame predicate after 20 passes; the later single broad run passed the same identity.",
+      "classification": "intermittent",
+      "evidence": [
+        {
+          "path": "docs/tasks/c9-live-sweep/evidence/post-repair/preflight.json",
+          "sha256": "ca8063b7396180c9807b6ea8efb0710584e9d2e5cf75ca24bdf35ec67ac1c105"
+        },
+        {
+          "path": "docs/tasks/c9-live-sweep/evidence/post-repair/broad-suite.json",
+          "sha256": "449878b794d4ae8b9504de112cab3d398903f615265685f9ef362a4f12a5560f"
+        }
+      ],
+      "repairCluster": "ui-test-stability"
+    },
+    {
+      "identity": "deterministic:sandbox-process-historical-intermittent",
+      "layer": "deterministic",
+      "workload": "historical affected floor",
+      "observedState": "Evidence Gap",
+      "qualificationStatus": "not-run",
+      "failureClass": "test",
+      "code": "historical-intermittent",
+      "message": "P4 retained the historical nested sandbox-process non-completion as unresolved/intermittent because no cause was established; it did not reproduce in this P5 floor or broad run.",
+      "classification": "intermittent",
+      "evidence": [
+        {
+          "path": "docs/tasks/c9-live-sweep/P4-ui-test-stability-evidence.md",
+          "sha256": "3a6f736545e3a33dbdfc69575f4861fab9f67085f4bf96b88545889a07b7d427"
+        }
+      ],
+      "repairCluster": "ui-test-stability"
+    },
+    {
+      "identity": "live:b2:structured-stage-tool-limit",
+      "layer": "live",
+      "workload": "b2",
+      "observedState": "Evidence Gap",
+      "qualificationStatus": "not-run",
+      "failureClass": "evidence",
+      "code": "common-preflight-abort",
+      "message": "The post-repair B2 workload was not run because the common P4 regression floor was Not Green; the pre-repair failure cannot be classified as resolved.",
+      "classification": "unresolved",
+      "evidence": [
+        {
+          "path": "docs/tasks/c9-live-sweep/evidence/post-repair/sweep.json",
+          "sha256": "e24e7c78f1e46d6a9a3897e12fc52f73259a88a27e3118b4089bb7f13c3cad59"
+        }
+      ],
+      "repairCluster": "unresolved"
+    },
+    {
+      "identity": "live:c2:inspect-no-evidence",
+      "layer": "live",
+      "workload": "c2",
+      "observedState": "Evidence Gap",
+      "qualificationStatus": "not-run",
+      "failureClass": "evidence",
+      "code": "common-preflight-abort",
+      "message": "The post-repair C2 workload was not run because the common P4 regression floor was Not Green; the pre-repair failure cannot be classified as resolved.",
+      "classification": "unresolved",
+      "evidence": [
+        {
+          "path": "docs/tasks/c9-live-sweep/evidence/post-repair/sweep.json",
+          "sha256": "e24e7c78f1e46d6a9a3897e12fc52f73259a88a27e3118b4089bb7f13c3cad59"
+        }
+      ],
+      "repairCluster": "unresolved"
+    },
+    {
+      "identity": "live:gate-a:post-repair-not-run",
+      "layer": "live",
+      "workload": "gate-a",
+      "observedState": "Evidence Gap",
+      "qualificationStatus": "not-run",
+      "failureClass": "evidence",
+      "code": "common-preflight-abort",
+      "message": "The post-repair Gate A workload was not run because the common P4 regression floor was Not Green.",
+      "classification": "new",
+      "evidence": [
+        {
+          "path": "docs/tasks/c9-live-sweep/evidence/post-repair/sweep.json",
+          "sha256": "e24e7c78f1e46d6a9a3897e12fc52f73259a88a27e3118b4089bb7f13c3cad59"
+        }
+      ],
+      "repairCluster": "unresolved"
+    },
+    {
+      "identity": "live:greeting:post-repair-not-run",
+      "layer": "live",
+      "workload": "greeting",
+      "observedState": "Evidence Gap",
+      "qualificationStatus": "not-run",
+      "failureClass": "evidence",
+      "code": "common-preflight-abort",
+      "message": "The post-repair greeting workload was not run because the common P4 regression floor was Not Green.",
+      "classification": "new",
+      "evidence": [
+        {
+          "path": "docs/tasks/c9-live-sweep/evidence/post-repair/sweep.json",
+          "sha256": "e24e7c78f1e46d6a9a3897e12fc52f73259a88a27e3118b4089bb7f13c3cad59"
+        }
+      ],
+      "repairCluster": "unresolved"
+    },
+    {
+      "identity": "live:three-file:post-repair-not-run",
+      "layer": "live",
+      "workload": "three-file",
+      "observedState": "Evidence Gap",
+      "qualificationStatus": "not-run",
+      "failureClass": "evidence",
+      "code": "common-preflight-abort",
+      "message": "The post-repair three-file workload was not run because the common P4 regression floor was Not Green.",
+      "classification": "new",
+      "evidence": [
+        {
+          "path": "docs/tasks/c9-live-sweep/evidence/post-repair/sweep.json",
+          "sha256": "e24e7c78f1e46d6a9a3897e12fc52f73259a88a27e3118b4089bb7f13c3cad59"
+        }
+      ],
+      "repairCluster": "unresolved"
+    },
+    {
+      "identity": "runtime:gpu-offload-26",
+      "layer": "deterministic",
+      "workload": "runtime controlled-latency evidence",
+      "observedState": "Evidence Gap",
+      "qualificationStatus": "not-run",
+      "failureClass": "environment",
+      "code": "ui-only-control-unobserved",
+      "message": "LM Studio GPU Offload 26 was not independently observed; no controlled-latency claim is made.",
+      "classification": "environment-only",
+      "evidence": [
+        {
+          "path": "docs/tasks/c9-live-sweep/evidence/post-repair/runtime.json",
+          "sha256": "05b18c15579d3c3c828051a4676f289ac6bf2d8210db9b337c9fcd87a813da39"
+        }
+      ],
+      "repairCluster": "environment-only"
+    }
+  ],
+  "preRepairDispositions": [
+    { "identity": "broad:draft-preservation-rendering", "disposition": "resolved", "reason": "Passed in the P5 focused floor and exact broad run." },
+    { "identity": "broad:inactive-task-text-rendering", "disposition": "resolved", "reason": "Passed in the P5 focused floor and exact broad run." },
+    { "identity": "broad:native-real-tty", "disposition": "retained", "reason": "The non-TTY environment still skipped the native terminal test." },
+    { "identity": "broad:progressive-final-answer-reveal", "disposition": "retained", "reason": "Failed intermittently in the P5 common floor, then passed in the exact broad run." },
+    { "identity": "broad:streamed-answer-visibility", "disposition": "resolved", "reason": "Passed in the P5 focused floor and exact broad run." },
+    { "identity": "deterministic:sandbox-process-historical-intermittent", "disposition": "retained", "reason": "Did not reproduce, but P4 established no cause or permanent resolution." },
+    { "identity": "live:b2:structured-stage-tool-limit", "disposition": "retained", "reason": "Post-repair workload was not run after the common abort, so resolution is unproven." },
+    { "identity": "live:c2:inspect-no-evidence", "disposition": "retained", "reason": "Post-repair workload was not run after the common abort, so resolution is unproven." },
+    { "identity": "runtime:gpu-offload-26", "disposition": "retained", "reason": "The UI-only control remains unobserved." }
+  ]
+}

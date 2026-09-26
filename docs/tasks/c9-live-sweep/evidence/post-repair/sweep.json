@@ -1,0 +1,18 @@
+{
+  "commonState": "Not Green",
+  "commonAbortReason": "P4 progressive final-answer reveal regression failed in the supported Node 26 common floor.",
+  "orderedWorkloadIds": [
+    "greeting",
+    "three-file",
+    "gate-a",
+    "b2",
+    "c2"
+  ],
+  "results": [
+    { "id": "greeting", "observedResult": "Not Run", "qualificationStatus": "not-run", "attempts": 0 },
+    { "id": "three-file", "observedResult": "Not Run", "qualificationStatus": "not-run", "attempts": 0 },
+    { "id": "gate-a", "observedResult": "Not Run", "qualificationStatus": "not-run", "attempts": 0 },
+    { "id": "b2", "observedResult": "Not Run", "qualificationStatus": "not-run", "attempts": 0 },
+    { "id": "c2", "observedResult": "Not Run", "qualificationStatus": "not-run", "attempts": 0 }
+  ]
+}

@@ -1,0 +1,33 @@
+{
+  "commit": "518cc8e7c20e04b8ed8cc6badd897a5e8825e18a",
+  "packageVersion": "0.9.10",
+  "nodeVersion": "v26.10.0",
+  "npmVersion": "11.19.1",
+  "focusedFloor": {
+    "state": "not_green",
+    "total": 268,
+    "passed": 267,
+    "failed": 1,
+    "skipped": 0,
+    "failure": {
+      "identity": "committed final answers reveal progressively without delaying canonical durability, and cancellation stops the reveal",
+      "category": "opentui-renderer-timeout",
+      "signature": "Timed out waiting for frame predicate after 20 passes; renderer idle at frameId 13 with no cells updated."
+    }
+  },
+  "typecheck": "green",
+  "runner": {
+    "state": "green",
+    "passed": 90,
+    "failed": 0,
+    "skipped": 0
+  },
+  "applicationRunnable": "green",
+  "p1EvidenceWriter": "green",
+  "fixtureInstrumentAcceptanceImmutability": "green",
+  "packageVersionExact": true,
+  "rootPackageLockAbsent": true,
+  "initialDiffCheck": "green",
+  "liveSweepEligible": false,
+  "abortReason": "A P4 permanent regression failed in the supported-runtime common floor. The later single broad run passed the same identity, so the failure remains an intermittent common validity blocker and is not hidden by the later pass."
+}
