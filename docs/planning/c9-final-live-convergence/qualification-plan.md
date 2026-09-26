@@ -228,3 +228,12 @@ The rerun must:
 - classify a repeated terminal provider stall as a provider failure rather than task budget exhaustion unless a real George budget is the terminal cause.
 
 The existing P3/P4 readiness rules otherwise remain unchanged.
+
+
+## Inserted prerequisite — Gen-Op
+
+Before a new official P3 final sweep, `c9-gen-op` must be qualified and closed.
+
+The rerun must start again at greeting, preserve prior interrupted/devlog attempts as historical evidence, use qualified workload-owned outer deadlines (greeting 3m, three-file 5m, Gate A 10m, B2 20m total stack, C2 15m), record Gen-Op/cache/output metrics where available, and continue later diagnostic workloads after ordinary workload failure when common sweep validity remains Green.
+
+Deadline expiration is Not Green operational evidence, not a production RunBudget change.

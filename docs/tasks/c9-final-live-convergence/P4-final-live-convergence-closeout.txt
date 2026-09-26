@@ -62,7 +62,19 @@ Verify the inserted `c9-provider-stall-recovery` closeout and current code:
 - repeated terminal stall remains provider-class failure;
 - duplicate/no-progress and P2 replay safety preserved.
 
+AUDIT GEN-OP
+
+Verify the inserted `c9-gen-op` closeout/current code:
+- accepted prefill no longer becomes active-output stall solely from response start;
+- stable instructions/late dynamic round context qualified;
+- Gen-Op tool/control-only structured rounds qualified;
+- George handoff is non-authoritative/non-executable;
+- response completion still precedes side effects/control acceptance;
+- qualification deadlines are active, including one 20-minute B2 whole-stack deadline;
+- production RunBudget remains unchanged.
+
 AUDIT P3
+
 
 
 Report exact:
@@ -103,6 +115,8 @@ Decision table must include:
 - Efficiency Metric Separation Qualified;
 - Partial Provider Timeout Recovery Qualified;
 - Provider Stall Watchdog / Recovery Qualified;
+- Gen-Op / Stable-Prefix Operation Protocol Qualified;
+- Qualification Workload Deadlines Qualified;
 - Broad Suite State;
 - Greeting;
 - Three-File;

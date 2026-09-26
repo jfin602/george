@@ -1,0 +1,76 @@
+TASK: Correction 9 / P4 — Gen-Op closeout
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Sol Medium`.
+- Browser required: no.
+
+VERSIONING
+- Required unchanged project version: `0.9.10`.
+
+GOAL
+
+Perform an evidence-only closeout of `c9-gen-op`.
+
+Do not repair production behavior and do not run the official final five-workload sweep.
+
+Read:
+- `BOOT.md`;
+- workflow/stability/Phase 5/8/9 authority;
+- `docs/planning/c9-gen-op/{decision-record,qualification-plan}.md`;
+- `docs/tasks/c9-gen-op/{prompt-assessment,implementation-plan,qualification-report.md}`;
+- P1/P2 code/tests and P3 evidence;
+- `c9-provider-stall-recovery` closeout;
+- current `c9-final-live-convergence` authority and historical attempts.
+
+CREATE
+
+`docs/tasks/c9-gen-op/closeout.md`
+
+Decision table:
+- Useful-Output Watchdog Semantics Qualified;
+- False 60s Prefill Stall Removed;
+- Absolute Provider Timeout Preserved;
+- Stall Recovery Ladder Preserved;
+- Stable Instruction Prefix Qualified;
+- Late Dynamic Round Context Qualified;
+- Mission Card Authority Preserved;
+- Gen-Op v1 Qualified;
+- George Handoff Control Non-Authoritative;
+- Response-Completion Side-Effect Boundary Preserved;
+- Provisional Branch Discard Safety Preserved;
+- Internal Prose Reduction Measured;
+- Cached-Input Evidence Recorded/Gap;
+- Qualification Workload Deadlines Qualified;
+- B2 Whole-Stack 20m Deadline Qualified;
+- Production RunBudget Unchanged;
+- Ordinary Conversation Behavior Preserved;
+- Phase 5 Reliability Floors Green;
+- Phase 9 Structured/Recovery Floors Green;
+- Broad Suite;
+- Historical Live Evidence Preserved;
+- Remaining Blocking Failure Count;
+- Nonblocking Evidence Gaps;
+- Overall `c9-gen-op` Qualified;
+- Final Five-Workload Sweep Ready To Rerun.
+
+READY RULE
+
+Yes only if:
+- P1/P2 deterministic behavior is Green;
+- live Gen-Op qualification shows no functional regression;
+- no permission/recovery/TaskState/validation regression;
+- no blocking broad regression;
+- deadline behavior is qualified;
+- no blocking correction-local Evidence Gap remains.
+
+If ready, state exactly:
+
+`next action: npm run codex:phase -- c9-final-live-convergence --closeout`
+
+Do not execute it here.
+
+Do not:
+- change code;
+- rewrite historical evidence;
+- owner-close Phase 9;
+- open Phase 10.
