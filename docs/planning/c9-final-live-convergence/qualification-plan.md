@@ -29,7 +29,9 @@ Preserve:
 
 ### Mission-card projection
 
-Add a pure bounded projection from canonical structured state/evidence.
+Add a pure bounded projection from canonical structured state/evidence plus a provider-independent continuation-alignment seam in the canonical agent loop.
+
+The structured service must be able to recompute/provide the current mission card before every implementation/correction provider request, including continuation rounds after tool results. Expanding only the initial `renderSlice()` text is insufficient.
 
 Deterministic tests must prove:
 - identical canonical state -> identical mission card;
@@ -43,7 +45,11 @@ Deterministic tests must prove:
 - completed unrelated history is excluded;
 - no model claim can mark canonical completion;
 - provider projection cannot raise permissions;
-- output is bounded by explicit byte/token limits.
+- output is bounded by explicit byte/token limits;
+- round N+1 reflects authoritative/tool evidence produced in round N;
+- a mutation invalidates only stale path/resource observations while unaffected evidence remains reusable;
+- ephemeral freshness evidence is never mistaken for durable TaskState;
+- reopen without reconstructible freshness re-inspects rather than trusting stale derived state.
 
 ### No-repeat / alignment behavior
 
@@ -77,6 +83,8 @@ Deterministic tests must prove:
 
 Select revised hard stage ceilings from bounded current-workload evidence. Do not remove task-wide budgets.
 
+This plan supersedes the earlier current-qualification prohibition on raising structured stage limits, but only for this deliberate hard-budget/efficiency separation. Preserve strict duplicate/no-progress, permission, recovery, cancellation, and task-wide budget behavior.
+
 ## P2 — safe provider partial-response timeout convergence
 
 Reproduce with scripted provider streams:
@@ -98,6 +106,10 @@ The safe retry rule may retry only when:
 A retry must:
 - use a fresh provider attempt identity;
 - preserve the failed attempt as evidence;
+- discard provisional text/tool proposals from the incomplete branch;
+- never execute proposals from the incomplete branch;
+- never reuse that incomplete response's response ID as a continuation;
+- restart from the same canonical pre-round application state;
 - consume retry/run budget;
 - remain cancellable;
 - never synthesize success from partial proposals.
