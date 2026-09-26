@@ -1,0 +1,105 @@
+TASK: Correction 9 / P2 — Provider stall recovery qualification
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Sol Medium`.
+- Browser required: no.
+
+VERSIONING
+- Required unchanged project version: `0.9.10`.
+
+GOAL
+
+Qualify the P1 provider-stall correction deterministically and through the inherited integration/broad regression floors.
+
+This prompt is qualification/evidence work. Do not run the official final five-workload live sweep.
+
+Read:
+- `BOOT.md`;
+- current workflow/stability/Phase 5/8/9 authority;
+- `docs/planning/c9-provider-stall-recovery/{decision-record,qualification-plan}.md`;
+- `docs/tasks/c9-provider-stall-recovery/{prompt-assessment,implementation-plan}.md`;
+- P1 commit/diff/tests;
+- current provider/agent-loop/context/structured-task/qualification/TUI code;
+- prior `c9-final-live-convergence` P1/P2 regressions.
+
+CREATE
+
+`docs/tasks/c9-provider-stall-recovery/qualification-report.md`
+
+Record exact:
+- P1 baseline parent and P1 commit;
+- package version;
+- watchdog suspected-stall threshold;
+- first-evidence recovery threshold;
+- post-activity inactivity threshold;
+- absolute provider timeout;
+- max stall-specific identical retries;
+- max canonical rebases;
+- compactor recursion behavior;
+- focused test counts/results;
+- Phase 5 reliability floor;
+- c9-final-live-convergence P1 mission-card/evidence/convergence floor;
+- c9-final-live-convergence P2 replay-safe incomplete-provider floor;
+- Phase 9 integration;
+- TUI/work-projection floor;
+- typecheck;
+- runner;
+- broad `npm test` totals;
+- diff/lockfile hygiene;
+- remaining Not Green/Evidence Gaps.
+
+FOCUSED QUALIFICATION
+
+Prove with deterministic scripted/fake-time cases:
+
+1. first-evidence stall is detected before the absolute timeout;
+2. slow-but-active provider traffic does not false-stall;
+3. response-start/provisional-text/provisional-tool-call stalls preserve P2 discard safety;
+4. only one identical stall retry occurs;
+5. repeated eligible stall invokes at most one canonical rebase;
+6. failed provider-native response/continuation IDs are not reused by rebase;
+7. low-pressure rebase performs no semantic compaction;
+8. high-pressure rebase may perform one bounded compaction/reduction;
+9. continuation/request estimate affects pressure classification;
+10. stall-triggered semantic compactor cannot recurse into provider recovery;
+11. compactor failure is bounded/auditable;
+12. user cancellation wins immediately;
+13. watchdog timers/controllers clean up;
+14. final repeated stall is provider-class failure;
+15. final repeated stall is not mislabeled `budget_exhausted`;
+16. genuine RunBudget exhaustion remains `budget_exhausted`;
+17. discarded provisional tool calls do not contaminate duplicate/no-progress accounting;
+18. genuine duplicate/no-progress behavior remains bounded;
+19. mission-card/TaskState/permissions/SHA/framing/recovery authority remains intact;
+20. bounded evidence contains no raw prompt/tool/file/provider bodies.
+
+INHERITED VALIDATION
+
+Run:
+- affected provider unit tests;
+- affected agent-loop/recovery/retry tests;
+- context compaction/profile tests;
+- run-budget tests;
+- structured-task/task-stack tests;
+- qualification/live-work evidence tests;
+- TUI/work projection tests;
+- Phase 5 integration floor;
+- Phase 9 integration floor;
+- current c9-final-live-convergence P1/P2 permanent regressions;
+- `npm run typecheck`;
+- `npm run test:runner`;
+- `npm test`;
+- `git diff --check`.
+
+Run `npm test` once for the broad recorded result.
+
+Do not:
+- repair by inflating timeouts/retry counts;
+- edit live instruments/acceptance;
+- run greeting/three-file/Gate A/B2/C2;
+- introduce helper inference;
+- owner-close Phase 9.
+
+If qualification finds a narrow defect in P1, repair it only if it is inside this correction scope and add a permanent regression in the same prompt. Record every such repair explicitly in the report.
+
+Leave package `0.9.10` and no root lockfile.

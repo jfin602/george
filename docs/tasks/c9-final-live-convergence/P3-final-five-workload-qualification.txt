@@ -23,7 +23,16 @@ Read:
 - qualification sweep/live-work helpers;
 - frozen greeting/three-file/Gate A/v2 instruments/hidden acceptance.
 
+STALL-RECOVERY PREREQUISITE
+
+Before this new official sweep, require `docs/tasks/c9-provider-stall-recovery/closeout.md` to state that the correction is Qualified and the final five-workload sweep is ready to rerun.
+
+Preserve the earlier interrupted P3 attempt as historical diagnostic evidence. This invocation is a new candidate sweep and starts again at greeting.
+
+Record any provider stall/retry/canonical-rebase/pressure-compaction observations from the new correction in the final report and failure ledger.
+
 COMMON HARD GATES
+
 
 Require enough Green evidence for a meaningful live sweep:
 

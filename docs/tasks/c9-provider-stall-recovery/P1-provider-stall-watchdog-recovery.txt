@@ -1,0 +1,230 @@
+TASK: Correction 9 / P1 — Provider stall watchdog and bounded recovery
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Sol High`.
+- Browser required: no.
+
+VERSIONING
+- Required unchanged project version: `0.9.10`.
+
+GOAL
+
+Implement bounded provider/model stall detection and recovery without weakening Phase 5 replay safety or Phase 9 convergence authority.
+
+This correction is inserted after `c9-final-live-convergence` P1/P2 and before a new final P3 sweep.
+
+Read first:
+- `BOOT.md`;
+- `AGENTS.md`;
+- current workflow/stability docs;
+- Phase 5 reliability/compaction/retry authority;
+- Phase 8 agentic-context authority;
+- Phase 9 structured-task authority;
+- `docs/planning/c9-provider-stall-recovery/{decision-record,qualification-plan}.md`;
+- `docs/tasks/c9-provider-stall-recovery/{prompt-assessment,implementation-plan}.md`;
+- current local `c9-final-live-convergence` P1/P2 implementation and tests;
+- interrupted P3 evidence/trace;
+- provider, agent-loop, retry, compaction, run-budget, structured-task, qualification, and Work/TUI code/tests.
+
+Inspect the actual local HEAD. Do not assume the planning branch source snapshot includes the completed P1/P2 implementation.
+
+Do not introduce helper/utility inference.
+
+STALL POLICY
+
+Add one validated application-owned provider stall policy.
+
+Initial intended defaults:
+- suspected-stall visibility at approximately 60000 ms without provider/wire activity;
+- first-evidence recovery at approximately 90000 ms;
+- post-activity inactivity recovery at approximately 60000 ms;
+- absolute provider request timeout remains exactly 120000 ms;
+- at most 1 stall-specific identical fresh retry per canonical provider round;
+- at most 1 canonical rebase attempt after the repeated eligible stall.
+
+If current deterministic/runtime evidence requires a nearby safer threshold, document the reason in the P1 final response and tests. Do not simply lower the global provider timeout.
+
+PROVIDER ACTIVITY
+
+Add the smallest provider-independent activity seam needed for watchdog accuracy.
+
+The LM Studio adapter may report bounded wire activity such as valid SSE frame receipt even when the function-call assembler has not yet emitted a semantic tool call.
+
+Requirements:
+- no raw SSE payload persistence;
+- no unbounded activity events;
+- adapter does not decide retry/rebase;
+- provider implementations that do not supply extra activity remain valid because semantic ProviderEvents also refresh liveness.
+
+WATCHDOG
+
+Implement application-owned per-attempt watchdog state for:
+- awaiting first evidence;
+- response active;
+- response completed.
+
+Use a watchdog-owned AbortController combined with the caller signal.
+
+Classify:
+- caller abort -> `cancelled`;
+- watchdog abort -> provider stall;
+- provider absolute timeout -> provider timeout;
+- normal completion -> no stall.
+
+Clean up every timer/controller.
+
+Do not allow a stale timer to cancel a later attempt.
+
+SAFE FRESH RETRY
+
+Preserve and extend the current P2 replay-safe incomplete-response logic.
+
+A stalled branch may receive one identical fresh retry only when:
+- response incomplete;
+- no tool proposed by that failed branch executed;
+- no canonical assistant response committed;
+- no ambiguous external/local/remote side effect;
+- policy/cancellation/budgets allow it.
+
+Discard provisional text/tool proposals and incomplete response ID.
+
+They are diagnostic evidence only.
+
+CANONICAL REBASE
+
+If that eligible fresh retry also stalls, do not issue another identical retry.
+
+For structured implementation/correction stages, rebuild one new provider request from George-owned canonical state/evidence.
+
+The rebased request must not reuse the failed provider-native `previous_response_id`.
+
+Preserve, bounded:
+- current user/task objective;
+- active work unit/completion condition;
+- mission card;
+- applicable requirements/invariants/stops;
+- effective permission constraints;
+- valid current inspection/tool evidence;
+- current SHA/text-framing evidence when valid;
+- completed prior-round tool-result evidence needed to continue;
+- unresolved provider/tool/validation/recovery failures;
+- pending George-owned validation/completion condition.
+
+Do not invent state or mark completion by model inference.
+
+If safe reconstruction is unavailable, terminate provider failure rather than guessing.
+
+CONTEXT PRESSURE
+
+A stall is not proof of context overload.
+
+Use current request estimate plus effective profile pressure.
+
+After the repeated eligible stall:
+
+LOW PRESSURE
+- do not semantic-compact merely because of the stall;
+- perform the one canonical rebase directly.
+
+HIGH PRESSURE
+- if older completed history is safely compactable, allow one bounded stall-pressure compaction/reduction before rebase;
+- otherwise preserve critical current state and rebase safely or terminate.
+
+Continuation/tool-result growth must participate in the pressure decision.
+
+COMPACTOR RECURSION GUARD
+
+The default semantic compactor uses the same provider.
+
+A compaction initiated by stall recovery:
+- may run once;
+- has a strict independent timeout/budget;
+- cannot recursively enter the normal provider stall retry/rebase ladder;
+- records failure;
+- falls back only when a non-compacted rebase remains safe.
+
+Do not create a hidden retry loop inside compaction.
+
+TERMINAL TRUTH
+
+If original attempt, fresh retry, and canonical rebase all fail for provider liveness:
+
+- terminate with GeorgeError code `provider`;
+- retain bounded stall/recovery metadata;
+- do not report `budget_exhausted` unless a real RunBudget/stage budget is actually terminal;
+- do not execute provisional tool proposals;
+- do not commit provisional assistant text.
+
+DUPLICATE / NO-PROGRESS
+
+Do not weaken the existing guard.
+
+Discarded incomplete branch proposals are not executed tool evidence.
+
+But actual completed rounds and actual/rejected duplicate local reads continue to count normally.
+
+TUI / OBSERVABILITY
+
+Surface bounded derived statuses for:
+- suspected stall;
+- retrying provider;
+- rebuilding provider request;
+- stall-pressure compaction when used;
+- terminal provider stall.
+
+No raw prompts/provider payloads/file/tool bodies.
+
+PERMANENT REGRESSIONS
+
+Add deterministic/fake-time coverage for:
+1. no evidence stall -> one fresh retry -> success;
+2. response start stall -> fresh retry -> success;
+3. provisional text stall -> discarded;
+4. provisional tool proposals stall -> never execute;
+5. heartbeat activity prevents false stall;
+6. user cancellation wins;
+7. timers clean up;
+8. repeated low-pressure stall -> canonical rebase, no compaction;
+9. repeated high-pressure stall -> one compaction/rebase;
+10. stall-triggered compactor failure cannot recurse;
+11. rebased request does not reuse failed response ID;
+12. rebase preserves authoritative structured evidence;
+13. rebase succeeds;
+14. rebase stalls -> provider terminal failure;
+15. genuine duplicate/no-progress still exhausts normally;
+16. actual budget exhaustion remains budget exhaustion;
+17. persisted/schema-2 evidence is bounded and redacted;
+18. ordinary unsafe-to-rebase turn terminates safely.
+
+VALIDATION
+
+Run focused new tests plus affected:
+- provider unit;
+- agent-loop/retry/recovery;
+- context compaction/profile/continuation;
+- run budget;
+- structured-task/task-stack;
+- mission-card/evidence freshness;
+- qualification/live-work evidence;
+- Work/TUI projection;
+- Phase 5 integration;
+- Phase 9 integration;
+- `npm run typecheck`;
+- `npm run test:runner`;
+- `npm test`;
+- `git diff --check`.
+
+Verify:
+- package exactly `0.9.10`;
+- no root `package-lock.json`;
+- absolute timeout still 120000 ms.
+
+Do not run the official greeting/three-file/Gate A/B2/C2 final sweep in P1.
+
+Do not:
+- edit frozen live instruments/hidden acceptance;
+- raise provider timeout;
+- add helper inference;
+- weaken security/recovery/convergence controls;
+- rewrite historical P3 evidence;
+- owner-close Phase 9.

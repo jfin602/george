@@ -126,20 +126,31 @@ The final sweep exposed three fresh live blockers:
 - B2 completed P1 and failed in P2 when LM Studio emitted partial response/tool-call evidence but never completed before the 120000 ms timeout;
 - C2 consumed the eight-call implementation-stage ceiling largely re-inspecting already observed state, so the first legitimate patch was rejected as call 9.
 
-The active correction is now `c9-final-live-convergence`.
+The `c9-final-live-convergence` correction remains the final Phase 9 qualification chain, but its first P3 attempt is now historical interrupted evidence rather than the final qualifying sweep.
+
+P1 and P2 of that correction completed before P3. During P3 Gate A, repeated incomplete/stalled local-model attempts consumed minutes of provider time before the run was manually interrupted. LM Studio developer logs showed a request still processing prompt state after roughly 51 seconds and then reaching the 120000 ms client timeout; a fresh retry later benefited from high LCP reuse and completed materially faster. The event proves that safe replay classification alone is insufficient: George also needs bounded stall detection, recovery escalation, and truthful provider-stall termination.
+
+The active inserted correction is now `c9-provider-stall-recovery`.
 
 It must:
-- add a deterministic bounded mission-card/alignment projection from canonical TaskState and observed evidence;
-- make structured implementation reuse valid INSPECT evidence and avoid unnecessary repeated investigation;
-- separate hard runaway/no-progress controls from nonblocking efficiency targets;
-- qualify safe recovery/retry for incomplete provider responses only when no proposed tool executed, no assistant response committed, and no ambiguous side effect occurred;
-- preserve permissions, recovery, SHA/framing, containment, hidden acceptance, and TaskState authority;
-- run one final complete greeting -> three-file -> Gate A -> B2 -> C2 sweep;
+- keep the existing 120000 ms provider timeout as an absolute emergency ceiling rather than the only stall detector;
+- add provider-independent first-evidence and inactivity watchdog semantics in the application loop;
+- preserve the LM Studio adapter as wire/timeout normalization rather than recovery-policy authority;
+- allow at most one replay-safe identical fresh retry for a stalled/incomplete provider attempt;
+- after a repeated stall, stop repeating the same provider-native branch and perform at most one canonical request rebase from George-owned state/evidence;
+- condition stall-triggered compaction on real context pressure and compactable completed history rather than assuming every stall is a context problem;
+- prevent stall-triggered semantic compaction from recursively retrying an unhealthy provider without a strict bound;
+- preserve provisional-text/tool-call discard rules, permissions, recovery, SHA/framing, containment, TaskState, mission-card/evidence-reuse authority, and strict duplicate/no-progress behavior;
+- terminate repeated low-pressure or post-rebase failure truthfully as a provider failure rather than allowing long retries to surface misleading task `budget_exhausted`;
+- add bounded observable stall/recovery evidence and TUI-facing recovery status;
 - keep helper/utility-model inference out of Phase 9.
 
+After `c9-provider-stall-recovery` is qualified and closed, rerun the existing `c9-final-live-convergence` P3 sweep from greeting through C2 exactly once on the new candidate, then run its P4 closeout. The interrupted P3 attempt remains immutable historical evidence.
+
 Current correction authority:
-- latest full-sweep truth: `docs/tasks/c9-final-qualification/report.md` and `failure-ledger.json`;
-- active planning: `docs/planning/c9-final-live-convergence/decision-record.md` and `qualification-plan.md`.
+- latest completed full-sweep truth: `docs/tasks/c9-final-qualification/report.md` and `failure-ledger.json`;
+- final convergence planning: `docs/planning/c9-final-live-convergence/decision-record.md` and `qualification-plan.md`;
+- active stall-recovery planning: `docs/planning/c9-provider-stall-recovery/decision-record.md` and `qualification-plan.md`.
 
 Historical Phase 1-8 prompts/evidence are not renumbered or rewritten.
 
