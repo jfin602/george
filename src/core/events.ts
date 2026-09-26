@@ -59,6 +59,9 @@ export type ContextDiagnostics = Readonly<{
 }>;
 
 export type ContextEnvelopePromotionReason = 'continuation-estimate' | 'provider-usage';
+export const MODEL_ROUND_AVOIDANCE_REASONS = ['inspection-evidence-complete', 'work-unit-complete', 'validation-passed', 'correction-repaired', 'stack-task-complete'] as const;
+export type ModelRoundAvoidanceReason = typeof MODEL_ROUND_AVOIDANCE_REASONS[number];
+export type ModelRoundAvoidanceCounts = Readonly<Partial<Record<ModelRoundAvoidanceReason, number>>>;
 
 export type WorkflowChange = Readonly<{
   path: string;
@@ -184,6 +187,8 @@ export type ApplicationEvent =
   | Readonly<{ type: 'assistant.response.completed'; turnId: string; text: string }>
   /** Completed-round metrics only; raw Operation-mode text is never retained. */
   | Readonly<{ type: 'agent.round.completed'; turnId: string; round: number; executionMode: ExecutionMode; internalTextBytes: number; estimatedInternalTextTokens: number; toolCallCount: number; control?: 'handoff' }>
+  /** George-owned transition evidence; each event represents one provider confirmation round not requested. */
+  | Readonly<{ type: 'model.round.avoided'; turnId: string; reason: ModelRoundAvoidanceReason }>
   | Readonly<{ type: 'context.source'; turnId: string; sourceId: string; kind: string; status: 'loading' | 'loaded' | 'missing' | 'oversized' | 'failed'; bytes?: number }>
   | Readonly<{ type: 'context.assembled'; turnId: string; diagnostics: ContextDiagnostics }>
   | Readonly<{ type: 'context.envelope.promoted'; turnId: string; fromProfileId: string; toProfileId: string; reason: ContextEnvelopePromotionReason; tokens: number; providerInputBudget: number }>
@@ -234,3 +239,9 @@ export type ApplicationEvent =
       execution?: ToolExecutionMetadata;
       origin?: HookOrigin;
     }>;
+
+export function countModelRoundsAvoided(events: readonly ApplicationEvent[]): ModelRoundAvoidanceCounts {
+  const counts: Partial<Record<ModelRoundAvoidanceReason, number>> = {};
+  for (const event of events) if (event.type === 'model.round.avoided') counts[event.reason] = (counts[event.reason] ?? 0) + 1;
+  return Object.freeze(counts);
+}

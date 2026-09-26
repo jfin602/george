@@ -135,6 +135,8 @@ test('event-derived records retain correctness separately from timing and failed
   assert.equal(record.cachedInputTokens, 5);
   assert.deepEqual(record.providerAttemptTimings, [{ attemptId: 'a', outcome: 'completed', responseAcceptanceMs: 4, firstUsefulOutputMs: 7, providerActiveMs: 14 }]);
   assert.deepEqual({ internalTextBytes: record.internalTextBytes, concurrentReadBatchCount: record.concurrentReadBatchCount, modelRoundsAvoided: record.modelRoundsAvoided, humanModeRounds: record.humanModeRounds }, { internalTextBytes: null, concurrentReadBatchCount: 0, modelRoundsAvoided: 0, humanModeRounds: null });
+  const avoided = deriveBenchmarkRecord(case_, [...pass, { type: 'model.round.avoided', turnId: 't', reason: 'validation-passed' }], 25, 1, 'warm-repeat', 'model', 'http://127.0.0.1:1234');
+  assert.deepEqual({ total: avoided.modelRoundsAvoided, reasons: avoided.modelRoundsAvoidedByReason }, { total: 1, reasons: { 'validation-passed': 1 } });
   const failed = deriveBenchmarkRecord(case_, pass.slice(0, -1), 25, 1, 'warm-repeat', 'model', 'http://127.0.0.1:1234');
   assert.equal(failed.passed, false);
   const tooManyTools = deriveBenchmarkRecord(BENCHMARK_CASES.find((item) => item.id === 'structured-tool-use-001')!, [...pass.slice(0, -1), { type: 'tool.requested', turnId: 't', callId: 'extra', name: 'read_file', arguments: '{"path":"answer.txt"}' }, { type: 'turn.completed', turnId: 't' }], 1, 1, 'warm-repeat', 'model', 'http://127.0.0.1:1234');
@@ -249,7 +251,7 @@ test('JSON artifacts, report, aggregates, and comparison remain stable', async (
   await writeFile(join(root, 'v2.json'), JSON.stringify({ ...results, schemaVersion: 2, suiteVersion: 'v2' }));
   assert.match(await compareBenchmark(join(root, 'v2.json'), results), /Legacy v2 artifact/);
   const legacyV3 = JSON.parse(JSON.stringify(results));
-  for (const item of legacyV3.records) for (const key of ['cachedInputTokens', 'internalTextBytes', 'estimatedInternalTextTokens', 'toolBatchCount', 'toolBatchWidths', 'concurrentReadBatchCount', 'parallelBatchWallMs', 'summedChildToolRuntimeMs', 'modelRoundsAvoided', 'georgeControlCount', 'humanModeRounds', 'operationModeRounds', 'correctionCycles']) delete item[key];
+  for (const item of legacyV3.records) for (const key of ['cachedInputTokens', 'internalTextBytes', 'estimatedInternalTextTokens', 'toolBatchCount', 'toolBatchWidths', 'concurrentReadBatchCount', 'parallelBatchWallMs', 'summedChildToolRuntimeMs', 'modelRoundsAvoided', 'modelRoundsAvoidedByReason', 'georgeControlCount', 'humanModeRounds', 'operationModeRounds', 'correctionCycles']) delete item[key];
   await writeFile(join(root, 'legacy-v3.json'), JSON.stringify(legacyV3));
   assert.match(await compareBenchmark(join(root, 'legacy-v3.json'), results), /tool batches delta/);
   assert.match(report(legacyV3), /Phase 10 telemetry/);

@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import test from 'node:test';
 
 import { MISSION_CARD_LIMITS, StructuredTaskApplicationService, createCodingWorkflowApplicationService, projectStructuredMissionCard, type StructuredFreshEvidence } from '../../../src/application/index.ts';
-import { createSession, DEFAULT_RUN_BUDGET, RunBudget, type ApplicationEvent, type ApprovalDecision, type ApprovalPort, type ApprovalRequest, type ModelProvider, type ProviderEvent, type ProviderRequest } from '../../../src/core/index.ts';
+import { appendSessionEvent, createSession, DEFAULT_RUN_BUDGET, RunBudget, type ApplicationEvent, type ApprovalDecision, type ApprovalPort, type ApprovalRequest, type ModelProvider, type ProviderEvent, type ProviderRequest } from '../../../src/core/index.ts';
 import { addressTaskWorkUnit, beginTaskCorrection, beginTaskWorkUnit, createTaskState, parseTaskPrompt, recordTaskInspection, recordTaskValidationAttempt } from '../../../src/tasks/index.ts';
 
 class Provider implements ModelProvider {
@@ -27,6 +27,10 @@ class Provider implements ModelProvider {
 }
 
 class Allow implements ApprovalPort { async request(_request: ApprovalRequest): Promise<ApprovalDecision> { return 'allow_once'; } }
+class Deny implements ApprovalPort {
+  readonly requests: ApprovalRequest[] = [];
+  async request(request: ApprovalRequest): Promise<ApprovalDecision> { this.requests.push(request); return 'deny'; }
+}
 
 class RecordingApproval implements ApprovalPort {
   readonly requests: ApprovalRequest[] = [];
@@ -169,6 +173,9 @@ test('structured service preflights with local reads, progresses task state, and
   assert.equal(provider.requests[1]?.toolChoice, undefined);
   assert.equal(provider.requests[2]?.toolChoice, undefined);
   assert.equal(provider.requests.length, 3);
+  assert.deepEqual(events.filter((event) => event.type === 'model.round.avoided').map((event) => event.reason), [
+    'inspection-evidence-complete', 'work-unit-complete', 'work-unit-complete', 'validation-passed', 'validation-passed',
+  ]);
   assert.deepEqual(provider.requests.map((request) => request.executionMode), ['operation', 'operation', 'operation']);
   assert.deepEqual(events.filter((event) => event.type === 'tool.completed' && event.execution?.effect === 'local_read').map((event) => event.callId), ['read', 'list']);
   assert.match(provider.requests[0]?.input ?? '', /W1 — First work/);
@@ -347,6 +354,42 @@ STOP CONDITIONS
   assert.deepEqual(session.taskState?.validations.V1?.attempts.map((attempt) => attempt.status), ['failed', 'passed']);
   assert.equal(session.taskState?.validations.V1?.attempts[0]?.stderr, 'old diagnostic');
   assert.deepEqual(session.taskState?.corrections.map((correction) => correction.status), ['completed']);
+  assert.deepEqual(session.events.filter((event) => event.type === 'model.round.avoided').map((event) => event.reason), ['correction-repaired', 'validation-passed']);
+});
+
+test('deterministic progression never suppresses approval, cancellation, or outcome-unknown recovery', async (t) => {
+  const root = await workspace();
+  t.after(() => rm(root, { recursive: true, force: true }));
+
+  const approval = new Deny();
+  const provider = new Provider([
+    [{ type: 'provider.response.started', responseId: 'denied-write' }, { type: 'provider.tool.call', callId: 'write', name: 'write_file', arguments: '{"path":"denied.txt","content":"no"}' }, { type: 'provider.response.completed' }],
+    [{ type: 'provider.response.completed' }],
+  ]);
+  const workflow = await createCodingWorkflowApplicationService({ provider, workspace: root, approvalPort: approval });
+  const denied = createSession({ workspace: root });
+  await new StructuredTaskApplicationService(workflow.agent).run({ session: denied, input: singleWorkTask('Approval floor') });
+  assert.deepEqual(approval.requests.map((request) => request.toolName), ['write_file', 'run_process']);
+  assert.equal(denied.taskState?.status, 'blocked');
+  assert.equal(denied.taskState?.validations.V1?.status, 'denied');
+
+  const cancelledProvider = new Provider([]);
+  const cancelledWorkflow = await createCodingWorkflowApplicationService({ provider: cancelledProvider, workspace: root });
+  const cancelled = createSession({ workspace: root });
+  const controller = new AbortController(); controller.abort();
+  await new StructuredTaskApplicationService(cancelledWorkflow.agent).run({ session: cancelled, input: singleWorkTask('Cancellation floor'), signal: controller.signal });
+  assert.equal(cancelledProvider.requests.length, 0);
+  assert.equal(cancelled.taskState?.status, 'cancelled');
+  assert.equal(cancelled.events.some((event) => event.type === 'model.round.avoided'), false);
+
+  const recoveryProvider = new Provider([]);
+  const recoveryWorkflow = await createCodingWorkflowApplicationService({ provider: recoveryProvider, workspace: root });
+  const recovery = createSession({ workspace: root });
+  appendSessionEvent(recovery, { type: 'recovery.decision', turnId: 'old', kind: 'mutation', outcome: 'outcome_unknown', evidence: 'Mutation outcome remains unknown.' });
+  await assert.rejects(new StructuredTaskApplicationService(recoveryWorkflow.agent).run({ session: recovery, input: singleWorkTask('Recovery floor') }), /ambiguous recovery/);
+  assert.equal(recoveryProvider.requests.length, 0);
+  assert.equal(recovery.taskState?.status, 'planning_needed');
+  assert.equal(recovery.events.some((event) => event.type === 'model.round.avoided'), false);
 });
 
 test('structured stages carry bounded safe evidence and share one task-wide budget', async (t) => {
@@ -465,6 +508,7 @@ test('successful workspace mutation advances the structured read epoch', async (
   await new StructuredTaskApplicationService(workflow.agent).run({ session, input, onEvent: (event) => { events.push(event); } });
 
   assert.deepEqual(events.filter((event) => event.type === 'tool.started' && event.name !== 'run_process').map((event) => event.callId), ['read-before', 'write', 'read-after']);
+  assert.equal(events.findIndex((event) => event.type === 'model.round.avoided' && event.reason === 'work-unit-complete') > events.findIndex((event) => event.type === 'tool.completed' && event.callId === 'read-after'), true, 'a mutation alone cannot complete semantic work before the provider handoff');
   assert.equal(events.filter((event) => event.type === 'tool.started' && event.name === 'run_process').length, 1);
   assert.equal(events.some((event) => event.type === 'tool.failed' && /Equivalent unchanged/.test(event.result.error.message)), false);
   assert.equal(session.taskState?.status, 'completed');
@@ -567,6 +611,7 @@ STOP CONDITIONS
   assert.match(provider.requests[3]?.input ?? '', /fixture|UNCHANGED_TEST/);
   assert.doesNotMatch(provider.requests[3]?.input ?? '', /OLD_APP/);
   assert.deepEqual(events.filter((event) => event.type === 'tool.started' && event.name !== 'run_process').map((event) => event.callId), ['read-package', 'read-app', 'read-test', 'list-src', 'write-app']);
+  assert.equal(provider.requests.length, 4, 'stale evidence still reaches the next semantic work boundary');
 });
 
 test('reopened structured work without ephemeral evidence re-inspects', async (t) => {

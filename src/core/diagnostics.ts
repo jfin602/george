@@ -123,6 +123,7 @@ function eventRecord(session: Session, event: ApplicationEvent, sequence: number
     case 'provider.stall.suspected': case 'provider.stall.detected': correlation.providerAttemptId = event.attemptId; fields.phase = event.phase; fields.inactivityMs = event.inactivityMs; break;
     case 'provider.rebase.started': correlation.providerAttemptId = event.attemptId; fields.pressure = event.pressure; fields.estimatedTokens = event.estimatedTokens; fields.profileId = bounded(event.profileId, 256); fields.compaction = event.compaction; break;
     case 'provider.stall.terminal': correlation.providerAttemptId = event.attemptId; fields.phase = event.phase; fields.attempts = event.attempts; fields.pressure = event.pressure; fields.compaction = event.compaction; break;
+    case 'model.round.avoided': fields.reason = event.reason; break;
     case 'turn.failed': case 'turn.cancelled': fields.code = bounded(event.error.code, 128); fields.message = bounded(event.error.message); break;
     default: break;
   }

@@ -5,7 +5,7 @@ import { isAbsolute, join, relative, resolve } from 'node:path';
 import { promisify } from 'node:util';
 
 import type { StructuredTaskApplicationService, StructuredTaskStackApplicationService } from '../application/index.ts';
-import { CONTEXT_PROFILE_ORDER, CONTEXT_PROFILE_REGISTRY, asGeorgeError, type ApprovalPort, type ApplicationEvent, type RunBudgetDimension, type RunBudgetSnapshot, type Session, type ToolEffect } from '../core/index.ts';
+import { CONTEXT_PROFILE_ORDER, CONTEXT_PROFILE_REGISTRY, asGeorgeError, countModelRoundsAvoided, type ApprovalPort, type ApplicationEvent, type ModelRoundAvoidanceCounts, type RunBudgetDimension, type RunBudgetSnapshot, type Session, type ToolEffect } from '../core/index.ts';
 import { projectStackState, projectTaskState, sanitizeTaskEvidence, type StackStateProjection, type TaskStateProjection } from '../tasks/index.ts';
 
 const MAX_LIVE_EVENTS = 4_096;
@@ -59,6 +59,7 @@ export type LiveWorkMetrics = Readonly<{
   parallelBatchWallMs: number | null;
   summedChildToolRuntimeMs: number | null;
   modelRoundsAvoided: number;
+  modelRoundsAvoidedByReason: ModelRoundAvoidanceCounts;
   georgeControlCount: number;
   humanModeRounds: number | null;
   operationModeRounds: number | null;
@@ -301,6 +302,7 @@ function metrics(events: readonly ApplicationEvent[], correctionCycles: number):
   const agentRounds = events.filter((event): event is Extract<ApplicationEvent, { type: 'agent.round.completed' }> => event.type === 'agent.round.completed');
   const attemptTimings = events.filter((event): event is Extract<ApplicationEvent, { type: 'provider.attempt.finished' }> => event.type === 'provider.attempt.finished');
   const attemptCount = events.filter((event) => event.type === 'provider.attempt.started').length;
+  const avoidedByReason = countModelRoundsAvoided(events);
   const input = completed.map((event) => number(event.usage?.inputTokens)).filter((value): value is number => value !== null);
   const output = completed.map((event) => number(event.usage?.outputTokens)).filter((value): value is number => value !== null);
   const cachedInput = completed.map((event) => number(event.usage?.cachedInputTokens)).filter((value): value is number => value !== null);
@@ -332,7 +334,8 @@ function metrics(events: readonly ApplicationEvent[], correctionCycles: number):
     concurrentReadBatchCount: 0,
     parallelBatchWallMs: null,
     summedChildToolRuntimeMs: null,
-    modelRoundsAvoided: 0,
+    modelRoundsAvoided: Object.values(avoidedByReason).reduce((total, value) => total + value, 0),
+    modelRoundsAvoidedByReason: avoidedByReason,
     georgeControlCount: agentRounds.filter((event) => event.control !== undefined).length,
     humanModeRounds: agentRounds.length ? agentRounds.filter((event) => event.executionMode === 'human').length : null,
     operationModeRounds: agentRounds.length ? agentRounds.filter((event) => event.executionMode === 'operation').length : null,
@@ -562,6 +565,7 @@ function eventEvidence(event: ApplicationEvent): Readonly<Record<string, unknown
   if (event.type === 'context.envelope.promoted') safe.promotion = { fromProfileId: event.fromProfileId, toProfileId: event.toProfileId, reason: event.reason, tokens: event.tokens, providerInputBudget: event.providerInputBudget };
   if (event.type === 'provider.response.completed') safe.usage = { inputTokens: event.usage?.inputTokens ?? null, outputTokens: event.usage?.outputTokens ?? null, cachedInputTokens: event.usage?.cachedInputTokens ?? null };
   if (event.type === 'agent.round.completed') safe.round = { round: event.round, executionMode: event.executionMode, internalTextBytes: event.internalTextBytes, estimatedInternalTextTokens: event.estimatedInternalTextTokens, toolCallCount: event.toolCallCount, control: event.control ?? null };
+  if (event.type === 'model.round.avoided') safe.modelRoundAvoided = { reason: event.reason };
   if (event.type === 'provider.error' || event.type === 'turn.failed' || event.type === 'turn.cancelled') safe.error = boundedFailureError(event.error);
   if (event.type === 'tool.failed') safe.error = boundedFailureError(event.result.error);
   if (event.type === 'validation.completed' && event.status !== 'passed') safe.error = { code: sanitizeTaskEvidence(event.error?.code ?? event.status, 128).text, message: sanitizeTaskEvidence(event.error?.message ?? `Validation ${event.status}.`, 1024).text, ...(event.outcome === undefined ? {} : { reason: event.outcome }) };

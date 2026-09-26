@@ -33,12 +33,13 @@ export class StructuredTaskStackApplicationService {
     this.store = store;
   }
 
-  private async lifecycle(submission: StructuredTaskStackSubmission, state: StackState, message: string): Promise<void> {
+  private async lifecycle(submission: StructuredTaskStackSubmission, state: StackState, message: string, avoided = false): Promise<void> {
     submission.session.stackState = state;
     const projection = projectStackState(state);
     const turnId = submission.turnId ?? 'structured-stack';
     const events: ApplicationEvent[] = [
       ...this.taskService.agent.record(submission.session, { type: 'stack.updated', turnId, fingerprint: projection.fingerprint, stackId: projection.stackId, status: projection.status, ...(projection.currentTaskOrdinal === undefined ? {} : { currentTaskOrdinal: projection.currentTaskOrdinal }), completedTasks: projection.completedTaskOrdinals.length, totalTasks: projection.tasks.length }),
+      ...(avoided ? this.taskService.agent.record(submission.session, { type: 'model.round.avoided', turnId, reason: 'stack-task-complete' }) : []),
       ...this.taskService.agent.record(submission.session, { type: 'progress.milestone', turnId, category: 'completion', message: message.slice(0, 512) }),
     ];
     for (const event of events) await submission.onEvent?.(event);
@@ -74,7 +75,7 @@ export class StructuredTaskStackApplicationService {
       state = submission.session.stackState?.currentTaskIndex === undefined
         ? submission.session.stackState ?? updateCurrentStackTask(state, submission.session.taskState!)
         : updateCurrentStackTask(submission.session.stackState, submission.session.taskState!);
-      await this.lifecycle(submission, state, state.status === 'completed' ? 'Structured stack completed.' : state.terminalOutcome === undefined ? `Structured stack completed P${state.tasks[index]!.ordinal}.` : `Structured stack stopped at P${state.tasks[index]!.ordinal}.`);
+      await this.lifecycle(submission, state, state.status === 'completed' ? 'Structured stack completed.' : state.terminalOutcome === undefined ? `Structured stack completed P${state.tasks[index]!.ordinal}.` : `Structured stack stopped at P${state.tasks[index]!.ordinal}.`, state.terminalOutcome === undefined);
       if (state.terminalOutcome !== undefined) break;
     }
     return { state, taskCompletions: Object.freeze(completions) };

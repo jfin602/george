@@ -188,10 +188,11 @@ test('Operation rounds project deterministic progress without model prose', () =
   const events = [
     { type: 'agent.round.completed', turnId: 'op', round: 1, executionMode: 'operation', internalTextBytes: 12, estimatedInternalTextTokens: 3, toolCallCount: 2 },
     { type: 'agent.round.completed', turnId: 'op', round: 2, executionMode: 'operation', internalTextBytes: 0, estimatedInternalTextTokens: 0, toolCallCount: 0, control: 'handoff' },
+    { type: 'model.round.avoided', turnId: 'op', reason: 'validation-passed' },
   ] as const;
   const projected = events.flatMap((event) => projection.observe(event));
   assert.deepEqual(projected.filter((event) => event.type === 'progress.milestone').map((event) => event.message), [
-    'Operation proposed 2 tool calls', 'Operation handed control to George',
+    'Operation proposed 2 tool calls', 'Operation handed control to George', 'George advanced passing validation without model confirmation',
   ]);
   assert.deepEqual(projection.snapshot().work.map((item) => [item.operationId, item.category, item.summary, item.details]), [
     ['operation:1', 'inspection', 'Operation proposed 2 tool calls', { count: 2, bytes: 12 }],

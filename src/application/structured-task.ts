@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 
 import { loadWorkspaceContextFile } from '../context/index.ts';
-import { GeorgeError, type ApplicationEvent, type LocalSessionStore } from '../core/index.ts';
+import { GeorgeError, type ApplicationEvent, type LocalSessionStore, type ModelRoundAvoidanceReason } from '../core/index.ts';
 import {
   addressTaskWorkUnit, beginTaskCorrection, beginTaskWorkUnit, blockTask, completeTask, completeTaskCorrection, createTaskState, repairTaskCorrection,
   parseTaskPrompt, recordTaskInspection, recordTaskValidationAttempt, sanitizeTaskEvidence,
@@ -360,12 +360,13 @@ export class StructuredTaskApplicationService extends CodingWorkflowApplicationS
     this.correctionLimit = correctionLimit;
   }
 
-  private async lifecycle(submission: CodingWorkflowSubmission, state: TaskState, message: string): Promise<void> {
+  private async lifecycle(submission: CodingWorkflowSubmission, state: TaskState, message: string, avoided?: ModelRoundAvoidanceReason): Promise<void> {
     if (submission.session.stackState?.currentTaskIndex !== undefined) submission.session.stackState = updateCurrentStackTask(submission.session.stackState, state);
     const turnId = submission.turnId ?? 'structured-task';
     const projection = projectTaskState(state);
     const events = [
       ...this.agent.record(submission.session, { type: 'task.updated', turnId, fingerprint: projection.fingerprint, status: projection.status, ...(projection.currentWorkUnit === undefined ? {} : { currentWorkUnit: projection.currentWorkUnit }), blockerCount: projection.blockerCount }),
+      ...(avoided === undefined ? [] : this.agent.record(submission.session, { type: 'model.round.avoided', turnId, reason: avoided })),
       ...this.agent.record(submission.session, { type: 'progress.milestone', turnId, category: 'completion', message: message.slice(0, 512) }),
     ];
     for (const item of events) await submission.onEvent?.(item);
@@ -432,6 +433,7 @@ export class StructuredTaskApplicationService extends CodingWorkflowApplicationS
         }
         for (const item of definition.inspect) state = recordTaskInspection(state, { item, source: observed.source });
         submission.session.taskState = state;
+        await this.lifecycle(submission, state, `Structured inspection completed for ${unit.id}; starting implementation.`, 'inspection-evidence-complete');
       }
       const currentEvidence = validEvidence();
       last = await super.run({
@@ -451,7 +453,7 @@ export class StructuredTaskApplicationService extends CodingWorkflowApplicationS
       }
       state = addressTaskWorkUnit(state, unit.id);
       submission.session.taskState = state;
-      await this.lifecycle(submission, state, `Structured task addressed ${unit.id}.`);
+      await this.lifecycle(submission, state, `Structured task addressed ${unit.id}; advancing without model confirmation.`, 'work-unit-complete');
     }
     for (const validation of definition.validations) {
       if (state.validations[validation.id]!.status === 'passed') continue;
@@ -485,7 +487,7 @@ export class StructuredTaskApplicationService extends CodingWorkflowApplicationS
           }
           state = repairTaskCorrection(state, pendingCorrection.cycle);
           submission.session.taskState = state;
-          await this.lifecycle(submission, state, `Structured correction repair completed for ${validation.id}; rerunning validation.`);
+          await this.lifecycle(submission, state, `Structured correction repair completed for ${validation.id}; rerunning validation.`, 'correction-repaired');
           continue;
         }
         last = await super.validate({ ...submission, input: `George-owned validation ${validation.id}.`, routedDocuments: routed, toolNames: [], omitHistory: true, executionPolicy, budget }, literal);
@@ -503,7 +505,10 @@ export class StructuredTaskApplicationService extends CodingWorkflowApplicationS
           state = blockTask(state, 'budget_exhausted', `Validation ${validation.id} exhausted the run budget.`);
           submission.session.taskState = state; await this.lifecycle(submission, state, `Structured task exhausted its budget at ${validation.id}.`); return last;
         }
-        if (observed.status === 'passed') break;
+        if (observed.status === 'passed') {
+          await this.lifecycle(submission, state, `Structured validation ${validation.id} passed; advancing without model confirmation.`, 'validation-passed');
+          break;
+        }
         if (observed.status === 'cancelled') {
           state = blockTask(state, 'cancelled', `Validation ${validation.id} is cancelled.`);
           submission.session.taskState = state; await this.lifecycle(submission, state, `Structured task stopped at ${validation.id}.`); return last;

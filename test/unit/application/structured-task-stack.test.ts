@@ -70,6 +70,11 @@ test('stack validates every definition before P1 and executes only after prior c
   assert.deepEqual(completion.state.completedTaskOrdinals, [1, 2, 3]);
   assert.deepEqual(completion.state.tasks.map((item) => item.taskState.validations.V1.status), ['passed', 'passed', 'passed']);
   assert.deepEqual(provider.requests.map((request) => request.input.match(/W1 — Work/)?.[0]), ['W1 — Work', 'W1 — Work', 'W1 — Work']);
+  assert.deepEqual(session.events.filter((event) => event.type === 'model.round.avoided').map((event) => event.reason), [
+    'work-unit-complete', 'validation-passed', 'stack-task-complete',
+    'work-unit-complete', 'validation-passed', 'stack-task-complete',
+    'work-unit-complete', 'validation-passed',
+  ]);
 });
 
 test('stack fail-stops after P1 or P2 and terminal failure cannot be resumed', async (t) => {

@@ -222,6 +222,16 @@ export class WorkProjection {
           ...this.update({ id: `${event.turnId}:operation:${event.round}`, turnId: event.turnId, operationId: `operation:${event.round}`, category, status: 'succeeded', summary: message, details: { count: event.toolCallCount, bytes: event.internalTextBytes } }),
         ];
       }
+      case 'model.round.avoided': {
+        const message = ({
+          'inspection-evidence-complete': 'George advanced observed inspection evidence directly to implementation',
+          'work-unit-complete': 'George advanced completed work without another confirmation round',
+          'validation-passed': 'George advanced passing validation without model confirmation',
+          'correction-repaired': 'George advanced completed correction directly to revalidation',
+          'stack-task-complete': 'George advanced the completed stack task directly',
+        } as const)[event.reason];
+        return [this.activityEvent(event.turnId, 'completion', message), ...this.progressEvent(event.turnId, 'completion', message)];
+      }
       case 'provider.stall.suspected': return [this.activityEvent(event.turnId, 'recovery', 'Provider response may be stalled')];
       case 'provider.stall.detected': return [this.activityEvent(event.turnId, 'recovery', 'Provider stall detected')];
       case 'provider.retry.scheduled': return [this.activityEvent(event.turnId, 'recovery', 'Retrying provider')];

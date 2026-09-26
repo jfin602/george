@@ -6,7 +6,7 @@ import { basename, isAbsolute, join, resolve } from 'node:path';
 import { GeorgeError } from './errors.ts';
 import { TEXT_FRAMING_CHANGE_WARNING } from './approval.ts';
 import type { ContextProfile } from './config.ts';
-import type { ApplicationEvent, ContextCheckpointEvidence, ContextDiagnostics, ProviderAttemptTiming, ProviderUsage } from './events.ts';
+import { MODEL_ROUND_AVOIDANCE_REASONS, type ApplicationEvent, type ContextCheckpointEvidence, type ContextDiagnostics, type ProviderAttemptTiming, type ProviderUsage } from './events.ts';
 import type { RunBudgetDimension, RunBudgetSnapshot } from './run-budget.ts';
 import type { ToolExecutionMetadata } from './execution.ts';
 import type { TranscriptEntry, Session, SessionInterruption } from './session.ts';
@@ -290,6 +290,7 @@ function durableEvent(event: ApplicationEvent): ApplicationEvent | undefined {
       internalTextBytes: boundedInteger(event.internalTextBytes, 'internal text bytes', 4 * 1024), estimatedInternalTextTokens: boundedInteger(event.estimatedInternalTextTokens, 'estimated internal text tokens', 1024),
       toolCallCount: boundedInteger(event.toolCallCount, 'round tool call count', 1024), ...(event.control === undefined ? {} : { control: oneOf(event.control, 'George control', ['handoff'] as const) }),
     };
+    case 'model.round.avoided': return { type: event.type, turnId: string(event.turnId, 'turn ID', 256), reason: oneOf(event.reason, 'model round avoidance reason', MODEL_ROUND_AVOIDANCE_REASONS) };
     case 'provider.text.delta': return undefined; // The clean transcript is authoritative for completed assistant text.
     case 'provider.response.started': return event.responseId === undefined ? { type: event.type } : { type: event.type, responseId: string(event.responseId, 'response ID', 256) };
     case 'provider.response.completed': return event.usage === undefined ? { type: event.type } : { type: event.type, usage: safeUsage(event.usage) };
