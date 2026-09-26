@@ -12,18 +12,19 @@ Qualification is split into deterministic correctness, bounded task-slice correc
 
 ## Current post-correction qualification authority
 
-The original qualification sequence remains historical authority. Current Phase 9 acceptance now has one inherited Green core gate plus two aligned larger-work gates:
+The original qualification sequence remains historical authority. `c9-greenfield-instrument-alignment` qualified v2 instrument semantics, but its official Gate B2 attempt exposed a production mutation/tool convergence defect. Because `c9-mutation-precondition-convergence` changes production agent-loop/tool/recovery behavior, current Phase 9 acceptance uses three freshly gated live checks:
 
 1. **Gate A — frozen Phase 8 structured edit-plus-validation replay.**
-   - **Green and inherited** from `c9-mutation-intent-authority` so long as the production structured execution path, mutation authority, or exact Gate A fixture/acceptance does not change.
-   - The qualifying attempt produced the exact required 60-byte edit, passed George-owned V1, completed/verified TaskState, passed hidden acceptance, used zero human coding intervention, avoided exhaustion, and stayed within the locked `<=10` model-requested tool calls / `<=10` logical provider rounds.
-   - Do not respent Gate A solely because qualification instruments B/C are structurally versioned.
+   - The prior `c9-mutation-intent-authority` Gate A Green remains immutable historical evidence.
+   - Rerun Gate A exactly once after the mutation-precondition production correction. The correction may not inherit the prior pass across changed production execution behavior.
+   - Green still requires the exact 60-byte edit, George-owned V1 Green, completed/verified TaskState, hidden acceptance Green, zero human coding intervention, no exhaustion, and the locked `<=10` model-requested tool calls / `<=10` logical provider rounds.
 2. **Gate B2 — `greenfield-express-v2`.**
-   - Runs once after deterministic v2 instrument qualification.
-   - Must execute through the production structured task-stack service, preserve strict fail-stop ordering, complete all declared validations, finish with completed StackState, pass hidden acceptance, use zero human coding intervention, and avoid task/stage exhaustion.
+   - Run one fresh official attempt only after corrected Gate A Green and deterministic mutation-convergence qualification.
+   - Use the existing v2 task/instrument version and digest unchanged; do not create v3 merely because production behavior changed.
+   - Must execute through the production structured task-stack service, preserve strict fail-stop ordering, complete all declared validations, finish with completed StackState, pass hidden acceptance, use zero human coding intervention, and avoid task/stage/correction/run-budget exhaustion.
 3. **Gate C2 — `existing-express-feature-v2`.**
-   - Runs once only after Gate B2 Green.
-   - Must preserve baseline behavior, pass focused/broad validation and hidden acceptance, finish with completed TaskState, use zero human coding intervention, and avoid task/stage exhaustion.
+   - Run one official attempt only after fresh Gate B2 Green.
+   - Must preserve baseline behavior, pass focused/broad validation and hidden acceptance, finish with completed TaskState, use zero human coding intervention, and avoid task/stage/correction/run-budget exhaustion.
 
 Historical `greenfield-express-v1` / `existing-express-feature-v1` remain immutable evidence. `greenfield-express-v1` is Not Green because its task-stack authoring duplicates preflight inspection as ordinary workflow and exhausted the duplicate/no-progress guard before implementation. That result is not reclassified or erased.
 
@@ -36,7 +37,26 @@ Instrument alignment rules:
 
 Current qualified sub-boundaries remain Green: production StackState/task-stack execution; Bubblewrap containment; read SHA/mutation preconditions; mandatory first-round INSPECT; application-owned INSPECT completion; exception-safe live evidence; text-framing evidence/guard; mutation-intent authority; and fair frozen-edit approval.
 
-Phase 9 is ready for owner closeout only if Gate B2 and Gate C2 are both Green and no new blocking regression appears.
+Phase 9 is ready for owner closeout only if the fresh corrected Gate A, Gate B2, and Gate C2 are all Green and no new blocking regression appears.
+
+## Mutation-precondition convergence correction qualification
+
+Deterministic qualification for `c9-mutation-precondition-convergence` must reproduce the exact failure class before any live rerun and then prove the repaired behavior.
+
+Required executable guards:
+
+- an existing-file `write_file` without `expectedSha256` remains rejected, produces bounded `tool.failed` evidence, reaches provider continuation, and can converge through `read_file -> current sha256 -> retry -> successful mutation`;
+- a model-originated write targeting a safe relative path beneath a nonexistent parent returns a normal bounded failure instead of escaping as a turn-level exception before terminal tool evidence;
+- the new native `create_directory` tool can create the required in-workspace directory chain and then permit a normal `write_file` to create the nested file;
+- `create_directory` is idempotent for an already-existing directory, rejects regular-file collisions, absolute paths, traversal, and symlink escapes, and never deletes/replaces existing entries;
+- Standard workspace approval and Workspace Autonomous behavior follow the existing mutation policy ceiling exactly;
+- cancellation, policy denial, budget exhaustion, configuration faults, and ambiguous/outcome-unknown effects retain their stronger existing semantics and are not misclassified as recoverable local failures;
+- same-response sequential tool requests receive truthful terminal evidence for every request reached before a legitimate hard stop; one ordinary local prerequisite failure does not strand later safe requests merely because pre-dispatch preparation threw;
+- interrupted directory creation has deterministic recovery/reconciliation evidence and is never blindly replayed;
+- Gate A's exact-edit, text-framing, mutation-intent-authority, approval, and current-content precondition regressions remain Green;
+- v1/v2 task, fixture, metadata, and hidden-acceptance digests remain unchanged.
+
+Do not raise structured stage limits, weaken SHA requirements, silently inject current hashes, silently create write parents, expose arbitrary process execution as a directory-creation substitute, or revise Task Prompt format 1 merely to obtain a pass.
 
 ## Task-format parser and validator
 
