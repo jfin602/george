@@ -230,6 +230,22 @@ Integrated tests prove:
 
 An approved arbitrary process is not considered workspace-sandboxed unless a real OS sandbox was actually used and tested.
 
+### Mutation-prerequisite convergence
+
+Workspace mutation qualification must prove both safety and convergence. Safe rejection is insufficient if an ordinary no-side-effect prerequisite failure escapes before the model receives terminal tool evidence.
+
+Deterministic coverage must prove:
+- missing/stale existing-file current-content preconditions fail closed without mutation and remain available as bounded `tool.failed` continuation evidence;
+- safe nonexistent-parent failures do not escape the per-call tool boundary;
+- explicit native directory creation can establish a missing in-workspace directory chain without granting delete/move/general filesystem authority;
+- directory creation rejects traversal, absolute paths, symlink escapes, and file collisions, is idempotent for an already-existing directory, and obeys Standard/Workspace Autonomous mutation policy;
+- every ordinary requested local tool call reached before a legitimate hard stop has an authoritative terminal result rather than an unexplained unavailable state;
+- cancellation, denial, configuration failure, budget exhaustion, ambiguous mutations, and outcome-unknown external effects retain their stricter classifications;
+- interruption recovery for directory creation is evidence-based and never blindly replays a possibly completed mutation;
+- existing `read_file.sha256 -> expectedSha256`, text-framing, mutation-intent, Git dirty-state, atomicity, and workspace-boundary guarantees remain unchanged.
+
+Official live qualification must preserve the earlier Not Green attempt and record the new attempt separately; a later pass never rewrites the prior failure.
+
 ### Agent-loop qualification
 
 Use small fixture repositories and deterministic scripted model responses to exercise multi-turn tool loops without depending on model nondeterminism.
