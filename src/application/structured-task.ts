@@ -74,9 +74,9 @@ function renderSlice(slice: StructuredTaskSlice, stage: 'inspection' | 'implemen
     `VALIDATION\n${slice.validations.join('\n') || '(none)'}`,
     `STOP CONDITIONS\n${slice.stops.join('\n') || '(none)'}`,
     ...(slice.evidence.length ? [`OBSERVED EVIDENCE\n${slice.evidence.join('\n')}`] : []),
-    ...(stage === 'inspection' ? ['Use a local read/list/search/Git tool before responding. Do not mutate files or run processes.'] : []),
+    ...(stage === 'inspection' ? [`Use at most ${STAGE_LIMITS.inspection.maxToolCalls} local read/list/search/Git tool calls in this response. Start from observed paths or list the workspace; do not guess paths. George completes inspection after this first round has successful read-only evidence. Do not mutate files or run processes.`] : []),
     ...(stage === 'correction' ? ['Repair only the observed validation failure using the normal tool and permission policy. Do not claim validation passed; George reruns it.'] : []),
-    ...(stage === 'inspection' ? [] : ['Use supplied observed evidence. Perform only the current work unit. Stop when its completion condition is satisfied. Do not run declared George-owned validation yourself.']),
+    ...(stage === 'inspection' ? [] : [`Use supplied observed evidence and at most ${STAGE_LIMITS[stage].maxToolCalls} tool calls. Before changing an existing file, read it and pass its expectedSha256 while preserving its textFraming. Before writing beneath a missing parent, use create_directory. Perform only the current work unit and stop when its completion condition is satisfied. Do not run declared George-owned validation yourself.`]),
   ].join('\n\n');
 }
 

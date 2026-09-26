@@ -131,10 +131,16 @@ test('structured service preflights with local reads, progresses task state, and
   assert.equal(provider.requests.length, 3);
   assert.deepEqual(events.filter((event) => event.type === 'tool.completed' && event.execution?.effect === 'local_read').map((event) => event.callId), ['read', 'list']);
   assert.match(provider.requests[0]?.input ?? '', /W1 — First work/);
+  // live:c2:inspect-no-evidence — keep the bounded preflight from guessing enough paths to discard valid evidence at the frozen ceiling.
+  assert.match(provider.requests[0]?.input ?? '', /at most 4 .*tool calls.*do not guess paths/i);
   assert.doesNotMatch(provider.requests[0]?.input ?? '', /UNRELATED_COMPLETED_LEDGER/);
   assert.doesNotMatch(provider.requests[0]?.input ?? '', /W2 — Second work/);
   assert.match(provider.requests[1]?.input ?? '', /inspection result read_file:read/);
   assert.match(provider.requests[1]?.input ?? '', /inspection result list_directory:list/);
+  // live:b2:structured-stage-tool-limit — expose the existing safe mutation prerequisites before they consume the eight-call stage budget.
+  assert.match(provider.requests[1]?.input ?? '', /at most 8 tool calls/);
+  assert.match(provider.requests[1]?.input ?? '', /read it and pass its expectedSha256.*preserving its textFraming/);
+  assert.match(provider.requests[1]?.input ?? '', /missing parent.*create_directory/);
   assert.match(provider.requests[2]?.input ?? '', /W2 — Second work/);
   assert.doesNotMatch(provider.requests[2]?.input ?? '', /W1 — First work|First work is bounded/);
 });
