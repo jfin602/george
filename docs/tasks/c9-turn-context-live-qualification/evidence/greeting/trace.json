@@ -1,0 +1,97 @@
+{
+  "terminalStatus": "completed",
+  "terminalError": null,
+  "observerError": null,
+  "taskState": null,
+  "stackState": null,
+  "metrics": {
+    "providerAttempts": 1,
+    "providerRounds": 1,
+    "retries": 0,
+    "providerInputTokens": 1479,
+    "providerOutputTokens": 9,
+    "toolCalls": 0,
+    "contextAssemblies": 1,
+    "sandboxedProcessCalls": 0,
+    "taskUpdates": 0,
+    "stackUpdates": 0
+  },
+  "toolCalls": [],
+  "mutations": [],
+  "validations": [],
+  "correctionCount": 0,
+  "contexts": [
+    {
+      "profileId": "qwen3-coder-30b-a3b-instruct-q4_k_m-lm-studio-32k-ordinary",
+      "attemptedProfileIds": [
+        "qwen3-coder-30b-a3b-instruct-q4_k_m-lm-studio-32k-ordinary",
+        "qwen3-coder-30b-a3b-instruct-q4_k_m-lm-studio-32k-medium",
+        "qwen3-coder-30b-a3b-instruct-q4_k_m-lm-studio-32k"
+      ],
+      "promotionReasons": [],
+      "estimatedTokens": 1012,
+      "providerInputBudget": 8192,
+      "remainingHeadroom": 7180
+    }
+  ],
+  "envelopePromotions": [],
+  "observedReadPaths": [],
+  "finalResponse": {
+    "present": true,
+    "bytes": 34,
+    "sha256": "cd153d3c18e782c4f4b3ceec574adccc8e68bc557110b0bc263b01e09bfcc8ef"
+  },
+  "budgets": {
+    "latest": [
+      {
+        "runId": "44886388-8d0f-43e5-82d4-2a577dee87fa",
+        "snapshot": {
+          "runId": "44886388-8d0f-43e5-82d4-2a577dee87fa",
+          "limits": {
+            "providerAttempts": 128,
+            "toolExecutions": 128,
+            "retryAttempts": 32,
+            "compactionAttempts": 32,
+            "compactionCheckpoints": 32,
+            "processExecutions": 64,
+            "processRuntimeMs": 3600000,
+            "wallClockMs": 3600000,
+            "contextTokens": 1000000,
+            "providerInputTokens": 1000000,
+            "providerOutputTokens": 1000000
+          },
+          "consumed": {
+            "providerAttempts": 1,
+            "toolExecutions": 0,
+            "retryAttempts": 0,
+            "compactionAttempts": 0,
+            "compactionCheckpoints": 0,
+            "processExecutions": 0,
+            "processRuntimeMs": 0,
+            "wallClockMs": 14482,
+            "contextTokens": 1012,
+            "providerInputTokens": 1479,
+            "providerOutputTokens": 9
+          },
+          "elapsedMs": 14482
+        }
+      }
+    ],
+    "pressure": [],
+    "exhaustion": [],
+    "taskExhausted": false,
+    "stageExhaustion": []
+  },
+  "timing": {
+    "totalMs": 14506.142444,
+    "workflows": [
+      {
+        "turnId": "dc2edad5-77e4-43bb-b0d0-6cbfc9ee551f",
+        "totalMs": 14501
+      }
+    ]
+  },
+  "hiddenAcceptance": "passed",
+  "humanInterventions": 0,
+  "eventsOmitted": 11
+}

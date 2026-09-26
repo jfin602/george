@@ -1,0 +1,256 @@
+{
+  "schemaVersion": 1,
+  "attemptId": "c9-turn-context-live-qualification-p1-greeting-20260926",
+  "runtime": {
+    "node": "v26.10.0",
+    "platform": "linux",
+    "arch": "x64"
+  },
+  "workspace": "/tmp/george-greeting-cS9BMh/workspace",
+  "qualifying": true,
+  "terminalStatus": "completed",
+  "terminalError": null,
+  "observerError": null,
+  "hiddenAcceptance": "passed",
+  "humanInterventions": 0,
+  "taskState": null,
+  "stackState": null,
+  "eventEvidence": [
+    {
+      "type": "turn.started",
+      "turnId": "dc2edad5-77e4-43bb-b0d0-6cbfc9ee551f"
+    },
+    {
+      "type": "activity.updated",
+      "turnId": "dc2edad5-77e4-43bb-b0d0-6cbfc9ee551f"
+    },
+    {
+      "type": "progress.milestone",
+      "turnId": "dc2edad5-77e4-43bb-b0d0-6cbfc9ee551f"
+    },
+    {
+      "type": "reliability.run.started",
+      "turnId": "dc2edad5-77e4-43bb-b0d0-6cbfc9ee551f",
+      "runId": "44886388-8d0f-43e5-82d4-2a577dee87fa"
+    },
+    {
+      "type": "budget.state",
+      "turnId": "dc2edad5-77e4-43bb-b0d0-6cbfc9ee551f",
+      "runId": "44886388-8d0f-43e5-82d4-2a577dee87fa"
+    },
+    {
+      "type": "context.source",
+      "turnId": "dc2edad5-77e4-43bb-b0d0-6cbfc9ee551f",
+      "status": "loading"
+    },
+    {
+      "type": "activity.updated",
+      "turnId": "dc2edad5-77e4-43bb-b0d0-6cbfc9ee551f"
+    },
+    {
+      "type": "work.updated"
+    },
+    {
+      "type": "context.source",
+      "turnId": "dc2edad5-77e4-43bb-b0d0-6cbfc9ee551f",
+      "status": "missing"
+    },
+    {
+      "type": "activity.updated",
+      "turnId": "dc2edad5-77e4-43bb-b0d0-6cbfc9ee551f"
+    },
+    {
+      "type": "work.updated"
+    },
+    {
+      "type": "context.source",
+      "turnId": "dc2edad5-77e4-43bb-b0d0-6cbfc9ee551f",
+      "status": "loading"
+    },
+    {
+      "type": "activity.updated",
+      "turnId": "dc2edad5-77e4-43bb-b0d0-6cbfc9ee551f"
+    },
+    {
+      "type": "work.updated"
+    },
+    {
+      "type": "context.source",
+      "turnId": "dc2edad5-77e4-43bb-b0d0-6cbfc9ee551f",
+      "status": "missing"
+    },
+    {
+      "type": "activity.updated",
+      "turnId": "dc2edad5-77e4-43bb-b0d0-6cbfc9ee551f"
+    },
+    {
+      "type": "work.updated"
+    },
+    {
+      "type": "context.source",
+      "turnId": "dc2edad5-77e4-43bb-b0d0-6cbfc9ee551f",
+      "status": "loading"
+    },
+    {
+      "type": "activity.updated",
+      "turnId": "dc2edad5-77e4-43bb-b0d0-6cbfc9ee551f"
+    },
+    {
+      "type": "work.updated"
+    },
+    {
+      "type": "context.source",
+      "turnId": "dc2edad5-77e4-43bb-b0d0-6cbfc9ee551f",
+      "status": "missing"
+    },
+    {
+      "type": "activity.updated",
+      "turnId": "dc2edad5-77e4-43bb-b0d0-6cbfc9ee551f"
+    },
+    {
+      "type": "work.updated"
+    },
+    {
+      "type": "context.source",
+      "turnId": "dc2edad5-77e4-43bb-b0d0-6cbfc9ee551f",
+      "status": "loading"
+    },
+    {
+      "type": "activity.updated",
+      "turnId": "dc2edad5-77e4-43bb-b0d0-6cbfc9ee551f"
+    },
+    {
+      "type": "work.updated"
+    },
+    {
+      "type": "context.source",
+      "turnId": "dc2edad5-77e4-43bb-b0d0-6cbfc9ee551f",
+      "status": "missing"
+    },
+    {
+      "type": "activity.updated",
+      "turnId": "dc2edad5-77e4-43bb-b0d0-6cbfc9ee551f"
+    },
+    {
+      "type": "work.updated"
+    },
+    {
+      "type": "context.source",
+      "turnId": "dc2edad5-77e4-43bb-b0d0-6cbfc9ee551f",
+      "status": "loading"
+    },
+    {
+      "type": "activity.updated",
+      "turnId": "dc2edad5-77e4-43bb-b0d0-6cbfc9ee551f"
+    },
+    {
+      "type": "work.updated"
+    },
+    {
+      "type": "context.source",
+      "turnId": "dc2edad5-77e4-43bb-b0d0-6cbfc9ee551f",
+      "status": "missing"
+    },
+    {
+      "type": "activity.updated",
+      "turnId": "dc2edad5-77e4-43bb-b0d0-6cbfc9ee551f"
+    },
+    {
+      "type": "work.updated"
+    },
+    {
+      "type": "context.assembled",
+      "turnId": "dc2edad5-77e4-43bb-b0d0-6cbfc9ee551f",
+      "diagnostics": {
+        "profileId": "qwen3-coder-30b-a3b-instruct-q4_k_m-lm-studio-32k-ordinary",
+        "attemptedProfileIds": [
+          "qwen3-coder-30b-a3b-instruct-q4_k_m-lm-studio-32k-ordinary",
+          "qwen3-coder-30b-a3b-instruct-q4_k_m-lm-studio-32k-medium",
+          "qwen3-coder-30b-a3b-instruct-q4_k_m-lm-studio-32k"
+        ],
+        "promotionReasons": [],
+        "estimatedTokens": 1012,
+        "providerInputBudget": 8192,
+        "remainingHeadroom": 7180
+      }
+    },
+    {
+      "type": "activity.updated",
+      "turnId": "dc2edad5-77e4-43bb-b0d0-6cbfc9ee551f"
+    },
+    {
+      "type": "progress.milestone",
+      "turnId": "dc2edad5-77e4-43bb-b0d0-6cbfc9ee551f"
+    },
+    {
+      "type": "budget.state",
+      "turnId": "dc2edad5-77e4-43bb-b0d0-6cbfc9ee551f",
+      "runId": "44886388-8d0f-43e5-82d4-2a577dee87fa"
+    },
+    {
+      "type": "budget.state",
+      "turnId": "dc2edad5-77e4-43bb-b0d0-6cbfc9ee551f",
+      "runId": "44886388-8d0f-43e5-82d4-2a577dee87fa"
+    },
+    {
+      "type": "provider.attempt.started",
+      "turnId": "dc2edad5-77e4-43bb-b0d0-6cbfc9ee551f",
+      "runId": "44886388-8d0f-43e5-82d4-2a577dee87fa"
+    },
+    {
+      "type": "provider.response.started"
+    },
+    {
+      "type": "activity.updated"
+    },
+    {
+      "type": "provider.response.completed",
+      "usage": {
+        "inputTokens": 1479,
+        "outputTokens": 9
+      }
+    },
+    {
+      "type": "budget.state",
+      "turnId": "dc2edad5-77e4-43bb-b0d0-6cbfc9ee551f",
+      "runId": "44886388-8d0f-43e5-82d4-2a577dee87fa"
+    },
+    {
+      "type": "budget.state",
+      "turnId": "dc2edad5-77e4-43bb-b0d0-6cbfc9ee551f",
+      "runId": "44886388-8d0f-43e5-82d4-2a577dee87fa"
+    },
+    {
+      "type": "budget.state",
+      "turnId": "dc2edad5-77e4-43bb-b0d0-6cbfc9ee551f",
+      "runId": "44886388-8d0f-43e5-82d4-2a577dee87fa"
+    },
+    {
+      "type": "activity.updated",
+      "turnId": "dc2edad5-77e4-43bb-b0d0-6cbfc9ee551f"
+    },
+    {
+      "type": "progress.milestone",
+      "turnId": "dc2edad5-77e4-43bb-b0d0-6cbfc9ee551f"
+    },
+    {
+      "type": "turn.completed",
+      "turnId": "dc2edad5-77e4-43bb-b0d0-6cbfc9ee551f"
+    },
+    {
+      "type": "workflow.completed",
+      "turnId": "dc2edad5-77e4-43bb-b0d0-6cbfc9ee551f"
+    },
+    {
+      "type": "activity.updated",
+      "turnId": "dc2edad5-77e4-43bb-b0d0-6cbfc9ee551f"
+    },
+    {
+      "type": "progress.milestone",
+      "turnId": "dc2edad5-77e4-43bb-b0d0-6cbfc9ee551f"
+    },
+    {
+      "type": "work.updated"
+    }
+  ]
+}

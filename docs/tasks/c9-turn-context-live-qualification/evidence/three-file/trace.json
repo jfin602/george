@@ -1,0 +1,165 @@
+{
+  "terminalStatus": "failed",
+  "terminalError": null,
+  "observerError": null,
+  "taskState": null,
+  "stackState": null,
+  "metrics": {
+    "providerAttempts": 3,
+    "providerRounds": 3,
+    "retries": 0,
+    "providerInputTokens": 4334,
+    "providerOutputTokens": 208,
+    "toolCalls": 9,
+    "contextAssemblies": 1,
+    "sandboxedProcessCalls": 0,
+    "taskUpdates": 0,
+    "stackUpdates": 0
+  },
+  "toolCalls": [
+    {
+      "callId": "call_2029258686870000",
+      "name": "git_status",
+      "requestedArguments": "{}",
+      "effect": "local_read",
+      "terminalState": "succeeded"
+    },
+    {
+      "callId": "call_2029258686870001",
+      "name": "list_directory",
+      "requestedArguments": "{\"path\":\"\"}",
+      "effect": "local_read",
+      "terminalState": "succeeded"
+    },
+    {
+      "callId": "call_2029258686870002",
+      "name": "read_file",
+      "requestedArguments": "{\"path\":\"README.md\"}",
+      "effect": "local_read",
+      "terminalState": "succeeded"
+    },
+    {
+      "callId": "call_2029258686870003",
+      "name": "search_text",
+      "requestedArguments": "{\"query\":\"compileReleasePlan\",\"path\":\"\"}",
+      "effect": "local_read",
+      "terminalState": "failed"
+    },
+    {
+      "callId": "call_2029258686870004",
+      "name": "list_directory",
+      "requestedArguments": "{\"path\":\"src\"}",
+      "effect": "local_read",
+      "terminalState": "failed"
+    },
+    {
+      "callId": "call_2029258686870005",
+      "name": "read_file",
+      "requestedArguments": "{\"path\":\"plan.js\"}",
+      "effect": "local_read",
+      "terminalState": "succeeded"
+    },
+    {
+      "callId": "call_2029258686870006",
+      "name": "read_file",
+      "requestedArguments": "{\"path\":\"plan.test.js\"}",
+      "effect": "local_read",
+      "terminalState": "succeeded"
+    },
+    {
+      "callId": "call_2029258686870007",
+      "name": "run_process",
+      "requestedArguments": "{\"executable\":\"node\",\"arguments\":[\"--version\"]}",
+      "effect": "host_process",
+      "terminalState": "denied"
+    },
+    {
+      "callId": "call_2029258686870008",
+      "name": "search_text",
+      "requestedArguments": "{\"query\":\"compileReleasePlan\"}",
+      "effect": "local_read",
+      "terminalState": "succeeded"
+    }
+  ],
+  "mutations": [],
+  "validations": [],
+  "correctionCount": 0,
+  "contexts": [
+    {
+      "profileId": "qwen3-coder-30b-a3b-instruct-q4_k_m-lm-studio-32k-ordinary",
+      "attemptedProfileIds": [
+        "qwen3-coder-30b-a3b-instruct-q4_k_m-lm-studio-32k-ordinary",
+        "qwen3-coder-30b-a3b-instruct-q4_k_m-lm-studio-32k-medium",
+        "qwen3-coder-30b-a3b-instruct-q4_k_m-lm-studio-32k"
+      ],
+      "promotionReasons": [],
+      "estimatedTokens": 1081,
+      "providerInputBudget": 8192,
+      "remainingHeadroom": 7111
+    }
+  ],
+  "envelopePromotions": [],
+  "observedReadPaths": [
+    "README.md",
+    "plan.js",
+    "plan.test.js"
+  ],
+  "finalResponse": {
+    "present": false,
+    "bytes": 0,
+    "sha256": null
+  },
+  "budgets": {
+    "latest": [
+      {
+        "runId": "e5b748f4-500f-4dcb-989d-4d90ec586895",
+        "snapshot": {
+          "runId": "e5b748f4-500f-4dcb-989d-4d90ec586895",
+          "limits": {
+            "providerAttempts": 128,
+            "toolExecutions": 128,
+            "retryAttempts": 32,
+            "compactionAttempts": 32,
+            "compactionCheckpoints": 32,
+            "processExecutions": 64,
+            "processRuntimeMs": 3600000,
+            "wallClockMs": 3600000,
+            "contextTokens": 1000000,
+            "providerInputTokens": 1000000,
+            "providerOutputTokens": 1000000
+          },
+          "consumed": {
+            "providerAttempts": 3,
+            "toolExecutions": 7,
+            "retryAttempts": 0,
+            "compactionAttempts": 0,
+            "compactionCheckpoints": 0,
+            "processExecutions": 0,
+            "processRuntimeMs": 0,
+            "wallClockMs": 33200,
+            "contextTokens": 1081,
+            "providerInputTokens": 4334,
+            "providerOutputTokens": 208
+          },
+          "elapsedMs": 33200
+        }
+      }
+    ],
+    "pressure": [],
+    "exhaustion": [],
+    "taskExhausted": false,
+    "stageExhaustion": []
+  },
+  "timing": {
+    "totalMs": 153320.910315,
+    "workflows": [
+      {
+        "turnId": "d6b72b5a-8167-47c1-b9a9-93a530b3f3e6",
+        "totalMs": 153309
+      }
+    ]
+  },
+  "hiddenAcceptance": "failed",
+  "humanInterventions": 0,
+  "eventsOmitted": 394
+}
