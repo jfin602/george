@@ -214,3 +214,17 @@ The historical <=10 Gate A efficiency target is reported but is no longer indepe
 
 If ready, next action:
 `/closeout phase 9`.
+
+
+## Inserted prerequisite — provider stall recovery
+
+Before starting a new official P3 final sweep, `c9-provider-stall-recovery` must be qualified and closed.
+
+The rerun must:
+- preserve the first interrupted P3 attempt as historical evidence;
+- start a new candidate sweep at greeting;
+- run greeting -> three-file -> Gate A -> B2 -> C2 once each without repair between workloads;
+- record provider stall/retry/rebase observations from the new correction;
+- classify a repeated terminal provider stall as a provider failure rather than task budget exhaustion unless a real George budget is the terminal cause.
+
+The existing P3/P4 readiness rules otherwise remain unchanged.

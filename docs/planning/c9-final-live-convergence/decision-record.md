@@ -235,3 +235,14 @@ Do not:
 - introduce a helper model into Phase 9;
 - hide native real-TTY/GPU Offload Evidence Gaps;
 - owner-close Phase 9 until the final qualifying chain is Green.
+
+
+## Inserted correction — provider stall recovery
+
+The first P3 final-sweep attempt after P1/P2 is preserved as interrupted diagnostic evidence.
+
+Repeated incomplete/stalled LM Studio behavior during Gate A demonstrated that replay-safe retry alone can still consume operationally unacceptable wall-clock time. `c9-provider-stall-recovery` is inserted before the final qualifying P3 rerun.
+
+The final convergence architecture remains authoritative. The inserted correction may add provider-stall watchdog/recovery/rebase behavior, but it must not weaken mission-card alignment, evidence reuse, hard convergence ceilings, duplicate/no-progress protection, or P2 replay safety.
+
+After the inserted correction is qualified, rerun P3 from greeting through C2 once against the new candidate. Do not treat the interrupted attempt as the final qualification.
