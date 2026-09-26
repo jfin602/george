@@ -51,6 +51,22 @@ The correction must also preserve bounded provider/turn/tool/validation failure 
 
 Phase 9 is ready for owner closeout only when the post-repair sweep's qualifying chain is Green, no blocking deterministic/broad regression remains, and historical evidence is preserved.
 
+Phase 9 final convergence now routes through `c9-final-live-convergence`.
+
+That correction supersedes the historical use of the Gate A <=10 call/round values as standalone functional pass/fail requirements. The old results remain historically classified under the criteria that produced them. Current final qualification separates:
+- functional correctness and George-owned completion/validation truth;
+- hard runaway/stage/task/run-budget exhaustion;
+- duplicate/no-progress protection;
+- measured convergence efficiency such as tool-call and provider-round counts.
+
+The historical <=10 Gate A values remain reported as efficiency targets. Missing them alone does not make an otherwise functionally completed final Gate A Not Green.
+
+The final correction also introduces a deterministic mission-card/alignment projection for structured implementation/correction rounds. It is a bounded derived view of canonical TaskState, applicable requirements/invariants/stops, valid observed evidence, no-repeat guidance, and the next George-owned completion/validation condition. It cannot alter canonical state, infer completion, raise permissions, or replace validation/recovery authority.
+
+A helper/utility model remains outside Phase 9. Phase 9 must close on the primary-model path so alignment failures remain attributable to George/Qwen rather than a semantic intermediary.
+
+
+
 Aggregate broad failures remain truthful observations; the current polish wave should repair actionable retained OpenTUI/test-stability failures rather than carrying them indefinitely when their causes can be established.
 
 ## Mutation-precondition convergence correction qualification
