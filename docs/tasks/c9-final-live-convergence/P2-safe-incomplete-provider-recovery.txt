@@ -1,0 +1,123 @@
+TASK: Correction 9 / P2 — Safe incomplete provider response recovery
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Sol High`.
+- Browser required: no.
+
+VERSIONING
+- Required unchanged project version: `0.9.10`.
+
+GOAL
+
+Repair the B2 provider-lifecycle failure class without weakening replay safety.
+
+The final sweep observed an LM Studio round that emitted `provider.response.started` and several tool proposals, never emitted response completion, and timed out after 120000 ms. George executed none of those proposed tools.
+
+Read:
+- `BOOT.md`;
+- current Phase 5/9 retry/recovery/provider authority;
+- `docs/planning/c9-final-live-convergence/{decision-record,qualification-plan}.md`;
+- `docs/tasks/c9-final-live-convergence/{prompt-assessment,implementation-plan}.md`;
+- final B2 attempt/trace;
+- `src/application/{one-turn,retry,recovery}.ts`;
+- provider/core event types;
+- LM Studio provider adapter/tests;
+- existing retry/recovery integration tests.
+
+Do not solve this by increasing the provider timeout.
+
+REPLAY-SAFE PROVIDER ATTEMPT STATE
+
+Refine the canonical application loop's provider-attempt classification so it distinguishes:
+
+- no response evidence;
+- provisional response start;
+- provisional text;
+- provisional tool proposals;
+- completed provider response;
+- tool execution;
+- canonical assistant commit;
+- ambiguous external/remote side effect.
+
+Streamed tool proposals are not executed effects.
+
+SAFE FRESH RETRY
+
+An incomplete provider branch may receive a bounded fresh retry only when all are true:
+
+- the provider response did not complete;
+- no proposed tool from that branch executed;
+- no canonical assistant response committed;
+- no ambiguous external/remote effect occurred;
+- cancellation/configuration/policy does not prohibit retry;
+- retry/run budgets remain available.
+
+When safe:
+- retain the failed provider attempt/error as authoritative evidence;
+- discard provisional text/tool proposals from execution and continuation;
+- execute none of those proposals;
+- do not reuse the incomplete response ID;
+- start a fresh provider attempt from the same canonical pre-round application state/request intent;
+- use existing retry policy/backoff/budget/cancellation semantics;
+- emit normal retry scheduled/exhausted evidence.
+
+UNSAFE / NO RETRY
+
+Do not transparently retry after:
+- any tool from the failed branch executed;
+- ambiguous local/external/remote effect;
+- canonical assistant commit;
+- cancellation;
+- policy/configuration failure;
+- retry exhaustion.
+
+Do not infer success from partial provider output.
+
+PROVIDER ADAPTER BOUNDARY
+
+LM Studio remains responsible for normalized wire/timeout/provider errors only.
+
+Replay-safety decisions stay in the application/core loop.
+
+PERMANENT REGRESSIONS
+
+Script provider behavior for:
+
+1. timeout before response evidence -> bounded retry allowed;
+2. response.started then timeout -> bounded fresh retry allowed;
+3. response.started + provisional text then timeout -> provisional text discarded, retry allowed;
+4. response.started + tool proposals then timeout -> proposals never execute, response ID never reused, retry allowed;
+5. safe retry then completed successful response;
+6. completed response -> executed tool -> later provider timeout cannot replay the executed effect;
+7. ambiguous external effect prevents transparent retry;
+8. cancellation prevents retry;
+9. retry exhaustion terminates truthfully;
+10. failed attempts/retries remain visible in bounded schema-2 evidence;
+11. no provisional assistant text becomes canonical.
+
+Preserve existing Phase 5 provider retry/recovery tests.
+
+VALIDATION
+
+Run:
+- provider unit tests;
+- agent-loop integration;
+- recovery/retry tests;
+- structured-task tests affected by provider lifecycle;
+- qualification/live-work evidence tests;
+- Phase 5 and Phase 9 relevant integration floors;
+- `npm run typecheck`;
+- `npm run test:runner`;
+- `npm test`;
+- `git diff --check`.
+
+Verify package `0.9.10`, no root lockfile.
+
+Do not run official final live qualification in P2.
+
+Do not:
+- edit frozen task instruments/acceptance;
+- inflate timeout;
+- retry ambiguous executed effects;
+- introduce helper inference;
+- owner-close Phase 9.
