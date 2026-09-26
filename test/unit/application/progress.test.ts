@@ -182,3 +182,19 @@ test('provider stall recovery projects bounded derived statuses', () => {
     'Compacting context for provider recovery', 'Provider stall recovery exhausted',
   ]);
 });
+
+test('Operation rounds project deterministic progress without model prose', () => {
+  const projection = new WorkProjection();
+  const events = [
+    { type: 'agent.round.completed', turnId: 'op', round: 1, executionMode: 'operation', internalTextBytes: 12, estimatedInternalTextTokens: 3, toolCallCount: 2 },
+    { type: 'agent.round.completed', turnId: 'op', round: 2, executionMode: 'operation', internalTextBytes: 0, estimatedInternalTextTokens: 0, toolCallCount: 0, control: 'handoff' },
+  ] as const;
+  const projected = events.flatMap((event) => projection.observe(event));
+  assert.deepEqual(projected.filter((event) => event.type === 'progress.milestone').map((event) => event.message), [
+    'Operation proposed 2 tool calls', 'Operation handed control to George',
+  ]);
+  assert.deepEqual(projection.snapshot().work.map((item) => [item.operationId, item.category, item.summary, item.details]), [
+    ['operation:1', 'inspection', 'Operation proposed 2 tool calls', { count: 2, bytes: 12 }],
+    ['operation:2', 'completion', 'Operation handed control to George', { count: 0, bytes: 0 }],
+  ]);
+});

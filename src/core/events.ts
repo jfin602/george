@@ -4,6 +4,7 @@ import type { ContextOperatingMode, ContextProfile } from './config.ts';
 import type { RunBudgetDimension, RunBudgetSnapshot } from './run-budget.ts';
 import type { ToolExecutionMetadata } from './execution.ts';
 import type { TaskStatus } from '../tasks/state.ts';
+import type { ExecutionMode } from './provider.ts';
 
 export type ContextCheckpointEvidence = Readonly<{
   version: number;
@@ -179,8 +180,10 @@ export type ApplicationEvent =
   | Readonly<{ type: 'context.compaction.completed'; turnId: string; runId: string; checkpoint: ContextCheckpointEvidence }>
   | Readonly<{ type: 'context.compaction.failed'; turnId: string; runId: string; reason: string }>
   | Readonly<{ type: 'turn.started'; turnId: string }>
-  | Readonly<{ type: 'input.submitted'; text: string }>
+  | Readonly<{ type: 'input.submitted'; text: string; executionMode?: ExecutionMode }>
   | Readonly<{ type: 'assistant.response.completed'; turnId: string; text: string }>
+  /** Completed-round metrics only; raw Operation-mode text is never retained. */
+  | Readonly<{ type: 'agent.round.completed'; turnId: string; round: number; executionMode: ExecutionMode; internalTextBytes: number; estimatedInternalTextTokens: number; toolCallCount: number; control?: 'handoff' }>
   | Readonly<{ type: 'context.source'; turnId: string; sourceId: string; kind: string; status: 'loading' | 'loaded' | 'missing' | 'oversized' | 'failed'; bytes?: number }>
   | Readonly<{ type: 'context.assembled'; turnId: string; diagnostics: ContextDiagnostics }>
   | Readonly<{ type: 'context.envelope.promoted'; turnId: string; fromProfileId: string; toProfileId: string; reason: ContextEnvelopePromotionReason; tokens: number; providerInputBudget: number }>

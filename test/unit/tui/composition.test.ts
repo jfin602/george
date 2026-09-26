@@ -21,12 +21,19 @@ import {
 import { createTuiApplicationService } from '../../../src/tui/composition.ts';
 
 class ScriptedProvider implements ModelProvider {
+  readonly supportsRoundContext = true as const;
   readonly requests: ProviderRequest[] = [];
   private readonly rounds: readonly (readonly ProviderEvent[])[];
   constructor(rounds: readonly (readonly ProviderEvent[])[]) { this.rounds = rounds; }
   async *stream(request: ProviderRequest): AsyncGenerator<ProviderEvent> {
     this.requests.push(request);
-    yield* this.rounds[this.requests.length - 1] ?? [];
+    const round = this.rounds[this.requests.length - 1] ?? [];
+    if (request.executionMode === 'operation' && !round.some((event) => event.type === 'provider.tool.call')) {
+      yield { type: 'provider.text.delta', delta: '{"version":1,"control":"handoff"}' };
+      yield round.find((event): event is Extract<ProviderEvent, { type: 'provider.response.completed' }> => event.type === 'provider.response.completed') ?? { type: 'provider.response.completed' };
+      return;
+    }
+    yield* round;
   }
 }
 

@@ -284,6 +284,12 @@ function durableEvent(event: ApplicationEvent): ApplicationEvent | undefined {
     case 'context.compaction.failed': return { type: event.type, turnId: string(event.turnId, 'turn ID', 256), runId: identifier(event.runId, 'run ID'), reason: boundedMessage(string(event.reason, 'context compaction failure', 512)) };
     case 'input.submitted': return undefined; // Completed user input lives only in the canonical transcript.
     case 'assistant.response.completed': return { type: event.type, turnId: string(event.turnId, 'turn ID', 256), text: boundedMessage(string(event.text, 'assistant response')) };
+    case 'agent.round.completed': return {
+      type: event.type, turnId: string(event.turnId, 'turn ID', 256), round: boundedInteger(event.round, 'agent round', 1_000_000),
+      executionMode: oneOf(event.executionMode, 'execution mode', ['human', 'operation']),
+      internalTextBytes: boundedInteger(event.internalTextBytes, 'internal text bytes', 4 * 1024), estimatedInternalTextTokens: boundedInteger(event.estimatedInternalTextTokens, 'estimated internal text tokens', 1024),
+      toolCallCount: boundedInteger(event.toolCallCount, 'round tool call count', 1024), ...(event.control === undefined ? {} : { control: oneOf(event.control, 'George control', ['handoff'] as const) }),
+    };
     case 'provider.text.delta': return undefined; // The clean transcript is authoritative for completed assistant text.
     case 'provider.response.started': return event.responseId === undefined ? { type: event.type } : { type: event.type, responseId: string(event.responseId, 'response ID', 256) };
     case 'provider.response.completed': return event.usage === undefined ? { type: event.type } : { type: event.type, usage: safeUsage(event.usage) };

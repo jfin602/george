@@ -38,7 +38,7 @@ export function createSession({
 
 export function appendSessionEvent(session: Session, event: ApplicationEvent): void {
   session.events.push(event);
-  if (event.type === 'input.submitted') {
+  if (event.type === 'input.submitted' && event.executionMode !== 'operation') {
     session.transcript.push({ role: 'user', text: event.text });
   } else if (event.type === 'assistant.response.completed') {
     appendAssistantResponse(session, event.text);

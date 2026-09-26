@@ -841,7 +841,7 @@ export class GeorgeTui {
   private restoreHistory(): void {
     let afterEntryCount = 0;
     for (const event of this.session.events) {
-      if (event.type === 'input.submitted' || event.type === 'assistant.response.completed') {
+      if ((event.type === 'input.submitted' && event.executionMode !== 'operation') || event.type === 'assistant.response.completed') {
         afterEntryCount += 1;
         continue;
       }

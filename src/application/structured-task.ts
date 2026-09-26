@@ -418,7 +418,7 @@ export class StructuredTaskApplicationService extends CodingWorkflowApplicationS
       const slice = projectStructuredTaskSlice(state, unit.id);
       if (definition.inspect.length && validEvidence().every((item) => item.kind !== 'observation')) {
         const events: ApplicationEvent[] = [];
-        for await (const event of this.agent.run({ session: submission.session, input: renderSlice(slice, 'inspection'), turnId: `${submission.turnId ?? randomUUID()}-inspect`, routedDocuments: routed, toolNames: INSPECTION_TOOLS, initialToolChoice: 'required', completeAfterSuccessfulToolRound: true, omitHistory: true, signal: submission.signal, executionPolicy, budget, limits: STAGE_LIMITS.inspection })) {
+        for await (const event of this.agent.run({ session: submission.session, input: renderSlice(slice, 'inspection'), executionMode: 'operation', turnId: `${submission.turnId ?? randomUUID()}-inspect`, routedDocuments: routed, toolNames: INSPECTION_TOOLS, initialToolChoice: 'required', completeAfterSuccessfulToolRound: true, omitHistory: true, signal: submission.signal, executionPolicy, budget, limits: STAGE_LIMITS.inspection })) {
           events.push(event); await submission.onEvent?.(event);
         }
         const observed = observedInspection(events, freshness);
@@ -437,6 +437,7 @@ export class StructuredTaskApplicationService extends CodingWorkflowApplicationS
       last = await super.run({
         ...submission,
         input: renderSlice(projectStructuredTaskSlice(state, unit.id, currentEvidence.map((item) => item.fact)), 'implementation'),
+        executionMode: 'operation',
         alignment: () => projectStructuredMissionCard(state, unit.id, 'implementation', [...freshness.items.values()]),
         allowCanonicalRebase: true,
         onEvent: observeStage,
@@ -472,6 +473,7 @@ export class StructuredTaskApplicationService extends CodingWorkflowApplicationS
           const repaired = await super.run({
             ...submission,
             input: renderSlice(projectStructuredTaskSlice(state, repair, validEvidence().map((item) => item.fact), validation.id), 'correction'),
+            executionMode: 'operation',
             alignment: () => projectStructuredMissionCard(state, repair, 'correction', [...freshness.items.values()], validation.id),
             allowCanonicalRebase: true,
             onEvent: observeStage,

@@ -298,6 +298,7 @@ function operationalEvent(event: ApplicationEvent): boolean {
 
 function metrics(events: readonly ApplicationEvent[], correctionCycles: number): LiveWorkMetrics {
   const completed = events.filter((event): event is Extract<ApplicationEvent, { type: 'provider.response.completed' }> => event.type === 'provider.response.completed');
+  const agentRounds = events.filter((event): event is Extract<ApplicationEvent, { type: 'agent.round.completed' }> => event.type === 'agent.round.completed');
   const attemptTimings = events.filter((event): event is Extract<ApplicationEvent, { type: 'provider.attempt.finished' }> => event.type === 'provider.attempt.finished');
   const attemptCount = events.filter((event) => event.type === 'provider.attempt.started').length;
   const input = completed.map((event) => number(event.usage?.inputTokens)).filter((value): value is number => value !== null);
@@ -324,17 +325,17 @@ function metrics(events: readonly ApplicationEvent[], correctionCycles: number):
     firstUsefulOutputMs: attemptTimings.find((event) => event.timing.firstUsefulOutputMs !== undefined)?.timing.firstUsefulOutputMs ?? null,
     providerActiveMs: attemptCount > 0 && attemptTimings.length === attemptCount ? attemptTimings.reduce((total, event) => total + event.timing.providerActiveMs, 0) : null,
     toolCalls: events.filter((event) => event.type === 'tool.requested').length,
-    internalTextBytes: null,
-    estimatedInternalTextTokens: null,
+    internalTextBytes: agentRounds.length ? agentRounds.reduce((total, event) => total + event.internalTextBytes, 0) : null,
+    estimatedInternalTextTokens: agentRounds.length ? agentRounds.reduce((total, event) => total + event.estimatedInternalTextTokens, 0) : null,
     toolBatchCount: toolBatchWidths.length,
     toolBatchWidths: Object.freeze(toolBatchWidths),
     concurrentReadBatchCount: 0,
     parallelBatchWallMs: null,
     summedChildToolRuntimeMs: null,
     modelRoundsAvoided: 0,
-    georgeControlCount: 0,
-    humanModeRounds: null,
-    operationModeRounds: null,
+    georgeControlCount: agentRounds.filter((event) => event.control !== undefined).length,
+    humanModeRounds: agentRounds.length ? agentRounds.filter((event) => event.executionMode === 'human').length : null,
+    operationModeRounds: agentRounds.length ? agentRounds.filter((event) => event.executionMode === 'operation').length : null,
     correctionCycles,
     contextAssemblies: events.filter((event) => event.type === 'context.assembled').length,
     sandboxedProcessCalls: events.filter((event) => event.type === 'tool.started' && event.execution?.effect === 'sandboxed_workspace_process').length,
@@ -560,6 +561,7 @@ function eventEvidence(event: ApplicationEvent): Readonly<Record<string, unknown
   if (event.type === 'context.assembled') safe.diagnostics = { profileId: event.diagnostics?.profileId ?? null, attemptedProfileIds: event.diagnostics?.attemptedProfileIds ?? [], promotionReasons: event.diagnostics?.promotionReasons ?? [], estimatedTokens: event.diagnostics?.estimatedTokens ?? null, providerInputBudget: event.diagnostics?.providerInputBudget ?? null, remainingHeadroom: event.diagnostics?.remainingHeadroom ?? null };
   if (event.type === 'context.envelope.promoted') safe.promotion = { fromProfileId: event.fromProfileId, toProfileId: event.toProfileId, reason: event.reason, tokens: event.tokens, providerInputBudget: event.providerInputBudget };
   if (event.type === 'provider.response.completed') safe.usage = { inputTokens: event.usage?.inputTokens ?? null, outputTokens: event.usage?.outputTokens ?? null, cachedInputTokens: event.usage?.cachedInputTokens ?? null };
+  if (event.type === 'agent.round.completed') safe.round = { round: event.round, executionMode: event.executionMode, internalTextBytes: event.internalTextBytes, estimatedInternalTextTokens: event.estimatedInternalTextTokens, toolCallCount: event.toolCallCount, control: event.control ?? null };
   if (event.type === 'provider.error' || event.type === 'turn.failed' || event.type === 'turn.cancelled') safe.error = boundedFailureError(event.error);
   if (event.type === 'tool.failed') safe.error = boundedFailureError(event.result.error);
   if (event.type === 'validation.completed' && event.status !== 'passed') safe.error = { code: sanitizeTaskEvidence(event.error?.code ?? event.status, 128).text, message: sanitizeTaskEvidence(event.error?.message ?? `Validation ${event.status}.`, 1024).text, ...(event.outcome === undefined ? {} : { reason: event.outcome }) };

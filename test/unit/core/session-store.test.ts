@@ -61,6 +61,21 @@ test('durable sessions bind a canonical workspace and reconstruct clean complete
   await assert.rejects(store.open('session-1', other), /different workspace/);
 });
 
+test('Operation rounds persist only bounded metrics and never enter the transcript', async () => {
+  const { workspace, state } = await fixture();
+  const store = new LocalSessionStore({ root: state });
+  const session = createSession({ id: 'operation-metrics', workspace });
+  appendSessionEvent(session, { type: 'input.submitted', text: 'INTERNAL_OPERATION_OBJECTIVE', executionMode: 'operation' });
+  appendSessionEvent(session, { type: 'agent.round.completed', turnId: 'operation', round: 1, executionMode: 'operation', internalTextBytes: 17, estimatedInternalTextTokens: 5, toolCallCount: 1, control: 'handoff' });
+  await store.save(session);
+
+  const serialized = await readFile(join(state, 'operation-metrics.json'), 'utf8');
+  assert.doesNotMatch(serialized, /INTERNAL_OPERATION_OBJECTIVE/);
+  const reopened = await store.open(session.id, workspace);
+  assert.deepEqual(reopened.transcript, []);
+  assert.deepEqual(reopened.events, [{ type: 'agent.round.completed', turnId: 'operation', round: 1, executionMode: 'operation', internalTextBytes: 17, estimatedInternalTextTokens: 5, toolCallCount: 1, control: 'handoff' }]);
+});
+
 test('resaving a reopened session preserves prior canonical history without persisting an unfinished tail', async () => {
   const { workspace, state } = await fixture();
   const store = new LocalSessionStore({ root: state });

@@ -12,7 +12,7 @@ import { createStackState, createTaskState, parseTaskPrompt } from '../../../src
 
 class Provider implements ModelProvider {
   readonly supportsRoundContext = true as const;
-  async *stream(_request: ProviderRequest): AsyncGenerator<ProviderEvent> { yield { type: 'provider.response.completed', usage: { inputTokens: 4, outputTokens: 1 } }; }
+  async *stream(request: ProviderRequest): AsyncGenerator<ProviderEvent> { if (request.executionMode === 'operation') yield { type: 'provider.text.delta', delta: '{"version":1,"control":"handoff"}' }; yield { type: 'provider.response.completed', usage: { inputTokens: 4, outputTokens: 1 } }; }
 }
 class NoInspectionProvider implements ModelProvider {
   readonly supportsRoundContext = true as const;
@@ -145,7 +145,7 @@ test('thrown structured inspection retains a bounded failed result and durable a
   assert.deepEqual(result.events, observed.filter((event) => !['provider.text.delta', 'input.submitted', 'assistant.response.completed'].includes(event.type)), 'every bounded operational event observed before the throw is retained');
   assert.equal(result.events.some((event) => event.type === 'provider.attempt.started'), true);
   assert.equal(result.events.some((event) => event.type === 'provider.response.completed'), true);
-  assert.equal(result.events.some((event) => event.type === 'turn.failed'), false, 'text-only inspection returns normally before the structured service rejects missing evidence');
+  assert.equal(result.events.some((event) => event.type === 'turn.failed'), true, 'invalid Operation prose fails closed before the structured service rejects missing evidence');
 
   await writeLiveWorkArtifacts({ directory: artifacts, workspace, result });
   const attempt = await readFile(join(artifacts, 'attempt.json'), 'utf8');
@@ -251,6 +251,7 @@ test('live telemetry records cached usage and completed tool batches with explic
     { type: 'provider.tool.call', callId: 'one', name: 'read_file', arguments: '{}' },
     { type: 'provider.tool.call', callId: 'two', name: 'read_file', arguments: '{}' },
     { type: 'provider.response.completed', usage: { inputTokens: 10, outputTokens: 2, cachedInputTokens: 6 } },
+    { type: 'agent.round.completed', turnId: 't', round: 1, executionMode: 'operation', internalTextBytes: 16, estimatedInternalTextTokens: 4, toolCallCount: 2, control: 'handoff' },
     { type: 'provider.attempt.finished', turnId: 't', runId: 'r', attemptId: 'a', outcome: 'completed', timing: { responseAcceptanceMs: 4, firstUsefulOutputMs: 61_000, providerActiveMs: 61_010 } },
   ], terminalStatus: 'failed', hiddenAcceptance: 'not_run', humanInterventions: 0 });
   assert.deepEqual(trace.metrics.toolBatchWidths, [2]);
@@ -258,7 +259,7 @@ test('live telemetry records cached usage and completed tool batches with explic
   assert.equal(trace.metrics.cachedInputTokens, 6);
   assert.deepEqual({ acceptance: trace.metrics.responseAcceptanceMs, useful: trace.metrics.firstUsefulOutputMs, active: trace.metrics.providerActiveMs }, { acceptance: 4, useful: 61_000, active: 61_010 });
   assert.deepEqual(trace.timing.providerAttempts, [{ attemptId: 'a', outcome: 'completed', responseAcceptanceMs: 4, firstUsefulOutputMs: 61_000, providerActiveMs: 61_010 }]);
-  assert.deepEqual({ internal: trace.metrics.internalTextBytes, concurrent: trace.metrics.concurrentReadBatchCount, parallel: trace.metrics.parallelBatchWallMs, avoided: trace.metrics.modelRoundsAvoided, controls: trace.metrics.georgeControlCount, human: trace.metrics.humanModeRounds, operation: trace.metrics.operationModeRounds, corrections: trace.metrics.correctionCycles }, { internal: null, concurrent: 0, parallel: null, avoided: 0, controls: 0, human: null, operation: null, corrections: 0 });
+  assert.deepEqual({ internal: trace.metrics.internalTextBytes, concurrent: trace.metrics.concurrentReadBatchCount, parallel: trace.metrics.parallelBatchWallMs, avoided: trace.metrics.modelRoundsAvoided, controls: trace.metrics.georgeControlCount, human: trace.metrics.humanModeRounds, operation: trace.metrics.operationModeRounds, corrections: trace.metrics.correctionCycles }, { internal: 16, concurrent: 0, parallel: null, avoided: 0, controls: 1, human: 0, operation: 1, corrections: 0 });
 });
 
 test('live trace uses typed diagnostics, pairs tools, retains mutation and safe task projections, and tolerates missing or future evidence', () => {

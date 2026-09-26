@@ -26,9 +26,14 @@ export type ProviderContinuation = Readonly<{
 
 export type ProviderToolChoice = 'auto' | 'required' | 'none';
 export type ProviderActivity = 'accepted' | 'output_progress';
+export type ExecutionMode = 'human' | 'operation';
+export type GeorgeOperationControl = Readonly<{ version: 1; control: 'handoff' }>;
+export const GEORGE_OPERATION_PROTOCOL_VERSION = 1;
+export const MAX_OPERATION_TEXT_BYTES = 4 * 1024;
 export const MAX_PROVIDER_ROUND_CONTEXT_BYTES = 8 * 1024;
 
 export type ProviderRequest = Readonly<{
+  executionMode: ExecutionMode;
   instructions?: string;
   input: string;
   /** Application-owned context appended after stable input/tool results for this logical round. */

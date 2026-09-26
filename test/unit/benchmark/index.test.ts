@@ -141,18 +141,19 @@ test('event-derived records retain correctness separately from timing and failed
   assert.equal(tooManyTools.passed, false);
 });
 
-test('benchmark telemetry records completed tool batches and never fabricates unavailable Phase 10 producers', () => {
+test('benchmark telemetry records completed tool batches and bounded Operation metrics', () => {
   const record = deriveBenchmarkRecord(BENCHMARK_CASES[0]!, [
     { type: 'provider.attempt.started', turnId: 't', runId: 'r', attemptId: 'a' },
     { type: 'provider.tool.call', callId: 'one', name: 'read_file', arguments: '{}' },
     { type: 'provider.tool.call', callId: 'two', name: 'read_file', arguments: '{}' },
     { type: 'provider.response.completed', usage: { inputTokens: 10, outputTokens: 2 } },
+    { type: 'agent.round.completed', turnId: 't', round: 1, executionMode: 'operation', internalTextBytes: 12, estimatedInternalTextTokens: 3, toolCallCount: 2, control: 'handoff' },
     { type: 'turn.failed', turnId: 't', error: { code: 'validation', message: 'fixture' } },
   ], 5, 1, 'warm-repeat', 'model', 'http://127.0.0.1:1234');
   assert.deepEqual(record.toolBatchWidths, [2]);
   assert.equal(record.toolBatchCount, 1);
   assert.equal(record.cachedInputTokens, null);
-  assert.deepEqual({ internal: record.internalTextBytes, parallel: record.parallelBatchWallMs, child: record.summedChildToolRuntimeMs, controls: record.georgeControlCount, human: record.humanModeRounds, operation: record.operationModeRounds, corrections: record.correctionCycles }, { internal: null, parallel: null, child: null, controls: 0, human: null, operation: null, corrections: 0 });
+  assert.deepEqual({ internal: record.internalTextBytes, parallel: record.parallelBatchWallMs, child: record.summedChildToolRuntimeMs, controls: record.georgeControlCount, human: record.humanModeRounds, operation: record.operationModeRounds, corrections: record.correctionCycles }, { internal: 12, parallel: null, child: null, controls: 1, human: 0, operation: 1, corrections: 0 });
 });
 
 test('code-understanding requires one read and its exact deterministic answer', () => {

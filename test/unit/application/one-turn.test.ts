@@ -86,7 +86,7 @@ test('one-turn service keeps George context first and invokes the provider exact
   assert.doesNotMatch(provider.calls[0]?.request.instructions ?? '', /Repository boot\./);
   assert.match(provider.calls[0]?.request.input ?? '', /\[conversation:current-user-input; user-intent\]\nHi/);
   assert.deepEqual(events.filter((event) => !['context.source', 'activity.updated', 'progress.milestone', 'work.updated'].includes(event.type)).map((event) => event.type), [
-    'turn.started', 'reliability.run.started', 'budget.state', 'input.submitted', 'context.assembled', 'budget.state', 'budget.state', 'provider.attempt.started', 'provider.response.started', 'provider.text.delta', 'provider.response.completed', 'provider.attempt.finished', 'budget.state', 'assistant.response.completed', 'turn.completed',
+    'turn.started', 'reliability.run.started', 'budget.state', 'input.submitted', 'context.assembled', 'budget.state', 'budget.state', 'provider.attempt.started', 'provider.response.started', 'provider.text.delta', 'provider.response.completed', 'agent.round.completed', 'provider.attempt.finished', 'budget.state', 'assistant.response.completed', 'turn.completed',
   ]);
   assert.deepEqual(session.transcript, [{ role: 'user', text: 'Hi' }, { role: 'assistant', text: 'Hello.' }]);
 });
@@ -721,6 +721,95 @@ test('successful-tool-round completion executes the full round, retains evidence
   assert.deepEqual(session.transcript, [{ role: 'user', text: 'inspect' }]);
 });
 
+test('Operation mode keeps prose internal, accepts only completed handoff, and preserves canonical tool authority', async (t) => {
+  const root = await workspace();
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const provider = new class implements ModelProvider {
+    readonly supportsRoundContext = true as const;
+    readonly requests: ProviderRequest[] = [];
+    async *stream(request: ProviderRequest): AsyncGenerator<ProviderEvent> {
+      this.requests.push(request);
+      if (this.requests.length === 1) {
+        yield { type: 'provider.response.started', responseId: 'operation-read' };
+        yield { type: 'provider.text.delta', delta: 'I will read the file.' };
+        yield { type: 'provider.tool.call', callId: 'read', name: 'read_file', arguments: '{"path":"BOOT.md"}' };
+      } else yield { type: 'provider.text.delta', delta: '{"version":1,"control":"handoff"}' };
+      yield { type: 'provider.response.completed' };
+    }
+  }();
+  const service = await createOneTurnApplicationService({ provider, workspace: root, toolNames: ['read_file'] });
+  const session = createSession({ workspace: root });
+  const events = await collect(service.run({ session, input: 'Inspect internally.', executionMode: 'operation' }));
+
+  assert.equal(provider.requests.every((request) => request.executionMode === 'operation'), true);
+  assert.match(provider.requests[0]?.instructions ?? '', /George Operation Protocol v1/);
+  assert.deepEqual(provider.requests[0]?.tools?.map((tool) => tool.name), ['read_file']);
+  assert.equal(provider.requests[0]?.tools?.some((tool) => /handoff|control/i.test(tool.name)), false);
+  assert.equal(events.some((event) => event.type === 'provider.text.delta' || event.type === 'assistant.response.completed'), false);
+  assert.equal(events.some((event) => event.type === 'tool.completed' && event.callId === 'read'), true);
+  assert.deepEqual(events.filter((event) => event.type === 'agent.round.completed').map((event) => ({ mode: event.executionMode, bytes: event.internalTextBytes, tools: event.toolCallCount, control: event.control })), [
+    { mode: 'operation', bytes: 21, tools: 1, control: undefined },
+    { mode: 'operation', bytes: 0, tools: 0, control: 'handoff' },
+  ]);
+  assert.deepEqual(session.transcript, []);
+  assert.equal(events.at(-1)?.type, 'turn.completed');
+});
+
+test('Operation controls and tool proposals fail closed until a completed valid response', async (t) => {
+  const root = await workspace();
+  t.after(() => rm(root, { recursive: true, force: true }));
+  for (const [name, response, expectedExecutions] of [
+    ['unknown control', [{ type: 'provider.text.delta', delta: '{"version":1,"control":"complete"}' }, { type: 'provider.response.completed' }], 0],
+    ['malformed control', [{ type: 'provider.text.delta', delta: 'done' }, { type: 'provider.response.completed' }], 0],
+    ['mixed control and tool', [{ type: 'provider.response.started', responseId: 'mixed' }, { type: 'provider.text.delta', delta: '{"version":1,"control":"handoff"}' }, { type: 'provider.tool.call', callId: 'effect', name: 'effect', arguments: '{}' }, { type: 'provider.response.completed' }], 0],
+  ] as const) await t.test(name, async () => {
+    let executions = 0;
+    const service = await createOneTurnApplicationService({
+      provider: new ScriptedProvider(response), workspace: root,
+      additionalTools: [{ name: 'effect', description: 'Effect.', inputSchema: { type: 'object', properties: {}, additionalProperties: false }, execution: { effect: 'workspace_mutation', replaySafety: 'not_replay_safe', source: { kind: 'builtin' } }, execute: async () => { executions += 1; return {}; } }],
+    });
+    const events = await collect(service.run({ session: createSession({ workspace: root }), input: name, executionMode: 'operation' }));
+    assert.equal(executions, expectedExecutions);
+    assert.equal(events.some((event) => event.type === 'tool.requested' || event.type === 'provider.tool.call'), false);
+    assert.equal(events.at(-1)?.type === 'turn.failed' && events.at(-1).error.code, 'validation');
+  });
+
+  const incomplete = new ScriptedProvider([
+    { type: 'provider.response.started', responseId: 'incomplete-control' },
+    { type: 'provider.text.delta', delta: '{"version":1,"control":"handoff"}' },
+    { type: 'provider.tool.call', callId: 'never', name: 'read_file', arguments: '{"path":"BOOT.md"}' },
+    { type: 'provider.error', error: { code: 'provider', message: 'incomplete' } },
+  ]);
+  const service = await createOneTurnApplicationService({ provider: incomplete, workspace: root, providerRetryPolicy: { maxRetries: 0, initialDelayMs: 0, maxDelayMs: 0 } });
+  const session = createSession({ workspace: root });
+  const events = await collect(service.run({ session, input: 'incomplete', executionMode: 'operation' }));
+  assert.equal(events.some((event) => event.type === 'provider.tool.call' || event.type === 'tool.requested' || event.type === 'agent.round.completed'), false);
+  assert.equal(JSON.stringify(session.events).includes('handoff'), false);
+});
+
+test('Operation prose is bounded and a deterministic successful tool round needs no handoff', async (t) => {
+  const root = await workspace();
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const oversized = await createOneTurnApplicationService({ provider: new ScriptedProvider([{ type: 'provider.text.delta', delta: 'x'.repeat(4097) }, { type: 'provider.response.completed' }]), workspace: root });
+  const failedSession = createSession({ workspace: root });
+  const failed = await collect(oversized.run({ session: failedSession, input: 'bounded', executionMode: 'operation' }));
+  assert.equal(failed.at(-1)?.type === 'turn.failed' && failed.at(-1).error.code, 'validation');
+  assert.equal(JSON.stringify(failedSession.events).includes('x'.repeat(128)), false);
+
+  const provider = new ScriptedProvider([
+    { type: 'provider.response.started', responseId: 'deterministic' },
+    { type: 'provider.text.delta', delta: 'routine narration' },
+    { type: 'provider.tool.call', callId: 'read', name: 'read_file', arguments: '{"path":"BOOT.md"}' },
+    { type: 'provider.response.completed' },
+  ]);
+  const service = await createOneTurnApplicationService({ provider, workspace: root });
+  const events = await collect(service.run({ session: createSession({ workspace: root }), input: 'inspect', executionMode: 'operation', completeAfterSuccessfulToolRound: true }));
+  assert.equal(provider.calls.length, 1);
+  assert.equal(events.some((event) => event.type === 'tool.completed' && event.callId === 'read'), true);
+  assert.equal(events.some((event) => event.type === 'agent.round.completed' && event.control !== undefined), false);
+  assert.equal(events.at(-1)?.type, 'turn.completed');
+});
+
 test('successful-tool-round completion continues after an all-failed round and cannot bypass the stage ceiling', async (t) => {
   const root = await workspace();
   t.after(() => rm(root, { recursive: true, force: true }));
@@ -1235,6 +1324,7 @@ test('incomplete tool proposals are diagnostic only and never execute or become 
   const service = await createOneTurnApplicationService({ provider, workspace: root, additionalTools: [tool], providerRetryPolicy: { maxRetries: 1, initialDelayMs: 0, maxDelayMs: 0 }, retrySleeper: async () => {} });
   const events = await collect(service.run({ session, input: 'retry proposals' }));
   assert.equal(executions, 0);
+  assert.equal(events.some((event) => event.type === 'provider.tool.call'), false);
   assert.equal(events.some((event) => event.type === 'tool.requested'), false);
   assert.equal(requests[1]?.continuation, undefined);
   assert.deepEqual(session.transcript, [{ role: 'user', text: 'retry proposals' }, { role: 'assistant', text: 'Fresh response.' }]);

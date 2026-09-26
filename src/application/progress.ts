@@ -211,6 +211,17 @@ export class WorkProjection {
         return [this.activityEvent(event.turnId, 'context', message), ...this.progressEvent(event.turnId, 'context', message)];
       }
       case 'provider.response.started': return [this.activityEvent(undefined, 'inspection', 'Thinking...')];
+      case 'agent.round.completed': {
+        if (event.executionMode !== 'operation') return [];
+        const handoff = event.control === 'handoff';
+        const message = handoff ? 'Operation handed control to George' : `Operation proposed ${event.toolCallCount} tool call${event.toolCallCount === 1 ? '' : 's'}`;
+        const category: WorkCategory = handoff ? 'completion' : 'inspection';
+        return [
+          this.activityEvent(event.turnId, category, message),
+          ...this.progressEvent(event.turnId, handoff ? 'completion' : 'inspection', message),
+          ...this.update({ id: `${event.turnId}:operation:${event.round}`, turnId: event.turnId, operationId: `operation:${event.round}`, category, status: 'succeeded', summary: message, details: { count: event.toolCallCount, bytes: event.internalTextBytes } }),
+        ];
+      }
       case 'provider.stall.suspected': return [this.activityEvent(event.turnId, 'recovery', 'Provider response may be stalled')];
       case 'provider.stall.detected': return [this.activityEvent(event.turnId, 'recovery', 'Provider stall detected')];
       case 'provider.retry.scheduled': return [this.activityEvent(event.turnId, 'recovery', 'Retrying provider')];

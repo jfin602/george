@@ -12,7 +12,7 @@ import { renderTask, taskHeader } from '../../../src/tui/app.ts';
 class Provider implements ModelProvider {
   readonly supportsRoundContext = true as const;
   readonly requests: ProviderRequest[] = [];
-  async *stream(request: ProviderRequest): AsyncGenerator<ProviderEvent> { this.requests.push(request); yield { type: 'provider.response.completed' }; }
+  async *stream(request: ProviderRequest): AsyncGenerator<ProviderEvent> { this.requests.push(request); if (request.executionMode === 'operation') yield { type: 'provider.text.delta', delta: '{"version":1,"control":"handoff"}' }; yield { type: 'provider.response.completed' }; }
 }
 class Allow implements ApprovalPort { async request(_request: ApprovalRequest): Promise<ApprovalDecision> { return 'allow_once'; } }
 

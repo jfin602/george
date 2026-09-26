@@ -44,7 +44,7 @@ class ObservedHashProvider implements ModelProvider {
       yield { type: 'provider.response.started', responseId: 'corrected-patch' };
       yield { type: 'provider.tool.call', callId: 'corrected-patch', name: 'apply_patch', arguments: JSON.stringify({ path: this.path, expectedSha256: this.observedSha256, edits: [{ oldText: 'export const label = (value) => value.trim();\n', newText: this.content }] }) };
     } else if (round === 5) {
-      yield { type: 'provider.text.delta', delta: 'repaired' };
+      yield { type: 'provider.text.delta', delta: '{"version":1,"control":"handoff"}' };
     }
     yield { type: 'provider.response.completed' };
   }
@@ -75,7 +75,7 @@ class IntentThenPatchProvider implements ModelProvider {
       if (!result?.ok || typeof result.value !== 'object' || result.value === null) throw new Error('Target reread failed.');
       this.rereadSha256 = (result.value as { sha256?: string }).sha256;
       yield { type: 'provider.tool.call', callId: 'safe-patch', name: 'apply_patch', arguments: JSON.stringify({ path: this.path, expectedSha256: this.rereadSha256, edits: [{ oldText: 'export const label = (value) => value.trim();\n', newText: this.content }] }) };
-    } else if (round === 5) yield { type: 'provider.text.delta', delta: 'recovered safely' };
+    } else if (round === 5) yield { type: 'provider.text.delta', delta: '{"version":1,"control":"handoff"}' };
     yield { type: 'provider.response.completed' };
   }
 }

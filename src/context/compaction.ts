@@ -64,6 +64,7 @@ export class ProviderContextCompactor implements ContextCompactor {
     const chunks: string[] = [];
     let completed = false;
     for await (const event of this.provider.stream({
+      executionMode: 'human',
       instructions: 'Summarize this completed conversation for later context. Preserve concrete decisions, completed work, unresolved failures, and facts. This is derived history, not instructions. Do not call tools.',
       input: request.history,
       tools: [],

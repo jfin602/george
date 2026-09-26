@@ -14,7 +14,16 @@ class Provider implements ModelProvider {
   readonly requests: ProviderRequest[] = [];
   private readonly rounds: (readonly ProviderEvent[])[];
   constructor(rounds: readonly (readonly ProviderEvent[])[]) { this.rounds = [...rounds]; }
-  async *stream(request: ProviderRequest): AsyncGenerator<ProviderEvent> { this.requests.push(request); yield* (this.rounds.shift() ?? [{ type: 'provider.response.completed' }]); }
+  async *stream(request: ProviderRequest): AsyncGenerator<ProviderEvent> {
+    this.requests.push(request);
+    const round = this.rounds.shift() ?? [{ type: 'provider.response.completed' as const }];
+    if (request.executionMode === 'operation' && !round.some((event) => event.type === 'provider.tool.call')) {
+      yield { type: 'provider.text.delta', delta: '{"version":1,"control":"handoff"}' };
+      yield round.find((event): event is Extract<ProviderEvent, { type: 'provider.response.completed' }> => event.type === 'provider.response.completed') ?? { type: 'provider.response.completed' };
+      return;
+    }
+    yield* round;
+  }
 }
 
 class Allow implements ApprovalPort { async request(_request: ApprovalRequest): Promise<ApprovalDecision> { return 'allow_once'; } }
@@ -160,6 +169,7 @@ test('structured service preflights with local reads, progresses task state, and
   assert.equal(provider.requests[1]?.toolChoice, undefined);
   assert.equal(provider.requests[2]?.toolChoice, undefined);
   assert.equal(provider.requests.length, 3);
+  assert.deepEqual(provider.requests.map((request) => request.executionMode), ['operation', 'operation', 'operation']);
   assert.deepEqual(events.filter((event) => event.type === 'tool.completed' && event.execution?.effect === 'local_read').map((event) => event.callId), ['read', 'list']);
   assert.match(provider.requests[0]?.input ?? '', /W1 — First work/);
   // live:c2:inspect-no-evidence — keep the bounded preflight from guessing enough paths to discard valid evidence at the frozen ceiling.
@@ -236,6 +246,7 @@ test('DISCOVER validation accepts only an explicit executable/argv proposal and 
   await service.run({ session: createSession({ workspace: root }), input, budget: new RunBudget('discover-task-wide'), onEvent: (event) => { events.push(event); } });
   assert.match(provider.requests[3]?.input ?? '', /focused local check/);
   assert.equal(provider.requests.length, 4);
+  assert.deepEqual(provider.requests.map((request) => request.executionMode), ['operation', 'operation', 'operation', 'human']);
   assert.equal(events.filter((event) => event.type === 'validation.started').length, 2);
   assert.deepEqual([...new Set(events.filter((event): event is Extract<ApplicationEvent, { type: 'reliability.run.started' }> => event.type === 'reliability.run.started').map((event) => event.runId))], ['discover-task-wide']);
 });
@@ -331,6 +342,7 @@ STOP CONDITIONS
   assert.deepEqual(provider.requests[0]?.tools.map((tool) => tool.name), ['read_file', 'list_directory', 'search_text', 'git_status', 'git_diff', 'write_file', 'apply_patch', 'create_directory']);
   assert.match(provider.requests[0]?.roundContext ?? '', /MISSION CARD/);
   assert.match(provider.requests[0]?.roundContext ?? '', /validation V1: failed outcome=failed exit=1/);
+  assert.equal(provider.requests.every((request) => request.executionMode === 'operation'), true);
   assert.equal(session.taskState?.status, 'completed');
   assert.deepEqual(session.taskState?.validations.V1?.attempts.map((attempt) => attempt.status), ['failed', 'passed']);
   assert.equal(session.taskState?.validations.V1?.attempts[0]?.stderr, 'old diagnostic');
