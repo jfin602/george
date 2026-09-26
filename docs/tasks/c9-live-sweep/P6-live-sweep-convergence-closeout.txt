@@ -1,0 +1,173 @@
+TASK: Correction 9 / P6 — Live sweep convergence closeout
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Sol Medium`.
+- Browser required: no.
+
+VERSIONING
+- Required unchanged project version: `0.9.10`.
+
+GOAL
+
+Perform an evidence-only closeout of the full Phase 9 live-sweep convergence correction.
+
+Do not repair implementation or rerun official workloads.
+
+Read:
+- `BOOT.md`;
+- current roadmap/workflow/stability/Phase 9 authority;
+- `docs/planning/c9-live-sweep-convergence/{decision-record,qualification-plan}.md`;
+- all `docs/tasks/c9-live-sweep/P*-evidence.md`;
+- pre/post failure ledgers;
+- every committed sweep artifact referenced by those ledgers;
+- prior turn-context/live-qualification closeouts;
+- exact current tests/source/instrument identities.
+
+AUDIT — FAILURE DIAGNOSTICS
+
+Verify:
+- provider/turn/tool/validation bounded failure diagnostics are durable;
+- application failures remain distinct from harness/observer failures;
+- schema-2 semantics are explicit;
+- historical schema-1 artifacts are unchanged;
+- raw unsafe payloads are not retained.
+
+Report:
+`Failure Evidence Diagnostics Qualified`.
+
+AUDIT — FULL-SWEEP ORCHESTRATION
+
+Verify:
+- common validity/safety aborts remain fail-fast;
+- functional failure does not suppress later isolated workloads;
+- fresh workspace/session isolation;
+- one attempt per workload per sweep;
+- observed result vs qualifying/diagnostic-only distinction;
+- no diagnostic-only Green promoted into qualifying Green.
+
+Report:
+`Full-Sweep Orchestration Qualified`.
+
+AUDIT — FAILURE LEDGERS
+
+Verify:
+- P2 and P5 ledgers retain every required individual failure/Evidence Gap;
+- identities do not collapse;
+- classifications/repair clusters are bounded and supported;
+- artifact references/hashes match.
+
+Report:
+`Failure Ledger Qualified`.
+
+AUDIT — P2 DIAGNOSTIC SWEEP
+
+Report all five observed outcomes and which were qualifying vs diagnostic-only.
+
+Preserve every P2 failure as historical evidence.
+
+AUDIT — P3 REPAIR WAVE
+
+For every pre-repair `agent-provider-context` ledger entry report:
+- disposition;
+- repair/root cause;
+- permanent guard;
+- validation;
+- unresolved/environment-only items.
+
+AUDIT — P4 REPAIR WAVE
+
+For every pre-repair `ui-test-stability` ledger entry report:
+- disposition;
+- repair/root cause or justified no-op;
+- permanent guard;
+- validation;
+- unresolved/intermittent items.
+
+AUDIT — P5 POST-REPAIR SWEEP
+
+Report:
+- complete deterministic/common qualification;
+- aggregate broad suite;
+- every remaining broad failure/skip;
+- runtime provenance;
+- greeting observed + qualification status;
+- three-file observed + qualification status;
+- Gate A observed + qualification status;
+- B2 observed + qualification status;
+- C2 observed + qualification status;
+- remaining ledger count/classes.
+
+AUDIT — EVIDENCE
+
+Verify:
+- all artifact hashes;
+- every reached workload has attempt/trace;
+- no raw provider wire/body, assistant prose log, file/write/patch body, secret/environment dump, unbounded Git/log, dependency tree, or workspace copy;
+- historical evidence/instruments unchanged.
+
+CREATE
+
+`docs/tasks/c9-live-sweep/closeout.md`
+
+Decision table must include:
+
+- Failure Evidence Diagnostics Qualified;
+- Full-Sweep Orchestration Qualified;
+- Failure Ledger Qualified;
+- P2 Diagnostic Sweep Completed;
+- P3 Agent/Provider/Context Repair Wave;
+- P4 UI/Test-Stability Repair Wave;
+- P5 Post-Repair Sweep Completed;
+- Aggregate Broad Suite State;
+- Greeting Smoke;
+- Three-File Inspection Smoke;
+- Fresh Gate A Qualified;
+- Gate B2 Greenfield Qualified;
+- Gate C2 Existing-App Qualified;
+- Remaining Failure Count / Classes;
+- Evidence Auditability Qualified;
+- Historical Evidence Preserved;
+- Overall c9-live-sweep-convergence Qualified;
+- Phase 9 Ready For Owner Closeout.
+
+PHASE 9 OWNER-CLOSEOUT RULE
+
+Ready = Yes only if:
+- common deterministic/security/recovery/integration qualification is Green;
+- no blocking regression remains;
+- P5 greeting Green and qualifying;
+- P5 three-file Green and qualifying;
+- P5 Gate A Green and qualifying;
+- P5 B2 Green and qualifying;
+- P5 C2 Green and qualifying;
+- no blocking Evidence Gap remains.
+
+Diagnostic-only downstream Green does not satisfy readiness.
+
+Report aggregate broad state truthfully. If broad remains Not Green, explicitly identify whether it is blocking under current authority rather than silently waiving it.
+
+If Phase 9 Ready = Yes, state exactly:
+
+`next action: /closeout phase 9`
+
+Do not owner-close Phase 9 in this prompt.
+
+VALIDATION
+
+Re-run/verify as appropriate:
+- correction-specific regression floors;
+- Phase 9 integration/immutability;
+- typecheck;
+- runner;
+- current broad characterization;
+- `git diff --check`;
+- package exactly `0.9.10`;
+- no root lockfile;
+- P6 made no implementation/test/fixture/instrument repair.
+
+Do not:
+- rerun P5 workloads;
+- repair failures;
+- rewrite historical evidence;
+- owner-close Phase 9;
+- open Phase 10.

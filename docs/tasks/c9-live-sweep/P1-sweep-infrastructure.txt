@@ -1,0 +1,207 @@
+TASK: Correction 9 / P1 — Build durable failure diagnostics and full-sweep qualification
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Sol High`.
+- Browser required: no.
+
+VERSIONING
+- Required unchanged project version: `0.9.10`.
+
+GOAL
+
+Build the qualification infrastructure required to run the complete Phase 9 diagnostic surface without losing actionable failure evidence.
+
+Do not repair the three-file agent/provider failure in P1.
+
+Read:
+- `BOOT.md`;
+- `AGENTS.md`;
+- workflow/stability/current Phase 9 qualification authority;
+- `docs/planning/c9-live-sweep-convergence/{decision-record,qualification-plan}.md`;
+- `docs/tasks/c9-live-sweep/{prompt-assessment,implementation-plan}.md`;
+- `docs/tasks/c9-turn-context-live-qualification/{P1-live-evidence,closeout}.md`;
+- its three-file attempt/trace;
+- `src/qualification/{live-work,preflight}.ts`;
+- application/core provider error/event types;
+- `test/unit/qualification/{live-work,preflight}.test.ts`;
+- affected integration tests.
+
+PRESERVE HISTORICAL EVIDENCE
+
+Do not modify:
+- any prior attempt/trace JSON;
+- prior closeouts/evidence;
+- v1/v2 live task instruments;
+- hidden acceptance;
+- three-file frozen fixture;
+- existing workload acceptance semantics.
+
+FAILURE DIAGNOSTIC DURABILITY
+
+The existing three-file artifact proves that retaining only the event type `provider.error` is insufficient.
+
+Extend qualification evidence so durable sanitized artifacts retain bounded actionable diagnostics for:
+
+- `provider.error`;
+- `turn.failed`;
+- `turn.cancelled`;
+- `tool.failed`;
+- validation failures;
+- harness/observer failures separately.
+
+When safe/available retain:
+- stable finite category;
+- bounded code;
+- bounded message/reason;
+- normalized provider/HTTP status already exposed by George;
+- associated turn/call/validation identity.
+
+Do NOT persist:
+- raw provider response/SSE/wire body;
+- unrestricted arbitrary JSON;
+- model private reasoning;
+- full assistant prose as failure logging;
+- file/write/patch bodies;
+- secrets/environment dumps;
+- unbounded logs.
+
+Use existing sanitizer/redaction primitives.
+
+SCHEMA VERSION
+
+The current durable live artifacts declare schema version 1.
+
+If the durable envelope/trace changes incompatibly, introduce artifact schema version 2.
+
+Requirements:
+- historical schema-1 artifacts remain immutable;
+- tests establish schema-1 remains recognizable under its original semantics;
+- schema-2 writer is deterministic;
+- schema versioning is independent from task instrument versioning;
+- do not create greenfield/existing-app v3.
+
+AUTHORITATIVE FAILURE SOURCES
+
+Do not rely only on thrown harness errors.
+
+The latest ordinary-turn failure returned a failed workflow completion while authoritative application events contained the provider failure.
+
+Derive normalized application/provider terminal failure evidence from captured events.
+
+Keep distinct:
+- authoritative application/provider failure;
+- tool/validation failure;
+- harness failure;
+- observer/report failure.
+
+FULL-SWEEP ORCHESTRATOR
+
+Add the smallest qualification-only sweep module/classifier needed.
+
+It must represent:
+- common validity/safety state;
+- ordered workload IDs;
+- prerequisite chain;
+- observed result: Green / Not Green / Evidence Gap / Not Run;
+- qualification status: qualifying / diagnostic-only / not-run;
+- common abort reason;
+- one-attempt-per-workload invariant.
+
+Common validity/safety failure:
+- abort later live callbacks.
+
+Ordinary functional failure:
+- record it;
+- continue remaining isolated workloads;
+- mark downstream results diagnostic-only when an upstream prerequisite is Not Green.
+
+No production agent business logic belongs in this helper.
+
+FAILURE LEDGER
+
+Add a bounded JSON-compatible failure-ledger schema/normalizer.
+
+Each entry must support, when applicable:
+- stable identity;
+- layer/workload;
+- observed state;
+- qualification status;
+- failure class;
+- bounded code/message;
+- tool/validation identity;
+- provider attempts/rounds/input/output;
+- tool count;
+- profile/promotions;
+- TaskState/StackState/hidden acceptance;
+- intervention/exhaustion;
+- classification: new / retained / intermittent / environment-only / unresolved;
+- evidence references/hashes;
+- repair cluster.
+
+Repair clusters:
+- `agent-provider-context`;
+- `ui-test-stability`;
+- `environment-only`;
+- `unresolved`.
+
+Prevent duplicate identity collapse.
+
+PERMANENT TESTS
+
+At minimum prove:
+
+1. provider error code/message survives artifact sanitization;
+2. turn failure/cancellation survives;
+3. tool/validation error survives;
+4. harness/observer failure stays distinct;
+5. raw secret/provider payload/file body remains absent;
+6. schema-1 history is not rewritten;
+7. schema-2 output deterministic;
+8. all-Green sweep -> all qualifying;
+9. three-file Not Green -> A/B2/C2 callbacks still execute but downstream qualification status is diagnostic-only;
+10. A Not Green -> B2/C2 execute diagnostic-only;
+11. B2 Not Green -> C2 executes diagnostic-only;
+12. common runtime invalid -> no workload callbacks execute;
+13. evidence-writer/common evidence-validity failure aborts;
+14. same workload cannot be spent twice in one sweep;
+15. ledger retains multiple simultaneous independent failures;
+16. bounded ledger rejects/leaves out unsafe oversized/raw content.
+
+EVIDENCE
+
+Create:
+
+`docs/tasks/c9-live-sweep/P1-sweep-infrastructure-evidence.md`
+
+Record:
+- schema decision;
+- diagnostic fields;
+- sweep semantics;
+- failure-ledger contract;
+- exact changed files/tests;
+- validation results.
+
+VALIDATION
+
+Run:
+- qualification unit tests;
+- provider/error/event affected tests;
+- session/progress/diagnostic tests if changed;
+- Phase 9 integration affected floor;
+- `npm run typecheck`;
+- `npm run test:runner`;
+- complete `npm test` characterization;
+- `git diff --check`.
+
+Verify:
+- package exactly `0.9.10`;
+- no root `package-lock.json`;
+- no frozen fixture/instrument/acceptance change.
+
+Do not:
+- run official live workloads;
+- repair three-file behavior;
+- repair OpenTUI failures;
+- retune runtime/profiles;
+- owner-close Phase 9;
+- open Phase 10.

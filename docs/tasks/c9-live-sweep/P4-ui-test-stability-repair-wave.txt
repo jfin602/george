@@ -1,0 +1,104 @@
+TASK: Correction 9 / P4 — Repair the complete UI and test-stability failure wave
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Sol High`.
+- Browser required: no.
+
+VERSIONING
+- Required unchanged project version: `0.9.10`.
+
+GOAL
+
+Repair every clearly evidenced P2 failure assigned to the `ui-test-stability` cluster after accounting for P3 changes.
+
+If the ledger contains no actionable entry in this cluster, perform a no-op verification and evidence that fact.
+
+Read:
+- `BOOT.md`;
+- `AGENTS.md`;
+- workflow/stability/Phase 9 authority;
+- `docs/planning/c9-live-sweep-convergence/{decision-record,qualification-plan}.md`;
+- `docs/tasks/c9-live-sweep/{P2-diagnostic-sweep-evidence,P3-agent-repair-evidence}.md`;
+- pre-repair failure ledger;
+- all referenced UI/process/sandbox evidence;
+- current OpenTUI/process tests and implementation.
+
+LEDGER-DRIVEN SCOPE
+
+Enumerate all P2 entries with repairCluster:
+
+`ui-test-stability`
+
+Re-evaluate only whether P3 already fixed a shared root cause.
+
+For each remaining entry determine:
+- product UI defect;
+- test synchronization/lifecycle defect;
+- process/sandbox integration defect;
+- intermittent/environment-only;
+- unresolved.
+
+Do not invent work if no actionable defect remains.
+
+OPENTUI FAILURES
+
+For each retained/new renderer failure:
+- inspect the actual renderer lifecycle and test synchronization;
+- establish whether expected user-visible behavior is wrong or the test races legitimate async rendering;
+- prefer deterministic event/state synchronization;
+- preserve semantic behavior, draft state, approvals, final-response singularity, resize/scrollback behavior.
+
+Do not "fix" a flake by arbitrary sleep/timeout inflation without proving the underlying lifecycle requires that bound.
+
+SANDBOX/PROCESS INTERMITTENCY
+
+If reproduced/actionable:
+- trace process startup/wait/cleanup/cancellation;
+- preserve OS-containment semantics;
+- ensure the nested test/process lifetime is deterministically awaited;
+- add permanent regression coverage.
+
+If the historical intermittent failure does not reproduce and no cause can be established:
+- record it as unresolved/intermittent;
+- do not fabricate a code change.
+
+REGRESSION PERMANENCE
+
+Every repaired defect class gets a permanent detector.
+
+Do not delete or loosen assertions solely to achieve Green.
+
+EVIDENCE
+
+Create:
+
+`docs/tasks/c9-live-sweep/P4-ui-test-stability-evidence.md`
+
+Map every P2 UI/test entry to:
+- fixed;
+- already fixed by P3 shared cause;
+- environment-only;
+- unresolved;
+- no-op/not applicable.
+
+VALIDATION
+
+Run:
+- focused OpenTUI renderer tests;
+- process/sandbox tests;
+- affected application/TUI/session tests;
+- full `npm test`;
+- `npm run typecheck`;
+- `npm run test:runner`;
+- Phase 9 integration/immutability;
+- `git diff --check`.
+
+Verify package `0.9.10`, no root lockfile.
+
+Do not:
+- run official live workloads;
+- rewrite P2 ledger;
+- change frozen live instruments/acceptance;
+- retune runtime;
+- owner-close Phase 9;
+- open Phase 10.

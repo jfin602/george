@@ -1,0 +1,125 @@
+TASK: Correction 9 / P3 — Repair the complete agent/provider/context failure wave
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Sol High`.
+- Browser required: no.
+
+VERSIONING
+- Required unchanged project version: `0.9.10`.
+
+GOAL
+
+Repair every clearly evidenced P2 failure assigned to the `agent-provider-context` cluster in one bounded implementation wave.
+
+Do not guess beyond the P2 ledger.
+
+Read:
+- `BOOT.md`;
+- `AGENTS.md`;
+- architecture/workflow/stability/Phase 9 authority;
+- `docs/planning/c9-live-sweep-convergence/{decision-record,qualification-plan}.md`;
+- `docs/tasks/c9-live-sweep/{implementation-plan,P2-diagnostic-sweep-evidence}.md`;
+- `docs/tasks/c9-live-sweep/evidence/pre-repair/failure-ledger.json`;
+- every bounded artifact referenced by agent/provider/context ledger entries;
+- relevant production/tests.
+
+LEDGER IS SCOPE AUTHORITY
+
+Enumerate all P2 entries whose repairCluster is:
+
+`agent-provider-context`
+
+For every entry decide:
+- actionable George defect;
+- environment/provider-only;
+- duplicate/shared root cause;
+- unresolved due insufficient evidence.
+
+Do not create repairs for absent ledger entries merely because they seem plausible.
+
+REPAIR METHOD
+
+For every actionable defect:
+
+1. reproduce it deterministically at the lowest reliable layer;
+2. identify the narrowest authority boundary;
+3. implement the smallest safe repair;
+4. add a permanent regression guard;
+5. preserve previous safety/permission/recovery/context behavior;
+6. link the repair/test back to the ledger identity.
+
+Potential surfaces may include, only when evidenced:
+- provider stream/error normalization;
+- continuation behavior;
+- multi-round tool-loop convergence;
+- unnecessary/repeated tool use that George can deterministically constrain;
+- provider result handling;
+- context/profile promotion;
+- structured task stage state;
+- Gate A/B2/C2 execution;
+- live qualification integration.
+
+THREE-FILE FAILURE
+
+The historical failure read all required files then ended on provider error.
+
+Use P2 schema-2 diagnostics to determine the actual cause before changing production.
+
+Do not assume the denied `node --version` request caused the failure unless evidence demonstrates that relation.
+
+Do not solve model behavior by silently expanding executable permission authority.
+
+PROVIDER/ENVIRONMENT-ONLY FAILURES
+
+If a P2 entry is an external provider/runtime/environment failure and George behaved correctly:
+- do not code around it unsafely;
+- classify it;
+- improve bounded diagnostic/recovery handling only if George itself lacks required behavior.
+
+FROZEN ACCEPTANCE
+
+Do not weaken:
+- three-file required reads/final response;
+- Gate A exact edit/V1/hidden acceptance;
+- B2 task/validation/hidden acceptance;
+- C2 baseline/validation/hidden acceptance;
+- instrument versions/digests.
+
+No v3 instrument solely to obtain Green.
+
+EVIDENCE
+
+Create:
+
+`docs/tasks/c9-live-sweep/P3-agent-repair-evidence.md`
+
+For each P2 ledger entry record:
+- disposition;
+- root cause evidence;
+- changed source/tests;
+- regression guard;
+- validation result;
+- any intentionally unresolved item.
+
+VALIDATION
+
+Run:
+- every new regression;
+- provider/agent/context/tool affected floors;
+- permission/recovery/security floors touched;
+- Phase 9 integration;
+- qualification tests;
+- `npm run typecheck`;
+- `npm run test:runner`;
+- complete `npm test` characterization;
+- `git diff --check`.
+
+Verify package `0.9.10`, no root lockfile, frozen instruments/acceptance unchanged.
+
+Do not:
+- run official live workloads in P3;
+- repair UI/test-stability cluster unless it shares the proven same root cause;
+- retune model/runtime merely to pass;
+- rewrite P2 evidence;
+- owner-close Phase 9;
+- open Phase 10.

@@ -1,0 +1,141 @@
+TASK: Correction 9 / P5 — Run the complete post-repair qualification sweep
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Sol Medium`.
+- Browser required: no.
+
+VERSIONING
+- Required unchanged project version: `0.9.10`.
+
+GOAL
+
+Run the entire deterministic, broad, and live qualification surface after P3/P4 repairs and record every remaining failure.
+
+P5 is qualification/evidence only. Do not repair failures in this prompt.
+
+Read:
+- `BOOT.md`;
+- current workflow/stability/Phase 9 authority;
+- `docs/planning/c9-live-sweep-convergence/{decision-record,qualification-plan}.md`;
+- `docs/tasks/c9-live-sweep/{P1-sweep-infrastructure-evidence,P2-diagnostic-sweep-evidence,P3-agent-repair-evidence,P4-ui-test-stability-evidence}.md`;
+- pre-repair failure ledger;
+- exact current production/tests;
+- unchanged live fixtures/instruments/acceptance.
+
+NO REPAIR IN P5
+
+Only evidence/ledger/report output may change.
+
+COMMON VALIDITY / SAFETY QUALIFICATION
+
+Require:
+- P1 failure-diagnostic/sweep/ledger tests Green;
+- every P3/P4 permanent regression Green;
+- critical permission/security/recovery floors Green;
+- provider/context/tool floors Green;
+- Phase 9 integration Green;
+- instrument/fixture/acceptance immutability Green;
+- application runnable;
+- `npm run typecheck` Green;
+- `npm run test:runner` Green;
+- package exactly `0.9.10`;
+- no root lockfile;
+- `git diff --check` Green;
+- supported Node 26;
+- loaded pinned REST runtime sufficient;
+- evidence writer operational.
+
+Only a validity/safety/evidence-integrity blocker may abort the live matrix.
+
+FULL BROAD SUITE
+
+Run exact `npm test` once.
+
+Record:
+- total/pass/fail/skip;
+- every failed/skipped identity;
+- bounded category/signature;
+- whether each pre-repair P2 broad failure is resolved, retained, changed, or replaced by a new failure.
+
+Do not hide intermittent failures behind a later pass.
+
+RUNTIME
+
+Use exact pinned loaded model:
+`qwen3-coder-30b-a3b-instruct@q4_k_m`.
+
+Capture REST-visible controls.
+
+No retuning.
+
+COMPLETE POST-REPAIR LIVE MATRIX
+
+Execute all five exactly once, each in a fresh isolated environment:
+
+1. greeting;
+2. three-file;
+3. Gate A;
+4. B2;
+5. C2.
+
+Do not functional-fail-fast.
+
+Do not repair between workloads.
+
+Persist schema-2 bounded attempt/trace for every workload.
+
+For each record:
+- observed result;
+- qualifying / diagnostic-only;
+- bounded terminal diagnostics;
+- provider attempts/rounds/input/output;
+- tool calls;
+- profile/promotions;
+- task/stack states;
+- validations;
+- hidden acceptance;
+- intervention/exhaustion;
+- artifact hashes.
+
+Canonical prerequisite chain remains:
+
+greeting -> three-file -> A -> B2 -> C2
+
+A downstream observation after an upstream failure is diagnostic-only.
+
+POST-REPAIR FAILURE LEDGER
+
+Create:
+
+`docs/tasks/c9-live-sweep/evidence/post-repair/failure-ledger.json`
+
+Include every remaining Not Green/Evidence Gap:
+- deterministic/common observations;
+- full broad suite failures/skips;
+- runtime/control gaps;
+- live workloads.
+
+Reference corresponding pre-repair ledger identities where possible and record disposition:
+- resolved;
+- retained;
+- changed;
+- new.
+
+Create:
+
+`docs/tasks/c9-live-sweep/P5-post-repair-sweep-evidence.md`
+
+Include exact hashes for all new JSON artifacts.
+
+PHASE 9 READINESS INPUT
+
+Do not decide owner closeout here beyond reporting raw result.
+
+A fully Green qualifying chain is necessary but P6 owns the final audit.
+
+Do not:
+- rerun failed workloads;
+- repair production/tests;
+- alter instruments/acceptance;
+- owner-close Phase 9;
+- open Phase 10.

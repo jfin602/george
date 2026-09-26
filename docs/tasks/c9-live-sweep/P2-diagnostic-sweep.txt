@@ -1,0 +1,172 @@
+TASK: Correction 9 / P2 — Run the complete pre-repair diagnostic sweep
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Sol Medium`.
+- Browser required: no.
+
+VERSIONING
+- Required unchanged project version: `0.9.10`.
+
+GOAL
+
+Run the complete Phase 9 diagnostic matrix once and record every failure before any repair work.
+
+This prompt makes no production/test/qualification-semantic repair.
+
+Read:
+- `BOOT.md`;
+- current workflow/stability/Phase 9 qualification authority;
+- `docs/planning/c9-live-sweep-convergence/{decision-record,qualification-plan}.md`;
+- `docs/tasks/c9-live-sweep/{prompt-assessment,implementation-plan,P1-sweep-infrastructure-evidence}.md`;
+- historical turn-context live qualification evidence;
+- current P1 schema/sweep/ledger implementation;
+- unchanged greeting/three-file/Gate A/B2/C2 instruments/helpers.
+
+NO REPAIR IN P2
+
+Do not modify:
+- production source;
+- tests;
+- qualification semantics;
+- fixtures/instruments;
+- hidden acceptance;
+- profiles/runtime settings.
+
+Only bounded evidence/ledger/report files may be created.
+
+COMMON VALIDITY / SAFETY PREFLIGHT
+
+Require enough Green evidence that the live sweep is representative and safe:
+
+- P1 schema-2 diagnostics/sweep/ledger tests Green;
+- core provider/tool permission/recovery/security floors Green;
+- Phase 9 task/stack integration Green;
+- instrument/fixture/acceptance immutability Green;
+- application runnable;
+- `npm run typecheck` Green;
+- `npm run test:runner` Green;
+- package exactly `0.9.10`;
+- no root `package-lock.json`;
+- `git diff --check` Green;
+- supported Node 26;
+- loaded pinned REST-visible runtime sufficient;
+- bounded evidence writer operational.
+
+A common validity/safety/evidence-integrity failure may abort live workload execution.
+
+An ordinary functional test failure does NOT automatically abort the live sweep; record it in the ledger.
+
+FULL BROAD SUITE
+
+Run exact `npm test` once under supported Node 26.
+
+Record every failed/skipped identity and bounded signature.
+
+Do not summarize five failures as one ledger item.
+
+Include:
+- all retained/new OpenTUI failures;
+- native real-TTY skip/Evidence Gap;
+- any process/sandbox failure;
+- any new deterministic failure.
+
+If the historical sandbox-process intermittent failure does not reproduce, include a bounded historical/intermittent ledger note only if the ledger schema supports non-current observations distinctly; never pretend it failed in P2 when it did not.
+
+RUNTIME
+
+Use exact loaded model:
+
+`qwen3-coder-30b-a3b-instruct@q4_k_m`
+
+Capture REST-visible runtime controls.
+
+Print:
+`MANUAL CHECK: LM Studio GPU Offload must show 26`
+
+UI-only GPU Offload 26 may remain Evidence Gap for controlled latency without blocking functional sweep.
+
+Do not retune.
+
+COMPLETE LIVE MATRIX
+
+Once common gates are Green, execute all five exactly once, each with a fresh isolated workspace/session/fixture:
+
+1. ordinary greeting;
+2. synthetic three-file inspection;
+3. frozen Gate A;
+4. `greenfield-express-v2` B2;
+5. `existing-express-feature-v2` C2.
+
+Do NOT stop after an ordinary functional Not Green result.
+
+Do NOT repair between workloads.
+
+For each workload persist schema-2 bounded attempt/trace.
+
+For each workload record:
+- observed result;
+- qualifying / diagnostic-only / not-run;
+- bounded authoritative terminal diagnostics;
+- provider attempts/rounds/tokens;
+- tool calls and terminal states;
+- selected profile/promotions;
+- task/stack state;
+- validations;
+- hidden acceptance;
+- intervention;
+- exhaustion;
+- artifact hashes.
+
+QUALIFICATION STATUS
+
+Use the canonical prerequisite chain:
+
+greeting -> three-file -> Gate A -> B2 -> C2
+
+A workload is qualifying only when all required upstream prerequisites in this sweep are Green.
+
+If an upstream workload is Not Green/Evidence Gap:
+- still run later isolated workloads;
+- label later observations diagnostic-only.
+
+Never turn diagnostic-only Green into Phase 9 qualifying evidence.
+
+FAILURE LEDGER
+
+Create:
+
+`docs/tasks/c9-live-sweep/evidence/pre-repair/failure-ledger.json`
+
+Include every Not Green/Evidence Gap observation from:
+- common/deterministic checks that did not invalidate the sweep;
+- broad `npm test`;
+- runtime/controlled-latency evidence;
+- all five live workloads.
+
+Assign each entry:
+- classification;
+- repair cluster;
+- bounded supporting artifact reference/hash.
+
+Create:
+
+`docs/tasks/c9-live-sweep/P2-diagnostic-sweep-evidence.md`
+
+Summarize:
+- common preflight;
+- broad totals plus every failure identity;
+- five workload observed/qualification statuses;
+- failure ledger entries grouped by repair cluster;
+- exact artifact hashes.
+
+Do not diagnose beyond evidence or begin repairs.
+
+FINAL P2 CHECK
+
+Verify evidence generation did not modify production/tests/fixtures/instruments.
+
+Do not:
+- rerun a workload;
+- fix a failure;
+- owner-close Phase 9;
+- open Phase 10.
