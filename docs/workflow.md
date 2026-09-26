@@ -200,3 +200,16 @@ Phase 1 must establish explicit commands/coverage for any provider, TUI, or inte
 Keep implementation completion separate from broader qualification.
 
 Evidence is Green, Not Green, or Evidence Gap. An Evidence Gap is not a pass. Owner acceptance of a known gap is a waiver, not retroactive evidence.
+
+
+## Phase 10 optimization workflow
+
+Phase 10 uses the existing benchmark-driven keep/revise/revert discipline with a provider-round-first optimization order.
+
+The routine live efficacy matrix is `greeting -> three-file -> Gate A -> B3 -> C3`.
+
+Frozen Phase 9 B2/C2 are milestone-only longitudinal gates and are not rerun after each optimization.
+
+Internal structured work may use Operation mode: typed tool/application-control protocol with no routine natural-language narration. Operator-facing Human mode remains conversational.
+
+Every bounded optimization must be measured independently before the next optimization is accepted. Correctness, permission, recovery, TaskState/StackState, validation, and evidence authority outrank performance.

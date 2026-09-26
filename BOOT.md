@@ -108,9 +108,17 @@ Key carried-forward truth:
 
 **Phase 10 — Agent Loop Throughput — is the current roadmap gate.**
 
-Phase 10 baseline target: `0.10.0`. The package remains `0.9.10` until the explicit Phase 10 baseline transition.
+Phase 10 baseline: `0.10.0`.
 
-Phase 10 must preserve Phase 9 task/permission/evidence/recovery authority while optimizing serialized provider/tool/model-loop performance and measuring frozen Phase 9 live workloads.
+Phase 10 authority:
+- `docs/planning/p10-agent-loop-throughput/decision-record.md`;
+- `docs/planning/p10-agent-loop-throughput/qualification-plan.md`;
+- `docs/planning/p10-agent-loop-throughput/optimization-metrics.md`;
+- `docs/planning/p10-agent-loop-throughput/fast-live-work.md`.
+
+Phase 10 must preserve Phase 9 task/permission/evidence/recovery authority while optimizing serialized provider/tool/model-loop performance. Human language belongs at the human boundary; internal structured work moves toward a typed operation protocol. B3/C3 are the routine fast live efficacy gates; frozen Phase 9 B2/C2 remain milestone-only longitudinal gates.
+
+The unexecuted `c9-gen-op` planning is historical precursor material only. Do not run that correction stack.
 
 ## Core premise
 
@@ -147,7 +155,7 @@ Read:
 - stability/testing: `docs/stability-contract.md`;
 - roadmap: `docs/roadmap/mvp-roadmap.md`;
 - Living Project Map / Software Graph, when relevant: `docs/planning/living-project-map/decision-record.md` (then its graph, interaction, and qualification companions as needed);
-- Phase 9 owner closeout: `docs/phase-9-owner-closeout.md`; retained Phase 9 authority/evidence: `docs/planning/p9-structured-task-execution/{decision-record,task-format-v1,qualification-plan}.md`, `docs/tasks/c9-final-live-convergence/closeout.md`, and its final report/ledger; current roadmap gate: Phase 10 — Agent Loop Throughput;
+- Phase 9 owner closeout: `docs/phase-9-owner-closeout.md`; retained Phase 9 authority/evidence: `docs/planning/p9-structured-task-execution/{decision-record,task-format-v1,qualification-plan}.md`, `docs/tasks/c9-final-live-convergence/closeout.md`, and its final report/ledger; current Phase 10 authority: `docs/planning/p10-agent-loop-throughput/{decision-record,qualification-plan,optimization-metrics,fast-live-work}.md`;
 - Phase 8 closeout/history when needed: `docs/phase-8-closeout.md`, `docs/phase-8-owner-closeout.md`, `docs/tasks/c8-agentic-context/closeout.md`, `docs/planning/c8-agentic-context/decision-record.md`, `docs/planning/c8-agentic-context/qualification-plan.md`, `docs/planning/p8-context-throughput-optimization/decision-record.md`, `docs/planning/p8-context-throughput-optimization/initial-baseline.md`, and `docs/planning/performance-benchmarking-worksheet.md`;
 - Phase 7 closeout/history when needed: `docs/phase-7-closeout.md`, `docs/phase-7-owner-closeout.md`, `docs/planning/p7-inference-runtime-optimization/initial-baseline.md`;
 - Phase 6 closeout/history when needed: `docs/phase-6-closeout.md`, `docs/phase-6-owner-closeout.md`, `docs/planning/p6-plugins-external-adapters/decision-record.md`;

@@ -670,8 +670,25 @@ Phase 8 context qualification must additionally prove:
 - stable/incremental/provider-cached context paths never make provider-native cache state the sole copy of canonical or safety-relevant state;
 - a context speedup does not silently omit critical sources or change logical precedence.
 
-Phase 10 tool-concurrency qualification must additionally prove:
-- only explicitly dependency-safe operations are concurrent;
+Phase 10 qualification is provider-round-first. Model-call reduction and provider-input/output reduction are evaluated before lower-level tool parallelism because current local-model evidence shows provider/model time dominates the loop.
+
+Phase 10 Operation-mode qualification must additionally prove:
+- Human mode preserves operator-facing conversational behavior;
+- Operation mode uses typed tool/application-control output rather than routine hidden narration;
+- application controls are non-executable and cannot grant permissions or mark task/validation truth;
+- deterministic transitions George already owns can proceed without an extra model completion/handoff round;
+- raw internal prose is not required as durable evidence.
+
+Phase 10 stable-prefix/useful-output qualification must additionally prove:
+- response acceptance/prefill is distinguished from useful generation;
+- changing round context does not unnecessarily rewrite the stable provider prefix;
+- canonical George state never depends solely on provider-native cache state;
+- cached-input evidence is recorded only when actually reported.
+
+Phase 10 batching/tool-concurrency qualification must additionally prove:
+- multiple calls from one provider round retain independent canonical validation/effect classification;
+- batching is correct before concurrency is introduced;
+- only explicitly dependency-safe replay-safe local reads are concurrent initially;
 - side-effecting/ambiguous operations remain sequential unless separately authorized by a later contract;
 - concurrent calls retain unique lifecycle identities and normal permission/cancellation/output bounds;
 - failure/cancellation of one call does not fabricate success for peers;
@@ -679,6 +696,8 @@ Phase 10 tool-concurrency qualification must additionally prove:
 - integrated permission, recovery, work-log, and transcript evidence remains complete.
 
 Phase 10 model-call reduction qualification must distinguish logical provider rounds from retry attempts and prove that removed model turns were unnecessary orchestration boundaries rather than lost reasoning/approval/recovery decisions.
+
+Routine Phase 10 live qualification uses compact B3/C3 efficacy instruments. Frozen Phase 9 B2/C2 remain milestone longitudinal gates and are not required after every bounded optimization.
 
 Phase 11 closes the primary-model optimization campaign only after a full-suite consolidated run records the original baseline, accepted/rejected experiments, cumulative deltas, correctness state, call counts, token usage where available, and resource footprint. Speculative decoding is retained only if the end-to-end evidence justifies its memory/runtime complexity.
 
