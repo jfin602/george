@@ -1,0 +1,164 @@
+TASK: Correction 9 / P1 — Scope qualification preflight and compare broad baseline
+
+MODEL / REASONING / USAGE
+- Recommended configuration: `Sol Medium`.
+- Browser required: no.
+
+VERSIONING
+- Required unchanged project version: `0.9.10`.
+
+GOAL
+
+Repair the qualification-policy defect that blocked live Phase 9 gates solely because aggregate broad `npm test` remained Not Green.
+
+Add a permanent qualification-layer classifier that keeps hard affected-system state, aggregate broad-suite state, broad regression delta, and live eligibility separate.
+
+Then perform the controlled broad baseline comparison required by the approved correction.
+
+Read:
+- `BOOT.md`;
+- `AGENTS.md`;
+- workflow/stability/Phase 9 qualification authority;
+- `docs/planning/c9-qualification-preflight-scope/{decision-record,qualification-plan}.md`;
+- `docs/tasks/c9-qualification-preflight-scope/{prompt-assessment,implementation-plan}.md`;
+- `docs/tasks/c9-mutation-precondition-convergence/{P2-live-evidence,closeout}.md`;
+- `docs/tasks/c9-greenfield-instrument-alignment/P2-live-evidence.md`;
+- current qualification source/tests.
+
+Do not modify George production agent-loop/tool/filesystem/TUI behavior.
+
+QUALIFICATION CLASSIFIER
+
+Add the smallest pure qualification-layer representation needed.
+
+Prefer:
+`src/qualification/preflight.ts`
+plus export/test integration.
+
+Represent explicit finite evidence states, not one broad boolean.
+
+Inputs must support:
+- hard-preflight state;
+- bounded baseline broad summary;
+- bounded candidate broad summary.
+
+Output must distinguish:
+- candidate aggregate broad state;
+- broad regression delta;
+- live-gate eligibility;
+- bounded reasons/matched/new/worsened evidence.
+
+Required semantics:
+
+1. Hard Not Green blocks regardless of broad comparison.
+2. Aggregate candidate broad failures keep aggregate state Not Green.
+3. Same baseline/candidate failed+skipped identities with materially equivalent bounded categories/signatures may produce regression delta Green.
+4. Delta Green + hard Green may be live-eligible even while aggregate broad is Not Green.
+5. New failure identity => delta Not Green.
+6. Previously passing/absent affected test becoming failed/skipped => delta Not Green.
+7. Materially worsened retained failure category/signature => delta Not Green.
+8. Missing/non-equivalent baseline evidence => Evidence Gap/ineligible.
+9. Input ordering cannot change the result.
+10. Counts alone cannot make different failure identities equivalent.
+
+Do not make this helper execute tests, parse raw logs, or decide hidden acceptance.
+
+PERMANENT TESTS
+
+Install focused deterministic tests for all rules above, especially:
+
+hard Green
++ baseline five renderer failures + one native-TTY skip
++ candidate materially equivalent five failures + one skip
+= aggregate broad Not Green
++ regression delta Green
++ live eligible.
+
+Bound signatures/reasons; no raw unbounded logs.
+
+CONTROLLED BROAD COMPARISON
+
+Compare exactly:
+
+Baseline:
+`d7e565ccb0e694166e6fe4346b56f4746f0697f1`
+
+Candidate:
+`04405570b92680e6297b48391a7d0bdf0aa8ed5e`
+
+Do NOT:
+- move active HEAD;
+- run `git checkout`, `git switch`, reset/rebase/merge;
+- edit either immutable commit;
+- commit temporary snapshots/logs.
+
+Use isolated temporary trees from read-only `git archive` or another equally non-mutating method.
+
+Before running:
+- verify both `package.json` dependency identities are compatible;
+- use the same Node/npm;
+- use exact `npm test`;
+- use equivalent non-TTY/OpenTUI environment;
+- reuse the same installed dependency tree only if dependency identity is proven identical.
+
+Run the broad suite once for each controlled snapshot.
+
+Capture for each:
+- commit;
+- Node/npm;
+- exact command;
+- total/pass/fail/skip;
+- exact failed/skipped test names;
+- bounded failure category/signature sufficient to compare assertion/timeout/renderer/native behavior.
+
+Counts alone are insufficient.
+
+If equivalent execution cannot be established, record Evidence Gap rather than guessing.
+
+TRACKED EVIDENCE
+
+Create:
+
+- `docs/tasks/c9-qualification-preflight-scope/evidence/broad-baseline.json`
+- `docs/tasks/c9-qualification-preflight-scope/evidence/broad-candidate.json`
+- `docs/tasks/c9-qualification-preflight-scope/evidence/broad-delta.json`
+- `docs/tasks/c9-qualification-preflight-scope/P1-preflight-evidence.md`
+
+Use the classifier for the committed delta result.
+
+Record SHA-256 of each JSON in the Markdown evidence.
+
+Do not commit raw test logs, secrets, environment dumps, dependency trees, workspace snapshots, or file bodies.
+
+If broad regression delta is Green:
+- state aggregate candidate broad remains Not Green if failures remain;
+- state live eligibility is Green subject to P2's fresh hard checks.
+
+If delta is Not Green/Evidence Gap:
+- preserve exact reason;
+- do not repair TUI in P1;
+- P2 must not spend live gates.
+
+VALIDATION
+
+Run:
+- new qualification-preflight tests;
+- qualification/live-work tests;
+- mutation-precondition focused/inherited floor;
+- Phase 9 integration;
+- `npm run typecheck`;
+- `npm run test:runner`;
+- current broad `npm test` as characterization;
+- `git diff --check`.
+
+Verify:
+- package exactly `0.9.10`;
+- no root `package-lock.json`.
+
+Do not:
+- change production behavior;
+- edit v1/v2 instruments or hidden acceptance;
+- run official Gate A/B2/C2;
+- relabel broad Not Green Green;
+- owner-close Phase 9;
+- open Phase 10.
