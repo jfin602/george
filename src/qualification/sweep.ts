@@ -5,6 +5,85 @@ export type SweepObservedResult = 'Green' | 'Not Green' | 'Evidence Gap' | 'Not 
 export type SweepQualificationStatus = 'qualifying' | 'diagnostic-only' | 'not-run';
 export type SweepCommonState = 'Green' | 'Not Green' | 'Evidence Gap';
 
+const SWEEP_PREFLIGHT_POLICY = Object.freeze({
+  'supported-runtime': 'abort',
+  'pinned-model': 'abort',
+  'runtime-controls': 'abort',
+  'application-runnable': 'abort',
+  typecheck: 'abort',
+  'instrument-identity': 'abort',
+  'evidence-writer': 'abort',
+  'permission-security-recovery': 'abort',
+  'workspace-autonomous-containment': 'abort',
+  'provider-tool-contract': 'abort',
+  'qualification-harness': 'abort',
+  'opentui-renderer': 'record',
+  'functional-test': 'record',
+  'broad-functional-test': 'record',
+  'live-functional': 'record',
+  'model-task-behavior': 'record',
+  'historical-intermittent': 'record',
+  'native-real-tty': 'record',
+  'gpu-offload-26': 'record',
+} as const);
+
+export type SweepPreflightKind = keyof typeof SWEEP_PREFLIGHT_POLICY;
+
+export type SweepPreflightObservation = Readonly<{
+  identity: string;
+  kind: SweepPreflightKind;
+  state: SweepCommonState;
+  message?: string;
+}>;
+
+export type SweepAbortClassification = Readonly<{
+  liveSweepEligible: boolean;
+  abortState: SweepCommonState;
+  abortReasons: readonly string[];
+  recordAndContinue: readonly SweepPreflightObservation[];
+}>;
+
+const SWEEP_PREFLIGHT_KINDS = Object.keys(SWEEP_PREFLIGHT_POLICY) as SweepPreflightKind[];
+
+/** Classifies bounded preflight evidence by semantic safety scope, not aggregate test state. */
+export function classifySweepAbortScope(observations: readonly SweepPreflightObservation[]): SweepAbortClassification {
+  if (observations.length > 256) throw new Error('Sweep preflight exceeds 256 observations.');
+  const identities = new Set<string>();
+  const abortReasons: string[] = [];
+  const recordAndContinue: SweepPreflightObservation[] = [];
+  let abortState: SweepCommonState = 'Green';
+
+  for (const item of observations) {
+    const identity = boundedRequired(item.identity, 'Sweep preflight identity', 512);
+    if (identities.has(identity)) throw new Error(`Duplicate sweep preflight identity: ${identity}.`);
+    identities.add(identity);
+    const kind = oneOf(item.kind, SWEEP_PREFLIGHT_KINDS, 'Sweep preflight kind');
+    const state = oneOf(item.state, ['Green', 'Not Green', 'Evidence Gap'], 'Sweep preflight state');
+    const message = item.message === undefined ? undefined : boundedDiagnostic(item.message, 1024);
+    if (state === 'Green') continue;
+    const observation = Object.freeze({ identity, kind, state, ...(message === undefined ? {} : { message }) });
+    if (SWEEP_PREFLIGHT_POLICY[kind] === 'record') {
+      recordAndContinue.push(observation);
+      continue;
+    }
+    if (state === 'Not Green' || abortState === 'Green') abortState = state;
+    abortReasons.push(boundedDiagnostic(`${identity}: ${message ?? kind}`, 1024));
+  }
+
+  return Object.freeze({
+    liveSweepEligible: abortState === 'Green',
+    abortState,
+    abortReasons: Object.freeze(abortReasons),
+    recordAndContinue: Object.freeze(recordAndContinue),
+  });
+}
+
+export function sweepCommonFromAbortScope(classification: SweepAbortClassification): Readonly<{ state: SweepCommonState; reason?: string }> {
+  return classification.liveSweepEligible
+    ? Object.freeze({ state: 'Green' })
+    : Object.freeze({ state: classification.abortState, reason: boundedDiagnostic(classification.abortReasons.join('; '), 1024) });
+}
+
 export type SweepWorkloadResult = Readonly<{
   id: string;
   observedResult: SweepObservedResult;

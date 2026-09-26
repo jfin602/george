@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { normalizeFailureLedger, runQualificationSweep, type FailureLedgerEntryInput, type SweepObservedResult } from '../../../src/qualification/index.ts';
+import { classifySweepAbortScope, normalizeFailureLedger, runQualificationSweep, sweepCommonFromAbortScope, type FailureLedgerEntryInput, type SweepObservedResult, type SweepPreflightKind, type SweepPreflightObservation } from '../../../src/qualification/index.ts';
 
 const ids = ['greeting', 'three-file', 'gate-a', 'b2', 'c2'] as const;
 
@@ -12,6 +12,81 @@ function workloads(outcomes: Partial<Record<(typeof ids)[number], Exclude<SweepO
     run: async () => { called.push(id); return outcomes[id] ?? 'Green'; },
   }));
 }
+
+const observation = (kind: SweepPreflightKind, state: SweepPreflightObservation['state'] = 'Not Green', identity = kind): SweepPreflightObservation => ({ identity, kind, state, message: `${identity} observed ${state}` });
+
+test('functional and environment observations are ledgered without aborting live work', () => {
+  const observations = [
+    observation('opentui-renderer', 'Not Green', 'progressive-final-answer-reveal'),
+    observation('opentui-renderer', 'Not Green', 'generic-renderer'),
+    observation('functional-test'),
+    observation('broad-functional-test'),
+    observation('live-functional'),
+    observation('model-task-behavior'),
+    observation('native-real-tty', 'Evidence Gap'),
+    observation('gpu-offload-26', 'Evidence Gap'),
+    observation('historical-intermittent', 'Evidence Gap', 'sandbox-process'),
+  ];
+  const result = classifySweepAbortScope(observations);
+  assert.equal(result.liveSweepEligible, true);
+  assert.equal(result.abortState, 'Green');
+  assert.deepEqual(result.abortReasons, []);
+  assert.deepEqual(result.recordAndContinue, observations);
+});
+
+test('runtime, integrity, security, containment, and harness failures abort closed', () => {
+  const kinds: SweepPreflightKind[] = [
+    'supported-runtime',
+    'pinned-model',
+    'runtime-controls',
+    'evidence-writer',
+    'instrument-identity',
+    'application-runnable',
+    'typecheck',
+    'permission-security-recovery',
+    'workspace-autonomous-containment',
+    'provider-tool-contract',
+    'qualification-harness',
+  ];
+  for (const kind of kinds) {
+    const result = classifySweepAbortScope([observation(kind)]);
+    assert.equal(result.liveSweepEligible, false, kind);
+    assert.equal(result.abortState, 'Not Green', kind);
+    assert.equal(result.abortReasons.length, 1, kind);
+    assert.deepEqual(result.recordAndContinue, [], kind);
+  }
+  assert.equal(classifySweepAbortScope([observation('runtime-controls', 'Evidence Gap')]).abortState, 'Evidence Gap');
+});
+
+test('abort-scope evidence rejects duplicate or unbounded observations and sanitizes diagnostics', () => {
+  const item = observation('qualification-harness');
+  assert.throws(() => classifySweepAbortScope([item, item]), /Duplicate sweep preflight identity/);
+  assert.throws(() => classifySweepAbortScope([{ ...item, identity: 'x'.repeat(513) }]), /Sweep preflight identity is missing or unbounded/);
+  const result = classifySweepAbortScope([{ ...item, message: `token=CLASSIFIER_SECRET ${'x'.repeat(4_000)}` }]);
+  assert.equal(result.abortReasons[0]?.includes('CLASSIFIER_SECRET'), false);
+  assert.equal(Buffer.byteLength(result.abortReasons[0] ?? '', 'utf8') <= 1024, true);
+});
+
+test('exact P5 renderer intermittent remains Not Green evidence while the full live matrix runs', async () => {
+  const identity = 'committed final answers reveal progressively without delaying canonical durability, and cancellation stops the reveal';
+  const classification = classifySweepAbortScope([
+    observation('pinned-model', 'Green'),
+    observation('runtime-controls', 'Green'),
+    observation('application-runnable', 'Green'),
+    observation('typecheck', 'Green'),
+    observation('evidence-writer', 'Green'),
+    observation('permission-security-recovery', 'Green'),
+    observation('opentui-renderer', 'Not Green', identity),
+    observation('broad-functional-test', 'Green', `${identity} broad rerun`),
+  ]);
+  assert.equal(classification.liveSweepEligible, true);
+  assert.deepEqual(classification.recordAndContinue.map(({ identity: retained, state }) => [retained, state]), [[identity, 'Not Green']]);
+
+  const called: string[] = [];
+  const sweep = await runQualificationSweep({ common: sweepCommonFromAbortScope(classification), workloads: workloads({}, called) });
+  assert.deepEqual(called, ids);
+  assert.deepEqual(sweep.results.map(({ attempts }) => attempts), [1, 1, 1, 1, 1]);
+});
 
 test('full sweep keeps ordered functional failures diagnostic without spending a workload twice', async () => {
   const cases = [

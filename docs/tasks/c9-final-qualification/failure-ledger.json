@@ -1,0 +1,141 @@
+{
+  "schemaVersion": 1,
+  "head": "e6f19645d6ed65e670bacff2f22924990c53b37b",
+  "entries": [
+    {
+      "identity": "live:gate-a:model-tool-call-ceiling",
+      "layer": "live",
+      "workload": "gate-a",
+      "observedState": "Not Green",
+      "qualificationStatus": "qualifying",
+      "failureClass": "validation",
+      "code": "model_tool_call_ceiling",
+      "message": "12 model-requested calls exceeded the frozen maximum of 10; exact 60-byte edit, V1, completed TaskState, and hidden acceptance passed.",
+      "provider": { "attempts": 8, "rounds": 8, "inputTokens": 30897, "outputTokens": 1143 },
+      "toolCount": 12,
+      "validation": { "id": "V1" },
+      "profile": { "selected": "ordinary", "promotions": [] },
+      "taskState": { "fingerprint": "17991f1333017225f2eab92a50fae520324a8f9910722301d22ca1fefb9207dc", "status": "completed", "currentWorkUnit": "W1" },
+      "hiddenAcceptance": "passed",
+      "interventions": 0,
+      "exhausted": false,
+      "classification": "new",
+      "repairCluster": "agent-provider-context",
+      "evidence": [
+        { "path": "evidence/gate-a/attempt.json", "sha256": "540da94e9fb542d5524c1ce7bc7f95490d28bdb7f420f379238c6da56b4c330f" },
+        { "path": "evidence/gate-a/trace.json", "sha256": "5ab72d92959720509bc219beaa54858e1c9eb36755d17967aa1d377d9420e3b5" }
+      ]
+    },
+    {
+      "identity": "live:b2:provider-timeout-p2",
+      "layer": "live",
+      "workload": "greenfield-express-v2",
+      "observedState": "Not Green",
+      "qualificationStatus": "diagnostic-only",
+      "failureClass": "provider",
+      "code": "provider_timeout",
+      "message": "P1 completed with V1 passed; P2 failed when LM Studio timed out after 120000 ms. P3 and hidden acceptance did not run.",
+      "provider": { "attempts": 11, "rounds": 11, "inputTokens": 21170, "outputTokens": 1146 },
+      "toolCount": 20,
+      "validation": { "id": "P1 V1" },
+      "profile": { "selected": "ordinary", "promotions": [] },
+      "taskState": { "fingerprint": "ab612aad0ecd43a2bbbdb4d0135a21db32fa5c8e13e993ba90105e407c96b3dc", "status": "failed", "currentWorkUnit": "W1" },
+      "stackState": { "fingerprint": "b4115722914fac5e5b254c80f69b75b8394cd4fcfa6c1a319120c7cf758a3c72", "status": "failed", "currentTaskOrdinal": 2 },
+      "hiddenAcceptance": "not_run",
+      "interventions": 0,
+      "exhausted": false,
+      "classification": "new",
+      "repairCluster": "agent-provider-context",
+      "evidence": [
+        { "path": "evidence/b2/attempt.json", "sha256": "e4621fc4bdd7b170d53e70123920bd124023012783cb659d7b3868c1e45027b3" },
+        { "path": "evidence/b2/trace.json", "sha256": "2a0fd393f1bb8a76efa108d63be1f2213df277c20dc15bb58857332b0c6de9eb" }
+      ]
+    },
+    {
+      "identity": "live:c2:implementation-stage-tool-limit",
+      "layer": "live",
+      "workload": "existing-express-feature-v2",
+      "observedState": "Not Green",
+      "qualificationStatus": "diagnostic-only",
+      "failureClass": "turn",
+      "code": "structured_stage_tool_limit",
+      "message": "INSPECT read package.json, src/app.js, and test/notes.test.js; implementation W1 exhausted the eight-call stage limit before V1/V2.",
+      "provider": { "attempts": 3, "rounds": 3, "inputTokens": 5848, "outputTokens": 829 },
+      "toolCount": 13,
+      "validation": { "id": "V1/V2" },
+      "profile": { "selected": "ordinary", "promotions": [] },
+      "taskState": { "fingerprint": "fdc635e281657ab801a9038f899532f4eee32f75aa9fc5238eb9291c29bf94e5", "status": "budget_exhausted", "currentWorkUnit": "W1" },
+      "hiddenAcceptance": "not_run",
+      "interventions": 0,
+      "exhausted": true,
+      "classification": "new",
+      "repairCluster": "agent-provider-context",
+      "evidence": [
+        { "path": "evidence/c2/attempt.json", "sha256": "169792d4faabbf04bb166ee1a5bc2c2364ea20843896df0870a6ecfcd34438e6" },
+        { "path": "evidence/c2/trace.json", "sha256": "5655a1eb3833ced09b7f502927e742b8028cf3ee31f5c94aa8081e91d8547b94" }
+      ]
+    },
+    {
+      "identity": "historical:progressive-final-answer-reveal",
+      "layer": "deterministic",
+      "workload": "OpenTUI progressive reveal",
+      "observedState": "Evidence Gap",
+      "qualificationStatus": "not-run",
+      "failureClass": "test",
+      "code": "historical_intermittent",
+      "message": "P5 focused timeout remains historical; current focused and broad runs passed this identity. Cause of intermittency was not established.",
+      "classification": "intermittent",
+      "repairCluster": "ui-test-stability",
+      "evidence": [
+        { "path": "../c9-live-sweep/P5-post-repair-sweep-evidence.md", "sha256": "46df989d0cf2a072afe92f509e586e4caa81ecbb74039c5c2c27f306ac8b2d10" },
+        { "path": "report.md", "sha256": "b3cc701bfa553d9766e9318ed50969cffcb6d656d8a2b7ee83bf7d9e3b3c89a8" }
+      ]
+    },
+    {
+      "identity": "historical:sandbox-process-intermittent",
+      "layer": "deterministic",
+      "workload": "nested sandbox process",
+      "observedState": "Evidence Gap",
+      "qualificationStatus": "not-run",
+      "failureClass": "test",
+      "code": "historical_intermittent",
+      "message": "Historical non-completion did not reproduce in the current focused or broad runs; root cause remains unestablished.",
+      "classification": "intermittent",
+      "repairCluster": "ui-test-stability",
+      "evidence": [
+        { "path": "../c9-live-sweep/P4-ui-test-stability-evidence.md", "sha256": "3a6f736545e3a33dbdfc69575f4861fab9f67085f4bf96b88545889a07b7d427" },
+        { "path": "report.md", "sha256": "b3cc701bfa553d9766e9318ed50969cffcb6d656d8a2b7ee83bf7d9e3b3c89a8" }
+      ]
+    },
+    {
+      "identity": "broad:native-real-tty",
+      "layer": "broad",
+      "workload": "native OpenTUI launches and restores a real Node 26 terminal",
+      "observedState": "Evidence Gap",
+      "qualificationStatus": "not-run",
+      "failureClass": "environment",
+      "code": "non_tty_host",
+      "message": "The exact broad run skipped the native real-TTY test in this non-TTY environment.",
+      "classification": "environment-only",
+      "repairCluster": "environment-only",
+      "evidence": [
+        { "path": "report.md", "sha256": "b3cc701bfa553d9766e9318ed50969cffcb6d656d8a2b7ee83bf7d9e3b3c89a8" }
+      ]
+    },
+    {
+      "identity": "runtime:gpu-offload-26",
+      "layer": "deterministic",
+      "workload": "LM Studio GPU Offload 26",
+      "observedState": "Evidence Gap",
+      "qualificationStatus": "not-run",
+      "failureClass": "environment",
+      "code": "ui_only_control",
+      "message": "REST-visible GPU KV-cache offload was enabled; the UI-only GPU Offload 26 control was not independently observable.",
+      "classification": "environment-only",
+      "repairCluster": "environment-only",
+      "evidence": [
+        { "path": "report.md", "sha256": "b3cc701bfa553d9766e9318ed50969cffcb6d656d8a2b7ee83bf7d9e3b3c89a8" }
+      ]
+    }
+  ]
+}

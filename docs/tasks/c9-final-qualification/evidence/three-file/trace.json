@@ -1,0 +1,167 @@
+{
+  "schemaVersion": 2,
+  "terminalStatus": "completed",
+  "terminalError": null,
+  "observerError": null,
+  "failures": [
+    {
+      "source": "application",
+      "category": "tool",
+      "eventType": "tool.failed",
+      "code": "validation",
+      "message": "Workspace path must exist.",
+      "turnId": "2b33b675-ed8c-456b-b385-914c7853da98",
+      "callId": "call_2029258686870044",
+      "name": "read_file"
+    },
+    {
+      "source": "application",
+      "category": "tool",
+      "eventType": "tool.failed",
+      "code": "validation",
+      "message": "Workspace path must exist.",
+      "turnId": "2b33b675-ed8c-456b-b385-914c7853da98",
+      "callId": "call_2029258686870045",
+      "name": "read_file"
+    }
+  ],
+  "taskState": null,
+  "stackState": null,
+  "metrics": {
+    "providerAttempts": 3,
+    "providerRounds": 3,
+    "retries": 0,
+    "providerInputTokens": 10562,
+    "providerOutputTokens": 631,
+    "toolCalls": 6,
+    "contextAssemblies": 1,
+    "sandboxedProcessCalls": 0,
+    "taskUpdates": 0,
+    "stackUpdates": 0
+  },
+  "toolCalls": [
+    {
+      "callId": "call_2029258686870042",
+      "name": "list_directory",
+      "requestedArguments": "{}",
+      "effect": "local_read",
+      "terminalState": "succeeded"
+    },
+    {
+      "callId": "call_2029258686870043",
+      "name": "read_file",
+      "requestedArguments": "{\"path\":\"README.md\"}",
+      "effect": "local_read",
+      "terminalState": "succeeded"
+    },
+    {
+      "callId": "call_2029258686870044",
+      "name": "read_file",
+      "requestedArguments": "{\"path\":\"src/main/java/com/example/ReleasePlan.java\"}",
+      "effect": "local_read",
+      "terminalState": "failed"
+    },
+    {
+      "callId": "call_2029258686870045",
+      "name": "read_file",
+      "requestedArguments": "{\"path\":\"src/test/java/com/example/ReleasePlanTest.java\"}",
+      "effect": "local_read",
+      "terminalState": "failed"
+    },
+    {
+      "callId": "call_2029258686870046",
+      "name": "read_file",
+      "requestedArguments": "{\"path\":\"plan.js\"}",
+      "effect": "local_read",
+      "terminalState": "succeeded"
+    },
+    {
+      "callId": "call_2029258686870047",
+      "name": "read_file",
+      "requestedArguments": "{\"path\":\"plan.test.js\"}",
+      "effect": "local_read",
+      "terminalState": "succeeded"
+    }
+  ],
+  "mutations": [],
+  "validations": [],
+  "correctionCount": 0,
+  "contexts": [
+    {
+      "profileId": "qwen3-coder-30b-a3b-instruct-q4_k_m-lm-studio-32k-ordinary",
+      "attemptedProfileIds": [
+        "qwen3-coder-30b-a3b-instruct-q4_k_m-lm-studio-32k-ordinary",
+        "qwen3-coder-30b-a3b-instruct-q4_k_m-lm-studio-32k-medium",
+        "qwen3-coder-30b-a3b-instruct-q4_k_m-lm-studio-32k"
+      ],
+      "promotionReasons": [],
+      "estimatedTokens": 1081,
+      "providerInputBudget": 8192,
+      "remainingHeadroom": 7111
+    }
+  ],
+  "envelopePromotions": [],
+  "observedReadPaths": [
+    "README.md",
+    "plan.js",
+    "plan.test.js"
+  ],
+  "finalResponse": {
+    "present": true,
+    "bytes": 2878,
+    "sha256": "8a242edce3c92ef01f58329ef6e1bed026003b6cb7758d50a4f6e66c7c4b83b7"
+  },
+  "budgets": {
+    "latest": [
+      {
+        "runId": "dc98f596-434b-4bf3-a49f-0ee1857839f8",
+        "snapshot": {
+          "runId": "dc98f596-434b-4bf3-a49f-0ee1857839f8",
+          "limits": {
+            "providerAttempts": 128,
+            "toolExecutions": 128,
+            "retryAttempts": 32,
+            "compactionAttempts": 32,
+            "compactionCheckpoints": 32,
+            "processExecutions": 64,
+            "processRuntimeMs": 3600000,
+            "wallClockMs": 3600000,
+            "contextTokens": 1000000,
+            "providerInputTokens": 1000000,
+            "providerOutputTokens": 1000000
+          },
+          "consumed": {
+            "providerAttempts": 3,
+            "toolExecutions": 6,
+            "retryAttempts": 0,
+            "compactionAttempts": 0,
+            "compactionCheckpoints": 0,
+            "processExecutions": 0,
+            "processRuntimeMs": 0,
+            "wallClockMs": 138480,
+            "contextTokens": 1081,
+            "providerInputTokens": 10562,
+            "providerOutputTokens": 631
+          },
+          "elapsedMs": 138480
+        }
+      }
+    ],
+    "pressure": [],
+    "exhaustion": [],
+    "taskExhausted": false,
+    "stageExhaustion": []
+  },
+  "timing": {
+    "totalMs": 138502.27626699998,
+    "workflows": [
+      {
+        "turnId": "2b33b675-ed8c-456b-b385-914c7853da98",
+        "totalMs": 138497
+      }
+    ]
+  },
+  "hiddenAcceptance": "passed",
+  "humanInterventions": 0,
+  "eventsOmitted": 633
+}

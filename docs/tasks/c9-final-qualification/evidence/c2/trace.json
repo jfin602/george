@@ -1,0 +1,291 @@
+{
+  "schemaVersion": 2,
+  "terminalStatus": "budget_exhausted",
+  "terminalError": null,
+  "observerError": null,
+  "failures": [
+    {
+      "source": "application",
+      "category": "tool",
+      "eventType": "tool.failed",
+      "code": "budget",
+      "message": "Structured stage tool call limit of 8 exhausted.",
+      "turnId": "e30c3bd5-d277-475b-909b-27239b2dd54f",
+      "callId": "call_2029258686870093",
+      "name": "apply_patch"
+    },
+    {
+      "source": "application",
+      "category": "turn",
+      "eventType": "turn.failed",
+      "code": "budget",
+      "message": "Structured stage tool call limit of 8 exhausted.",
+      "turnId": "e30c3bd5-d277-475b-909b-27239b2dd54f"
+    }
+  ],
+  "taskState": {
+    "fingerprint": "fdc635e281657ab801a9038f899532f4eee32f75aa9fc5238eb9291c29bf94e5",
+    "status": "budget_exhausted",
+    "requirements": [
+      {
+        "id": "R1",
+        "status": "pending"
+      },
+      {
+        "id": "R2",
+        "status": "pending"
+      },
+      {
+        "id": "R3",
+        "status": "pending"
+      },
+      {
+        "id": "R4",
+        "status": "pending"
+      },
+      {
+        "id": "R5",
+        "status": "pending"
+      },
+      {
+        "id": "R6",
+        "status": "pending"
+      }
+    ],
+    "workUnits": [
+      {
+        "id": "W1",
+        "status": "active"
+      },
+      {
+        "id": "W2",
+        "status": "pending"
+      }
+    ],
+    "validations": [
+      {
+        "id": "V1",
+        "status": "pending",
+        "attempts": 0
+      },
+      {
+        "id": "V2",
+        "status": "pending",
+        "attempts": 0
+      }
+    ],
+    "corrections": [],
+    "blockerCount": 1,
+    "terminalOutcome": "budget_exhausted",
+    "effectivePermissionExpectations": {
+      "workspace": "autonomous",
+      "outsideWorkspace": "reject",
+      "network": "ask",
+      "remoteMutation": "ask"
+    }
+  },
+  "stackState": null,
+  "metrics": {
+    "providerAttempts": 3,
+    "providerRounds": 3,
+    "retries": 0,
+    "providerInputTokens": 5848,
+    "providerOutputTokens": 829,
+    "toolCalls": 13,
+    "contextAssemblies": 2,
+    "sandboxedProcessCalls": 0,
+    "taskUpdates": 2,
+    "stackUpdates": 0
+  },
+  "toolCalls": [
+    {
+      "callId": "call_2029258686870081",
+      "name": "git_status",
+      "requestedArguments": "{}",
+      "effect": "local_read",
+      "terminalState": "succeeded"
+    },
+    {
+      "callId": "call_2029258686870082",
+      "name": "list_directory",
+      "requestedArguments": "{\"path\":\"\"}",
+      "effect": "local_read",
+      "terminalState": "succeeded"
+    },
+    {
+      "callId": "call_2029258686870083",
+      "name": "read_file",
+      "requestedArguments": "{\"path\":\"package.json\"}",
+      "effect": "local_read",
+      "terminalState": "succeeded"
+    },
+    {
+      "callId": "call_2029258686870084",
+      "name": "search_text",
+      "requestedArguments": "{\"query\":\"GET /notes\",\"path\":\".\"}",
+      "effect": "local_read",
+      "terminalState": "succeeded"
+    },
+    {
+      "callId": "call_2029258686870085",
+      "name": "git_status",
+      "requestedArguments": "{}",
+      "effect": "local_read",
+      "terminalState": "succeeded"
+    },
+    {
+      "callId": "call_2029258686870086",
+      "name": "list_directory",
+      "requestedArguments": "{\"path\":\"src\"}",
+      "effect": "local_read",
+      "terminalState": "succeeded"
+    },
+    {
+      "callId": "call_2029258686870087",
+      "name": "list_directory",
+      "requestedArguments": "{\"path\":\"test\"}",
+      "effect": "local_read",
+      "terminalState": "succeeded"
+    },
+    {
+      "callId": "call_2029258686870088",
+      "name": "read_file",
+      "requestedArguments": "{\"path\":\"src/app.js\"}",
+      "effect": "local_read",
+      "terminalState": "succeeded"
+    },
+    {
+      "callId": "call_2029258686870089",
+      "name": "read_file",
+      "requestedArguments": "{\"path\":\"test/notes.test.js\"}",
+      "effect": "local_read",
+      "terminalState": "succeeded"
+    },
+    {
+      "callId": "call_2029258686870090",
+      "name": "search_text",
+      "requestedArguments": "{\"query\":\"GET /notes\",\"path\":\"src\"}",
+      "effect": "local_read",
+      "terminalState": "succeeded"
+    },
+    {
+      "callId": "call_2029258686870091",
+      "name": "search_text",
+      "requestedArguments": "{\"query\":\"POST /notes\",\"path\":\"src\"}",
+      "effect": "local_read",
+      "terminalState": "succeeded"
+    },
+    {
+      "callId": "call_2029258686870092",
+      "name": "git_diff",
+      "requestedArguments": "{}",
+      "effect": "local_read",
+      "terminalState": "succeeded"
+    },
+    {
+      "callId": "call_2029258686870093",
+      "name": "apply_patch",
+      "requestedArguments": "{\"path\":\"src/app.js\",\"expectedSha256\":\"32beb14019446e40b4a3ce6453e10af108b3e68bc2b94fa24531e9233dfcc0de\",\"edits\":[{\"oldText\":\"[omitted 66 bytes]\",\"newText\":\"[omitted 333 bytes]\"},{\"oldText\":\"[omitted 327 bytes]\",\"newText\":\"[omitted 784 bytes]\"}]}",
+      "effect": null,
+      "terminalState": "failed"
+    }
+  ],
+  "mutations": [],
+  "validations": [],
+  "correctionCount": 0,
+  "contexts": [
+    {
+      "profileId": "qwen3-coder-30b-a3b-instruct-q4_k_m-lm-studio-32k-ordinary",
+      "attemptedProfileIds": [
+        "qwen3-coder-30b-a3b-instruct-q4_k_m-lm-studio-32k-ordinary",
+        "qwen3-coder-30b-a3b-instruct-q4_k_m-lm-studio-32k-medium",
+        "qwen3-coder-30b-a3b-instruct-q4_k_m-lm-studio-32k"
+      ],
+      "promotionReasons": [],
+      "estimatedTokens": 667,
+      "providerInputBudget": 8192,
+      "remainingHeadroom": 7525
+    },
+    {
+      "profileId": "qwen3-coder-30b-a3b-instruct-q4_k_m-lm-studio-32k-ordinary",
+      "attemptedProfileIds": [
+        "qwen3-coder-30b-a3b-instruct-q4_k_m-lm-studio-32k-ordinary",
+        "qwen3-coder-30b-a3b-instruct-q4_k_m-lm-studio-32k-medium",
+        "qwen3-coder-30b-a3b-instruct-q4_k_m-lm-studio-32k"
+      ],
+      "promotionReasons": [],
+      "estimatedTokens": 1513,
+      "providerInputBudget": 8192,
+      "remainingHeadroom": 6679
+    }
+  ],
+  "envelopePromotions": [],
+  "observedReadPaths": [
+    "package.json",
+    "src/app.js",
+    "test/notes.test.js"
+  ],
+  "finalResponse": {
+    "present": false,
+    "bytes": 0,
+    "sha256": null
+  },
+  "budgets": {
+    "latest": [
+      {
+        "runId": "cd76087c-b628-474b-a4b7-e03b60c5cd9a",
+        "snapshot": {
+          "runId": "cd76087c-b628-474b-a4b7-e03b60c5cd9a",
+          "limits": {
+            "providerAttempts": 128,
+            "toolExecutions": 128,
+            "retryAttempts": 32,
+            "compactionAttempts": 32,
+            "compactionCheckpoints": 32,
+            "processExecutions": 64,
+            "processRuntimeMs": 3600000,
+            "wallClockMs": 3600000,
+            "contextTokens": 1000000,
+            "providerInputTokens": 1000000,
+            "providerOutputTokens": 1000000
+          },
+          "consumed": {
+            "providerAttempts": 3,
+            "toolExecutions": 12,
+            "retryAttempts": 0,
+            "compactionAttempts": 0,
+            "compactionCheckpoints": 0,
+            "processExecutions": 0,
+            "processRuntimeMs": 0,
+            "wallClockMs": 109707,
+            "contextTokens": 2180,
+            "providerInputTokens": 5848,
+            "providerOutputTokens": 829
+          },
+          "elapsedMs": 109707
+        }
+      }
+    ],
+    "pressure": [],
+    "exhaustion": [],
+    "taskExhausted": true,
+    "stageExhaustion": [
+      {
+        "turnId": "e30c3bd5-d277-475b-909b-27239b2dd54f",
+        "message": "Structured stage tool call limit of 8 exhausted."
+      }
+    ]
+  },
+  "timing": {
+    "totalMs": 109743.87576099999,
+    "workflows": [
+      {
+        "turnId": "e30c3bd5-d277-475b-909b-27239b2dd54f",
+        "totalMs": 98901
+      }
+    ]
+  },
+  "hiddenAcceptance": "not_run",
+  "humanInterventions": 0,
+  "eventsOmitted": 2
+}
