@@ -90,77 +90,27 @@ Phase 8 carries forward:
 - the `agentic-context` benchmark as the real coding-agent measurement instrument;
 - the existing ordinary/medium/large profile values as provisional inherited operating policy rather than empirically optimal agentic envelopes.
 
-**Phase 9 — Structured Task Execution + Workspace Autonomy — is the current roadmap gate.**
+**Phase 9 — Structured Task Execution + Workspace Autonomy — is owner-closed.**
 
-Phase 9 authority:
-- decision record: `docs/planning/p9-structured-task-execution/decision-record.md`;
-- task grammar: `docs/planning/p9-structured-task-execution/task-format-v1.md`;
-- qualification plan: `docs/planning/p9-structured-task-execution/qualification-plan.md`.
+Phase 9 owner closeout: `docs/phase-9-owner-closeout.md`.
 
-Phase 9 begins from package baseline `0.9.0`.
+The owner explicitly accepts the final recorded B2/C2 Not Green outcomes and remaining nonblocking Evidence Gaps for roadmap progression. This acceptance does not relabel them Green.
 
-Phase 9 moves deterministic requirements, work-unit/dependency state, validation truth, stop/correction semantics, durable task-stack state, Transcript/Task presentation, and Workspace Autonomous policy into George-owned application/core behavior while preserving Phase 2-8 trust, permission, context, recovery, and evidence contracts.
+Accepted Phase 9 package state remains `0.9.10`.
 
-The failed Phase 8 agentic edit/validation workload must remain visible longitudinal evidence. Phase 9 must not claim that structured execution fixes it until the Phase 9 live-work instruments and qualification evidence actually demonstrate improvement.
+Key carried-forward truth:
+- George Task Prompt v1, TaskState/StackState, deterministic work/validation/correction semantics, Workspace Autonomous containment, mission-card alignment, evidence freshness/reuse, strict duplicate/no-progress, partial-provider replay safety, provider-stall recovery, and schema-2 live evidence are accepted as the Phase 9 foundation;
+- greeting, three-file, and Gate A are Green in the latest recorded final sweep;
+- B2 remains Not Green after P2 V1 failed and its correction did not complete;
+- C2 remains Not Green after provider stall/timeout retry exhaustion before mutation/validation;
+- `c9-gen-op` planning remains unexecuted Phase 9 planning and is carried forward only as possible Phase 10 throughput input;
+- historical Phase 8/9 failures and Evidence Gaps remain immutable evidence.
 
-### Current Phase 9 correction status — 2026-09-26
+**Phase 10 — Agent Loop Throughput — is the current roadmap gate.**
 
-Package remains `0.9.10`; Phase 9 remains open and Phase 10 is not opened.
+Phase 10 baseline target: `0.10.0`. The package remains `0.9.10` until the explicit Phase 10 baseline transition.
 
-`c9-turn-context-live-qualification` is now closed at commit `12b1b81c332324566ab2ec409b3326c286009ccf`.
-
-Its live result:
-- production candidate identity preserved;
-- deterministic turn-context correction remains Green;
-- loaded REST-visible pinned runtime Green;
-- ordinary greeting Green;
-- synthetic three-file inspection **Not Green**;
-- Gate A/B2/C2 Not Run under the historical stop-on-first-functional-failure policy.
-
-The three-file attempt successfully read all required files with no exhaustion or context promotion, then ended on `provider.error -> turn.failed` without a final answer. The bounded artifact retained the event category but not the provider error code/message, leaving a diagnostic Evidence Gap.
-
-The diagnostic-sweep strategy then completed through `c9-live-sweep-convergence` and the final five-workload sweep. Current broad/deterministic state is strong: `npm test` is 417 passed / 0 failed / 1 non-TTY skip, greeting is Green, and three-file is Green. The old B2 P1 stage-limit defect and old C2 missing-INSPECT-evidence defect did not recur.
-
-The final sweep exposed three fresh live blockers:
-- Gate A functionally succeeded (exact edit, V1, completed/verified TaskState, hidden acceptance) but exceeded the historical <=10 model-call efficiency ceiling with 12 calls;
-- B2 completed P1 and failed in P2 when LM Studio emitted partial response/tool-call evidence but never completed before the 120000 ms timeout;
-- C2 consumed the eight-call implementation-stage ceiling largely re-inspecting already observed state, so the first legitimate patch was rejected as call 9.
-
-The `c9-final-live-convergence` correction remains the final Phase 9 qualification chain, but its first P3 attempt is now historical interrupted evidence rather than the final qualifying sweep.
-
-P1 and P2 of that correction completed before P3. During P3 Gate A, repeated incomplete/stalled local-model attempts consumed minutes of provider time before the run was manually interrupted. LM Studio developer logs showed a request still processing prompt state after roughly 51 seconds and then reaching the 120000 ms client timeout; a fresh retry later benefited from high LCP reuse and completed materially faster. The event proves that safe replay classification alone is insufficient: George also needs bounded stall detection, recovery escalation, and truthful provider-stall termination.
-
-The inserted `c9-provider-stall-recovery` correction is now qualified. Its deterministic closeout is `docs/tasks/c9-provider-stall-recovery/closeout.md`.
-
-The next attempted final P3 sweep produced owner-supplied LM Studio developer-log evidence showing:
-- response acceptance was being treated as active output, causing legitimate local prompt-prefill work to be disconnected at approximately the 60000 ms active-inactivity threshold;
-- some continuation rounds had poor prefix/LCP reuse and tens of seconds of prompt evaluation;
-- completed internal structured rounds could spend tens of seconds generating natural-language output that George neither needed nor presented to the operator.
-
-That attempted sweep is preserved as historical diagnostic evidence and is not the final qualifying Phase 9 chain.
-
-The active inserted correction is now `c9-gen-op`.
-
-It must:
-- distinguish provider response acceptance/prefill from useful output so accepted prefill keeps the first-useful-output allowance;
-- preserve the qualified 120000 ms absolute provider timeout and bounded retry/rebase safety ladder;
-- keep stable provider instructions stable across structured continuation rounds;
-- move recomputed mission-card state into a bounded late dynamic round-context seam with correct token/pressure accounting;
-- add Generation Operation Protocol v1 so structured implementation/correction rounds emit only executable tool calls or one non-authoritative George handoff control instead of routine hidden prose;
-- preserve response completion as the boundary before tool execution/control acceptance;
-- add safe aggregate cached/input/output/internal-text observability without persisting internal prose;
-- add qualification-only outer workload deadlines without reducing production RunBudget, including one 20-minute deadline for the entire B2 P1/P2/P3 stack;
-- keep helper inference, parallel tools, compressed custom DSLs, and speculative decoding out of Phase 9.
-
-After `c9-gen-op` is qualified and closed, rerun the existing `c9-final-live-convergence` P3 sweep from greeting through C2 exactly once on the new candidate, then run P4 closeout.
-
-Current correction authority:
-- latest completed full-sweep truth: `docs/tasks/c9-final-qualification/report.md` and `failure-ledger.json`;
-- final convergence planning: `docs/planning/c9-final-live-convergence/decision-record.md` and `qualification-plan.md`;
-- qualified stall recovery: `docs/planning/c9-provider-stall-recovery/{decision-record,qualification-plan}.md` and `docs/tasks/c9-provider-stall-recovery/closeout.md`;
-- active Gen-Op planning: `docs/planning/c9-gen-op/decision-record.md` and `qualification-plan.md`.
-
-Historical Phase 1-8 prompts/evidence are not renumbered or rewritten.
+Phase 10 must preserve Phase 9 task/permission/evidence/recovery authority while optimizing serialized provider/tool/model-loop performance and measuring frozen Phase 9 live workloads.
 
 ## Core premise
 
@@ -197,7 +147,7 @@ Read:
 - stability/testing: `docs/stability-contract.md`;
 - roadmap: `docs/roadmap/mvp-roadmap.md`;
 - Living Project Map / Software Graph, when relevant: `docs/planning/living-project-map/decision-record.md` (then its graph, interaction, and qualification companions as needed);
-- current Phase 9 authority: `docs/planning/p9-structured-task-execution/decision-record.md`, `docs/planning/p9-structured-task-execution/task-format-v1.md`, and `docs/planning/p9-structured-task-execution/qualification-plan.md`; latest completed full-sweep truth: `docs/tasks/c9-final-qualification/report.md` and `docs/tasks/c9-final-qualification/failure-ledger.json`; final-convergence authority: `docs/planning/c9-final-live-convergence/{decision-record,qualification-plan}.md`; active inserted correction: `docs/planning/c9-gen-op/{decision-record,qualification-plan}.md`;
+- Phase 9 owner closeout: `docs/phase-9-owner-closeout.md`; retained Phase 9 authority/evidence: `docs/planning/p9-structured-task-execution/{decision-record,task-format-v1,qualification-plan}.md`, `docs/tasks/c9-final-live-convergence/closeout.md`, and its final report/ledger; current roadmap gate: Phase 10 — Agent Loop Throughput;
 - Phase 8 closeout/history when needed: `docs/phase-8-closeout.md`, `docs/phase-8-owner-closeout.md`, `docs/tasks/c8-agentic-context/closeout.md`, `docs/planning/c8-agentic-context/decision-record.md`, `docs/planning/c8-agentic-context/qualification-plan.md`, `docs/planning/p8-context-throughput-optimization/decision-record.md`, `docs/planning/p8-context-throughput-optimization/initial-baseline.md`, and `docs/planning/performance-benchmarking-worksheet.md`;
 - Phase 7 closeout/history when needed: `docs/phase-7-closeout.md`, `docs/phase-7-owner-closeout.md`, `docs/planning/p7-inference-runtime-optimization/initial-baseline.md`;
 - Phase 6 closeout/history when needed: `docs/phase-6-closeout.md`, `docs/phase-6-owner-closeout.md`, `docs/planning/p6-plugins-external-adapters/decision-record.md`;
