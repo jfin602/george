@@ -26,7 +26,7 @@ export type ContextCheckpoint = Readonly<{
   summary: string;
   beforeTokens: number;
   afterTokens: number;
-  reason: 'soft-pressure' | 'hard-pressure';
+  reason: 'soft-pressure' | 'hard-pressure' | 'stall-pressure';
 }>;
 
 export function digest(value: string): string {

@@ -263,6 +263,10 @@ test('schema-2 artifacts retain bounded authoritative failures without raw paylo
     { type: 'provider.error', error: { code: 'provider', message: 'LM Studio returned HTTP 422. token=TOP_SECRET', cause: { providerCode: 'context_length_exceeded', providerReason: 'input_too_large', status: 422, rawBody: 'RAW_PROVIDER_PAYLOAD' } } },
     { type: 'provider.retry.scheduled', turnId: 'turn-1', runId: 'run-1', attemptId: 'attempt-1', retry: 1, delayMs: 7, category: 'provider' },
     { type: 'provider.attempt.started', turnId: 'turn-1', runId: 'run-1', attemptId: 'attempt-2' },
+    { type: 'provider.stall.suspected', turnId: 'turn-1', runId: 'run-1', attemptId: 'attempt-2', phase: 'response_active', inactivityMs: 60_000 },
+    { type: 'provider.stall.detected', turnId: 'turn-1', runId: 'run-1', attemptId: 'attempt-2', phase: 'response_active', inactivityMs: 60_000 },
+    { type: 'provider.rebase.started', turnId: 'turn-1', runId: 'run-1', attemptId: 'attempt-2', pressure: 'high', estimatedTokens: 14_400, profileId: 'medium', compaction: 'completed' },
+    { type: 'provider.stall.terminal', turnId: 'turn-1', runId: 'run-1', attemptId: 'attempt-2', phase: 'response_active', attempts: 3, pressure: 'high', compaction: 'completed' },
     { type: 'provider.retry.exhausted', turnId: 'turn-1', runId: 'run-1', attemptId: 'attempt-2', retries: 1, category: 'provider' },
     { type: 'turn.failed', turnId: 'turn-1', error: { code: 'provider', message: 'Continuation failed.' } },
     { type: 'turn.cancelled', turnId: 'turn-2', error: { code: 'cancelled', message: 'Operator cancelled.' } },
@@ -291,6 +295,9 @@ test('schema-2 artifacts retain bounded authoritative failures without raw paylo
   assert.deepEqual(envelope.eventEvidence.filter((event) => event.type === 'provider.attempt.started').map((event) => event.attemptId), ['attempt-1', 'attempt-2']);
   assert.deepEqual(envelope.eventEvidence.filter((event) => event.type === 'provider.retry.scheduled').map((event) => event.retry), [{ attemptId: 'attempt-1', count: 1, delayMs: 7 }]);
   assert.deepEqual(envelope.eventEvidence.filter((event) => event.type === 'provider.retry.exhausted').map((event) => event.retry), [{ attemptId: 'attempt-2', count: 1, exhausted: true }]);
+  assert.deepEqual(envelope.eventEvidence.filter((event) => event.type === 'provider.rebase.started').map((event) => event.rebase), [{ attemptId: 'attempt-2', pressure: 'high', estimatedTokens: 14_400, profileId: 'medium', compaction: 'completed' }]);
+  assert.deepEqual(envelope.eventEvidence.filter((event) => event.type === 'provider.stall.terminal').map((event) => event.stall), [{ attemptId: 'attempt-2', phase: 'response_active', attempts: 3, pressure: 'high', compaction: 'completed', terminal: true }]);
+  assert.equal(evidence.includes('instructions'), false);
   for (const unsafe of ['RAW_PROVIDER_PAYLOAD', 'FULL_ASSISTANT_PROSE', 'FILE_BODY', 'OLD_FILE_BODY', 'NEW_FILE_BODY', 'PASSWORD_VALUE', 'TOP_SECRET', 'TOOL_SECRET', 'VALIDATION_SECRET', 'HARNESS_SECRET', 'OBSERVER_SECRET']) assert.equal(evidence.includes(unsafe), false, unsafe);
 });
 

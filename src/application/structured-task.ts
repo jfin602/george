@@ -438,6 +438,7 @@ export class StructuredTaskApplicationService extends CodingWorkflowApplicationS
         ...submission,
         input: renderSlice(projectStructuredTaskSlice(state, unit.id, currentEvidence.map((item) => item.fact)), 'implementation'),
         alignment: () => projectStructuredMissionCard(state, unit.id, 'implementation', [...freshness.items.values()]),
+        allowCanonicalRebase: true,
         onEvent: observeStage,
         routedDocuments: routed, toolNames: CODING_TOOLS, omitHistory: true, validations: [], executionPolicy, budget, limits: STAGE_LIMITS.implementation,
       });
@@ -472,6 +473,7 @@ export class StructuredTaskApplicationService extends CodingWorkflowApplicationS
             ...submission,
             input: renderSlice(projectStructuredTaskSlice(state, repair, validEvidence().map((item) => item.fact), validation.id), 'correction'),
             alignment: () => projectStructuredMissionCard(state, repair, 'correction', [...freshness.items.values()], validation.id),
+            allowCanonicalRebase: true,
             onEvent: observeStage,
             routedDocuments: routed, toolNames: CODING_TOOLS, omitHistory: true, validations: [], executionPolicy, budget, limits: STAGE_LIMITS.correction,
           });

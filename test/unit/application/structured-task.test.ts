@@ -428,6 +428,7 @@ test('structured duplicate local reads execute once and terminate truthfully bef
   assert.equal(provider.requests.length, 3);
   assert.equal(completion.terminalState, 'budget_exhausted');
   assert.equal(session.taskState?.status, 'budget_exhausted');
+  assert.equal(events.some((event) => event.type === 'provider.stall.terminal'), false);
   assert.match(session.taskState?.blockers.at(-1) ?? '', /did not complete/);
 });
 

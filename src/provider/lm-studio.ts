@@ -436,6 +436,7 @@ export class LmStudioResponsesProvider implements ModelProvider {
       const functionCalls = new FunctionCallAssembler();
       try {
         for await (const message of parseSse(response.body)) {
+          options.onActivity?.();
           const event = normalizeMessage(message, functionCalls);
           if (!event) continue;
           if (event.type === 'provider.response.completed') completed = true;

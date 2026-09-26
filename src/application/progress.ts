@@ -211,6 +211,12 @@ export class WorkProjection {
         return [this.activityEvent(event.turnId, 'context', message), ...this.progressEvent(event.turnId, 'context', message)];
       }
       case 'provider.response.started': return [this.activityEvent(undefined, 'inspection', 'Thinking...')];
+      case 'provider.stall.suspected': return [this.activityEvent(event.turnId, 'recovery', 'Provider response may be stalled')];
+      case 'provider.stall.detected': return [this.activityEvent(event.turnId, 'recovery', 'Provider stall detected')];
+      case 'provider.retry.scheduled': return [this.activityEvent(event.turnId, 'recovery', 'Retrying provider')];
+      case 'provider.rebase.started': return [this.activityEvent(event.turnId, 'recovery', 'Rebuilding provider request')];
+      case 'provider.stall.terminal': return [this.activityEvent(event.turnId, 'recovery', 'Provider stall recovery exhausted')];
+      case 'context.compaction.started': return event.reason === 'stall-pressure' ? [this.activityEvent(event.turnId, 'recovery', 'Compacting context for provider recovery')] : [];
       case 'provider.error': return [this.activityEvent(undefined, 'recovery', 'Provider failed')];
       case 'recovery.decision': {
         const status: WorkStatus = event.outcome === 'confirmed_complete' ? 'succeeded' : event.outcome === 'confirmed_incomplete' ? 'missing' : 'interrupted';

@@ -4,6 +4,7 @@ export * from './structured-task.ts';
 export * from './structured-task-stack.ts';
 export * from './progress.ts';
 export * from './retry.ts';
+export * from './provider-stall.ts';
 export * from './recovery.ts';
 export * from './lm-studio-smoke-diagnostics.ts';
 export * from './plugin-commands.ts';

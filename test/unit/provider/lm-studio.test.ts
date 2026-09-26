@@ -58,7 +58,8 @@ test('LM Studio provider sends the Responses request shape and parses split CRLF
   t.after(() => close(server));
 
   const provider = new LmStudioResponsesProvider({ baseUrl, model: 'local-model' });
-  const events = await eventsFrom(provider.stream({ instructions: 'Be brief.', input: 'Hello' }));
+  let activity = 0;
+  const events = await eventsFrom(provider.stream({ instructions: 'Be brief.', input: 'Hello' }, { onActivity: () => { activity += 1; } }));
 
   assert.deepEqual(JSON.parse(requestBody), {
     model: 'local-model',
@@ -72,6 +73,7 @@ test('LM Studio provider sends the Responses request shape and parses split CRLF
     { type: 'provider.text.delta', delta: ' world' },
     { type: 'provider.response.completed', usage: { inputTokens: 3, outputTokens: 2 } },
   ]);
+  assert.equal(activity, 4, 'valid SSE frames refresh liveness without adding semantic events');
 });
 
 test('LM Studio provider maps provider-neutral tool choice without changing tools or continuation', async (t) => {

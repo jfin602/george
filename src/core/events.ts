@@ -15,13 +15,16 @@ export type ContextCheckpointEvidence = Readonly<{
   summary: string;
   beforeTokens: number;
   afterTokens: number;
-  reason: 'soft-pressure' | 'hard-pressure';
+  reason: 'soft-pressure' | 'hard-pressure' | 'stall-pressure';
 }>;
 
 export type ProviderUsage = Readonly<{
   inputTokens?: number;
   outputTokens?: number;
 }>;
+
+export type ProviderStallPhase = 'awaiting_first_evidence' | 'response_active' | 'response_completed';
+export type ProviderPressure = 'low' | 'high';
 
 export type ContextDiagnosticEvidence = Readonly<{
   id: string;
@@ -155,12 +158,16 @@ export type ApplicationEvent =
   | ProviderEvent
   | Readonly<{ type: 'reliability.run.started'; turnId: string; runId: string; budget: RunBudgetSnapshot }>
   | Readonly<{ type: 'provider.attempt.started'; turnId: string; runId: string; attemptId: string }>
+  | Readonly<{ type: 'provider.stall.suspected'; turnId: string; runId: string; attemptId: string; phase: Exclude<ProviderStallPhase, 'response_completed'>; inactivityMs: number }>
+  | Readonly<{ type: 'provider.stall.detected'; turnId: string; runId: string; attemptId: string; phase: Exclude<ProviderStallPhase, 'response_completed'>; inactivityMs: number }>
+  | Readonly<{ type: 'provider.rebase.started'; turnId: string; runId: string; attemptId: string; pressure: ProviderPressure; estimatedTokens: number; profileId: string; compaction: 'not_needed' | 'completed' | 'failed' | 'unavailable' }>
+  | Readonly<{ type: 'provider.stall.terminal'; turnId: string; runId: string; attemptId: string; phase: Exclude<ProviderStallPhase, 'response_completed'>; attempts: number; pressure: ProviderPressure; compaction: 'not_attempted' | 'completed' | 'failed' | 'unavailable' }>
   | Readonly<{ type: 'provider.retry.scheduled'; turnId: string; runId: string; attemptId: string; retry: number; delayMs: number; category: 'provider' }>
   | Readonly<{ type: 'provider.retry.exhausted'; turnId: string; runId: string; attemptId: string; retries: number; category: 'provider' }>
   | Readonly<{ type: 'budget.state'; turnId: string; runId: string; budget: RunBudgetSnapshot }>
   | Readonly<{ type: 'budget.pressure'; turnId: string; runId: string; dimensions: readonly RunBudgetDimension[]; budget: RunBudgetSnapshot }>
   | Readonly<{ type: 'budget.exhausted'; turnId: string; runId: string; dimension: RunBudgetDimension; budget: RunBudgetSnapshot }>
-  | Readonly<{ type: 'context.compaction.started'; turnId: string; runId: string; start: number; end: number; reason: 'soft-pressure' | 'hard-pressure' }>
+  | Readonly<{ type: 'context.compaction.started'; turnId: string; runId: string; start: number; end: number; reason: 'soft-pressure' | 'hard-pressure' | 'stall-pressure' }>
   | Readonly<{ type: 'context.compaction.completed'; turnId: string; runId: string; checkpoint: ContextCheckpointEvidence }>
   | Readonly<{ type: 'context.compaction.failed'; turnId: string; runId: string; reason: string }>
   | Readonly<{ type: 'turn.started'; turnId: string }>

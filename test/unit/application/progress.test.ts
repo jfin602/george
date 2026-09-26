@@ -165,3 +165,20 @@ test('work/progress events remain outside the canonical transcript', () => {
   appendSessionEvent(session, { type: 'work.updated', item: { id: 't:tool:read', turnId: 't', operationId: 'read', category: 'inspection', status: 'succeeded', summary: 'Read secret.txt', details: { path: 'secret.txt' } } });
   assert.deepEqual(session.transcript, []);
 });
+
+test('provider stall recovery projects bounded derived statuses', () => {
+  const projection = new WorkProjection();
+  const base = { turnId: 'stall-turn', runId: 'stall-run', attemptId: 'attempt-1' } as const;
+  const events = [
+    { type: 'provider.stall.suspected', ...base, phase: 'awaiting_first_evidence', inactivityMs: 60_000 },
+    { type: 'provider.retry.scheduled', ...base, retry: 1, delayMs: 100, category: 'provider' },
+    { type: 'provider.rebase.started', ...base, pressure: 'low', estimatedTokens: 2_000, profileId: 'ordinary', compaction: 'not_needed' },
+    { type: 'context.compaction.started', turnId: base.turnId, runId: base.runId, start: 0, end: 5, reason: 'stall-pressure' },
+    { type: 'provider.stall.terminal', ...base, phase: 'response_active', attempts: 3, pressure: 'high', compaction: 'completed' },
+  ] as const;
+  const messages = events.flatMap((event) => projection.observe(event)).filter((event) => event.type === 'activity.updated').map((event) => event.message);
+  assert.deepEqual(messages, [
+    'Provider response may be stalled', 'Retrying provider', 'Rebuilding provider request',
+    'Compacting context for provider recovery', 'Provider stall recovery exhausted',
+  ]);
+});

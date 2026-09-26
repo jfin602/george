@@ -495,6 +495,9 @@ function eventEvidence(event: ApplicationEvent): Readonly<Record<string, unknown
   if (event.type === 'provider.attempt.started') safe.attemptId = event.attemptId;
   if (event.type === 'provider.retry.scheduled') safe.retry = { attemptId: event.attemptId, count: event.retry, delayMs: event.delayMs };
   if (event.type === 'provider.retry.exhausted') safe.retry = { attemptId: event.attemptId, count: event.retries, exhausted: true };
+  if (event.type === 'provider.stall.suspected' || event.type === 'provider.stall.detected') safe.stall = { attemptId: event.attemptId, phase: event.phase, inactivityMs: event.inactivityMs, detected: event.type === 'provider.stall.detected' };
+  if (event.type === 'provider.rebase.started') safe.rebase = { attemptId: event.attemptId, pressure: event.pressure, estimatedTokens: event.estimatedTokens, profileId: event.profileId, compaction: event.compaction };
+  if (event.type === 'provider.stall.terminal') safe.stall = { attemptId: event.attemptId, phase: event.phase, attempts: event.attempts, pressure: event.pressure, compaction: event.compaction, terminal: true };
   if (event.type === 'context.assembled') safe.diagnostics = { profileId: event.diagnostics?.profileId ?? null, attemptedProfileIds: event.diagnostics?.attemptedProfileIds ?? [], promotionReasons: event.diagnostics?.promotionReasons ?? [], estimatedTokens: event.diagnostics?.estimatedTokens ?? null, providerInputBudget: event.diagnostics?.providerInputBudget ?? null, remainingHeadroom: event.diagnostics?.remainingHeadroom ?? null };
   if (event.type === 'context.envelope.promoted') safe.promotion = { fromProfileId: event.fromProfileId, toProfileId: event.toProfileId, reason: event.reason, tokens: event.tokens, providerInputBudget: event.providerInputBudget };
   if (event.type === 'provider.response.completed') safe.usage = { inputTokens: event.usage?.inputTokens ?? null, outputTokens: event.usage?.outputTokens ?? null };

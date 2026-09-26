@@ -37,6 +37,8 @@ export type ProviderRequest = Readonly<{
 export type ProviderStreamOptions = Readonly<{
   signal?: AbortSignal;
   timeoutMs?: number;
+  /** Non-authoritative liveness only; no payload crosses this seam. */
+  onActivity?: () => void;
 }>;
 
 export interface ModelProvider {

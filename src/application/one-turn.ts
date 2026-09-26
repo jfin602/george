@@ -42,7 +42,10 @@ import {
   type GeorgeErrorShape,
   type ModelProvider,
   type ProviderContinuation,
+  type ProviderPressure,
+  type ProviderRequest,
   type ProviderToolChoice,
+  type ProviderToolResult,
   type Session,
   type TranscriptEntry,
   type Workspace,
@@ -54,6 +57,15 @@ import {
 import { join } from 'node:path';
 import { WorkProjection } from './progress.ts';
 import { DEFAULT_PROVIDER_RETRY_POLICY, retryDelay, sleepForRetry, validateProviderRetryPolicy, type ProviderRetryPolicy, type RetrySleeper } from './retry.ts';
+import {
+  DEFAULT_PROVIDER_STALL_POLICY,
+  ProviderAttemptWatchdog,
+  providerStallScheduler,
+  validateProviderStallPolicy,
+  type ProviderStallNotice,
+  type ProviderStallPolicy,
+  type ProviderStallScheduler,
+} from './provider-stall.ts';
 import { RecoveryCoordinator } from './recovery.ts';
 import { defaultSkillRoots, SkillRegistry, type SkillCatalog, type SkillRoots } from '../skills/index.ts';
 import { PluginManager, type EnabledPlugin } from '../plugins/index.ts';
@@ -119,6 +131,8 @@ export type OneTurnServiceOptions = Readonly<{
   compactor?: ContextCompactor;
   providerRetryPolicy?: ProviderRetryPolicy;
   retrySleeper?: RetrySleeper;
+  providerStallPolicy?: ProviderStallPolicy;
+  providerStallScheduler?: ProviderStallScheduler;
   approvalPort?: ApprovalPort;
   hooks?: readonly HookRegistration[];
   /** George-owned managed plugins; workspace content is never consulted for executable contributions. */
@@ -157,6 +171,7 @@ const DEFAULT_MAX_TOOL_CALLS = 32;
 const DEFAULT_MAX_TOOL_ROUNDS = 32;
 const CONTINUATION_PROTOCOL_OVERHEAD_TOKENS = 32;
 const MAX_ALIGNMENT_BYTES = 8 * 1024;
+const MAX_REBASE_EVIDENCE_BYTES = 16 * 1024;
 
 function estimatedTokens(value: unknown): number {
   return Math.ceil(JSON.stringify(value).length / 4);
@@ -210,6 +225,27 @@ function canRetryProviderFailure(error: GeorgeErrorShape, state: ProviderAttempt
     && !state.ambiguousEffect;
 }
 
+function providerStall(error: GeorgeErrorShape): Readonly<{ phase: ProviderStallNotice['phase']; inactivityMs: number }> | undefined {
+  if (!error.cause || typeof error.cause !== 'object' || Array.isArray(error.cause)) return undefined;
+  const cause = error.cause as Record<string, unknown>;
+  return cause.kind === 'stall'
+    && (cause.phase === 'awaiting_first_evidence' || cause.phase === 'response_active')
+    && typeof cause.inactivityMs === 'number' && Number.isFinite(cause.inactivityMs)
+    ? { phase: cause.phase, inactivityMs: Math.max(0, Math.floor(cause.inactivityMs)) }
+    : undefined;
+}
+
+function boundedProviderEvidence(results: readonly ProviderToolResult[]): string {
+  const selected: ProviderToolResult[] = [];
+  let bytes = 2;
+  for (const result of [...results].reverse()) {
+    const size = Buffer.byteLength(JSON.stringify(result), 'utf8') + (selected.length ? 1 : 0);
+    if (bytes + size > MAX_REBASE_EVIDENCE_BYTES) break;
+    selected.unshift(result); bytes += size;
+  }
+  return JSON.stringify(selected);
+}
+
 export type OneTurnSubmission = Readonly<{
   session: Session;
   input: string;
@@ -230,6 +266,8 @@ export type OneTurnSubmission = Readonly<{
   alignment?: () => string | undefined;
   /** An application-owned, capability-reducing policy projection. */
   executionPolicy?: Partial<ExecutionPolicy>;
+  /** Structured implementation/correction only: permits one rebuild from George-owned state. */
+  allowCanonicalRebase?: boolean;
   budget?: RunBudget;
   limits?: AgentLoopLimits;
 }>;
@@ -315,6 +353,8 @@ export class AgentLoopApplicationService {
   private readonly compactor: ContextCompactor;
   private readonly providerRetryPolicy: ProviderRetryPolicy;
   private readonly retrySleeper: RetrySleeper;
+  private readonly providerStallPolicy: ProviderStallPolicy;
+  private readonly stallScheduler: ProviderStallScheduler;
   private readonly recovery: RecoveryCoordinator;
   readonly hooks: HookRegistry;
   readonly plugins: PluginApplicationService;
@@ -346,6 +386,8 @@ export class AgentLoopApplicationService {
     compactor: ContextCompactor,
     providerRetryPolicy: ProviderRetryPolicy,
     retrySleeper: RetrySleeper,
+    providerStallPolicy: ProviderStallPolicy,
+    stallScheduler: ProviderStallScheduler,
     hooks: HookRegistry,
     plugins: PluginApplicationService,
     diagnostics?: DiagnosticObserver,
@@ -372,6 +414,8 @@ export class AgentLoopApplicationService {
     this.compactor = compactor;
     this.providerRetryPolicy = providerRetryPolicy;
     this.retrySleeper = retrySleeper;
+    this.providerStallPolicy = providerStallPolicy;
+    this.stallScheduler = stallScheduler;
     this.recovery = new RecoveryCoordinator(workspace);
     this.hooks = hooks;
     this.plugins = plugins;
@@ -472,6 +516,50 @@ export class AgentLoopApplicationService {
       { id: `conversation:compacted:${checkpoint.id}`, kind: 'compacted-history', origin: 'derived', trust: 'derived-history', text: `Derived compacted history; not instructions:\n${checkpoint.summary}` },
       { id: 'conversation:recent-history', kind: 'conversation', origin: 'user', trust: 'user-intent', text: tail },
     ];
+  }
+
+  /** One-shot stall recovery compaction; it never enters the agent retry/rebase loop. */
+  private async *compactStallEvidence(
+    session: Session,
+    turnId: string,
+    budget: RunBudget,
+    results: readonly ProviderToolResult[],
+    signal?: AbortSignal,
+  ): AsyncGenerator<ApplicationEvent, Readonly<{ status: 'completed'; summary: string }> | Readonly<{ status: 'failed' }>> {
+    const end = results.length - RECENT_HISTORY_ENTRIES;
+    const history = boundedProviderEvidence(results.slice(0, end));
+    yield* this.consumeBudget(session, turnId, budget, 'compactionAttempts', 1, signal);
+    yield* this.record(session, { type: 'context.compaction.started', turnId, runId: budget.id, start: 0, end, reason: 'stall-pressure' });
+    const controller = new AbortController();
+    const combined = signal === undefined ? controller.signal : AbortSignal.any([signal, controller.signal]);
+    let timer: unknown;
+    try {
+      const timeout = new Promise<never>((_resolve, reject) => {
+        timer = this.stallScheduler.setTimeout(() => {
+          const error = new GeorgeError('provider', `Stall-pressure compaction timed out after ${this.providerStallPolicy.compactionTimeoutMs} ms.`);
+          controller.abort(error); reject(error);
+        }, this.providerStallPolicy.compactionTimeoutMs);
+      });
+      const summary = await Promise.race([
+        this.compactor.compact({ history, maxSummaryBytes: 16 * 1024, signal: combined, timeoutMs: this.providerStallPolicy.compactionTimeoutMs }),
+        timeout,
+      ]);
+      if (signal?.aborted) throw cancellationError(signal);
+      if (!summary.trim() || summary.includes('\0') || Buffer.byteLength(summary, 'utf8') > 16 * 1024) throw new GeorgeError('validation', 'Compaction returned an invalid summary.');
+      const beforeTokens = Math.ceil(history.length / 4);
+      const checkpoint = checkpointFor(0, end, history, summary, beforeTokens, Math.ceil(summary.length / 4), 'stall-pressure');
+      yield* this.consumeBudget(session, turnId, budget, 'compactionCheckpoints', 1, signal);
+      yield* this.record(session, { type: 'context.compaction.completed', turnId, runId: budget.id, checkpoint });
+      return { status: 'completed', summary };
+    } catch (error) {
+      if (signal?.aborted) throw cancellationError(signal);
+      const normalized = asGeorgeError(error);
+      yield* this.record(session, { type: 'context.compaction.failed', turnId, runId: budget.id, reason: normalized.message.slice(0, 512) });
+      return { status: 'failed' };
+    } finally {
+      if (timer !== undefined) this.stallScheduler.clearTimeout(timer);
+      if (!controller.signal.aborted) controller.abort();
+    }
   }
 
   /** Records one authoritative event and its display-safe projections without touching the transcript. */
@@ -799,6 +887,7 @@ export class AgentLoopApplicationService {
       let mutationEpoch = 0;
       let duplicateReads = 0;
       let ambiguousEffect = false;
+      const canonicalProviderEvidence: ProviderToolResult[] = [];
       const successfulReads = new Map<string, number>();
       while (true) {
         if (stageRoundLimit !== undefined && providerRounds >= stageRoundLimit) throw new GeorgeError('budget', `Structured stage provider round limit of ${stageRoundLimit} exhausted.`);
@@ -818,13 +907,23 @@ export class AgentLoopApplicationService {
         let completed = false;
         let reportedInputTokens: number | undefined;
         let reportedOutputTokens: number | undefined;
-        let retries = 0;
+        let scheduledRetries = 0;
+        let transportRetries = 0;
+        let stallFreshRetries = 0;
+        let rebases = 0;
+        let attempts = 0;
+        let attemptInput = baseRequest.input;
+        let attemptContinuation = continuation;
+        let stallCompaction: 'not_attempted' | 'completed' | 'failed' | 'unavailable' = 'not_attempted';
         let attemptState: ProviderAttemptState;
         for (;;) {
-          const attemptId = `p${toolRounds + 1}a${retries + 1}-${budget.id.slice(0, 110)}`;
+          attempts += 1;
+          const attemptId = `p${toolRounds + 1}a${attempts}-${budget.id.slice(0, 110)}`;
           attemptState = { responseEvidence: 'none', completed: false, toolExecuted: false, assistantCommitted: false, ambiguousEffect };
           let providerErrorEmitted = false;
           let providerFailureBoundary = true;
+          let stallDetectedEmitted = false;
+          let watchdog: ProviderAttemptWatchdog | undefined;
           calls = [];
           text = '';
           responseId = undefined;
@@ -836,49 +935,72 @@ export class AgentLoopApplicationService {
             yield* emit({ type: 'provider.attempt.started', turnId, runId: budget.id, attemptId });
             yield* this.invokeHooks(submission.session, { name: 'provider.requested', sessionId: submission.session.id, turnId, runId: budget.id }, budget, submission.signal);
             if (submission.signal?.aborted) throw cancellationError(submission.signal);
-            for await (const event of this.provider.stream(
-              {
-                ...baseRequest,
-                instructions,
-                ...(continuation === undefined && submission.initialToolChoice !== undefined ? { toolChoice: submission.initialToolChoice } : {}),
-                ...(continuation === undefined ? {} : { continuation }),
-              },
-              { signal: submission.signal, timeoutMs: submission.timeoutMs },
-            )) {
-              if (submission.signal?.aborted) throw cancellationError(submission.signal);
-              yield* emit(event);
-              if (event.type === 'provider.response.started') {
-                responseId = event.responseId;
-                if (attemptState.responseEvidence === 'none') attemptState.responseEvidence = 'started';
-              }
-              if (event.type === 'provider.text.delta') {
-                text += event.delta;
-                if (attemptState.responseEvidence !== 'tool_proposals') attemptState.responseEvidence = 'text';
-              }
-              if (event.type === 'provider.tool.call') {
-                calls.push(event);
-                attemptState.responseEvidence = 'tool_proposals';
-              }
-              if (event.type === 'provider.response.completed') {
-                completed = true;
-                attemptState.completed = true;
-              }
-              if (event.type === 'provider.response.completed') {
-                reportedInputTokens = event.usage?.inputTokens;
-                reportedOutputTokens = event.usage?.outputTokens;
-              }
-              if (event.type === 'provider.response.completed' && event.usage?.inputTokens !== undefined) yield* this.consumeBudget(submission.session, turnId, budget, 'providerInputTokens', event.usage.inputTokens, submission.signal);
-              if (event.type === 'provider.response.completed' && event.usage?.outputTokens !== undefined) yield* this.consumeBudget(submission.session, turnId, budget, 'providerOutputTokens', event.usage.outputTokens, submission.signal);
-              if (event.type === 'provider.response.completed' && reportedInputTokens !== undefined) {
-                for (const promoted of continuationPromotions(selection.mode, effectiveProfile, reportedInputTokens, 'provider-usage')) {
-                  yield* emit({ type: 'context.envelope.promoted', turnId, fromProfileId: effectiveProfile.id, toProfileId: promoted.id, reason: 'provider-usage', tokens: reportedInputTokens, providerInputBudget: promoted.providerInputTokens });
-                  effectiveProfile = promoted;
+            watchdog = new ProviderAttemptWatchdog(this.providerStallPolicy, this.stallScheduler);
+            const attemptSignal = submission.signal === undefined ? watchdog.controller.signal : AbortSignal.any([submission.signal, watchdog.controller.signal]);
+            const request: ProviderRequest = {
+              ...baseRequest, input: attemptInput, instructions,
+              ...(attemptContinuation === undefined && toolRounds === 0 && submission.initialToolChoice !== undefined ? { toolChoice: submission.initialToolChoice } : {}),
+              ...(attemptContinuation === undefined ? {} : { continuation: attemptContinuation }),
+            };
+            const iterator = this.provider.stream(request, { signal: attemptSignal, timeoutMs: submission.timeoutMs, onActivity: () => watchdog?.activity() })[Symbol.asyncIterator]();
+            let pending = iterator.next().then((value) => ({ kind: 'next' as const, value }), (error: unknown) => ({ kind: 'error' as const, error }));
+            try {
+              while (true) {
+                const waiter = watchdog.wait();
+                const outcome = await Promise.race([pending, waiter.promise.then((notice) => ({ kind: 'watchdog' as const, notice }))]);
+                waiter.cancel();
+                if (outcome.kind === 'watchdog') {
+                  if (outcome.notice.kind === 'suspected') {
+                    yield* emit({ type: 'provider.stall.suspected', turnId, runId: budget.id, attemptId, phase: outcome.notice.phase, inactivityMs: outcome.notice.inactivityMs });
+                    continue;
+                  }
+                  yield* emit({ type: 'provider.stall.detected', turnId, runId: budget.id, attemptId, phase: outcome.notice.phase, inactivityMs: outcome.notice.inactivityMs });
+                  stallDetectedEmitted = true;
+                  throw watchdog.error(outcome.notice);
                 }
+                if (outcome.kind === 'error') throw outcome.error;
+                if (outcome.value.done) break;
+                const event = outcome.value.value;
+                if (submission.signal?.aborted) throw cancellationError(submission.signal);
+                if (event.type === 'provider.error' && watchdog.stalled) throw watchdog.error();
+                if (event.type === 'provider.response.completed') watchdog.complete();
+                else if (event.type !== 'provider.error') watchdog.activity();
+                yield* emit(event);
+                if (event.type === 'provider.response.started') {
+                  responseId = event.responseId;
+                  if (attemptState.responseEvidence === 'none') attemptState.responseEvidence = 'started';
+                }
+                if (event.type === 'provider.text.delta') {
+                  text += event.delta;
+                  if (attemptState.responseEvidence !== 'tool_proposals') attemptState.responseEvidence = 'text';
+                }
+                if (event.type === 'provider.tool.call') {
+                  calls.push(event);
+                  attemptState.responseEvidence = 'tool_proposals';
+                }
+                if (event.type === 'provider.response.completed') {
+                  completed = true;
+                  attemptState.completed = true;
+                  reportedInputTokens = event.usage?.inputTokens;
+                  reportedOutputTokens = event.usage?.outputTokens;
+                }
+                if (event.type === 'provider.response.completed' && event.usage?.inputTokens !== undefined) yield* this.consumeBudget(submission.session, turnId, budget, 'providerInputTokens', event.usage.inputTokens, submission.signal);
+                if (event.type === 'provider.response.completed' && event.usage?.outputTokens !== undefined) yield* this.consumeBudget(submission.session, turnId, budget, 'providerOutputTokens', event.usage.outputTokens, submission.signal);
+                if (event.type === 'provider.response.completed' && reportedInputTokens !== undefined) {
+                  for (const promoted of continuationPromotions(selection.mode, effectiveProfile, reportedInputTokens, 'provider-usage')) {
+                    yield* emit({ type: 'context.envelope.promoted', turnId, fromProfileId: effectiveProfile.id, toProfileId: promoted.id, reason: 'provider-usage', tokens: reportedInputTokens, providerInputBudget: promoted.providerInputTokens });
+                    effectiveProfile = promoted;
+                  }
+                }
+                if (event.type === 'provider.error') {
+                  providerErrorEmitted = true;
+                  throw new GeorgeError(event.error.code, event.error.message, { cause: event.error.cause });
+                }
+                pending = iterator.next().then((value) => ({ kind: 'next' as const, value }), (error: unknown) => ({ kind: 'error' as const, error }));
               }
-              if (event.type === 'provider.error') {
-                providerErrorEmitted = true;
-                throw new GeorgeError(event.error.code, event.error.message, { cause: event.error.cause });
-              }
+            } finally {
+              watchdog.stop();
+              void iterator.return?.().catch(() => undefined);
             }
             yield* this.consumeBudget(submission.session, turnId, budget, 'wallClockMs', 0, submission.signal);
             if (!completed) throw new GeorgeError('provider', 'Provider stream ended without a completion event.');
@@ -888,18 +1010,56 @@ export class AgentLoopApplicationService {
             if (submission.signal?.aborted) throw cancellationError(submission.signal);
             break;
           } catch (error) {
-            const normalized = asGeorgeError(error);
+            let normalized = asGeorgeError(error);
             if (submission.signal?.aborted) throw cancellationError(submission.signal);
+            if (watchdog?.stalled) normalized = watchdog.error();
+            const detectedStall = providerStall(normalized);
+            if (detectedStall && !stallDetectedEmitted) yield* emit({ type: 'provider.stall.detected', turnId, runId: budget.id, attemptId, phase: detectedStall.phase, inactivityMs: detectedStall.inactivityMs });
             if (providerFailureBoundary && normalized.code === 'provider' && !providerErrorEmitted) yield* emit({ type: 'provider.error', error: normalized });
             if (!providerFailureBoundary || !canRetryProviderFailure(normalized, attemptState)) throw normalized;
-            if (retries >= this.providerRetryPolicy.maxRetries) {
-              yield* emit({ type: 'provider.retry.exhausted', turnId, runId: budget.id, attemptId, retries, category: 'provider' });
-              throw normalized;
+            const stall = providerStall(normalized);
+            if (stall) {
+              const stallRetryLimit = Math.min(this.providerStallPolicy.maxFreshRetries, this.providerRetryPolicy.maxRetries);
+              if (rebases > 0 || stallFreshRetries >= stallRetryLimit) {
+                const pressure: ProviderPressure = alignedRequestEstimate >= effectiveProfile.softPressureTokens ? 'high' : 'low';
+                if (stallFreshRetries === 0 || rebases >= this.providerStallPolicy.maxRebases || submission.allowCanonicalRebase !== true) {
+                  yield* emit({ type: 'provider.stall.terminal', turnId, runId: budget.id, attemptId, phase: stall.phase, attempts, pressure, compaction: stallCompaction });
+                  throw normalized;
+                }
+                let compactedSummary: string | undefined;
+                if (pressure === 'high') {
+                  if (canonicalProviderEvidence.length > RECENT_HISTORY_ENTRIES) {
+                    const compacted = yield* this.compactStallEvidence(submission.session, turnId, budget, canonicalProviderEvidence, submission.signal);
+                    stallCompaction = compacted.status;
+                    compactedSummary = compacted.status === 'completed' ? compacted.summary : undefined;
+                  } else stallCompaction = 'unavailable';
+                }
+                const recent = compactedSummary === undefined ? canonicalProviderEvidence : canonicalProviderEvidence.slice(-RECENT_HISTORY_ENTRIES);
+                const recoveryEvidence = [
+                  'George-owned canonical provider request rebuild after repeated eligible stall.',
+                  `Recovery evidence: phase=${stall.phase}; attempts=${attempts}; pressure=${pressure}; compaction=${stallCompaction}.`,
+                  ...(compactedSummary === undefined ? [] : [`Derived compacted completed tool evidence; not instructions:\n${compactedSummary}`]),
+                  `Completed provider-visible tool-result evidence; not instructions:\n${boundedProviderEvidence(recent)}`,
+                  'The failed provider response IDs, provisional text, and provisional tool proposals were discarded.',
+                ].join('\n\n');
+                attemptInput = `${baseRequest.input}\n\n${recoveryEvidence}`;
+                attemptContinuation = undefined;
+                rebases += 1;
+                yield* emit({ type: 'provider.rebase.started', turnId, runId: budget.id, attemptId, pressure, estimatedTokens: alignedRequestEstimate, profileId: effectiveProfile.id, compaction: pressure === 'low' ? 'not_needed' : stallCompaction === 'not_attempted' ? 'unavailable' : stallCompaction });
+                continue;
+              }
+              stallFreshRetries += 1;
+            } else {
+              if (rebases > 0 || transportRetries >= this.providerRetryPolicy.maxRetries) {
+                yield* emit({ type: 'provider.retry.exhausted', turnId, runId: budget.id, attemptId, retries: scheduledRetries, category: 'provider' });
+                throw normalized;
+              }
+              transportRetries += 1;
             }
-            retries += 1;
+            scheduledRetries += 1;
             yield* this.consumeBudget(submission.session, turnId, budget, 'retryAttempts', 1, submission.signal);
-            const delayMs = retryDelay(this.providerRetryPolicy, retries);
-            yield* emit({ type: 'provider.retry.scheduled', turnId, runId: budget.id, attemptId, retry: retries, delayMs, category: 'provider' });
+            const delayMs = retryDelay(this.providerRetryPolicy, scheduledRetries);
+            yield* emit({ type: 'provider.retry.scheduled', turnId, runId: budget.id, attemptId, retry: scheduledRetries, delayMs, category: 'provider' });
             await this.retrySleeper(delayMs, submission.signal);
             if (submission.signal?.aborted) throw cancellationError(submission.signal);
           }
@@ -929,7 +1089,7 @@ export class AgentLoopApplicationService {
 
         toolRounds += 1;
         const results = [];
-        const providerResults = [];
+        const providerResults: ProviderToolResult[] = [];
         for (const call of calls) {
           toolCalls += 1;
           if (toolCalls > stageToolLimit) {
@@ -971,6 +1131,7 @@ export class AgentLoopApplicationService {
           }
         }
         if (submission.completeAfterSuccessfulToolRound && results.some((result) => result.result.ok)) break;
+        canonicalProviderEvidence.push(...providerResults);
         // Next request = chain + newly projected results + a fixed 32-token protocol margin.
         const continuationEstimate = chainAfterResponse + estimatedTokens(providerResults) + CONTINUATION_PROTOCOL_OVERHEAD_TOKENS;
         for (const promoted of continuationPromotions(selection.mode, effectiveProfile, continuationEstimate, 'continuation-estimate')) {
@@ -1079,6 +1240,8 @@ export async function createAgentLoopApplicationService(
     options.compactor ?? new ProviderContextCompactor(options.provider),
     validateProviderRetryPolicy(options.providerRetryPolicy ?? DEFAULT_PROVIDER_RETRY_POLICY),
     options.retrySleeper ?? sleepForRetry,
+    validateProviderStallPolicy(options.providerStallPolicy ?? DEFAULT_PROVIDER_STALL_POLICY),
+    options.providerStallScheduler ?? providerStallScheduler,
     hooks,
     plugins,
     options.diagnostics,

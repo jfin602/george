@@ -235,11 +235,14 @@ test('durable sessions retain only bounded normalized run-budget evidence', asyn
   appendSessionEvent(session, { type: 'reliability.run.started', turnId: 'turn-1', runId: 'run-1', budget });
   appendSessionEvent(session, { type: 'provider.retry.scheduled', turnId: 'turn-1', runId: 'run-1', attemptId: 'p1a1-run-1', retry: 1, delayMs: 7, category: 'provider' });
   appendSessionEvent(session, { type: 'provider.retry.exhausted', turnId: 'turn-1', runId: 'run-1', attemptId: 'p1a3-run-1', retries: 2, category: 'provider' });
+  appendSessionEvent(session, { type: 'provider.stall.suspected', turnId: 'turn-1', runId: 'run-1', attemptId: 'p1a2-run-1', phase: 'response_active', inactivityMs: 60_000 });
+  appendSessionEvent(session, { type: 'provider.rebase.started', turnId: 'turn-1', runId: 'run-1', attemptId: 'p1a2-run-1', pressure: 'low', estimatedTokens: 2_000, profileId: 'ordinary', compaction: 'not_needed' });
+  appendSessionEvent(session, { type: 'provider.stall.terminal', turnId: 'turn-1', runId: 'run-1', attemptId: 'p1a3-run-1', phase: 'response_active', attempts: 3, pressure: 'low', compaction: 'not_attempted' });
   appendSessionEvent(session, { type: 'budget.pressure', turnId: 'turn-1', runId: 'run-1', dimensions: ['providerAttempts'], budget });
   appendSessionEvent(session, { type: 'budget.exhausted', turnId: 'turn-1', runId: 'run-1', dimension: 'providerAttempts', budget });
   await store.save(session);
   const reopened = await store.open('budget-session', workspace);
-  assert.deepEqual(reopened.events.map((event) => event.type), ['reliability.run.started', 'provider.retry.scheduled', 'provider.retry.exhausted', 'budget.pressure', 'budget.exhausted']);
+  assert.deepEqual(reopened.events.map((event) => event.type), ['reliability.run.started', 'provider.retry.scheduled', 'provider.retry.exhausted', 'provider.stall.suspected', 'provider.rebase.started', 'provider.stall.terminal', 'budget.pressure', 'budget.exhausted']);
   const serialized = await readFile(join(state, 'budget-session.json'), 'utf8');
   assert.doesNotMatch(serialized, /provider payload|stdout|environment/i);
 });
@@ -252,7 +255,7 @@ test('durable sessions retain bounded valid compaction checkpoints without chang
   appendSessionEvent(session, { type: 'context.compaction.completed', turnId: 'turn-1', runId: 'run-1', checkpoint: {
     version: 1, id: 'compact-123', start: 0, end: 2,
     rangeDigest: 'a'.repeat(64), summaryDigest: createHash('sha256').update(summary).digest('hex'), summary,
-    beforeTokens: 100, afterTokens: 8, reason: 'hard-pressure',
+    beforeTokens: 100, afterTokens: 8, reason: 'stall-pressure',
   } });
   await store.save(session);
   const reopened = await store.open('checkpoint-session', workspace);

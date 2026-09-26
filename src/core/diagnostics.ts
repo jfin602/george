@@ -119,6 +119,9 @@ function eventRecord(session: Session, event: ApplicationEvent, sequence: number
     case 'hook.started': correlation.hookInvocationId = event.hookId; fields.event = bounded(event.event, 128); break;
     case 'hook.completed': correlation.hookInvocationId = event.hookId; fields.event = bounded(event.event, 128); fields.status = event.status; break;
     case 'provider.retry.scheduled': case 'provider.retry.exhausted': correlation.providerAttemptId = event.attemptId; fields.retries = event.type === 'provider.retry.scheduled' ? event.retry : event.retries; break;
+    case 'provider.stall.suspected': case 'provider.stall.detected': correlation.providerAttemptId = event.attemptId; fields.phase = event.phase; fields.inactivityMs = event.inactivityMs; break;
+    case 'provider.rebase.started': correlation.providerAttemptId = event.attemptId; fields.pressure = event.pressure; fields.estimatedTokens = event.estimatedTokens; fields.profileId = bounded(event.profileId, 256); fields.compaction = event.compaction; break;
+    case 'provider.stall.terminal': correlation.providerAttemptId = event.attemptId; fields.phase = event.phase; fields.attempts = event.attempts; fields.pressure = event.pressure; fields.compaction = event.compaction; break;
     case 'turn.failed': case 'turn.cancelled': fields.code = bounded(event.error.code, 128); fields.message = bounded(event.error.message); break;
     default: break;
   }
