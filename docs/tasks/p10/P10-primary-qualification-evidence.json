@@ -1,0 +1,79 @@
+{
+  "schemaVersion": 1,
+  "preTaskHead": "4b510792e2a01197a0063034bfc2a69692efd7a6",
+  "packageVersion": "0.10.10",
+  "runtime": {
+    "node": "v24.21.0",
+    "npm": "11.19.0",
+    "requiredNode": ">=26.4.0 <27",
+    "provider": "http://127.0.0.1:1234",
+    "model": "qwen3-coder-30b-a3b-instruct@q4_k_m",
+    "providerProbe": "connection refused",
+    "liveEligibility": "Evidence Gap"
+  },
+  "validation": {
+    "focused": { "total": 228, "passed": 227, "failed": 1, "skipped": 0 },
+    "typecheck": "Green",
+    "runner": { "total": 90, "passed": 90, "failed": 0, "skipped": 0 },
+    "broad": { "total": 0, "passed": 0, "failed": 0, "skipped": 0, "launcher": "Not Green: node: bad option: --experimental-ffi" },
+    "diffCheck": "Green"
+  },
+  "benchmarks": [
+    {
+      "suite": "quick",
+      "artifact": "artifacts/benchmarks/2026-09-27T00-23-39-577Z-509520/results.json",
+      "sha256": "ba0b6e7d6f63c8b61ea8ea65f3c0beb41d06afa3d8ad608191e0497b55ecae45",
+      "passed": 0,
+      "total": 4,
+      "elapsedMs": 1303,
+      "providerActiveMs": 60,
+      "attempts": 12,
+      "rounds": 0,
+      "retries": 8
+    },
+    {
+      "suite": "full",
+      "artifact": "artifacts/benchmarks/2026-09-27T00-23-54-681Z-509690/results.json",
+      "sha256": "71c9a54fc9c3d646ba144641888103beecd9ac70ff800ffe622be9ef3bce852d",
+      "passed": 0,
+      "total": 13,
+      "elapsedMs": 4340,
+      "providerActiveMs": 103,
+      "attempts": 39,
+      "rounds": 0,
+      "retries": 26
+    },
+    {
+      "suite": "agentic-context",
+      "bands": [2048],
+      "artifact": "artifacts/benchmarks/2026-09-27T00-24-03-687Z-509871/results.json",
+      "sha256": "74cb51189e9c32b4a51309f9dab451e4c89c971b15f4dbc814e1a9412a2724cd",
+      "passed": 0,
+      "total": 3,
+      "elapsedMs": 1168,
+      "providerActiveMs": 59,
+      "attempts": 9,
+      "rounds": 0,
+      "retries": 6
+    }
+  ],
+  "fastLive": {
+    "controllerInvocations": 1,
+    "commonState": "Evidence Gap",
+    "results": [
+      { "id": "greeting", "deadlineMs": 120000, "result": "Not Run", "attempts": 0 },
+      { "id": "three-file", "deadlineMs": 240000, "result": "Not Run", "attempts": 0 },
+      { "id": "gate-a", "deadlineMs": 360000, "result": "Not Run", "attempts": 0 },
+      { "id": "b3", "deadlineMs": 300000, "result": "Not Run", "attempts": 0 },
+      { "id": "c3", "deadlineMs": 240000, "result": "Not Run", "attempts": 0 }
+    ]
+  },
+  "milestone": {
+    "controllerInvocations": 1,
+    "commonState": "Evidence Gap",
+    "results": [
+      { "id": "b2", "deadlineMs": 900000, "result": "Not Run", "attempts": 0 },
+      { "id": "c2", "deadlineMs": 600000, "result": "Not Run", "attempts": 0 }
+    ]
+  }
+}
