@@ -269,7 +269,10 @@ function safeRecoveryIntent(value: Extract<ApplicationEvent, { type: 'recovery.i
 function durableEvent(event: ApplicationEvent): ApplicationEvent | undefined {
   switch (event.type) {
     case 'reliability.run.started': return { type: event.type, turnId: string(event.turnId, 'turn ID', 256), runId: identifier(event.runId, 'run ID'), budget: safeBudget(event.budget) };
-    case 'provider.attempt.started': return { type: event.type, turnId: string(event.turnId, 'turn ID', 256), runId: identifier(event.runId, 'run ID'), attemptId: identifier(event.attemptId, 'provider attempt ID') };
+    case 'provider.attempt.started': return {
+      type: event.type, turnId: string(event.turnId, 'turn ID', 256), runId: identifier(event.runId, 'run ID'), attemptId: identifier(event.attemptId, 'provider attempt ID'),
+      ...(event.outputPolicy === undefined ? {} : { outputPolicy: safeOutputPolicy(event.outputPolicy) }),
+    };
     case 'provider.attempt.finished': return { type: event.type, turnId: string(event.turnId, 'turn ID', 256), runId: identifier(event.runId, 'run ID'), attemptId: identifier(event.attemptId, 'provider attempt ID'), outcome: oneOf(event.outcome, 'provider attempt outcome', ['completed', 'failed', 'cancelled']), timing: safeProviderAttemptTiming(event.timing) };
     case 'provider.stall.suspected': case 'provider.stall.detected': return { type: event.type, turnId: string(event.turnId, 'turn ID', 256), runId: identifier(event.runId, 'run ID'), attemptId: identifier(event.attemptId, 'provider attempt ID'), phase: oneOf(event.phase, 'provider stall phase', ['awaiting_first_evidence', 'response_active']), inactivityMs: boundedInteger(event.inactivityMs, 'provider stall inactivity') };
     case 'provider.rebase.started': return { type: event.type, turnId: string(event.turnId, 'turn ID', 256), runId: identifier(event.runId, 'run ID'), attemptId: identifier(event.attemptId, 'provider attempt ID'), pressure: oneOf(event.pressure, 'provider pressure', ['low', 'high']), estimatedTokens: boundedInteger(event.estimatedTokens, 'provider rebase estimate'), profileId: string(event.profileId, 'provider rebase profile ID', 256), compaction: oneOf(event.compaction, 'provider rebase compaction', ['not_needed', 'completed', 'failed', 'unavailable']) };
@@ -372,6 +375,14 @@ function safeUsage(usage: ProviderUsage): ProviderUsage {
     }
   }
   return result;
+}
+
+function safeOutputPolicy(value: Readonly<{ requestedMaxOutputTokens: number; disposition: 'applied' | 'inherited' }>): Readonly<{ requestedMaxOutputTokens: number; disposition: 'applied' | 'inherited' }> {
+  const policy = record(value, 'provider output policy');
+  exactKeys(policy, ['requestedMaxOutputTokens', 'disposition'], 'provider output policy');
+  const requestedMaxOutputTokens = boundedInteger(policy.requestedMaxOutputTokens, 'requested provider output tokens', 1_000_000);
+  if (requestedMaxOutputTokens < 1) invalid('requested provider output tokens must be positive.');
+  return { requestedMaxOutputTokens, disposition: oneOf(policy.disposition, 'provider output policy disposition', ['applied', 'inherited']) };
 }
 
 function safeProviderAttemptTiming(timing: ProviderAttemptTiming): ProviderAttemptTiming {

@@ -20,6 +20,8 @@ Status: APPROVED
 ## New Phase 10 metrics
 
 - `executionMode`: human | operation;
+- requested output-token ceiling and applied | inherited adapter disposition;
+- completed tool/control payload counts;
 - internal prose bytes / estimated tokens;
 - George control count;
 - successful meaningful action count;

@@ -51,6 +51,9 @@ export type LiveWorkMetrics = Readonly<{
   firstUsefulOutputMs: number | null;
   providerActiveMs: number | null;
   toolCalls: number;
+  requestedOutputTokenCeilings: readonly number[];
+  outputPolicyAppliedAttempts: number;
+  outputPolicyInheritedAttempts: number;
   internalTextBytes: number | null;
   estimatedInternalTextTokens: number | null;
   toolBatchCount: number;
@@ -69,6 +72,8 @@ export type LiveWorkMetrics = Readonly<{
   georgeControlCount: number;
   humanModeRounds: number | null;
   operationModeRounds: number | null;
+  completedToolPayloads: number;
+  completedControlPayloads: number;
   correctionCycles: number;
   correctionFrameBytes: readonly number[];
   correctionProviderRounds: number;
@@ -312,6 +317,7 @@ function metrics(events: readonly ApplicationEvent[], correctionCycles: number):
   const agentRounds = events.filter((event): event is Extract<ApplicationEvent, { type: 'agent.round.completed' }> => event.type === 'agent.round.completed');
   const attemptTimings = events.filter((event): event is Extract<ApplicationEvent, { type: 'provider.attempt.finished' }> => event.type === 'provider.attempt.finished');
   const attemptCount = events.filter((event) => event.type === 'provider.attempt.started').length;
+  const outputPolicies = events.flatMap((event) => event.type === 'provider.attempt.started' && event.outputPolicy ? [event.outputPolicy] : []);
   const avoidedByReason = countModelRoundsAvoided(events);
   const concurrentReadBatches = events.filter((event): event is Extract<ApplicationEvent, { type: 'tool.concurrent-read-batch.completed' }> => event.type === 'tool.concurrent-read-batch.completed');
   const correctionFrames = events.filter((event): event is Extract<ApplicationEvent, { type: 'correction.frame.created' }> => event.type === 'correction.frame.created');
@@ -341,6 +347,9 @@ function metrics(events: readonly ApplicationEvent[], correctionCycles: number):
     firstUsefulOutputMs: attemptTimings.find((event) => event.timing.firstUsefulOutputMs !== undefined)?.timing.firstUsefulOutputMs ?? null,
     providerActiveMs: attemptCount > 0 && attemptTimings.length === attemptCount ? attemptTimings.reduce((total, event) => total + event.timing.providerActiveMs, 0) : null,
     toolCalls: events.filter((event) => event.type === 'tool.requested').length,
+    requestedOutputTokenCeilings: Object.freeze(outputPolicies.map((policy) => policy.requestedMaxOutputTokens)),
+    outputPolicyAppliedAttempts: outputPolicies.filter((policy) => policy.disposition === 'applied').length,
+    outputPolicyInheritedAttempts: outputPolicies.filter((policy) => policy.disposition === 'inherited').length,
     internalTextBytes: agentRounds.length ? agentRounds.reduce((total, event) => total + event.internalTextBytes, 0) : null,
     estimatedInternalTextTokens: agentRounds.length ? agentRounds.reduce((total, event) => total + event.estimatedInternalTextTokens, 0) : null,
     toolBatchCount: toolBatchWidths.length,
@@ -359,6 +368,8 @@ function metrics(events: readonly ApplicationEvent[], correctionCycles: number):
     georgeControlCount: agentRounds.filter((event) => event.control !== undefined).length,
     humanModeRounds: agentRounds.length ? agentRounds.filter((event) => event.executionMode === 'human').length : null,
     operationModeRounds: agentRounds.length ? agentRounds.filter((event) => event.executionMode === 'operation').length : null,
+    completedToolPayloads: agentRounds.reduce((total, event) => total + event.toolCallCount, 0),
+    completedControlPayloads: agentRounds.filter((event) => event.control !== undefined).length,
     correctionCycles,
     correctionFrameBytes: Object.freeze(correctionFrames.map((event) => event.bytes)),
     correctionProviderRounds: correctionRepairs.reduce((total, event) => total + event.providerRounds, 0),
@@ -578,7 +589,10 @@ function eventEvidence(event: ApplicationEvent): Readonly<Record<string, unknown
   if ('callId' in event && typeof event.callId === 'string') safe.callId = event.callId;
   if ('name' in event && typeof event.name === 'string') safe.name = event.name;
   if ('status' in event && typeof event.status === 'string') safe.status = event.status;
-  if (event.type === 'provider.attempt.started') safe.attemptId = event.attemptId;
+  if (event.type === 'provider.attempt.started') {
+    safe.attemptId = event.attemptId;
+    if (event.outputPolicy) safe.outputPolicy = event.outputPolicy;
+  }
   if (event.type === 'provider.attempt.finished') safe.attempt = { attemptId: event.attemptId, outcome: event.outcome, responseAcceptanceMs: event.timing.responseAcceptanceMs ?? null, firstUsefulOutputMs: event.timing.firstUsefulOutputMs ?? null, providerActiveMs: event.timing.providerActiveMs };
   if (event.type === 'provider.retry.scheduled') safe.retry = { attemptId: event.attemptId, count: event.retry, delayMs: event.delayMs };
   if (event.type === 'provider.retry.exhausted') safe.retry = { attemptId: event.attemptId, count: event.retries, exhausted: true };

@@ -76,6 +76,29 @@ test('LM Studio provider sends the Responses request shape and parses split CRLF
   assert.deepEqual(activity, ['accepted', 'output_progress', 'output_progress'], 'only acceptance and useful generation cross the payload-free activity seam');
 });
 
+test('LM Studio maps provider-neutral output policy to max_output_tokens and rejects invalid policy before fetch', async (t) => {
+  const requests: Array<Record<string, unknown>> = [];
+  const { server, baseUrl } = await fixture((request, response) => {
+    let body = '';
+    request.setEncoding('utf8');
+    request.on('data', (chunk: string) => { body += chunk; });
+    request.on('end', () => { requests.push(JSON.parse(body)); sse(response, ['data: {"type":"response.completed","response":{}}\n\n']); });
+  });
+  t.after(() => close(server));
+  const provider = new LmStudioResponsesProvider({ baseUrl, model: 'local-model' });
+
+  await eventsFrom(provider.stream({ input: 'bounded', outputPolicy: { maxOutputTokens: 32_768 } }));
+  assert.equal(requests[0]?.max_output_tokens, 32_768);
+  assert.equal(provider.supportsOutputPolicy, true);
+
+  const events: unknown[] = [];
+  await assert.rejects(async () => {
+    for await (const event of provider.stream({ input: 'invalid', outputPolicy: { maxOutputTokens: 0 } })) events.push(event);
+  }, (error: unknown) => error instanceof GeorgeError && error.code === 'validation');
+  assert.equal(requests.length, 1, 'invalid policy never reaches the adapter transport');
+  assert.equal((events.at(-1) as { type: string }).type, 'provider.error');
+});
+
 test('LM Studio provider maps provider-neutral tool choice without changing tools or continuation', async (t) => {
   const requests: Array<Record<string, unknown>> = [];
   const { server, baseUrl } = await fixture((request, response) => {
@@ -467,7 +490,7 @@ test('LM Studio provider preserves bounded safe diagnostics from failure events'
       const seen: unknown[] = [];
       let failure: unknown;
       try {
-        for await (const event of new LmStudioResponsesProvider({ baseUrl, model: 'local-model' }).stream({ input: 'Hello' })) seen.push(event);
+        for await (const event of new LmStudioResponsesProvider({ baseUrl, model: 'local-model' }).stream({ input: 'Hello', ...(item.name === 'response.incomplete' ? { outputPolicy: { maxOutputTokens: 8_192 } } : {}) })) seen.push(event);
       } catch (error) {
         failure = error;
       }

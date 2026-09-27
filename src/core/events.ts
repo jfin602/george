@@ -168,7 +168,7 @@ export type ProviderEvent =
 export type ApplicationEvent =
   | ProviderEvent
   | Readonly<{ type: 'reliability.run.started'; turnId: string; runId: string; budget: RunBudgetSnapshot }>
-  | Readonly<{ type: 'provider.attempt.started'; turnId: string; runId: string; attemptId: string }>
+  | Readonly<{ type: 'provider.attempt.started'; turnId: string; runId: string; attemptId: string; outputPolicy?: Readonly<{ requestedMaxOutputTokens: number; disposition: 'applied' | 'inherited' }> }>
   | Readonly<{ type: 'provider.attempt.finished'; turnId: string; runId: string; attemptId: string; outcome: 'completed' | 'failed' | 'cancelled'; timing: ProviderAttemptTiming }>
   | Readonly<{ type: 'provider.stall.suspected'; turnId: string; runId: string; attemptId: string; phase: Exclude<ProviderStallPhase, 'response_completed'>; inactivityMs: number }>
   | Readonly<{ type: 'provider.stall.detected'; turnId: string; runId: string; attemptId: string; phase: Exclude<ProviderStallPhase, 'response_completed'>; inactivityMs: number }>

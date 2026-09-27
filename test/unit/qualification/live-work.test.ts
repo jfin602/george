@@ -318,7 +318,7 @@ test('deterministic B3 correction variant fails once, repairs from focused evide
 
 test('live telemetry records cached usage and completed tool batches with explicit unavailable defaults', () => {
   const trace = extractLiveWorkTrace({ events: [
-    { type: 'provider.attempt.started', turnId: 't', runId: 'r', attemptId: 'a' },
+    { type: 'provider.attempt.started', turnId: 't', runId: 'r', attemptId: 'a', outputPolicy: { requestedMaxOutputTokens: 8_192, disposition: 'applied' } },
     { type: 'provider.tool.call', callId: 'one', name: 'read_file', arguments: '{}' },
     { type: 'provider.tool.call', callId: 'two', name: 'read_file', arguments: '{}' },
     { type: 'provider.response.completed', usage: { inputTokens: 10, outputTokens: 2, cachedInputTokens: 6 } },
@@ -331,6 +331,7 @@ test('live telemetry records cached usage and completed tool batches with explic
     { type: 'provider.attempt.finished', turnId: 't', runId: 'r', attemptId: 'a', outcome: 'completed', timing: { responseAcceptanceMs: 4, firstUsefulOutputMs: 61_000, providerActiveMs: 61_010 } },
   ], terminalStatus: 'failed', hiddenAcceptance: 'not_run', humanInterventions: 0 });
   assert.deepEqual(trace.metrics.toolBatchWidths, [2]);
+  assert.deepEqual({ ceilings: trace.metrics.requestedOutputTokenCeilings, applied: trace.metrics.outputPolicyAppliedAttempts, inherited: trace.metrics.outputPolicyInheritedAttempts, tools: trace.metrics.completedToolPayloads, controls: trace.metrics.completedControlPayloads }, { ceilings: [8_192], applied: 1, inherited: 0, tools: 2, controls: 1 });
   assert.equal(trace.metrics.toolBatchCount, 1);
   assert.equal(trace.metrics.providerToolSelectionRounds, 1);
   assert.equal(trace.metrics.toolBatchCompression, 1);

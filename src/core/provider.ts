@@ -28,9 +28,17 @@ export type ProviderToolChoice = 'auto' | 'required' | 'none';
 export type ProviderActivity = 'accepted' | 'output_progress';
 export type ExecutionMode = 'human' | 'operation';
 export type GeorgeOperationControl = Readonly<{ version: 1; control: 'handoff' }>;
+export type ProviderOutputPolicy = Readonly<{ maxOutputTokens: number }>;
 export const GEORGE_OPERATION_PROTOCOL_VERSION = 1;
 export const MAX_OPERATION_TEXT_BYTES = 4 * 1024;
 export const MAX_PROVIDER_ROUND_CONTEXT_BYTES = 8 * 1024;
+export const MAX_PROVIDER_OUTPUT_TOKENS = 1_000_000;
+export function validateProviderOutputPolicy(policy: ProviderOutputPolicy): ProviderOutputPolicy {
+  if (!Number.isSafeInteger(policy.maxOutputTokens) || policy.maxOutputTokens < 1 || policy.maxOutputTokens > MAX_PROVIDER_OUTPUT_TOKENS) {
+    throw new Error(`Provider output policy maxOutputTokens must be an integer between 1 and ${MAX_PROVIDER_OUTPUT_TOKENS}.`);
+  }
+  return Object.freeze({ maxOutputTokens: policy.maxOutputTokens });
+}
 
 export type ProviderRequest = Readonly<{
   executionMode: ExecutionMode;
@@ -40,6 +48,8 @@ export type ProviderRequest = Readonly<{
   roundContext?: string;
   tools?: readonly ProviderToolDefinition[];
   toolChoice?: ProviderToolChoice;
+  /** Provider-neutral intent; adapters opt in and translate their own wire field. */
+  outputPolicy?: ProviderOutputPolicy;
   continuation?: ProviderContinuation;
 }>;
 
@@ -53,6 +63,8 @@ export type ProviderStreamOptions = Readonly<{
 export interface ModelProvider {
   /** Explicit opt-in: adapters must not silently discard provider-visible round context. */
   readonly supportsRoundContext?: true;
+  /** Explicit opt-in: adapters must translate ProviderOutputPolicy without truncating locally. */
+  readonly supportsOutputPolicy?: true;
   stream(
     request: ProviderRequest,
     options?: ProviderStreamOptions,

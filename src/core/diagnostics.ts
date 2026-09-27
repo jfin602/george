@@ -82,7 +82,13 @@ function eventRecord(session: Session, event: ApplicationEvent, sequence: number
   const key = `${session.id}:${turnId ?? ''}`;
   const correlation: { sessionId: string; turnId?: string; operationId?: string; providerAttemptId?: string; compactionCheckpointId?: string; recoveryDecisionId?: string; hookInvocationId?: string } = { sessionId: session.id, ...(turnId === undefined ? {} : { turnId }) };
   const fields: Record<string, string | number | boolean | null> = {};
-  if (event.type === 'provider.attempt.started') attempts.set(key, event.attemptId);
+  if (event.type === 'provider.attempt.started') {
+    attempts.set(key, event.attemptId);
+    if (event.outputPolicy) {
+      fields.requestedMaxOutputTokens = event.outputPolicy.requestedMaxOutputTokens;
+      fields.outputPolicyDisposition = event.outputPolicy.disposition;
+    }
+  }
   if (attempts.has(key)) correlation.providerAttemptId = attempts.get(key)!;
   switch (event.type) {
     case 'input.submitted': fields.bytes = Buffer.byteLength(event.text, 'utf8'); break;

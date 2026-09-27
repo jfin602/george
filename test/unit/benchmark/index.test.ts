@@ -119,7 +119,7 @@ test('event-derived records retain correctness separately from timing and failed
   const case_ = BENCHMARK_CASES[0]!;
   const pass: ApplicationEvent[] = [
     { type: 'context.assembled', turnId: 't', diagnostics: { estimatedTokens: 22 } as never },
-    { type: 'provider.attempt.started', turnId: 't', runId: 'r', attemptId: 'a' },
+    { type: 'provider.attempt.started', turnId: 't', runId: 'r', attemptId: 'a', outputPolicy: { requestedMaxOutputTokens: 8_192, disposition: 'applied' } },
     { type: 'provider.response.started', responseId: 'response' },
     { type: 'provider.text.delta', delta: '42' },
     { type: 'provider.response.completed', usage: { inputTokens: 12, outputTokens: 1, cachedInputTokens: 5 } },
@@ -145,7 +145,7 @@ test('event-derived records retain correctness separately from timing and failed
 
 test('benchmark telemetry records completed tool batches and bounded Operation metrics', () => {
   const record = deriveBenchmarkRecord(BENCHMARK_CASES[0]!, [
-    { type: 'provider.attempt.started', turnId: 't', runId: 'r', attemptId: 'a' },
+    { type: 'provider.attempt.started', turnId: 't', runId: 'r', attemptId: 'a', outputPolicy: { requestedMaxOutputTokens: 8_192, disposition: 'applied' } },
     { type: 'provider.tool.call', callId: 'one', name: 'read_file', arguments: '{}' },
     { type: 'provider.tool.call', callId: 'two', name: 'read_file', arguments: '{}' },
     { type: 'provider.response.completed', usage: { inputTokens: 10, outputTokens: 2 } },
@@ -161,6 +161,7 @@ test('benchmark telemetry records completed tool batches and bounded Operation m
   assert.equal(record.providerToolSelectionRounds, 1);
   assert.equal(record.toolBatchCompression, 1);
   assert.equal(record.cachedInputTokens, null);
+  assert.deepEqual({ ceilings: record.requestedOutputTokenCeilings, applied: record.outputPolicyAppliedAttempts, inherited: record.outputPolicyInheritedAttempts, tools: record.completedToolPayloads, controls: record.completedControlPayloads }, { ceilings: [8_192], applied: 1, inherited: 0, tools: 2, controls: 1 });
   assert.deepEqual({ internal: record.internalTextBytes, widths: record.concurrentReadBatchWidths, average: record.averageConcurrentReadBatchWidth, maximum: record.maxConcurrentReadBatchWidth, parallel: record.parallelBatchWallMs, child: record.summedChildToolRuntimeMs, overlap: record.observedConcurrentReadOverlapMs, controls: record.georgeControlCount, human: record.humanModeRounds, operation: record.operationModeRounds, corrections: record.correctionCycles }, { internal: 12, widths: [2], average: 2, maximum: 2, parallel: 30, child: 50, overlap: 20, controls: 1, human: 0, operation: 1, corrections: 1 });
   assert.deepEqual({ frames: record.correctionFrameBytes, providerRounds: record.correctionProviderRounds, reinspections: record.correctionReinspectionCalls, reruns: record.validationReruns }, { frames: [700], providerRounds: 2, reinspections: 1, reruns: 1 });
 });

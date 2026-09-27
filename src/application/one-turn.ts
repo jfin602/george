@@ -32,6 +32,7 @@ import {
   validateContextProfile,
   validateContextOperatingMode,
   validateExecutionPolicy,
+  validateProviderOutputPolicy,
   validateRunBudget,
   type ApprovalPort,
   type ApprovalRequest,
@@ -49,6 +50,7 @@ import {
   type ProviderActivity,
   type ProviderContinuation,
   type ProviderPressure,
+  type ProviderOutputPolicy,
   type ProviderRequest,
   type ProviderToolChoice,
   type ProviderToolResult,
@@ -281,6 +283,8 @@ export type OneTurnSubmission = Readonly<{
   allowCanonicalRebase?: boolean;
   budget?: RunBudget;
   limits?: AgentLoopLimits;
+  /** Optional request intent. Human mode inherits provider behavior unless this is explicit. */
+  outputPolicy?: ProviderOutputPolicy;
 }>;
 
 function stableJson(value: import('../core/index.ts').JsonValue): string {
@@ -926,6 +930,13 @@ export class AgentLoopApplicationService {
   async *run(submission: AgentLoopSubmission): AsyncGenerator<ApplicationEvent> {
     const turnId = submission.turnId ?? randomUUID();
     const executionMode = submission.executionMode ?? 'human';
+    const configuredOutputPolicy = submission.outputPolicy;
+    let requestedOutputPolicy: ProviderOutputPolicy | undefined;
+    try { requestedOutputPolicy = configuredOutputPolicy === undefined ? undefined : validateProviderOutputPolicy(configuredOutputPolicy); }
+    catch (cause) {
+      throw new GeorgeError('configuration', cause instanceof Error ? cause.message : 'Provider output policy is invalid.');
+    }
+    const appliedOutputPolicy = requestedOutputPolicy !== undefined && this.provider.supportsOutputPolicy === true ? requestedOutputPolicy : undefined;
     const budget = submission.budget ?? this.createRunBudget();
     const registry = submission.toolNames === undefined ? this.registry : this.registry.select(submission.toolNames);
     const requestedLimits = submission.limits;
@@ -1083,7 +1094,7 @@ export class AgentLoopApplicationService {
           try {
             yield* this.consumeBudget(submission.session, turnId, budget, 'providerAttempts', 1, submission.signal);
             attemptStartedAt = this.stallScheduler.now();
-            yield* emit({ type: 'provider.attempt.started', turnId, runId: budget.id, attemptId });
+            yield* emit({ type: 'provider.attempt.started', turnId, runId: budget.id, attemptId, ...(requestedOutputPolicy === undefined ? {} : { outputPolicy: { requestedMaxOutputTokens: requestedOutputPolicy.maxOutputTokens, disposition: appliedOutputPolicy === undefined ? 'inherited' as const : 'applied' as const } }) });
             yield* this.invokeHooks(submission.session, { name: 'provider.requested', sessionId: submission.session.id, turnId, runId: budget.id }, budget, submission.signal);
             if (submission.signal?.aborted) throw cancellationError(submission.signal);
             watchdog = new ProviderAttemptWatchdog(this.providerStallPolicy, this.stallScheduler);
@@ -1092,6 +1103,7 @@ export class AgentLoopApplicationService {
               ...baseRequest, input: attemptInput,
               ...(alignment === undefined ? {} : { roundContext: alignment }),
               ...(attemptContinuation === undefined && toolRounds === 0 && submission.initialToolChoice !== undefined ? { toolChoice: submission.initialToolChoice } : {}),
+              ...(appliedOutputPolicy === undefined ? {} : { outputPolicy: appliedOutputPolicy }),
               ...(attemptContinuation === undefined ? {} : { continuation: attemptContinuation }),
             };
             const observeActivity = (activity: ProviderActivity) => {

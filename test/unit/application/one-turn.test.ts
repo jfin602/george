@@ -727,6 +727,7 @@ test('Operation mode keeps prose internal, accepts only completed handoff, and p
   t.after(() => rm(root, { recursive: true, force: true }));
   const provider = new class implements ModelProvider {
     readonly supportsRoundContext = true as const;
+    readonly supportsOutputPolicy = true as const;
     readonly requests: ProviderRequest[] = [];
     async *stream(request: ProviderRequest): AsyncGenerator<ProviderEvent> {
       this.requests.push(request);
@@ -743,6 +744,7 @@ test('Operation mode keeps prose internal, accepts only completed handoff, and p
   const events = await collect(service.run({ session, input: 'Inspect internally.', executionMode: 'operation' }));
 
   assert.equal(provider.requests.every((request) => request.executionMode === 'operation'), true);
+  assert.equal(provider.requests.every((request) => request.outputPolicy === undefined), true);
   assert.match(provider.requests[0]?.instructions ?? '', /George Operation Protocol v1/);
   assert.deepEqual(provider.requests[0]?.tools?.map((tool) => tool.name), ['read_file']);
   assert.equal(provider.requests[0]?.tools?.some((tool) => /handoff|control/i.test(tool.name)), false);
@@ -754,6 +756,62 @@ test('Operation mode keeps prose internal, accepts only completed handoff, and p
   ]);
   assert.deepEqual(session.transcript, []);
   assert.equal(events.at(-1)?.type, 'turn.completed');
+});
+
+test('output policy leaves Human mode inherited and degrades explicitly for unsupported adapters', async (t) => {
+  const root = await workspace();
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const human = new ScriptedProvider([{ type: 'provider.text.delta', delta: 'normal answer' }, { type: 'provider.response.completed' }]);
+  await collect((await createOneTurnApplicationService({ provider: human, workspace: root })).run({ session: createSession({ workspace: root }), input: 'human' }));
+  assert.equal(human.calls[0]?.request.outputPolicy, undefined);
+
+  const boundedHuman = new class implements ModelProvider {
+    readonly supportsOutputPolicy = true as const;
+    request: ProviderRequest | undefined;
+    async *stream(request: ProviderRequest): AsyncGenerator<ProviderEvent> {
+      this.request = request;
+      yield { type: 'provider.text.delta', delta: 'bounded answer' };
+      yield { type: 'provider.response.completed' };
+    }
+  }();
+  await collect((await createOneTurnApplicationService({ provider: boundedHuman, workspace: root })).run({ session: createSession({ workspace: root }), input: 'bounded human', outputPolicy: { maxOutputTokens: 16_384 } }));
+  assert.deepEqual(boundedHuman.request?.outputPolicy, { maxOutputTokens: 16_384 });
+
+  const unsupported = new ScriptedProvider([{ type: 'provider.text.delta', delta: '{"version":1,"control":"handoff"}' }, { type: 'provider.response.completed' }]);
+  const events = await collect((await createOneTurnApplicationService({ provider: unsupported, workspace: root })).run({ session: createSession({ workspace: root }), input: 'operation', executionMode: 'operation', outputPolicy: { maxOutputTokens: 8_192 } }));
+  assert.equal(unsupported.calls[0]?.request.outputPolicy, undefined);
+  assert.deepEqual(events.filter((event) => event.type === 'provider.attempt.started').map((event) => event.outputPolicy), [{ requestedMaxOutputTokens: 8_192, disposition: 'inherited' }]);
+});
+
+test('output policy does not trim a completed large bounded function argument payload', async (t) => {
+  const root = await workspace();
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const payload = 'x'.repeat(48 * 1024);
+  let received = '';
+  const provider = new class implements ModelProvider {
+    readonly supportsOutputPolicy = true as const;
+    readonly requests: ProviderRequest[] = [];
+    async *stream(request: ProviderRequest): AsyncGenerator<ProviderEvent> {
+      this.requests.push(request);
+      yield { type: 'provider.response.started', responseId: 'large-tool' };
+      yield { type: 'provider.tool.call', callId: 'large', name: 'large_payload', arguments: JSON.stringify({ payload }) };
+      yield { type: 'provider.response.completed', usage: { outputTokens: 12_400 } };
+    }
+  }();
+  const service = await createOneTurnApplicationService({
+    provider, workspace: root,
+    additionalTools: [{
+      name: 'large_payload', description: 'Accept a bounded payload.',
+      inputSchema: { type: 'object', properties: { payload: { type: 'string', maxLength: 64 * 1024 } }, required: ['payload'], additionalProperties: false },
+      execution: { effect: 'local_read', replaySafety: 'replay_safe', source: { kind: 'builtin' } },
+      execute: async (arguments_) => { received = arguments_.payload as string; return { bytes: Buffer.byteLength(received) }; },
+    }],
+  });
+  const events = await collect(service.run({ session: createSession({ workspace: root }), input: 'large', executionMode: 'operation', outputPolicy: { maxOutputTokens: 32_768 }, completeAfterSuccessfulToolRound: true }));
+  assert.equal(received, payload);
+  assert.deepEqual(provider.requests[0]?.outputPolicy, { maxOutputTokens: 32_768 });
+  assert.equal(events.some((event) => event.type === 'tool.completed' && event.callId === 'large'), true);
+  assert.equal(events.some((event) => event.type === 'agent.round.completed' && event.toolCallCount === 1), true);
 });
 
 test('Operation controls and tool proposals fail closed until a completed valid response', async (t) => {

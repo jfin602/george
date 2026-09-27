@@ -4,6 +4,7 @@ import {
   MAX_PROVIDER_ROUND_CONTEXT_BYTES,
   MAX_PROVIDER_TIMEOUT_MS,
   cancellationError,
+  validateProviderOutputPolicy,
   validateModelId,
   validateProviderBaseUrl,
   type ModelProvider,
@@ -356,6 +357,7 @@ export async function* parseSse(
 
 export class LmStudioResponsesProvider implements ModelProvider {
   readonly supportsRoundContext = true as const;
+  readonly supportsOutputPolicy = true as const;
   readonly baseUrl: URL;
   readonly model: string | undefined;
   readonly defaultTimeoutMs: number;
@@ -382,6 +384,13 @@ export class LmStudioResponsesProvider implements ModelProvider {
     }
     if (request.roundContext !== undefined && (typeof request.roundContext !== 'string' || request.roundContext.includes('\0') || Buffer.byteLength(request.roundContext, 'utf8') > MAX_PROVIDER_ROUND_CONTEXT_BYTES)) {
       const error = new GeorgeError('validation', `Provider round context must be bounded to ${MAX_PROVIDER_ROUND_CONTEXT_BYTES} bytes.`);
+      yield { type: 'provider.error', error };
+      throw error;
+    }
+    let outputPolicy;
+    try { outputPolicy = request.outputPolicy === undefined ? undefined : validateProviderOutputPolicy(request.outputPolicy); }
+    catch (cause) {
+      const error = new GeorgeError('validation', cause instanceof Error ? cause.message : 'Provider output policy is invalid.');
       yield { type: 'provider.error', error };
       throw error;
     }
@@ -435,6 +444,7 @@ export class LmStudioResponsesProvider implements ModelProvider {
               })),
             }),
             ...(request.toolChoice === undefined ? {} : { tool_choice: request.toolChoice }),
+            ...(outputPolicy === undefined ? {} : { max_output_tokens: outputPolicy.maxOutputTokens }),
             stream: true,
           }),
           signal,

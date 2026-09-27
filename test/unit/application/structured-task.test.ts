@@ -11,6 +11,7 @@ import { addressTaskWorkUnit, beginTaskCorrection, beginTaskWorkUnit, createTask
 
 class Provider implements ModelProvider {
   readonly supportsRoundContext = true as const;
+  readonly supportsOutputPolicy = true as const;
   readonly requests: ProviderRequest[] = [];
   private readonly rounds: (readonly ProviderEvent[])[];
   constructor(rounds: readonly (readonly ProviderEvent[])[]) { this.rounds = [...rounds]; }
@@ -207,6 +208,7 @@ test('structured service preflights with local reads, progresses task state, and
     'inspection-evidence-complete', 'work-unit-complete', 'work-unit-complete', 'validation-passed', 'validation-passed',
   ]);
   assert.deepEqual(provider.requests.map((request) => request.executionMode), ['operation', 'operation', 'operation']);
+  assert.equal(provider.requests.every((request) => request.outputPolicy === undefined), true);
   assert.deepEqual(events.filter((event) => event.type === 'tool.completed' && event.execution?.effect === 'local_read').map((event) => event.callId), ['read', 'list']);
   assert.match(provider.requests[0]?.input ?? '', /W1 — First work/);
   // live:c2:inspect-no-evidence — keep the bounded preflight from guessing enough paths to discard valid evidence at the frozen ceiling.
@@ -284,6 +286,7 @@ test('DISCOVER validation accepts only an explicit executable/argv proposal and 
   assert.match(provider.requests[3]?.input ?? '', /focused local check/);
   assert.equal(provider.requests.length, 4);
   assert.deepEqual(provider.requests.map((request) => request.executionMode), ['operation', 'operation', 'operation', 'human']);
+  assert.equal(provider.requests.every((request) => request.outputPolicy === undefined), true);
   assert.equal(events.filter((event) => event.type === 'validation.started').length, 2);
   assert.deepEqual([...new Set(events.filter((event): event is Extract<ApplicationEvent, { type: 'reliability.run.started' }> => event.type === 'reliability.run.started').map((event) => event.runId))], ['discover-task-wide']);
 });
@@ -382,6 +385,7 @@ STOP CONDITIONS
   assert.match(provider.requests[0]?.roundContext ?? '', /V1: Marker check[\s\S]*status=failed; outcome=failed; exit=1/);
   assert.doesNotMatch(provider.requests[0]?.roundContext ?? '', /MISSION CARD|GOAL|DELIVERABLES/);
   assert.equal(provider.requests.every((request) => request.executionMode === 'operation'), true);
+  assert.equal(provider.requests.every((request) => request.outputPolicy === undefined), true);
   assert.equal(session.taskState?.status, 'completed');
   assert.deepEqual(session.taskState?.validations.V1?.attempts.map((attempt) => attempt.status), ['failed', 'passed']);
   assert.equal(session.taskState?.validations.V1?.attempts[0]?.stderr, 'old diagnostic');

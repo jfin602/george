@@ -66,6 +66,7 @@ test('Operation rounds persist only bounded metrics and never enter the transcri
   const store = new LocalSessionStore({ root: state });
   const session = createSession({ id: 'operation-metrics', workspace });
   appendSessionEvent(session, { type: 'input.submitted', text: 'INTERNAL_OPERATION_OBJECTIVE', executionMode: 'operation' });
+  appendSessionEvent(session, { type: 'provider.attempt.started', turnId: 'operation', runId: 'run', attemptId: 'attempt', outputPolicy: { requestedMaxOutputTokens: 32_768, disposition: 'applied' } });
   appendSessionEvent(session, { type: 'agent.round.completed', turnId: 'operation', round: 1, executionMode: 'operation', internalTextBytes: 17, estimatedInternalTextTokens: 5, toolCallCount: 1, control: 'handoff' });
   appendSessionEvent(session, { type: 'model.round.avoided', turnId: 'operation', reason: 'validation-passed' });
   appendSessionEvent(session, { type: 'correction.frame.created', turnId: 'operation', cycle: 1, validationId: 'V1', bytes: 900, freshEvidenceCount: 2 });
@@ -79,6 +80,7 @@ test('Operation rounds persist only bounded metrics and never enter the transcri
   const reopened = await store.open(session.id, workspace);
   assert.deepEqual(reopened.transcript, []);
   assert.deepEqual(reopened.events, [
+    { type: 'provider.attempt.started', turnId: 'operation', runId: 'run', attemptId: 'attempt', outputPolicy: { requestedMaxOutputTokens: 32_768, disposition: 'applied' } },
     { type: 'agent.round.completed', turnId: 'operation', round: 1, executionMode: 'operation', internalTextBytes: 17, estimatedInternalTextTokens: 5, toolCallCount: 1, control: 'handoff' },
     { type: 'model.round.avoided', turnId: 'operation', reason: 'validation-passed' },
     { type: 'correction.frame.created', turnId: 'operation', cycle: 1, validationId: 'V1', bytes: 900, freshEvidenceCount: 2 },
