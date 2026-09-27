@@ -181,7 +181,8 @@ test('calls execute in provider order across same-response and multiple tool rou
   const service = await createAgentLoopApplicationService({ provider, workspace: root });
   const events = await collect(service.run({ session: createSession({ workspace: root }), input: 'Inspect.' }));
 
-  assert.deepEqual(events.filter((event) => event.type === 'tool.completed').map((event) => event.callId), ['first', 'second', 'third']);
+  assert.deepEqual(events.filter((event) => event.type === 'tool.started').map((event) => event.callId), ['first', 'second', 'third']);
+  assert.deepEqual(events.filter((event) => event.type === 'tool.completed').map((event) => event.callId).sort(), ['first', 'second', 'third']);
   assert.deepEqual(provider.calls[1]?.request.continuation?.toolResults.map((result) => result.callId), ['first', 'second']);
   assert.deepEqual(provider.calls[2]?.request.continuation?.toolResults.map((result) => result.callId), ['third']);
 });

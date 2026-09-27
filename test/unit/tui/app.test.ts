@@ -20,7 +20,7 @@ import {
   type ProviderRequest,
   type ProviderStreamOptions,
 } from '../../../src/core/index.ts';
-import { createCodingWorkflowApplicationService, createOneTurnApplicationService, WorkProjection, type OneTurnServiceOptions } from '../../../src/application/index.ts';
+import { createCodingWorkflowApplicationService, createOneTurnApplicationService, StructuredTaskApplicationService, WorkProjection, type OneTurnServiceOptions } from '../../../src/application/index.ts';
 import { GeorgeTui, NEON_THEME, formatElapsedDuration, formatThinkingElapsed, formatWorkflowTiming, renderTask, renderTranscript, taskHeader, type GeorgeTuiOptions, type ThinkingClock, type TranscriptWorkEntry } from '../../../src/tui/app.ts';
 import { createTaskState, parseTaskPrompt } from '../../../src/tasks/index.ts';
 import type { ToolDefinition } from '../../../src/tools/index.ts';
@@ -64,6 +64,30 @@ class PausedProvider implements ModelProvider {
       new Promise<never>((_resolve, reject) => options.signal?.addEventListener('abort', () => reject(new GeorgeError('cancelled', 'Stopped')), { once: true })),
     ]);
     yield { type: 'provider.text.delta', delta: 'streamed answer' };
+    yield { type: 'provider.response.completed' };
+  }
+}
+
+class PausedStructuredProvider implements ModelProvider {
+  readonly supportsRoundContext = true as const;
+  readonly calls: ProviderRequest[] = [];
+  readonly started = Promise.withResolvers<void>();
+  readonly release = Promise.withResolvers<void>();
+
+  async *stream(request: ProviderRequest, options: ProviderStreamOptions = {}): AsyncGenerator<ProviderEvent> {
+    this.calls.push(request);
+    yield { type: 'provider.response.started', responseId: `structured-${this.calls.length}` };
+    if (this.calls.length === 1) {
+      yield { type: 'provider.tool.call', callId: 'structured-read', name: 'read_file', arguments: '{"path":"BOOT.md"}' };
+      yield { type: 'provider.response.completed' };
+      return;
+    }
+    this.started.resolve();
+    await Promise.race([
+      this.release.promise,
+      new Promise<never>((_resolve, reject) => options.signal?.addEventListener('abort', () => reject(new GeorgeError('cancelled', 'Stopped')), { once: true })),
+    ]);
+    yield { type: 'provider.text.delta', delta: '{"version":1,"control":"handoff"}' };
     yield { type: 'provider.response.completed' };
   }
 }
@@ -140,6 +164,7 @@ async function tui(
   provider: ModelProvider,
   options: Omit<OneTurnServiceOptions, 'provider' | 'workspace' | 'approvalPort'> = {},
   uiOptions: Pick<GeorgeTuiOptions, 'clipboard' | 'thinkingClock' | 'onMeasurement'> = {},
+  structured = false,
 ) {
   const workspace = await mkdtemp(join(tmpdir(), 'george-tui-'));
   await writeFile(join(workspace, 'BOOT.md'), 'fixture boot');
@@ -147,7 +172,7 @@ async function tui(
   const setup = await createTestRenderer({ width: 72, height: 24, kittyKeyboard: true, exitOnCtrlC: false });
   const approvals = new ObservedApprovalPort();
   const service = await createOneTurnApplicationService({ provider, workspace, approvalPort: approvals, ...options });
-  const app = new GeorgeTui({ renderer: setup.renderer, service, provider: 'LM Studio', model: 'test-model', approvals, ...uiOptions });
+  const app = new GeorgeTui({ renderer: setup.renderer, service: structured ? new StructuredTaskApplicationService(service) : service, provider: 'LM Studio', model: 'test-model', approvals, ...uiOptions });
   return { workspace, setup, app, approvals };
 }
 
@@ -193,9 +218,48 @@ test('Transcript and Task pages switch without changing session state or the com
   assert.equal(JSON.stringify(item.app.session), before);
   item.setup.mockInput.pressKey('1', { ctrl: true });
   assert.equal(item.app.currentPage(), 'transcript');
-  await item.setup.mockMouse.click(60, 6);
+  const taskTab = item.setup.renderer.root.findDescendantById('task-tab');
+  const transcriptTab = item.setup.renderer.root.findDescendantById('transcript-tab');
+  assert.ok(taskTab && transcriptTab);
+  await item.setup.mockMouse.click(taskTab.x + 2, taskTab.y);
   await item.setup.flush();
   assert.equal(item.app.currentPage(), 'task');
+  await item.setup.mockMouse.click(transcriptTab.x + 2, transcriptTab.y);
+  await item.setup.flush();
+  assert.equal(item.app.currentPage(), 'transcript');
+  assert.equal(item.app.input.plainText, 'preserve this draft');
+  assert.equal(JSON.stringify(item.app.session), before);
+});
+
+test('structured work stays in both pages while active navigation preserves draft, state, and provider', async (t) => {
+  const provider = new PausedStructuredProvider();
+  const item = await tui(provider, {}, {}, true);
+  t.after(() => cleanup(item));
+  const prompt = `GEORGE TASK FORMAT: 1\n\nTASK: P1 — TUI visibility\nKIND: implementation\n\nGOAL\n\n- Show active work.\n\nREQUIREMENTS\n\n- R1: Show work.\n\nWORKFLOW\n\nW1 — Inspect\nCovers: R1\nDepends on: none\n\nVALIDATION\n\nV1 — Check\nCovers: R1\nRun: node --version\n\nSTOP CONDITIONS\n\n- S1: Stop safely.`;
+  item.app.input.insertText(prompt);
+  const run = item.app.submit();
+  await provider.started.promise;
+  await item.setup.flush();
+  assert.deepEqual(item.app.session.transcript, [{ role: 'user', text: prompt, origin: 'structured_task' }]);
+  assert.equal(item.app.work.filter((entry) => entry.item.operationId === 'structured-read').length, 1);
+  assert.match(item.setup.captureCharFrame(), /Read BOOT\.md/);
+  assert.equal(provider.calls.every((request) => request.executionMode === 'operation'), true);
+  assert.equal(provider.calls.some((request) => (request.input ?? '').includes('Read BOOT.md (')), false);
+  item.app.input.insertText('draft while working');
+  const state = JSON.stringify(item.app.session);
+  item.setup.mockInput.pressKey('2', { ctrl: true });
+  await item.setup.flush();
+  assert.equal(item.app.currentPage(), 'task');
+  assert.match(item.setup.captureCharFrame(), /Goal/);
+  assert.match(renderTask(item.app.session.taskState, item.app.work, 80), /Recent work[\s\S]*Read BOOT\.md/);
+  item.setup.mockInput.pressKey('1', { ctrl: true });
+  await item.setup.flush();
+  assert.equal(item.app.currentPage(), 'transcript');
+  assert.equal(item.app.input.plainText, 'draft while working');
+  assert.equal(JSON.stringify(item.app.session), state);
+  assert.equal(provider.calls.length, 2);
+  item.app.escape();
+  await run.catch(() => {});
 });
 
 test('task renderer uses application-owned task and work projections without unsafe bodies', () => {
@@ -445,6 +509,23 @@ test('reopened workflow renders historical evidence as idle and starts a fresh p
   assert.doesNotMatch(provider.calls[0]?.request.input ?? '', /Awaiting approval|Previous operation|old-provider-id/);
   assert.match(app.session.transcript.map((entry) => entry.text).join('\n'), /new request\nnew answer/);
   assert.equal((await store.open('resume-1', workspace)).interruptions.some((item) => item.kind === 'provider-continuation'), true);
+});
+
+test('reopened structured submission keeps historical work below the original user task', async (t) => {
+  const root = await mkdtemp(join(tmpdir(), 'george-tui-structured-reopen-'));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const store = new LocalSessionStore({ root: join(root, 'state') });
+  const session = createSession({ workspace: root });
+  appendSessionEvent(session, { type: 'input.submitted', text: 'original structured task', origin: 'structured_task' });
+  appendSessionEvent(session, { type: 'work.updated', item: { id: 'read', turnId: 'task', operationId: 'read', category: 'inspection', status: 'succeeded', summary: 'Read BOOT.md', details: {} } });
+  await store.save(session);
+  const setup = await createTestRenderer({ width: 72, height: 24, kittyKeyboard: true, exitOnCtrlC: false });
+  const approvals = new PendingApprovalPort();
+  const service = await createOneTurnApplicationService({ provider: new ScriptedProvider([]), workspace: root, approvalPort: approvals });
+  const app = new GeorgeTui({ renderer: setup.renderer, service, session: await store.open(session.id, root), provider: 'fixture', model: 'fixture', approvals });
+  t.after(() => app.close());
+  const visible = renderTranscript(app.session.transcript, app.diagnostics, 80, app.work).chunks.map((chunk) => chunk.text).join('');
+  assert.match(visible, /original structured task[\s\S]*Read BOOT\.md/);
 });
 
 test('resumed transcript waits for measured layout before its first usable frame', async (t) => {

@@ -7,6 +7,8 @@ import type { StackState } from '../tasks/stack-state.ts';
 export type TranscriptEntry = Readonly<{
   role: 'user' | 'assistant';
   text: string;
+  /** Marks an accepted human submission even when internal Operation stages produce no prose reply. */
+  origin?: 'structured_task';
 }>;
 
 export type Session = {
@@ -39,7 +41,7 @@ export function createSession({
 export function appendSessionEvent(session: Session, event: ApplicationEvent): void {
   session.events.push(event);
   if (event.type === 'input.submitted' && event.executionMode !== 'operation') {
-    session.transcript.push({ role: 'user', text: event.text });
+    session.transcript.push({ role: 'user', text: event.text, ...(event.origin === undefined ? {} : { origin: event.origin }) });
   } else if (event.type === 'assistant.response.completed') {
     appendAssistantResponse(session, event.text);
   }

@@ -196,6 +196,9 @@ test('structured service preflights with local reads, progresses task state, and
   const session = createSession({ workspace: root });
   const events: ApplicationEvent[] = [];
   await service.run({ session, input: task, turnId: 'structured', onEvent: (event) => { events.push(event); } });
+  assert.deepEqual(session.transcript.filter((entry) => entry.role === 'user'), [{ role: 'user', text: task, origin: 'structured_task' }]);
+  assert.equal(events.filter((event) => event.type === 'input.submitted' && event.executionMode !== 'operation').length, 1);
+  assert.equal(session.transcript.some((entry) => entry.text.includes('MISSION CARD') || entry.text.includes('CORRECTION FRAME') || entry.text.includes('inspected')), false);
   assert.equal(session.taskState?.status, 'completed');
   assert.equal(session.taskState?.requirements.R1, 'verified');
   assert.equal(session.taskState?.validations.V1?.status, 'passed');

@@ -482,6 +482,7 @@ export class StructuredTaskApplicationService extends CodingWorkflowApplicationS
     if (submission.session.taskState && submission.session.taskState.definitionFingerprint !== createTaskState({ sessionId: submission.session.id, workspace: submission.session.workspace, definition }).definitionFingerprint) {
       throw new GeorgeError('validation', 'Session already has a different structured task.');
     }
+    await this.emit(submission, { type: 'input.submitted', text: submission.input, origin: 'structured_task' });
     let state = submission.session.taskState ?? createTaskState({ sessionId: submission.session.id, workspace: submission.session.workspace, definition, effectivePermissionExpectations: permissionProjection(executionPolicy), ...(this.correctionLimit === undefined ? {} : { correctionLimit: this.correctionLimit }) });
     submission.session.taskState = state;
     if (recoveryNeedsPlanning(submission) && !['completed', 'failed', 'blocked', 'planning_needed', 'cancelled', 'budget_exhausted'].includes(state.status)) {

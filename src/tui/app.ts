@@ -381,7 +381,8 @@ export class GeorgeTui {
   private readonly taskView: TextRenderable;
   private readonly statusView: TextRenderable;
   private readonly taskHeaderView: TextRenderable;
-  private readonly pagesView: TextRenderable;
+  private readonly transcriptTab: TextRenderable;
+  private readonly taskTab: TextRenderable;
   private readonly contextView: TextRenderable;
   private readonly activityView: TextRenderable;
   private readonly approvalView: TextRenderable;
@@ -429,11 +430,13 @@ export class GeorgeTui {
     layout.add(this.taskHeaderView);
     this.contextView = new TextRenderable(this.renderer, { id: 'context', width: '100%', height: 2, flexShrink: 0, fg: NEON_THEME.muted, content: 'Context: awaiting first turn' });
     layout.add(this.contextView);
-    this.pagesView = new TextRenderable(this.renderer, {
-      id: 'pages', width: '100%', height: 1, flexShrink: 0, fg: NEON_THEME.mint, content: '',
-      onMouseDown: (event) => { if (event.button === 0) this.switchPage(event.x < this.pagesView.x + Math.ceil(this.pagesView.width / 2) ? 'transcript' : 'task'); },
-    });
-    layout.add(this.pagesView);
+    const pages = new BoxRenderable(this.renderer, { id: 'pages', width: '100%', height: 1, flexShrink: 0, flexDirection: 'row' });
+    this.transcriptTab = new TextRenderable(this.renderer, { id: 'transcript-tab', width: 15, height: 1, fg: NEON_THEME.mint, content: '', onMouseDown: (event) => { if (event.button === 0) this.switchPage('transcript'); } });
+    this.taskTab = new TextRenderable(this.renderer, { id: 'task-tab', width: 9, height: 1, fg: NEON_THEME.mint, content: '', onMouseDown: (event) => { if (event.button === 0) this.switchPage('task'); } });
+    pages.add(this.transcriptTab);
+    pages.add(this.taskTab);
+    pages.add(new TextRenderable(this.renderer, { id: 'page-shortcuts', content: '· Ctrl+1 / Ctrl+2 switch', fg: NEON_THEME.muted }));
+    layout.add(pages);
     this.transcript = new ScrollBoxRenderable(this.renderer, { id: 'transcript', flexGrow: 1, scrollY: true, stickyScroll: true, stickyStart: 'bottom', border: true, borderStyle: 'single', borderColor: NEON_THEME.border, focusedBorderColor: NEON_THEME.mint, backgroundColor: NEON_THEME.transcript, title: 'Transcript', titleColor: NEON_THEME.mint });
     this.transcriptView = new TextRenderable(this.renderer, { id: 'transcript-text', width: '100%', fg: NEON_THEME.foreground, selectionBg: NEON_THEME.green, selectionFg: NEON_THEME.background, content: '', onSizeChange: () => this.refreshTranscript() });
     this.transcript.add(this.transcriptView);
@@ -471,7 +474,7 @@ export class GeorgeTui {
     this.refreshTask();
     this.refreshPages();
     this.renderer.once(CliRenderEvents.FRAME, () => { this.refreshTranscript(); this.refreshTask(); });
-    this.renderer._internalKeyInput.onInternal('keypress', (key) => {
+    this.renderer.keyInput.on('keypress', (key) => {
       if (key.name === 'escape') {
         key.preventDefault();
         this.escape();
@@ -666,10 +669,16 @@ export class GeorgeTui {
     this.task.visible = page === 'task';
     this.refreshPages();
     this.renderer.requestRender();
+    this.renderer.once(CliRenderEvents.FRAME, () => {
+      if (page === 'task') this.refreshTask();
+      else this.refreshTranscript();
+      this.renderer.requestRender();
+    });
   }
 
   private refreshPages(): void {
-    this.pagesView.content = `${this.page === 'transcript' ? '[Transcript]' : ' Transcript '}  ${this.page === 'task' ? '[Task]' : ' Task '} · Ctrl+1 / Ctrl+2 switch`;
+    this.transcriptTab.content = this.page === 'transcript' ? '[Transcript]' : ' Transcript ';
+    this.taskTab.content = this.page === 'task' ? '[Task]' : ' Task ';
   }
 
   close(): void {
@@ -785,7 +794,7 @@ export class GeorgeTui {
     const entries = this.revealedAssistant === undefined ? this.session.transcript : this.session.transcript.map((entry, index) =>
       index === this.revealedAssistant!.index ? { ...entry, text: this.revealedAssistant!.text } : entry,
     );
-    this.transcriptView.content = renderTranscript(entries, this.diagnostics, bodyWidth, this.session.taskState || this.session.stackState ? [] : this.work);
+    this.transcriptView.content = renderTranscript(entries, this.diagnostics, bodyWidth, this.work);
   }
 
   private refreshTask(): void {
@@ -846,6 +855,8 @@ export class GeorgeTui {
         continue;
       }
       if (event.type === 'work.updated') {
+        // Durable input events omit bodies; position historical work after its retained user entry.
+        if (this.session.transcript[afterEntryCount]?.role === 'user') afterEntryCount += 1;
         const active = event.item.status === 'requested' || event.item.status === 'running' || event.item.status === 'waiting';
         const item = active ? { ...event.item, status: 'interrupted' as const, summary: `Previous operation interrupted: ${event.item.summary}` } : event.item;
         const existing = this.work.findIndex((entry) => entry.item.id === item.id);

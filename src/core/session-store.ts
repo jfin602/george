@@ -653,10 +653,12 @@ function parseStackState(value: unknown, sessionId: string, workspace: string): 
 
 function durableSession(session: Session, workspace: string): SerializedDurableSession {
   // Durable events intentionally omit prior input bodies, so they cannot rebuild a reopened transcript.
-  // A trailing user entry is the only incomplete canonical turn state and remains non-durable.
-  const transcript = (session.transcript.at(-1)?.role === 'user' ? session.transcript.slice(0, -1) : session.transcript).map((entry) => {
+  // Ordinary unfinished user turns remain non-durable; structured submissions are already accepted work.
+  const last = session.transcript.at(-1);
+  const transcript = (last?.role === 'user' && last.origin !== 'structured_task' ? session.transcript.slice(0, -1) : session.transcript).map((entry) => {
     if (entry.role !== 'user' && entry.role !== 'assistant') invalid('transcript role is invalid.');
-    return { role: entry.role, text: string(entry.text, 'transcript text') } as TranscriptEntry;
+    if (entry.origin !== undefined && (entry.role !== 'user' || entry.origin !== 'structured_task')) invalid('transcript origin is invalid.');
+    return { role: entry.role, text: string(entry.text, 'transcript text'), ...(entry.origin === undefined ? {} : { origin: entry.origin }) } as TranscriptEntry;
   });
   if (transcript.length > MAX_DURABLE_TRANSCRIPT_ENTRIES) invalid('transcript exceeds its bound.');
   if (session.events.length > MAX_DURABLE_EVENTS) invalid('event history exceeds its bound.');
@@ -671,10 +673,11 @@ function durableSession(session: Session, workspace: string): SerializedDurableS
 function parseTranscript(value: unknown): TranscriptEntry[] {
   return boundedArray(value, 'transcript', MAX_DURABLE_TRANSCRIPT_ENTRIES).map((entry) => {
     const item = record(entry, 'transcript entry');
-    exactKeys(item, ['role', 'text'], 'transcript entry');
+    exactKeys(item, ['role', 'text', ...(item.origin === undefined ? [] : ['origin'])], 'transcript entry');
     const role = string(item.role, 'transcript role', 16);
     if (role !== 'user' && role !== 'assistant') invalid('transcript role is invalid.');
-    return { role, text: string(item.text, 'transcript text') };
+    if (item.origin !== undefined && (role !== 'user' || item.origin !== 'structured_task')) invalid('transcript origin is invalid.');
+    return { role, text: string(item.text, 'transcript text'), ...(item.origin === undefined ? {} : { origin: 'structured_task' as const }) };
   });
 }
 

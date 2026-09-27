@@ -183,7 +183,7 @@ export type ApplicationEvent =
   | Readonly<{ type: 'context.compaction.completed'; turnId: string; runId: string; checkpoint: ContextCheckpointEvidence }>
   | Readonly<{ type: 'context.compaction.failed'; turnId: string; runId: string; reason: string }>
   | Readonly<{ type: 'turn.started'; turnId: string }>
-  | Readonly<{ type: 'input.submitted'; text: string; executionMode?: ExecutionMode }>
+  | Readonly<{ type: 'input.submitted'; text: string; executionMode?: ExecutionMode; origin?: 'structured_task' }>
   | Readonly<{ type: 'assistant.response.completed'; turnId: string; text: string }>
   /** Completed-round metrics only; raw Operation-mode text is never retained. */
   | Readonly<{ type: 'agent.round.completed'; turnId: string; round: number; executionMode: ExecutionMode; internalTextBytes: number; estimatedInternalTextTokens: number; toolCallCount: number; control?: 'handoff' }>

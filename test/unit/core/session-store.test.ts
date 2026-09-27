@@ -90,6 +90,20 @@ test('Operation rounds persist only bounded metrics and never enter the transcri
   ]);
 });
 
+test('structured human submission survives reopen without a prose response; internal Operation input does not', async () => {
+  const { workspace, state } = await fixture();
+  const store = new LocalSessionStore({ root: state });
+  const session = createSession({ id: 'structured-human', workspace });
+  appendSessionEvent(session, { type: 'input.submitted', text: 'GEORGE TASK FORMAT: 1\nOriginal human task', origin: 'structured_task' });
+  appendSessionEvent(session, { type: 'input.submitted', text: 'MISSION CARD INTERNAL', executionMode: 'operation' });
+  await store.save(session);
+  const reopened = await store.open(session.id, workspace);
+  assert.deepEqual(reopened.transcript, [{ role: 'user', text: 'GEORGE TASK FORMAT: 1\nOriginal human task', origin: 'structured_task' }]);
+  await store.save(reopened);
+  assert.deepEqual((await store.open(session.id, workspace)).transcript, reopened.transcript);
+  assert.doesNotMatch(await readFile(join(state, `${session.id}.json`), 'utf8'), /MISSION CARD INTERNAL/);
+});
+
 test('resaving a reopened session preserves prior canonical history without persisting an unfinished tail', async () => {
   const { workspace, state } = await fixture();
   const store = new LocalSessionStore({ root: state });
