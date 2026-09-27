@@ -8,6 +8,7 @@ import type { TextFraming } from '../tools/text-framing.ts';
 
 export const GEORGE_EDIT_PROTOCOL_VERSION = 1;
 export const MAX_GEP_PACKET_BYTES = MAX_OPERATION_TEXT_BYTES;
+export const MAX_GEP_DUAL_PROJECTION_BYTES = 16 * 1024;
 const MAX_RECEIPTS = 32;
 const MAX_RECEIPT_BYTES = 64 * 1024;
 const MAX_OPERATIONS = 8;
@@ -180,7 +181,7 @@ export class GeorgeEditReceiptRegistry {
 
   get count(): number { return this.receipts.size; }
 
-  /** Returns compact provider evidence while retaining the exact snapshot only in this run-local registry. */
+  /** Adds bounded provider metadata while retaining the exact receipt snapshot only in this run-local registry. */
   project(result: ToolResult, epoch: number): ToolResult {
     if (result.name !== 'read_file' || !result.result.ok || !result.result.value || typeof result.result.value !== 'object' || Array.isArray(result.result.value)) return result;
     const value = result.result.value as Record<string, unknown>;
@@ -189,13 +190,15 @@ export class GeorgeEditReceiptRegistry {
       || !framing || framing.lineEnding === 'mixed' || !['none', 'lf', 'crlf'].includes(framing.lineEnding) || !['none', 'lf', 'crlf'].includes(framing.finalNewline)) return result;
     const bytes = Buffer.from(value.text, 'utf8');
     if (!value.text || bytes.length !== value.bytes || bytes.length > MAX_RECEIPT_BYTES || bytes.toString('utf8') !== value.text || value.text.includes('\0')) return result;
-    if (this.receipts.size === MAX_RECEIPTS) this.receipts.delete(this.receipts.keys().next().value!);
-    const id = `R${this.next++}`;
-    const receipt = Object.freeze({ id, path: value.path, sha256: value.sha256, snapshot: value.text, framing, epoch });
-    this.receipts.set(id, receipt);
+    const id = `R${this.next}`;
     const separator = framing.lineEnding === 'crlf' ? '\r\n' : framing.lineEnding === 'lf' ? '\n' : undefined;
     const lines = separator === undefined ? [value.text] : value.text.split(separator).slice(0, framing.finalNewline === 'none' ? undefined : -1);
-    const projected: JsonValue = { name: 'read_file', path: value.path, receipt: id, lines: lines.map((line, index) => `${index + 1}|${line}`).join('\n'), bytes: value.bytes, textFraming: framing as unknown as JsonValue };
+    const projected: JsonValue = { ...value, gep: { receipt: id, numberedLines: lines.map((line, index) => `${index + 1}|${line}`).join('\n') } } as JsonValue;
+    if (Buffer.byteLength(JSON.stringify({ ok: true, value: projected }), 'utf8') > MAX_GEP_DUAL_PROJECTION_BYTES) return result;
+    this.next += 1;
+    if (this.receipts.size === MAX_RECEIPTS) this.receipts.delete(this.receipts.keys().next().value!);
+    const receipt = Object.freeze({ id, path: value.path, sha256: value.sha256, snapshot: value.text, framing, epoch });
+    this.receipts.set(id, receipt);
     return { ...result, result: { ok: true, value: projected } };
   }
 

@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import test from 'node:test';
 
 import { LocalSessionStore, createSession, type ApprovalPort, type ApplicationEvent, type ModelProvider, type ProviderEvent, type ProviderRequest } from '../../../src/core/index.ts';
-import { StructuredTaskApplicationService, createCodingWorkflowApplicationService, createOneTurnApplicationService } from '../../../src/application/index.ts';
+import { MAX_GEP_DUAL_PROJECTION_BYTES, StructuredTaskApplicationService, createCodingWorkflowApplicationService, createOneTurnApplicationService } from '../../../src/application/index.ts';
 
 const allow: ApprovalPort = { async request() { return 'allow_once'; } };
 const payload = (value: string) => `${Buffer.byteLength(value)}\n${value}\n`;
@@ -35,7 +35,7 @@ test('Operation reads project ephemeral receipts and completed GEP expands throu
         yield { type: 'provider.response.started', responseId: 'read' };
         yield { type: 'provider.tool.call', callId: 'read-target', name: 'read_file', arguments: '{"path":"target.txt"}' };
       } else yield { type: 'provider.text.delta', delta: gep };
-      yield { type: 'provider.response.completed' };
+      yield { type: 'provider.response.completed', ...(this.requests.length === 1 ? { usage: { inputTokens: 8_000, outputTokens: 20 } } : {}) };
     }
   }();
   const service = await createOneTurnApplicationService({ provider, workspace: root, approvalPort: allow, toolNames: ['read_file', 'write_file', 'apply_patch'] });
@@ -45,10 +45,19 @@ test('Operation reads project ephemeral receipts and completed GEP expands throu
   const continuation = provider.requests[1]?.continuation?.toolResults[0];
   assert.equal(continuation?.result.ok, true);
   if (!continuation?.result.ok || !continuation.result.value || typeof continuation.result.value !== 'object' || Array.isArray(continuation.result.value)) throw new Error('Expected compact read evidence.');
-  assert.equal(continuation.result.value.receipt, 'R1');
-  assert.equal('sha256' in continuation.result.value, false);
-  assert.equal('text' in continuation.result.value, false);
-  assert.match(String(continuation.result.value.lines), /^1\|line 01/m);
+  assert.equal(continuation.result.value.name, 'read_file');
+  assert.equal(continuation.result.value.path, 'target.txt');
+  assert.equal(continuation.result.value.text, original);
+  assert.equal(continuation.result.value.bytes, Buffer.byteLength(original));
+  assert.equal(continuation.result.value.truncated, false);
+  assert.equal(typeof continuation.result.value.sha256, 'string');
+  assert.deepEqual(continuation.result.value.textFraming, { lineEnding: 'lf', finalNewline: 'lf' });
+  const gepProjection = continuation.result.value.gep as { receipt: string; numberedLines: string };
+  assert.equal(gepProjection.receipt, 'R1');
+  assert.match(gepProjection.numberedLines, /^1\|line 01/m);
+  assert.ok(Buffer.byteLength(JSON.stringify(continuation.result)) <= MAX_GEP_DUAL_PROJECTION_BYTES);
+  const promotion = events.find((event) => event.type === 'context.envelope.promoted' && event.reason === 'continuation-estimate');
+  assert.equal(promotion?.type === 'context.envelope.promoted' ? promotion.tokens : undefined, 8_000 + 20 + Math.ceil(JSON.stringify(provider.requests[1]?.continuation?.toolResults).length / 4) + 32);
   assert.deepEqual(events.filter((event) => event.type === 'tool.requested').map((event) => event.name), ['read_file', 'apply_patch', 'write_file']);
   assert.deepEqual(events.filter((event) => event.type === 'recovery.intent').map((event) => event.intent.name), ['apply_patch', 'write_file']);
   assert.equal(events.filter((event) => event.type === 'approval.allowed').length, 2);
@@ -66,6 +75,40 @@ test('Operation reads project ephemeral receipts and completed GEP expands throu
   const reopened = await store.open(session.id, root);
   assert.equal(reopened.events.some((event) => event.type === 'gep.packet.completed'), true);
   assert.equal(JSON.stringify(reopened.events).includes('line 01'), false);
+});
+
+test('Operation dual reads retain the advertised legacy mutation fallback and bounded provider receipts', async (t) => {
+  const root = await mkdtemp(join(tmpdir(), 'george-gep-legacy-'));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  await writeFile(join(root, 'target.txt'), 'before\n');
+  const provider = new class implements ModelProvider {
+    requests: ProviderRequest[] = [];
+    async *stream(request: ProviderRequest): AsyncGenerator<ProviderEvent> {
+      this.requests.push(request);
+      yield { type: 'provider.response.started', responseId: `legacy-${this.requests.length}` };
+      if (this.requests.length === 1) {
+        yield { type: 'provider.tool.call', callId: 'read', name: 'read_file', arguments: '{"path":"target.txt"}' };
+      } else if (this.requests.length === 2) {
+        const result = request.continuation?.toolResults[0]?.result;
+        if (!result?.ok || typeof result.value !== 'object' || result.value === null || Array.isArray(result.value)) throw new Error('Expected dual read evidence.');
+        yield { type: 'provider.tool.call', callId: 'write', name: 'write_file', arguments: JSON.stringify({ path: 'target.txt', content: 'after\n', expectedSha256: result.value.sha256 }) };
+      } else yield { type: 'provider.text.delta', delta: '{"version":1,"control":"handoff"}' };
+      yield { type: 'provider.response.completed' };
+    }
+  }();
+  const service = await createOneTurnApplicationService({ provider, workspace: root, approvalPort: allow, toolNames: ['read_file', 'write_file', 'apply_patch'] });
+  const events = await collect(service.run({ session: createSession({ workspace: root }), input: 'edit', executionMode: 'operation' }));
+
+  assert.deepEqual(provider.requests[0]?.tools?.map((tool) => tool.name), ['read_file', 'write_file', 'apply_patch']);
+  const read = provider.requests[1]?.continuation?.toolResults[0]?.result;
+  assert.equal(read?.ok && typeof read.value === 'object' && read.value !== null && !Array.isArray(read.value) && typeof read.value.sha256, 'string');
+  const mutation = provider.requests[2]?.continuation?.toolResults[0];
+  assert.equal(mutation?.result.ok, true);
+  assert.deepEqual(mutation?.result.ok ? mutation.result.value : undefined, {
+    name: 'write_file', path: 'target.txt', bytes: 6, sha256: '7b9a72466d3960eb2aacccfc848939453490db0678bd4725def3f789b891c919',
+  });
+  assert.equal(events.at(-1)?.type, 'turn.completed');
+  assert.equal(await readFile(join(root, 'target.txt'), 'utf8'), 'after\n');
 });
 
 test('GEP mixed output, incomplete responses, denial, and cancellation fail before unsafe mutation', async (t) => {
