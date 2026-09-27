@@ -1,0 +1,142 @@
+GEORGE TASK FORMAT: 1
+
+STACK: c10-gep-compatibility
+TASK: Correction 10 / P1 — Bounded GEP dual projection and legacy fallback
+KIND: implementation
+
+VERSIONING
+
+- Required unchanged project version: `0.10.12`.
+- Recommended configuration: `Sol High`.
+- Browser required: no.
+
+GOAL
+
+Restore the inherited provider-visible `read_file` contract required by legacy `write_file` / `apply_patch` fallback while preserving GEP/1 compact edit receipts and proving the whole read-to-edit exchange remains net cheaper than the legacy path.
+
+Do not redesign GEP/1 or add a second mutation engine.
+
+READ FIRST
+
+- REQUIRED: BOOT.md
+- REQUIRED: AGENTS.md
+- REQUIRED: docs/stability-contract.md
+- REQUIRED: docs/tasks/c10-generation-bottleneck/qualification-report.md
+- REQUIRED: docs/tasks/c10-generation-bottleneck/closeout.md
+- REQUIRED: docs/planning/c10-gep-compatibility/decision-record.md
+- REQUIRED: docs/planning/c10-gep-compatibility/qualification-plan.md
+- REQUIRED: docs/tasks/c10-gep-compatibility/prompt-assessment.md
+- REQUIRED: docs/tasks/c10-gep-compatibility/implementation-plan.md
+
+INSPECT
+
+- src/application/george-edit.ts
+- src/application/one-turn.ts
+- src/tools/read-only.ts
+- src/tools/mutation.ts
+- provider-result projection and continuation accounting
+- test/unit/application/george-edit*.test.ts
+- test/unit/application/phase8-structured-replay.test.ts
+- framing/recovery/mutation tests
+
+REQUIREMENTS
+
+- R1: Replace destructive GEP read projection with an additive bounded provider result for eligible Operation-mode `read_file` observations.
+- R2: Preserve the inherited provider-visible fields required by compatibility consumers: `name`, `path`, `text`, `bytes`, `truncated=false`, `sha256`, and `textFraming`.
+- R3: Add GEP metadata without creating a second canonical snapshot. Prefer a nested or otherwise clearly namespaced GEP projection containing the short receipt ID and deterministic numbered-line view.
+- R4: Keep the exact receipt snapshot/SHA/framing/epoch only in the bounded run-local receipt registry. Do not add raw source bodies to durable events/diagnostics merely for GEP.
+- R5: Add one centralized maximum serialized provider-visible dual-projection size of 16 KiB.
+- R6: If the complete dual projection would exceed 16 KiB, return the inherited legacy provider result unchanged and do not expose a provider-usable GEP receipt for that result.
+- R7: Truncated, binary, mixed/unsupported framing, invalid UTF-8, or otherwise GEP-ineligible reads continue to return unchanged inherited provider evidence.
+- R8: A hidden/internal receipt must never be usable by the model when its GEP provider metadata was withheld due to the projection bound.
+- R9: Legacy `write_file` / `apply_patch` remain advertised and executable compatibility/fallback tools.
+- R10: Frozen Phase 8 structured replay must again observe SHA/framing and complete its legacy write/framing rejection/reread/patch path unchanged.
+- R11: Frozen framing-authority recovery must again observe reread SHA and complete its safe legacy patch path unchanged.
+- R12: Update P3-era regressions that asserted SHA absence. Replace them with additive/bounded coexistence assertions rather than weakening the frozen compatibility tests.
+- R13: Preserve GEP current-SHA recheck, stale receipt rejection, original-snapshot range semantics, text framing, permission/recovery intent, response-completion-before-mutation and legacy mutation compatibility.
+- R14: Add deterministic byte accounting for one representative existing-file edit:
+  - inherited legacy read provider bytes;
+  - bounded dual GEP read provider bytes;
+  - equivalent legacy mutation argument bytes;
+  - GEP packet bytes.
+- R15: Retain `Mutation Transmission Ratio = GEP packet bytes / legacy mutation argument bytes <= 0.70`.
+- R16: Add `Net Edit Transport Ratio = (dual GEP read bytes + GEP packet bytes) / (legacy read bytes + legacy mutation argument bytes)` and require it to be < 1.0.
+- R17: Resulting files in the representative fixture must remain byte-identical between GEP expansion and canonical expected output.
+- R18: Ensure continuation/context accounting measures the actual projected provider result and does not count hidden receipt state.
+- R19: Preserve package `0.10.12`; do not create package-lock.json.
+
+INVARIANTS
+
+- I1: Compatibility is restored at the provider-evidence contract, not by weakening legacy mutation SHA requirements.
+- I2: GEP receipts remain derived/run-local/non-authoritative.
+- I3: The 16 KiB bound is provider-visible serialization size, not a mutation file-size limit.
+- I4: Oversized dual projection falls back safely rather than truncating GEP metadata.
+- I5: Do not remove or rewrite frozen Phase 8 compatibility behavior.
+- I6: Do not change context profiles, provider timeout policy, helper behavior, concurrency, or browser tooling.
+
+WORKFLOW
+
+W1 — Implement additive bounded dual projection
+Covers: R1, R2, R3, R4, R5, R6, R7, R8
+Depends on: none
+
+W2 — Restore legacy fallback and frozen recovery
+Covers: R9, R10, R11, R12, R13
+Depends on: W1
+
+W3 — Add whole-exchange transport metrics
+Covers: R14, R15, R16, R17, R18
+Depends on: W1, W2
+
+W4 — Regression/version boundary
+Covers: R19
+Depends on: W1, W2, W3
+
+VALIDATION
+
+V1 — GEP projection/receipt tests
+Covers: R1, R2, R3, R4, R5, R6, R7, R8, R12, R13
+Run: DISCOVER
+Scope: george-edit and george-edit-loop tests plus provider projection/continuation tests affected by P1
+
+V2 — Frozen legacy compatibility
+Covers: R9, R10, R11, R13
+Run: DISCOVER
+Scope: frozen Phase 8 structured replay, framing-authority recovery, legacy write/apply_patch SHA/framing tests
+
+V3 — Transport efficiency
+Covers: R14, R15, R16, R17, R18
+Run: DISCOVER
+Scope: deterministic GEP transmission/net transport metric fixture and accounting tests
+
+V4 — TypeScript
+Covers: R1, R3, R18
+Run: npm run typecheck
+
+V5 — Runner regression
+Covers: R19
+Run: npm run test:runner
+
+V6 — Diff hygiene
+Covers: R19
+Run: git diff --check
+
+STOP CONDITIONS
+
+- S1: Do not restore compatibility by simply removing the GEP receipt projection.
+- S2: Do not emit unbounded duplicate raw + numbered source.
+- S3: Do not rewrite frozen compatibility tests to use GEP.
+- S4: Do not lower SHA/framing/permission/recovery requirements.
+- S5: Do not claim completion unless Mutation Transmission Ratio <= 0.70 and Net Edit Transport Ratio < 1.0.
+- S6: Do not claim completion while required validation fails.
+
+DELIVERABLES
+
+- D1: Bounded additive GEP read projection.
+- D2: Restored legacy mutation/recovery fallback.
+- D3: Mutation and net edit transport metrics/regressions.
+- D4: Package remains 0.10.12.
+
+EVIDENCE
+
+Record exact serialized byte measurements, ratio calculations, frozen test counts/results, typecheck/runner/diff results, and root package-lock absence.

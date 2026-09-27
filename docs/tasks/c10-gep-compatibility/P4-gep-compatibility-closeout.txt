@@ -1,0 +1,138 @@
+GEORGE TASK FORMAT: 1
+
+STACK: c10-gep-compatibility
+TASK: Correction 10 / P4 — GEP compatibility closeout
+KIND: closeout
+
+VERSIONING
+
+- Required unchanged project version: `0.10.12`.
+- Recommended configuration: `Sol Medium`.
+- Browser required: no.
+
+GOAL
+
+Perform an evidence-only closeout of `c10-gep-compatibility` from the exact P3 candidate. Reconcile bounded dual projection, legacy fallback, whole-exchange efficiency, Phase 5 causal repair, real-model evidence and inherited Phase 10 history without repairing code or opening Phase 11.
+
+READ FIRST
+
+- REQUIRED: BOOT.md
+- REQUIRED: AGENTS.md
+- REQUIRED: docs/workflow.md
+- REQUIRED: docs/stability-contract.md
+- REQUIRED: docs/phase-10-closeout.md
+- REQUIRED: docs/tasks/c10-generation-bottleneck/closeout.md
+- REQUIRED: docs/planning/c10-gep-compatibility/decision-record.md
+- REQUIRED: docs/planning/c10-gep-compatibility/qualification-plan.md
+- REQUIRED: docs/tasks/c10-gep-compatibility/prompt-assessment.md
+- REQUIRED: docs/tasks/c10-gep-compatibility/implementation-plan.md
+- REQUIRED: docs/tasks/c10-gep-compatibility/qualification-report.md
+- REQUIRED: P1/P2 source/tests/evidence and P3 artifacts
+
+CREATE
+
+- docs/tasks/c10-gep-compatibility/closeout.md
+
+REQUIREMENTS
+
+- R1: Tie closeout to exact P3 candidate SHA/tree and package 0.10.12.
+- R2: Audit the additive legacy + GEP provider read contract and 16 KiB dual-projection bound.
+- R3: Audit oversized/ineligible read fallback and prove no model-visible unusable receipt is emitted.
+- R4: Audit frozen Phase 8 replay and framing denial/reread/legacy patch recovery unchanged.
+- R5: Record deterministic Mutation Transmission Ratio and Net Edit Transport Ratio plus byte identity.
+- R6: Record P2's historical first-bad boundary, exact exhausted dimension and evidence-supported repair/test disposition.
+- R7: Audit the exact current Phase 5 fixed-profile workflow and its compaction/durability behavior.
+- R8: Audit preservation of terminal TaskState integrity and generation-aware provider timeout from the parent correction.
+- R9: Record P3 broad suite and Node 26 + real LM Studio/Qwen live qualification, including actual input/cached/output tokens and total/provider time.
+- R10: Preserve Phase 10 P7 historical/intermittent evidence and all Phase 8/9/10 historical outcomes without relabeling.
+- R11: Run only a bounded closeout recheck of correction-focused deterministic tests, typecheck, runner regression and diff hygiene. Do not rerun broad/live work merely to obtain a better result.
+- R12: Verify package remains 0.10.12 and root package-lock.json is absent.
+- R13: State whether `c10-gep-compatibility` is Qualified.
+- R14: State whether `c10-generation-bottleneck` + `c10-gep-compatibility` now provide a candidate ready for formal Phase 10 closeout/readiness reassessment.
+- R15: Do not owner-close Phase 10 or open Phase 11.
+
+DECISION TABLE
+
+Include at minimum:
+
+- GEP Legacy Read Contract Preserved;
+- Bounded Dual Projection Qualified;
+- Oversized Dual Projection Safe Fallback;
+- Frozen Phase 8 Replay Green;
+- Framing Denial/Reread/Patch Recovery Green;
+- Mutation Transmission Ratio;
+- Net Edit Transport Ratio;
+- GEP Receipt Freshness Preserved;
+- Canonical SHA/Framing Mutation Authority Preserved;
+- Phase 5 First Bad Boundary Identified;
+- Phase 5 Exhausted Dimension Identified;
+- Phase 5 Fixed-Profile Workflow Green;
+- Terminal TaskState Fix Preserved;
+- Generation-Aware Timeout Fix Preserved;
+- Broad Suite;
+- Node 26 + Real LM Studio/Qwen Live Qualification;
+- Phase 10 P7 Historical/Intermittent Evidence Preserved;
+- Remaining Blocking Failure Count;
+- Nonblocking Evidence Gaps;
+- Overall `c10-gep-compatibility` Qualified;
+- Phase 10 Closeout Ready To Reassess.
+
+INVARIANTS
+
+- I1: Closeout is evidence-only.
+- I2: Performance does not convert functional failure to Green.
+- I3: Historical evidence remains historical truth.
+- I4: Correction qualification does not owner-close Phase 10.
+- I5: No root package-lock.json.
+
+WORKFLOW
+
+W1 — Audit P1/P2 exact contracts and evidence
+Covers: R1, R2, R3, R4, R5, R6, R7, R8
+Depends on: none
+
+W2 — Reconcile P3 deterministic/live evidence
+Covers: R9, R10
+Depends on: W1
+
+W3 — Bounded recheck and formal closeout
+Covers: R11, R12, R13, R14, R15
+Depends on: W1, W2
+
+VALIDATION
+
+V1 — Correction-focused deterministic floor
+Covers: R2, R3, R4, R5, R6, R7, R8, R11
+Run: DISCOVER
+Scope: GEP dual projection/fallback, Phase 5 fixed-profile, terminal TaskState, provider timeout and mutation/recovery tests representing P1/P2
+
+V2 — TypeScript
+Covers: R11
+Run: npm run typecheck
+
+V3 — Runner regression
+Covers: R11, R12
+Run: npm run test:runner
+
+V4 — Diff hygiene
+Covers: R11, R12
+Run: git diff --check
+
+STOP CONDITIONS
+
+- S1: Do not repair implementation in closeout.
+- S2: Do not rerun broad suite or real-model workload to fish for Green.
+- S3: Do not owner-close Phase 10.
+- S4: Do not open Phase 11.
+- S5: Do not claim qualification while evidence is inconsistent or a correction-local/current affected-system blocker remains.
+
+DELIVERABLES
+
+- D1: docs/tasks/c10-gep-compatibility/closeout.md.
+- D2: Explicit Green / Not Green / Evidence Gap matrix.
+- D3: Correction qualification verdict.
+- D4: Phase 10 formal closeout reassessment readiness statement.
+
+EVIDENCE
+
+Cite exact commits/artifacts/commands and preserve every remaining Not Green/Evidence Gap.

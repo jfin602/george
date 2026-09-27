@@ -746,3 +746,40 @@ Qualification must preserve all Phase 9/10 authority and additionally prove:
 - unavailable Node/provider validity is an Evidence Gap/Not Green, not mock Green evidence;
 - frozen Phase 9 B2/C2 and unrelated helper/context/runtime tuning are not rerun as part of this correction;
 - Phase 10 P7 historical/intermittent evidence remains preserved.
+
+
+## Correction 10 GEP compatibility qualification
+
+`c10-gep-compatibility` is a Phase 10 follow-up correction at unchanged package `0.10.12`.
+
+Qualification must additionally prove:
+
+### Bounded additive GEP projection
+- eligible small Operation-mode reads preserve inherited provider-visible `text`, `bytes`, `truncated`, `sha256`, and `textFraming`;
+- GEP receipt/numbered-line metadata is additive and namespaced;
+- one 16 KiB serialized provider-projection ceiling bounds duplicated raw + numbered evidence;
+- reads exceeding that bound return unchanged legacy evidence and no usable GEP receipt;
+- no duplicated raw source becomes a second durable canonical snapshot.
+
+### Legacy fallback
+- frozen Phase 8 write/framing-rejection/reread/patch recovery remains Green without rewriting the frozen provider to use GEP;
+- legacy `write_file` / `apply_patch` retain SHA/framing/permission/recovery authority;
+- GEP receipt freshness/canonical expansion remains Green.
+
+### Whole-exchange efficiency
+- Mutation Transmission Ratio remains <= 0.70;
+- Net Edit Transport Ratio = (dual GEP read bytes + GEP packet bytes) / (legacy read bytes + legacy mutation argument bytes) is < 1.0 on the representative deterministic fixture;
+- live qualification records input, cached-input and output tokens separately so byte savings are not treated as proof of wall-time improvement by themselves.
+
+### Phase 5 causal repair
+- the exact Phase 5 fixed-profile failure is tested at required historical commit points under supported Node 26 before production repair;
+- the first bad boundary and exact `budget.exhausted.dimension` are recorded;
+- current context/compaction/continuation/provider/tool/process evidence is captured;
+- no default run-budget, fixed 2,200-token fixture envelope, adaptive context profile, or budget classification is increased/removed merely to obtain Green;
+- the current exact Phase 5 long workflow must restore its compaction, continuation, validation and durable reopen contract.
+
+### Live gate
+- deterministic/broad affected-system gates must be Green before live spending;
+- one disposable Node 26 + recorded LM Studio/Qwen workload exercises read -> GEP existing-file edit -> new file -> literal validation -> TaskState/session persistence;
+- frozen B2/C2, helper inference, runtime retuning and the owner's Express workspace are not used;
+- Phase 10 P7 historical/intermittent evidence remains immutable.

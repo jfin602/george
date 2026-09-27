@@ -1,0 +1,157 @@
+GEORGE TASK FORMAT: 1
+
+STACK: c10-gep-compatibility
+TASK: Correction 10 / P2 — Phase 5 budget causal isolation and bounded repair
+KIND: implementation
+
+VERSIONING
+
+- Required unchanged project version: `0.10.12`.
+- Recommended configuration: `Sol High`.
+- Browser required: no.
+
+GOAL
+
+Determine exactly why the inherited Phase 5 long-workflow qualification now ends `budget_exhausted`, identify the first bad historical boundary and exact exhausted dimension, then apply only the smallest evidence-supported repair needed to restore the current fixed-profile reliability contract.
+
+Do not increase general budgets or context envelopes merely to obtain Green.
+
+READ FIRST
+
+- REQUIRED: BOOT.md
+- REQUIRED: AGENTS.md
+- REQUIRED: docs/stability-contract.md
+- REQUIRED: docs/tasks/c10-generation-bottleneck/qualification-report.md
+- REQUIRED: docs/tasks/c10-generation-bottleneck/evidence/failure-ledger.md
+- REQUIRED: docs/planning/c10-gep-compatibility/decision-record.md
+- REQUIRED: docs/planning/c10-gep-compatibility/qualification-plan.md
+- REQUIRED: P1 implementation/tests
+- REQUIRED: Phase 5 reliability/context-compaction authority
+
+INSPECT
+
+- test/integration/phase5-qualification.test.ts
+- src/core/run-budget.ts
+- src/application/one-turn.ts
+- src/application/coding-workflow.ts
+- context continuation/promotion/compaction code
+- provider usage accounting
+- budget/state/compaction event contracts
+- Phase 5 and later tests covering the same small fixed context profile
+
+REQUIREMENTS
+
+- R1: Before modifying production code, run the exact failing Phase 5 long-workflow test under Node 26 in clean detached/isolated worktrees at:
+  - `a9c5175b6c45a218a7eb5997514b88ce679fc573`;
+  - `73885cfc4c09889db876dc4c75af1645ee88e4a9`;
+  - `99e5267ca0bc3961003fc0c5877ffbec3f22fa3d`;
+  - `384091366fcd1addabf0a2cff456a6ece77f7875`.
+- R2: Historical worktrees are diagnostic only. Do not commit, amend, or edit their source/tests to make the matrix pass.
+- R3: If every required point is already failing, continue backward through Phase 10 commits only as far as necessary to find the most recent Green -> first bad boundary.
+- R4: Record for each tested candidate: SHA, package, Node, pass/fail, completion terminal state, provider round count, tool/process count, compaction count, and any budget exhausted dimension observable from the existing test.
+- R5: On the current candidate, capture the exact `budget.exhausted.dimension` and corresponding budget snapshot.
+- R6: Capture surrounding current evidence:
+  - context.assembled diagnostics/profile/mode;
+  - context compaction requested/completed/failed/checkpoints;
+  - continuation estimate and envelope promotion events;
+  - provider reported input/output usage;
+  - provider attempts/retries;
+  - tool/process executions and process runtime.
+- R7: Identify the concrete producer/consumer that converts the underlying condition into `GeorgeError('budget')`; do not stop at `CodingWorkflowCompletion.terminalState`.
+- R8: Do not change production behavior until R1-R7 identify the first bad boundary and causal mechanism.
+- R9: If the cause is a current implementation regression, repair only that contract and add a permanent regression using the historical `p5-small` fixed profile.
+- R10: If evidence proves the old test expectation is superseded by newer authoritative behavior, document the authority and update the test only if the old expectation is truly invalid. Do not reinterpret a genuine safety exhaustion as success.
+- R11: Preserve the fixture's fixed profile values, including 2,200 provider-input tokens.
+- R12: Preserve finite context, continuation, run-budget and compaction safety ceilings.
+- R13: Explicitly forbid as a pass-seeking repair:
+  - increasing `DEFAULT_RUN_BUDGET`;
+  - increasing the test's provider-input/context envelope;
+  - changing adaptive profiles to accommodate this fixed-profile fixture;
+  - suppressing/renaming budget errors;
+  - deleting the compaction/durability assertions.
+- R14: The repaired/current exact Phase 5 long workflow must again prove:
+  - required compaction occurs;
+  - provisional tool text stays non-canonical;
+  - canonical history remains intact;
+  - tool continuation completes;
+  - process validation passes;
+  - second pressure checkpoint/compaction remains valid;
+  - LocalSessionStore reopens intact.
+- R15: Run directly affected Phase 5, context, run-budget, continuation, compaction, workflow, session and recovery regressions after the repair.
+- R16: Preserve package `0.10.12`; do not create package-lock.json.
+
+INVARIANTS
+
+- I1: Diagnosis precedes repair.
+- I2: Historical candidate results remain immutable evidence.
+- I3: Do not solve a bookkeeping defect by raising a safety ceiling.
+- I4: Do not solve genuine exhaustion by relabeling it completed.
+- I5: GEP P1 compatibility behavior must remain Green.
+- I6: Do not retune LM Studio/GPU/context runtime.
+
+WORKFLOW
+
+W1 — Historical causal matrix
+Covers: R1, R2, R3, R4
+Depends on: none
+
+W2 — Current exhausted-dimension trace
+Covers: R5, R6, R7, R8
+Depends on: W1
+
+W3 — Apply bounded evidence-supported repair
+Covers: R9, R10, R11, R12, R13, R14
+Depends on: W1, W2
+
+W4 — Regression/version boundary
+Covers: R15, R16
+Depends on: W3
+
+VALIDATION
+
+V1 — Exact Phase 5 long workflow
+Covers: R9, R10, R11, R12, R14
+Run: DISCOVER
+Scope: the exact Phase 5 long-workflow integration test under supported Node 26
+
+V2 — Reliability/context affected floor
+Covers: R12, R14, R15
+Run: DISCOVER
+Scope: run-budget, continuation, context compaction, coding-workflow, session-store and Phase 5 recovery tests affected by P2
+
+V3 — GEP compatibility preservation
+Covers: R5, R15
+Run: DISCOVER
+Scope: P1 dual-projection/frozen Phase 8 compatibility tests
+
+V4 — TypeScript
+Covers: R9
+Run: npm run typecheck
+
+V5 — Runner regression
+Covers: R16
+Run: npm run test:runner
+
+V6 — Diff hygiene
+Covers: R16
+Run: git diff --check
+
+STOP CONDITIONS
+
+- S1: Do not modify production before the historical boundary and exhausted dimension are known.
+- S2: Do not raise general budgets/context profiles to make the fixture fit.
+- S3: If historical commits cannot be tested due to an external/toolchain reason, record the exact Evidence Gap and use the strongest remaining source/event evidence rather than guessing.
+- S4: Do not disturb P1 GEP compatibility/efficiency to fix Human-mode Phase 5 behavior.
+- S5: Do not claim completion while the exact current Phase 5 workflow remains Not Green.
+
+DELIVERABLES
+
+- D1: Historical causal matrix.
+- D2: Exact exhausted-dimension/root-cause record.
+- D3: Bounded repair or explicitly justified stale-test correction.
+- D4: Permanent Phase 5 regression.
+- D5: Package remains 0.10.12.
+
+EVIDENCE
+
+Create/update bounded evidence under docs/tasks/c10-gep-compatibility/evidence/ with candidate matrix, exhausted dimension, causal boundary, commands, focused results, and root package-lock absence.

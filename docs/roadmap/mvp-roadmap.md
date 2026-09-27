@@ -485,7 +485,7 @@ Non-goals:
 
 ## Phase 10 — Agent Loop Throughput
 
-Status: CURRENT PHASE — formal closeout Not Green; `c10-generation-bottleneck` active at package `0.10.12`
+Status: CURRENT PHASE — formal closeout Not Green; `c10-gep-compatibility` active at package `0.10.12`
 
 Decision authority: `docs/planning/p10-agent-loop-throughput/decision-record.md`.  
 Qualification authority: `docs/planning/p10-agent-loop-throughput/qualification-plan.md`.  
@@ -563,6 +563,24 @@ Correction policy:
 - obtain supported Node 26 + real LM Studio/Qwen evidence before reassessing Phase 10 readiness.
 
 This correction does not relabel the formal Phase 10 P7 historical/intermittent lifecycle-order evidence.
+
+
+The parent `c10-generation-bottleneck` correction closed Not Green after deterministic qualification exposed:
+- GEP receipt-only projection breaking advertised legacy mutation fallback;
+- a separate Phase 5 fixed-profile workflow ending `budget_exhausted`;
+- the required live GEP workload remaining unspent.
+
+Active follow-up correction: `c10-gep-compatibility`.
+
+It must:
+- restore legacy `read_file` text/SHA/framing evidence through a bounded additive GEP projection;
+- cap serialized dual projection at 16 KiB and fall back to unchanged legacy evidence when the bound would be exceeded;
+- retain Mutation Transmission Ratio <= 0.70 and additionally prove Net Edit Transport Ratio < 1.0;
+- identify the Phase 5 first bad historical boundary and exact exhausted dimension before changing production behavior;
+- forbid broad budget/context increases as a pass-seeking repair;
+- obtain the previously blocked supported Node 26 + real LM Studio/Qwen live qualification only after deterministic/broad Green.
+
+If Green, the parent + follow-up correction chain becomes the candidate for formal Phase 10 closeout/readiness reassessment.
 
 ## Phase 11 — Final Acceleration + Primary-Model Performance Qualification
 

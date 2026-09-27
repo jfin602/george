@@ -118,20 +118,27 @@ Phase 10 authority:
 - `docs/planning/p10-agent-loop-throughput/optimization-metrics.md`;
 - `docs/planning/p10-agent-loop-throughput/fast-live-work.md`.
 
-The active inserted correction is now `c10-generation-bottleneck`.
+The parent correction `c10-generation-bottleneck` is closed **Not Green / Not Qualified**. Its closeout is `docs/tasks/c10-generation-bottleneck/closeout.md`.
+
+The active inserted correction is now `c10-gep-compatibility`.
 
 Correction authority:
-- `docs/planning/c10-generation-bottleneck/decision-record.md`;
-- `docs/planning/c10-generation-bottleneck/qualification-plan.md`;
-- `docs/tasks/c10-generation-bottleneck/README.md`.
+- `docs/planning/c10-gep-compatibility/decision-record.md`;
+- `docs/planning/c10-gep-compatibility/qualification-plan.md`;
+- `docs/tasks/c10-gep-compatibility/README.md`.
 
 It owns exactly:
-- terminal TaskState cleanup when an active work unit fails/cancels/exhausts;
-- generation-aware provider emergency timeout policy: 300s default / 600s maximum while preserving first-evidence and active-inactivity guards;
-- George Edit Protocol v1, a compact Operation-mode text mutation channel that expands back into existing SHA/framing/permission/recovery mutation authority;
-- supported Node 26 + real LM Studio/Qwen qualification for those changes.
+- bounded additive GEP read projection that restores legacy `read_file` SHA/text/framing fallback without unbounded duplicated provider input;
+- whole read->edit transport efficiency, including Net Edit Transport Ratio;
+- causal isolation and bounded repair/characterization of the current Phase 5 fixed-profile `budget_exhausted` failure;
+- supported Node 26 + real LM Studio/Qwen qualification once deterministic/broad gates are Green.
 
-It does not reopen context profiles/compaction, helper work, GPU tuning, additional concurrency work, frozen B2/C2, or browser/visual feedback.
+The parent correction's accepted implementation pieces remain in force while this follow-up repairs coexistence:
+- terminal TaskState cleanup;
+- 300s default / 600s maximum finite provider emergency timeout;
+- GEP/1 parser, receipts, canonical mutation expansion, SHA/framing/permission/recovery authority.
+
+This follow-up does not reopen context profiles/compaction, helper work, GPU tuning, additional concurrency work, frozen B2/C2, or browser/visual feedback.
 
 Phase 10 historical/intermittent P7 lifecycle-order evidence remains preserved and is not relabeled by this correction.
 
@@ -172,7 +179,7 @@ Read:
 - stability/testing: `docs/stability-contract.md`;
 - roadmap: `docs/roadmap/mvp-roadmap.md`;
 - Living Project Map / Software Graph, when relevant: `docs/planning/living-project-map/decision-record.md` (then its graph, interaction, and qualification companions as needed);
-- Phase 9 owner closeout: `docs/phase-9-owner-closeout.md`; retained Phase 9 authority/evidence: `docs/planning/p9-structured-task-execution/{decision-record,task-format-v1,qualification-plan}.md`, `docs/tasks/c9-final-live-convergence/closeout.md`, and its final report/ledger; Phase 10 authority: `docs/planning/p10-agent-loop-throughput/{decision-record,qualification-plan,optimization-metrics,fast-live-work}.md`; formal Phase 10 closeout: `docs/phase-10-closeout.md`; active correction: `docs/planning/c10-generation-bottleneck/{decision-record,qualification-plan}.md`;
+- Phase 9 owner closeout: `docs/phase-9-owner-closeout.md`; retained Phase 9 authority/evidence: `docs/planning/p9-structured-task-execution/{decision-record,task-format-v1,qualification-plan}.md`, `docs/tasks/c9-final-live-convergence/closeout.md`, and its final report/ledger; Phase 10 authority: `docs/planning/p10-agent-loop-throughput/{decision-record,qualification-plan,optimization-metrics,fast-live-work}.md`; formal Phase 10 closeout: `docs/phase-10-closeout.md`; parent correction closeout: `docs/tasks/c10-generation-bottleneck/closeout.md`; active correction: `docs/planning/c10-gep-compatibility/{decision-record,qualification-plan}.md`;
 - Phase 8 closeout/history when needed: `docs/phase-8-closeout.md`, `docs/phase-8-owner-closeout.md`, `docs/tasks/c8-agentic-context/closeout.md`, `docs/planning/c8-agentic-context/decision-record.md`, `docs/planning/c8-agentic-context/qualification-plan.md`, `docs/planning/p8-context-throughput-optimization/decision-record.md`, `docs/planning/p8-context-throughput-optimization/initial-baseline.md`, and `docs/planning/performance-benchmarking-worksheet.md`;
 - Phase 7 closeout/history when needed: `docs/phase-7-closeout.md`, `docs/phase-7-owner-closeout.md`, `docs/planning/p7-inference-runtime-optimization/initial-baseline.md`;
 - Phase 6 closeout/history when needed: `docs/phase-6-closeout.md`, `docs/phase-6-owner-closeout.md`, `docs/planning/p6-plugins-external-adapters/decision-record.md`;

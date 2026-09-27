@@ -1,0 +1,146 @@
+GEORGE TASK FORMAT: 1
+
+STACK: c10-gep-compatibility
+TASK: Correction 10 / P3 — Integrated GEP compatibility and live-model qualification
+KIND: qualification
+
+VERSIONING
+
+- Required unchanged project version: `0.10.12`.
+- Recommended configuration: `Sol Medium`.
+- Browser required: no.
+
+GOAL
+
+Qualify the corrected Phase 10 candidate after P1/P2: legacy + GEP coexistence, Phase 5 fixed-profile reliability, broad deterministic safety, and one supported Node 26 + real LM Studio/Qwen edit workload measuring actual whole-exchange cost.
+
+This is qualification work. Do not repair or rerun until Green.
+
+READ FIRST
+
+- REQUIRED: BOOT.md
+- REQUIRED: AGENTS.md
+- REQUIRED: docs/stability-contract.md
+- REQUIRED: docs/phase-10-closeout.md
+- REQUIRED: docs/tasks/c10-generation-bottleneck/qualification-report.md
+- REQUIRED: docs/tasks/c10-generation-bottleneck/closeout.md
+- REQUIRED: docs/planning/c10-gep-compatibility/decision-record.md
+- REQUIRED: docs/planning/c10-gep-compatibility/qualification-plan.md
+- REQUIRED: docs/tasks/c10-gep-compatibility/prompt-assessment.md
+- REQUIRED: docs/tasks/c10-gep-compatibility/implementation-plan.md
+- REQUIRED: P1/P2 implementation, tests and causal evidence
+
+CREATE
+
+- docs/tasks/c10-gep-compatibility/qualification-report.md
+- bounded supporting artifacts under docs/tasks/c10-gep-compatibility/evidence/
+
+REQUIREMENTS
+
+- R1: Record exact candidate SHA/tree/package, clean/dirty state, Node/npm/platform, LM Studio version/build where deterministically observable, model ID/state/context length, context mode/profile, provider timeout policy, and execution policy.
+- R2: Common validity requires Node >=26.4.0 <27, package 0.10.12, reachable LM Studio, loaded supported Qwen model, and known candidate state.
+- R3: Run focused affected deterministic floors covering:
+  - GEP dual projection/bounds/receipts/parser/expansion;
+  - frozen Phase 8 replay and framing recovery;
+  - Phase 5 long workflow and repaired causal seam;
+  - TaskState/StackState/session durability;
+  - provider timeout/stall/retry/rebase;
+  - mutation SHA/framing/permission/recovery;
+  - structured task/correction/freshness;
+  - affected batching/read-concurrency.
+- R4: Run inherited Phase 5 and Phase 9 integration floors affected by the correction.
+- R5: Run `npm run typecheck`, `npm run test:runner`, `npm test` exactly once, and `git diff --check`.
+- R6: All correction/current affected-system deterministic gates must be Green before live spending. Preserve any unrelated historical Phase 10 P7 intermittent failure as historical evidence.
+- R7: Verify deterministic transport evidence:
+  - Mutation Transmission Ratio <= 0.70;
+  - Net Edit Transport Ratio < 1.0;
+  - byte-identical final output.
+- R8: Use a disposable local live fixture, not the owner's Express workspace and not B2/C2.
+- R9: The live task must exercise multiple reads, one eligible existing-file GEP edit, one new UTF-8 text file, literal George-owned validation, TaskState completion/failure truth, and LocalSessionStore persistence/reopen.
+- R10: Run the live workload exactly once after deterministic Green. Do not repair between attempts or rerun to obtain Green.
+- R11: Record actual provider:
+  - attempts/rounds/retries/rebases;
+  - input tokens;
+  - cached input tokens where reported;
+  - output tokens;
+  - response acceptance / first useful output / provider-active / total elapsed;
+  - dual GEP read bytes;
+  - equivalent legacy read bytes;
+  - GEP packet bytes;
+  - equivalent legacy mutation bytes;
+  - Mutation Transmission Ratio;
+  - Net Edit Transport Ratio;
+  - validation result;
+  - final TaskState;
+  - durable reopen;
+  - human intervention.
+- R12: Distinguish input/cache cost from output/generation cost; do not conclude GEP is faster solely from byte ratios.
+- R13: Preserve the parent correction's deterministic terminal TaskState and generation-aware timeout evidence. Do not manufacture a >120s live generation if the corrected workload completes faster.
+- R14: Do not run B2/C2, helper inference, context retuning, GPU/runtime tuning, browser/visual work, or owner's current Express repo.
+- R15: Do not repair product behavior in P3.
+- R16: Preserve package `0.10.12`; do not create package-lock.json.
+
+INVARIANTS
+
+- I1: A failed individual run remains visible.
+- I2: Evidence Gap is not zero and Not Green is not averaged away.
+- I3: Live model output does not override validation/session truth.
+- I4: Historical Phase 8/9/10 evidence remains immutable.
+- I5: Qualification cannot change frozen acceptance instruments merely to pass.
+
+WORKFLOW
+
+W1 — Common validity and deterministic/broad gates
+Covers: R1, R2, R3, R4, R5, R6, R7
+Depends on: none
+
+W2 — One supported real-model workload
+Covers: R8, R9, R10, R11, R12, R13
+Depends on: W1
+
+W3 — Record qualification truth
+Covers: R14, R15, R16
+Depends on: W1, W2
+
+VALIDATION
+
+V1 — Correction focused floor
+Covers: R3, R4, R6, R7
+Run: DISCOVER
+Scope: P1/P2 GEP compatibility, Phase 5 causal seam, TaskState/provider/mutation/structured/recovery tests
+
+V2 — TypeScript
+Covers: R5
+Run: npm run typecheck
+
+V3 — Runner regression
+Covers: R5, R16
+Run: npm run test:runner
+
+V4 — Broad suite
+Covers: R5
+Run: npm test
+
+V5 — Diff hygiene
+Covers: R5, R16
+Run: git diff --check
+
+STOP CONDITIONS
+
+- S1: Do not run live work if the deterministic/broad gate is Not Green.
+- S2: Do not rerun failed live work to fish for Green.
+- S3: Do not retune model/runtime/context in qualification.
+- S4: Do not run B2/C2 or the owner's Express workspace.
+- S5: Do not claim GEP net benefit from mutation-only output metrics.
+- S6: Do not claim completion while a correction-local/current affected-system blocker remains.
+
+DELIVERABLES
+
+- D1: docs/tasks/c10-gep-compatibility/qualification-report.md.
+- D2: Bounded deterministic/live evidence artifacts.
+- D3: Whole-exchange GEP efficiency evidence.
+- D4: Package remains 0.10.12.
+
+EVIDENCE
+
+Record every exact command/test count, historical causal evidence inherited from P2, runtime/model identity, transport/token/timing metrics, validation/TaskState/session result, remaining Not Green/Evidence Gaps, and root package-lock absence.
