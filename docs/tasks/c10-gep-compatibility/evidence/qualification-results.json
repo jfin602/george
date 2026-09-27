@@ -1,0 +1,73 @@
+{
+  "schemaVersion": 1,
+  "correction": "c10-gep-compatibility",
+  "observedAt": "2026-09-27",
+  "candidate": {
+    "sha": "759b07de1594cb6ce4bff6896f72f1dcbf64e502",
+    "tree": "2e3d4a414e31b1ff2740de6435eb3cb4a49b7e9e",
+    "packageVersion": "0.10.12",
+    "initialWorktree": "clean",
+    "rootPackageLock": "absent"
+  },
+  "environment": {
+    "node": "v26.10.0",
+    "npm": "11.19.1",
+    "platform": "Linux 7.0.0-31-generic x86_64",
+    "lmStudio": "0.4.25+1",
+    "lmStudioBackend": "llama.cpp-linux-x86_64-vulkan-avx2-2.46.0",
+    "providerOrigin": "http://127.0.0.1:1234",
+    "providerReachable": true,
+    "model": "qwen3-coder-30b-a3b-instruct@q4_k_m",
+    "modelState": "loaded",
+    "loadedContextLength": 32768,
+    "contextMode": "adaptive",
+    "liveSelectedProfile": "qwen3-coder-30b-a3b-instruct-q4_k_m-lm-studio-32k-ordinary",
+    "providerTimeoutMs": 300000,
+    "maximumProviderTimeoutMs": 600000,
+    "firstUsefulOutputTimeoutMs": 90000,
+    "activeOutputInactivityTimeoutMs": 60000
+  },
+  "validation": {
+    "focused": { "total": 293, "passed": 293, "failed": 0, "skipped": 0, "state": "green" },
+    "typecheck": { "exitCode": 0, "state": "green" },
+    "runner": { "total": 90, "passed": 90, "failed": 0, "skipped": 0, "state": "green" },
+    "broad": { "total": 521, "passed": 520, "failed": 0, "skipped": 1, "state": "green_applicable", "skip": "native OpenTUI requires a real TTY" },
+    "diffCheck": { "exitCode": 0, "state": "green" }
+  },
+  "deterministicTransport": {
+    "legacyReadBytes": 2951,
+    "dualGepReadBytes": 5942,
+    "legacyMutationBytes": 5230,
+    "gepPacketBytes": 48,
+    "mutationTransmissionRatio": 0.009177820267686425,
+    "netEditTransportRatio": 0.7321843295440655,
+    "byteIdentical": true
+  },
+  "live": {
+    "state": "not_green",
+    "attempts": 8,
+    "rounds": 8,
+    "retries": 0,
+    "rebases": 0,
+    "inputTokens": 30023,
+    "cachedInputTokens": 16468,
+    "outputTokens": 1381,
+    "responseAcceptanceMsFirstObserved": 340,
+    "firstUsefulOutputMsFirstObserved": 11719,
+    "providerActiveMs": 276492,
+    "totalElapsedMs": 278598.148371,
+    "dualGepReadBytesObservedLowerBound": 3441,
+    "equivalentLegacyReadBytesObservedLowerBound": 1980,
+    "gepPacketBytes": 0,
+    "equivalentLegacyMutationBytes": 0,
+    "mutationTransmissionRatio": null,
+    "netEditTransportRatio": null,
+    "validation": "passed_2_of_2",
+    "finalTaskState": "completed",
+    "durableReopenTaskState": "completed",
+    "durableReopen": true,
+    "humanIntervention": 0,
+    "reason": "The real model used legacy apply_patch/write_file only, so the required live existing-file GEP edit did not occur. Ratios are unavailable, not zero. The read-byte observer also deduplicated run-local receipt IDs across structured turns, so its retained values are lower bounds rather than complete whole-exchange totals."
+  },
+  "disposition": "not_green"
+}

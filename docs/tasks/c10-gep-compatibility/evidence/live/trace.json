@@ -1,0 +1,457 @@
+{
+  "schemaVersion": 2,
+  "terminalStatus": "completed",
+  "terminalError": null,
+  "observerError": null,
+  "failures": [],
+  "taskState": {
+    "fingerprint": "6d6b2d8efaa73c86b143076360d11968cef9c08f904428368254b4c41fab9521",
+    "status": "completed",
+    "requirements": [
+      {
+        "id": "R1",
+        "status": "verified"
+      },
+      {
+        "id": "R2",
+        "status": "verified"
+      },
+      {
+        "id": "R3",
+        "status": "verified"
+      },
+      {
+        "id": "R4",
+        "status": "verified"
+      },
+      {
+        "id": "R5",
+        "status": "verified"
+      },
+      {
+        "id": "R6",
+        "status": "verified"
+      }
+    ],
+    "workUnits": [
+      {
+        "id": "W1",
+        "status": "addressed"
+      },
+      {
+        "id": "W2",
+        "status": "addressed"
+      }
+    ],
+    "validations": [
+      {
+        "id": "V1",
+        "status": "passed",
+        "attempts": 1
+      },
+      {
+        "id": "V2",
+        "status": "passed",
+        "attempts": 1
+      }
+    ],
+    "corrections": [],
+    "blockerCount": 0,
+    "terminalOutcome": "completed",
+    "effectivePermissionExpectations": {
+      "workspace": "standard",
+      "outsideWorkspace": "reject",
+      "network": "reject",
+      "remoteMutation": "ask"
+    }
+  },
+  "stackState": null,
+  "metrics": {
+    "providerAttempts": 8,
+    "providerRounds": 8,
+    "retries": 0,
+    "providerInputTokens": 30023,
+    "providerOutputTokens": 1381,
+    "cachedInputTokens": 16468,
+    "responseAcceptanceMs": 340,
+    "firstUsefulOutputMs": 11719,
+    "providerActiveMs": 276492,
+    "toolCalls": 15,
+    "requestedOutputTokenCeilings": [],
+    "outputPolicyAppliedAttempts": 0,
+    "outputPolicyInheritedAttempts": 0,
+    "internalTextBytes": 0,
+    "estimatedInternalTextTokens": 0,
+    "toolBatchCount": 6,
+    "toolBatchWidths": [
+      4,
+      2,
+      1,
+      1,
+      3,
+      2
+    ],
+    "providerToolSelectionRounds": 6,
+    "toolBatchCompression": 7,
+    "concurrentReadBatchCount": 3,
+    "concurrentReadBatchWidths": [
+      4,
+      2,
+      2
+    ],
+    "averageConcurrentReadBatchWidth": 2.6666666666666665,
+    "maxConcurrentReadBatchWidth": 4,
+    "parallelBatchWallMs": 16,
+    "summedChildToolRuntimeMs": 44,
+    "observedConcurrentReadOverlapMs": 28,
+    "modelRoundsAvoided": 5,
+    "modelRoundsAvoidedByReason": {
+      "inspection-evidence-complete": 1,
+      "work-unit-complete": 2,
+      "validation-passed": 2
+    },
+    "georgeControlCount": 2,
+    "humanModeRounds": 0,
+    "operationModeRounds": 8,
+    "gepPacketBytes": 0,
+    "gepExpandedMutationBytes": 0,
+    "gepReceiptCount": 0,
+    "gepStaleReceiptRejections": 0,
+    "mutationTransmissionRatio": null,
+    "completedToolPayloads": 13,
+    "completedControlPayloads": 2,
+    "correctionCycles": 0,
+    "correctionFrameBytes": [],
+    "correctionProviderRounds": 0,
+    "correctionReinspectionCalls": 0,
+    "validationReruns": 0,
+    "contextAssemblies": 3,
+    "sandboxedProcessCalls": 0,
+    "taskUpdates": 8,
+    "stackUpdates": 0
+  },
+  "toolCalls": [
+    {
+      "callId": "call_2666983139590000",
+      "name": "list_directory",
+      "requestedArguments": "{}",
+      "effect": "local_read",
+      "terminalState": "succeeded"
+    },
+    {
+      "callId": "call_2666983139590001",
+      "name": "read_file",
+      "requestedArguments": "{\"path\":\"src/labels.js\"}",
+      "effect": "local_read",
+      "terminalState": "succeeded"
+    },
+    {
+      "callId": "call_2666983139590002",
+      "name": "read_file",
+      "requestedArguments": "{\"path\":\"test/labels.test.js\"}",
+      "effect": "local_read",
+      "terminalState": "succeeded"
+    },
+    {
+      "callId": "call_2666983139590003",
+      "name": "search_text",
+      "requestedArguments": "{\"query\":\"normalizeLabel\",\"path\":\"src/\"}",
+      "effect": "local_read",
+      "terminalState": "succeeded"
+    },
+    {
+      "callId": "call_2666983139590004",
+      "name": "read_file",
+      "requestedArguments": "{\"path\":\"src/labels.js\"}",
+      "effect": "local_read",
+      "terminalState": "succeeded"
+    },
+    {
+      "callId": "call_2666983139590005",
+      "name": "read_file",
+      "requestedArguments": "{\"path\":\"test/labels.test.js\"}",
+      "effect": "local_read",
+      "terminalState": "succeeded"
+    },
+    {
+      "callId": "call_2666983139590006",
+      "name": "apply_patch",
+      "requestedArguments": "{\"path\":\"src/labels.js\",\"expectedSha256\":\"875b8414bea92f7880f2e7d2710617fdf273a6d3a9516983621c9e11f0733ca8\",\"edits\":[{\"oldText\":\"[omitted 281 bytes]\",\"newText\":\"[omitted 637 bytes]\"}]}",
+      "effect": "workspace_mutation",
+      "terminalState": "succeeded"
+    },
+    {
+      "callId": "call_2666983139590007",
+      "name": "read_file",
+      "requestedArguments": "{\"path\":\"src/labels.js\"}",
+      "effect": "local_read",
+      "terminalState": "succeeded"
+    },
+    {
+      "callId": "call_2666983139590008",
+      "name": "list_directory",
+      "requestedArguments": "{\"path\":\"test\"}",
+      "effect": "local_read",
+      "terminalState": "succeeded"
+    },
+    {
+      "callId": "call_2666983139590009",
+      "name": "read_file",
+      "requestedArguments": "{\"path\":\"README.md\"}",
+      "effect": "local_read",
+      "terminalState": "succeeded"
+    },
+    {
+      "callId": "call_2666983139590010",
+      "name": "apply_patch",
+      "requestedArguments": "{\"path\":\"src/labels.js\",\"expectedSha256\":\"654dec8eb267737ca95e249f9a9c05177edeeb4d8845ee10ab60c4c5d1633469\",\"edits\":[{\"oldText\":\"[omitted 355 bytes]\",\"newText\":\"[omitted 602 bytes]\"}]}",
+      "effect": "workspace_mutation",
+      "terminalState": "succeeded"
+    },
+    {
+      "callId": "call_2666983139590011",
+      "name": "write_file",
+      "requestedArguments": "{\"path\":\"test/release-label.test.js\",\"content\":\"[omitted 662 bytes]\"}",
+      "effect": "workspace_mutation",
+      "terminalState": "succeeded"
+    },
+    {
+      "callId": "call_2666983139590012",
+      "name": "apply_patch",
+      "requestedArguments": "{\"path\":\"README.md\",\"expectedSha256\":\"ede54019c084f50a519cdeb0e3de8f976dec3f12891ea656bffa6d422d7cae1e\",\"edits\":[{\"oldText\":\"[omitted 149 bytes]\",\"newText\":\"[omitted 386 bytes]\"}]}",
+      "effect": "workspace_mutation",
+      "terminalState": "succeeded"
+    },
+    {
+      "callId": "94c5b11a-876a-43cf-9966-142b5e19646b",
+      "name": "run_process",
+      "requestedArguments": "{\"executable\":\"node\",\"arguments\":[\"--test\",\"test/release-label.test.js\"]}",
+      "effect": "host_process",
+      "terminalState": "succeeded"
+    },
+    {
+      "callId": "099bbdc0-a448-428b-94af-e3f31663910d",
+      "name": "run_process",
+      "requestedArguments": "{\"executable\":\"npm\",\"arguments\":[\"test\"]}",
+      "effect": "host_process",
+      "terminalState": "succeeded"
+    }
+  ],
+  "mutations": [
+    {
+      "callId": "call_2666983139590006",
+      "tool": "apply_patch",
+      "path": "src/labels.js",
+      "bytes": 637,
+      "sha256": "654dec8eb267737ca95e249f9a9c05177edeeb4d8845ee10ab60c4c5d1633469"
+    },
+    {
+      "callId": "call_2666983139590010",
+      "tool": "apply_patch",
+      "path": "src/labels.js",
+      "bytes": 884,
+      "sha256": "e941a4cae59b78ffa795d069612d3641f8dc052b6a94130dabdb352196dba7a6"
+    },
+    {
+      "callId": "call_2666983139590011",
+      "tool": "write_file",
+      "path": "test/release-label.test.js",
+      "bytes": 662,
+      "sha256": "a58dcaf71d8dc607f5b1b305781e175b860e64535b1518150914c06396cc083b"
+    },
+    {
+      "callId": "call_2666983139590012",
+      "tool": "apply_patch",
+      "path": "README.md",
+      "bytes": 386,
+      "sha256": "8a866861dae1db54ee054445b2a743dde89c55f67a81aaff31a41b2e49919387"
+    }
+  ],
+  "validations": [
+    {
+      "callId": "94c5b11a-876a-43cf-9966-142b5e19646b",
+      "status": "passed",
+      "exitCode": 0,
+      "outcome": "completed"
+    },
+    {
+      "callId": "099bbdc0-a448-428b-94af-e3f31663910d",
+      "status": "passed",
+      "exitCode": 0,
+      "outcome": "completed"
+    }
+  ],
+  "correctionCount": 0,
+  "contexts": [
+    {
+      "profileId": "qwen3-coder-30b-a3b-instruct-q4_k_m-lm-studio-32k-ordinary",
+      "attemptedProfileIds": [
+        "qwen3-coder-30b-a3b-instruct-q4_k_m-lm-studio-32k-ordinary",
+        "qwen3-coder-30b-a3b-instruct-q4_k_m-lm-studio-32k-medium",
+        "qwen3-coder-30b-a3b-instruct-q4_k_m-lm-studio-32k"
+      ],
+      "promotionReasons": [],
+      "estimatedTokens": 866,
+      "providerInputBudget": 8192,
+      "remainingHeadroom": 7326
+    },
+    {
+      "profileId": "qwen3-coder-30b-a3b-instruct-q4_k_m-lm-studio-32k-ordinary",
+      "attemptedProfileIds": [
+        "qwen3-coder-30b-a3b-instruct-q4_k_m-lm-studio-32k-ordinary",
+        "qwen3-coder-30b-a3b-instruct-q4_k_m-lm-studio-32k-medium",
+        "qwen3-coder-30b-a3b-instruct-q4_k_m-lm-studio-32k"
+      ],
+      "promotionReasons": [],
+      "estimatedTokens": 1867,
+      "providerInputBudget": 8192,
+      "remainingHeadroom": 6325
+    },
+    {
+      "profileId": "qwen3-coder-30b-a3b-instruct-q4_k_m-lm-studio-32k-ordinary",
+      "attemptedProfileIds": [
+        "qwen3-coder-30b-a3b-instruct-q4_k_m-lm-studio-32k-ordinary",
+        "qwen3-coder-30b-a3b-instruct-q4_k_m-lm-studio-32k-medium",
+        "qwen3-coder-30b-a3b-instruct-q4_k_m-lm-studio-32k"
+      ],
+      "promotionReasons": [],
+      "estimatedTokens": 1891,
+      "providerInputBudget": 8192,
+      "remainingHeadroom": 6301
+    }
+  ],
+  "envelopePromotions": [],
+  "observedReadPaths": [
+    "README.md",
+    "src/labels.js",
+    "test/labels.test.js"
+  ],
+  "finalResponse": {
+    "present": false,
+    "bytes": 0,
+    "sha256": null
+  },
+  "budgets": {
+    "latest": [
+      {
+        "runId": "45078f70-0f45-49a4-a593-2de7d5ad5fa9",
+        "snapshot": {
+          "runId": "45078f70-0f45-49a4-a593-2de7d5ad5fa9",
+          "limits": {
+            "providerAttempts": 128,
+            "toolExecutions": 128,
+            "retryAttempts": 32,
+            "compactionAttempts": 32,
+            "compactionCheckpoints": 32,
+            "processExecutions": 64,
+            "processRuntimeMs": 3600000,
+            "wallClockMs": 3600000,
+            "contextTokens": 1000000,
+            "providerInputTokens": 1000000,
+            "providerOutputTokens": 1000000
+          },
+          "consumed": {
+            "providerAttempts": 8,
+            "toolExecutions": 15,
+            "retryAttempts": 0,
+            "compactionAttempts": 0,
+            "compactionCheckpoints": 0,
+            "processExecutions": 2,
+            "processRuntimeMs": 402,
+            "wallClockMs": 278545,
+            "contextTokens": 4624,
+            "providerInputTokens": 30023,
+            "providerOutputTokens": 1381
+          },
+          "elapsedMs": 278545
+        }
+      }
+    ],
+    "pressure": [],
+    "exhaustion": [],
+    "taskExhausted": false,
+    "stageExhaustion": []
+  },
+  "timing": {
+    "totalMs": 278598.148371,
+    "workflows": [
+      {
+        "turnId": "8de60c7c-45ee-42fb-aae3-0781c436c185",
+        "totalMs": 126702
+      },
+      {
+        "turnId": "5c4e9eda-e5df-4e52-8227-99b106a421c1",
+        "totalMs": 130147
+      },
+      {
+        "turnId": "69c17b47-813a-48ed-9640-21cd9fb5b057",
+        "totalMs": 243
+      },
+      {
+        "turnId": "bf4fb5ff-eaf6-4d46-9a36-302f65713f7a",
+        "totalMs": 378
+      }
+    ],
+    "providerAttempts": [
+      {
+        "attemptId": "p1a1-45078f70-0f45-49a4-a593-2de7d5ad5fa9",
+        "outcome": "completed",
+        "responseAcceptanceMs": 340,
+        "firstUsefulOutputMs": 11719,
+        "providerActiveMs": 20986
+      },
+      {
+        "attemptId": "p1a1-45078f70-0f45-49a4-a593-2de7d5ad5fa9",
+        "outcome": "completed",
+        "responseAcceptanceMs": 36,
+        "firstUsefulOutputMs": 21315,
+        "providerActiveMs": 27713
+      },
+      {
+        "attemptId": "p2a1-45078f70-0f45-49a4-a593-2de7d5ad5fa9",
+        "outcome": "completed",
+        "responseAcceptanceMs": 178,
+        "firstUsefulOutputMs": 15209,
+        "providerActiveMs": 65334
+      },
+      {
+        "attemptId": "p3a1-45078f70-0f45-49a4-a593-2de7d5ad5fa9",
+        "outcome": "completed",
+        "responseAcceptanceMs": 22,
+        "firstUsefulOutputMs": 12005,
+        "providerActiveMs": 15011
+      },
+      {
+        "attemptId": "p4a1-45078f70-0f45-49a4-a593-2de7d5ad5fa9",
+        "outcome": "completed",
+        "responseAcceptanceMs": 131,
+        "firstUsefulOutputMs": 15810,
+        "providerActiveMs": 17926
+      },
+      {
+        "attemptId": "p1a1-45078f70-0f45-49a4-a593-2de7d5ad5fa9",
+        "outcome": "completed",
+        "responseAcceptanceMs": 35,
+        "firstUsefulOutputMs": 16712,
+        "providerActiveMs": 67371
+      },
+      {
+        "attemptId": "p2a1-45078f70-0f45-49a4-a593-2de7d5ad5fa9",
+        "outcome": "completed",
+        "responseAcceptanceMs": 19,
+        "firstUsefulOutputMs": 12652,
+        "providerActiveMs": 48801
+      },
+      {
+        "attemptId": "p3a1-45078f70-0f45-49a4-a593-2de7d5ad5fa9",
+        "outcome": "completed",
+        "responseAcceptanceMs": 22,
+        "firstUsefulOutputMs": 11868,
+        "providerActiveMs": 13350
+      }
+    ]
+  },
+  "hiddenAcceptance": "passed",
+  "humanInterventions": 0,
+  "eventsOmitted": 4
+}
