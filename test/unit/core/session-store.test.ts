@@ -14,7 +14,7 @@ import {
   createSession,
   resolveGeorgeStateRoot,
 } from '../../../src/core/index.ts';
-import { addressTaskWorkUnit, beginTaskWorkUnit, createTaskState, parseTaskPrompt, recordTaskInspection, recordTaskValidationAttempt } from '../../../src/tasks/index.ts';
+import { addressTaskWorkUnit, beginTaskWorkUnit, blockTask, createTaskState, parseTaskPrompt, recordTaskInspection, recordTaskValidationAttempt } from '../../../src/tasks/index.ts';
 
 async function fixture(): Promise<{ root: string; workspace: string; state: string }> {
   const root = await mkdtemp(join(tmpdir(), 'george-session-store-'));
@@ -208,6 +208,58 @@ STOP CONDITIONS
   malformed.taskState.status = 'green';
   await writeFile(join(state, 'task-session.json'), JSON.stringify(malformed));
   await assert.rejects(store.open(session.id, workspace), /task status is invalid/);
+});
+
+test('terminal TaskState round-trips while impossible active-work state remains rejected', async () => {
+  const { workspace, state } = await fixture();
+  const store = new LocalSessionStore({ root: state });
+  const parsed = parseTaskPrompt(`GEORGE TASK FORMAT: 1
+
+TASK: P1 — Terminal persistence
+KIND: implementation
+
+GOAL
+
+Persist terminal work.
+
+REQUIREMENTS
+
+- R1: Terminal state reopens.
+
+WORKFLOW
+
+W1 — Work
+Covers: R1
+Depends on: none
+
+VALIDATION
+
+V1 — Check
+Covers: R1
+Run: node --version
+
+STOP CONDITIONS
+
+- S1: Stop truthfully.
+`);
+  if (parsed.kind !== 'structured') throw new Error('Expected structured task.');
+
+  for (const outcome of ['blocked', 'planning_needed', 'cancelled', 'budget_exhausted', 'failed'] as const) {
+    const session = createSession({ id: `terminal-${outcome}`, workspace });
+    session.taskState = blockTask(beginTaskWorkUnit(createTaskState({ sessionId: session.id, workspace, definition: parsed.task }), 'W1'), outcome, `${outcome} blocker`);
+    await store.save(session);
+    const reopened = await store.open(session.id, workspace);
+    assert.equal(reopened.taskState?.status, outcome);
+    assert.equal(reopened.taskState?.terminalOutcome, outcome);
+    assert.equal(reopened.taskState?.currentWorkUnit, undefined);
+    assert.equal(reopened.taskState?.workUnits.W1, 'blocked');
+  }
+
+  const impossible = createSession({ id: 'impossible-active', workspace });
+  const active = beginTaskWorkUnit(createTaskState({ sessionId: impossible.id, workspace, definition: parsed.task }), 'W1');
+  const { currentWorkUnit: _currentWorkUnit, ...withoutCurrentWorkUnit } = active;
+  impossible.taskState = withoutCurrentWorkUnit as typeof active;
+  await assert.rejects(store.save(impossible), /task active work unit is invalid/);
 });
 
 test('pre-adaptive context diagnostics reopen as fixed derived evidence', async () => {

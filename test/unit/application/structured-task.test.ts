@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import test from 'node:test';
 
 import { CORRECTION_FRAME_LIMITS, MISSION_CARD_LIMITS, StructuredTaskApplicationService, createCodingWorkflowApplicationService, projectCorrectionFrame, projectStructuredMissionCard, renderCorrectionFrame, type StructuredFreshEvidence } from '../../../src/application/index.ts';
-import { appendSessionEvent, createSession, DEFAULT_RUN_BUDGET, LocalSessionStore, RunBudget, type ApplicationEvent, type ApprovalDecision, type ApprovalPort, type ApprovalRequest, type ModelProvider, type ProviderEvent, type ProviderRequest } from '../../../src/core/index.ts';
+import { appendSessionEvent, createSession, DEFAULT_RUN_BUDGET, GeorgeError, LocalSessionStore, RunBudget, type ApplicationEvent, type ApprovalDecision, type ApprovalPort, type ApprovalRequest, type ModelProvider, type ProviderEvent, type ProviderRequest } from '../../../src/core/index.ts';
 import { addressTaskWorkUnit, beginTaskCorrection, beginTaskWorkUnit, createTaskState, parseTaskPrompt, recordTaskInspection, recordTaskValidationAttempt } from '../../../src/tasks/index.ts';
 
 class Provider implements ModelProvider {
@@ -330,6 +330,8 @@ test('direct validation budget exhaustion terminates the structured task without
   assert.equal(provider.requests.length, 1);
   assert.equal(completion.terminalState, 'budget_exhausted');
   assert.equal(session.taskState?.status, 'budget_exhausted');
+  assert.equal(session.taskState?.currentWorkUnit, undefined);
+  assert.equal(session.taskState?.workUnits.W1, 'addressed');
   assert.equal(session.taskState?.corrections.length, 0);
   assert.equal(session.taskState?.validations.V1?.attempts[0]?.error?.code, 'budget');
 });
@@ -412,6 +414,8 @@ test('deterministic progression never suppresses approval, cancellation, or outc
   await new StructuredTaskApplicationService(workflow.agent).run({ session: denied, input: singleWorkTask('Approval floor') });
   assert.deepEqual(approval.requests.map((request) => request.toolName), ['write_file', 'run_process']);
   assert.equal(denied.taskState?.status, 'blocked');
+  assert.equal(denied.taskState?.currentWorkUnit, undefined);
+  assert.equal(denied.taskState?.workUnits.W1, 'addressed');
   assert.equal(denied.taskState?.validations.V1?.status, 'denied');
 
   const cancelledProvider = new Provider([]);
@@ -421,16 +425,51 @@ test('deterministic progression never suppresses approval, cancellation, or outc
   await new StructuredTaskApplicationService(cancelledWorkflow.agent).run({ session: cancelled, input: singleWorkTask('Cancellation floor'), signal: controller.signal });
   assert.equal(cancelledProvider.requests.length, 0);
   assert.equal(cancelled.taskState?.status, 'cancelled');
+  assert.equal(cancelled.taskState?.currentWorkUnit, undefined);
+  assert.equal(cancelled.taskState?.workUnits.W1, 'blocked');
   assert.equal(cancelled.events.some((event) => event.type === 'model.round.avoided'), false);
 
   const recoveryProvider = new Provider([]);
   const recoveryWorkflow = await createCodingWorkflowApplicationService({ provider: recoveryProvider, workspace: root });
   const recovery = createSession({ workspace: root });
+  const recoveryDefinition = parseTaskPrompt(singleWorkTask('Recovery floor'));
+  if (recoveryDefinition.kind !== 'structured') throw new Error('Expected structured task.');
+  recovery.taskState = beginTaskWorkUnit(createTaskState({ sessionId: recovery.id, workspace: root, definition: recoveryDefinition.task }), 'W1');
   appendSessionEvent(recovery, { type: 'recovery.decision', turnId: 'old', kind: 'mutation', outcome: 'outcome_unknown', evidence: 'Mutation outcome remains unknown.' });
   await assert.rejects(new StructuredTaskApplicationService(recoveryWorkflow.agent).run({ session: recovery, input: singleWorkTask('Recovery floor') }), /ambiguous recovery/);
   assert.equal(recoveryProvider.requests.length, 0);
   assert.equal(recovery.taskState?.status, 'planning_needed');
+  assert.equal(recovery.taskState?.currentWorkUnit, undefined);
+  assert.equal(recovery.taskState?.workUnits.W1, 'blocked');
   assert.equal(recovery.events.some((event) => event.type === 'model.round.avoided'), false);
+});
+
+test('structured provider failure terminalizes active work and survives lifecycle persistence', async (t) => {
+  const root = await workspace();
+  const durable = await mkdtemp(join(tmpdir(), 'george-structured-provider-failure-'));
+  t.after(() => Promise.all([rm(root, { recursive: true, force: true }), rm(durable, { recursive: true, force: true })]));
+  const provider = new class implements ModelProvider {
+    async *stream(): AsyncGenerator<ProviderEvent> { throw new GeorgeError('provider', 'provider unavailable'); }
+  }();
+  const store = new LocalSessionStore({ root: durable });
+  const workflow = await createCodingWorkflowApplicationService({
+    provider,
+    workspace: root,
+    sessionStore: store,
+    providerRetryPolicy: { maxRetries: 0, initialDelayMs: 0, maxDelayMs: 0 },
+  });
+  const session = createSession({ id: 'provider-failure', workspace: root });
+  const completion = await new StructuredTaskApplicationService(workflow.agent, store).run({ session, input: singleWorkTask('Provider failure') });
+
+  assert.equal(completion.terminalState, 'failed');
+  assert.equal(session.taskState?.status, 'failed');
+  assert.equal(session.taskState?.currentWorkUnit, undefined);
+  assert.equal(session.taskState?.workUnits.W1, 'blocked');
+  const reopened = await store.open(session.id, root);
+  assert.equal(reopened.taskState?.status, 'failed');
+  assert.equal(reopened.taskState?.currentWorkUnit, undefined);
+  assert.equal(reopened.taskState?.workUnits.W1, 'blocked');
+  assert.equal(reopened.events.some((event) => event.type === 'task.updated' && event.status === 'failed'), true);
 });
 
 test('structured stages carry bounded safe evidence and share one task-wide budget', async (t) => {
@@ -678,6 +717,8 @@ test('structured duplicate local reads execute once and terminate truthfully bef
   assert.equal(provider.requests.length, 3);
   assert.equal(completion.terminalState, 'budget_exhausted');
   assert.equal(session.taskState?.status, 'budget_exhausted');
+  assert.equal(session.taskState?.currentWorkUnit, undefined);
+  assert.equal(session.taskState?.workUnits.W1, 'blocked');
   assert.equal(events.some((event) => event.type === 'provider.stall.terminal'), false);
   assert.match(session.taskState?.blockers.at(-1) ?? '', /did not complete/);
 });
@@ -717,6 +758,8 @@ test('structured stage tool ceiling reduces execution without changing ordinary 
   await new StructuredTaskApplicationService(structuredWorkflow.agent).run({ session: structuredSession, input, onEvent: (event) => { structuredEvents.push(event); } });
   assert.equal(structuredEvents.filter((event) => event.type === 'tool.started').length, 16);
   assert.equal(structuredSession.taskState?.status, 'budget_exhausted');
+  assert.equal(structuredSession.taskState?.currentWorkUnit, undefined);
+  assert.equal(structuredSession.taskState?.workUnits.W1, 'blocked');
 
   const ordinaryProvider = new Provider([round, [{ type: 'provider.response.completed' }]]);
   const ordinary = await createCodingWorkflowApplicationService({ provider: ordinaryProvider, workspace: root });

@@ -251,7 +251,10 @@ export function blockTask(state: TaskState, outcome: Exclude<TaskTerminalOutcome
   if (terminal(state.status)) throw new Error('Task is already terminal.');
   const message = bounded(blocker, 'blocker');
   if (state.blockers.length >= MAX_TASK_EVIDENCE) throw new Error('Task blocker history exceeds its bound.');
-  return clone(state, { status: outcome, terminalOutcome: outcome, blockers: freezeArray([...state.blockers, message]), currentWorkUnit: undefined });
+  const workUnits = state.currentWorkUnit !== undefined && state.workUnits[state.currentWorkUnit] === 'active'
+    ? freeze({ ...state.workUnits, [state.currentWorkUnit]: 'blocked' as const })
+    : state.workUnits;
+  return clone(state, { status: outcome, terminalOutcome: outcome, blockers: freezeArray([...state.blockers, message]), currentWorkUnit: undefined, workUnits });
 }
 
 export function completeTask(state: TaskState): TaskState {

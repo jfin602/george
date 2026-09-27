@@ -5,14 +5,16 @@ import { join } from 'node:path';
 import test from 'node:test';
 
 import { StructuredTaskApplicationService, StructuredTaskStackApplicationService, createCodingWorkflowApplicationService } from '../../../src/application/index.ts';
-import { LocalSessionStore, createSession, type ApprovalDecision, type ApprovalPort, type ApprovalRequest, type ModelProvider, type ProviderEvent, type ProviderRequest } from '../../../src/core/index.ts';
+import { GeorgeError, LocalSessionStore, createSession, type ApprovalDecision, type ApprovalPort, type ApprovalRequest, type ModelProvider, type ProviderEvent, type ProviderRequest } from '../../../src/core/index.ts';
 import { addressTaskWorkUnit, beginStackTask, beginTaskWorkUnit, completeTask, createStackState, parseTaskPrompt, recordTaskValidationAttempt, updateCurrentStackTask } from '../../../src/tasks/index.ts';
 import { renderTask, taskHeader } from '../../../src/tui/app.ts';
 
 class Provider implements ModelProvider {
   readonly supportsRoundContext = true as const;
   readonly requests: ProviderRequest[] = [];
-  async *stream(request: ProviderRequest): AsyncGenerator<ProviderEvent> { this.requests.push(request); if (request.executionMode === 'operation') yield { type: 'provider.text.delta', delta: '{"version":1,"control":"handoff"}' }; yield { type: 'provider.response.completed' }; }
+  readonly failure: GeorgeError | undefined;
+  constructor(failure?: GeorgeError) { this.failure = failure; }
+  async *stream(request: ProviderRequest): AsyncGenerator<ProviderEvent> { this.requests.push(request); if (this.failure) throw this.failure; if (request.executionMode === 'operation') yield { type: 'provider.text.delta', delta: '{"version":1,"control":"handoff"}' }; yield { type: 'provider.response.completed' }; }
 }
 class Allow implements ApprovalPort { async request(_request: ApprovalRequest): Promise<ApprovalDecision> { return 'allow_once'; } }
 
@@ -48,13 +50,15 @@ STOP CONDITIONS
 `;
 const prompts = (failure?: number) => [prompt(1, failure === 1), prompt(2, failure === 2), prompt(3, failure === 3, 'production-stack', 'closeout')];
 
-async function fixture(t: test.TestContext) {
+async function fixture(t: test.TestContext, provider = new Provider()) {
   const workspace = await mkdtemp(join(tmpdir(), 'george-stack-'));
   const durable = await mkdtemp(join(tmpdir(), 'george-stack-state-'));
   t.after(() => Promise.all([rm(workspace, { recursive: true, force: true }), rm(durable, { recursive: true, force: true })]));
-  const provider = new Provider();
   const store = new LocalSessionStore({ root: durable });
-  const workflow = await createCodingWorkflowApplicationService({ provider, workspace, approvalPort: new Allow(), sessionStore: store });
+  const workflow = await createCodingWorkflowApplicationService({
+    provider, workspace, approvalPort: new Allow(), sessionStore: store,
+    ...(provider.failure === undefined ? {} : { providerRetryPolicy: { maxRetries: 0, initialDelayMs: 0, maxDelayMs: 0 } }),
+  });
   const taskService = new StructuredTaskApplicationService(workflow.agent, store, undefined, 0);
   return { workspace, durable, provider, store, service: new StructuredTaskStackApplicationService(taskService, store) };
 }
@@ -88,6 +92,21 @@ test('stack fail-stops after P1 or P2 and terminal failure cannot be resumed', a
     await service.run({ session, prompts: prompts(failure) });
     assert.equal(provider.requests.length, failure + 2, 'terminal stack must not restart provider work');
   }
+});
+
+test('stack child provider failure blocks active work and reopens durably', async (t) => {
+  const provider = new Provider(new GeorgeError('provider', 'provider unavailable'));
+  const { workspace, store, service } = await fixture(t, provider);
+  const session = createSession({ id: 'failed-stack', workspace });
+  const result = await service.run({ session, prompts: prompts() });
+
+  assert.equal(result.state.status, 'failed');
+  assert.equal(result.state.tasks[0]?.taskState.currentWorkUnit, undefined);
+  assert.equal(result.state.tasks[0]?.taskState.workUnits.W1, 'blocked');
+  const reopened = await store.open(session.id, workspace);
+  assert.equal(reopened.stackState?.status, 'failed');
+  assert.equal(reopened.stackState?.tasks[0]?.taskState.currentWorkUnit, undefined);
+  assert.equal(reopened.stackState?.tasks[0]?.taskState.workUnits.W1, 'blocked');
 });
 
 test('reopen retains completed P1 and resumes at P2 without replaying P1', async (t) => {

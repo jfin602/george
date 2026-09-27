@@ -103,6 +103,34 @@ test('TaskState correction bounds and projection do not expose task prompt bodie
   assert.equal(view.blockerCount, 1);
 });
 
+test('terminalization atomically blocks only the current active work unit and preserves task evidence', () => {
+  const outcomes = ['blocked', 'planning_needed', 'cancelled', 'budget_exhausted', 'failed'] as const;
+  for (const outcome of outcomes) {
+    let current = beginTaskWorkUnit(state(), 'W1');
+    current = recordTaskInspection(current, { item: 'current state', source: 'read' });
+    current = { ...current, blockers: Object.freeze(['earlier blocker']) };
+    const terminal = blockTask(current, outcome, `${outcome} blocker`);
+
+    assert.equal(terminal.status, outcome);
+    assert.equal(terminal.terminalOutcome, outcome);
+    assert.equal(terminal.currentWorkUnit, undefined);
+    assert.deepEqual(terminal.workUnits, { W1: 'blocked', W2: 'pending' });
+    assert.deepEqual(terminal.blockers, ['earlier blocker', `${outcome} blocker`]);
+    assert.strictEqual(terminal.requirements, current.requirements);
+    assert.strictEqual(terminal.inspections, current.inspections);
+    assert.strictEqual(terminal.validations, current.validations);
+    assert.strictEqual(terminal.corrections, current.corrections);
+    assert.strictEqual(terminal.effectivePermissionExpectations, current.effectivePermissionExpectations);
+  }
+
+  let inactive = beginTaskWorkUnit(state(), 'W1');
+  inactive = recordTaskInspection(inactive, { item: 'current state', source: 'read' });
+  inactive = addressTaskWorkUnit(inactive, 'W1');
+  const terminal = blockTask(inactive, 'failed', 'later failure');
+  assert.strictEqual(terminal.workUnits, inactive.workUnits);
+  assert.deepEqual(terminal.workUnits, { W1: 'addressed', W2: 'pending' });
+});
+
 test('TaskState rejects correction once its configured cycle budget is exhausted', () => {
   let current = createTaskState({ sessionId: 'limited', workspace: '/workspace', definition: state().definition, correctionLimit: 0 });
   current = beginTaskWorkUnit(current, 'W1');

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { addressTaskWorkUnit, beginStackTask, beginTaskWorkUnit, completeTask, createStackState, parseTaskPrompt, projectStackState, recordTaskValidationAttempt, updateCurrentStackTask } from '../../../src/tasks/index.ts';
+import { addressTaskWorkUnit, beginStackTask, beginTaskWorkUnit, blockTask, completeTask, createStackState, parseTaskPrompt, projectStackState, recordTaskValidationAttempt, restoreStackState, updateCurrentStackTask } from '../../../src/tasks/index.ts';
 
 const prompt = (ordinal: number, kind = 'implementation') => `GEORGE TASK FORMAT: 1
 
@@ -54,4 +54,16 @@ test('StackState preserves completed TaskState history and projects ordered prog
   assert.equal(stack.tasks[0]?.taskState.validations.V1.attempts.length, 1);
   assert.equal(stack.tasks[1]?.status, 'pending');
   assert.deepEqual(projectStackState(stack).tasks.map((item) => item.status), ['completed', 'pending', 'pending']);
+});
+
+test('StackState preserves a terminal child with its active work unit blocked', () => {
+  let stack = beginStackTask(createStackState({ sessionId: 'stack', workspace: '/workspace', definitions: [definition(1), definition(2)] }), 0);
+  const child = blockTask(beginTaskWorkUnit(stack.tasks[0]!.taskState, 'W1'), 'failed', 'provider failed');
+  stack = updateCurrentStackTask(stack, child);
+
+  assert.equal(stack.status, 'failed');
+  assert.equal(stack.currentTaskIndex, 0);
+  assert.equal(stack.tasks[0]?.taskState.currentWorkUnit, undefined);
+  assert.equal(stack.tasks[0]?.taskState.workUnits.W1, 'blocked');
+  assert.deepEqual(restoreStackState(stack), stack);
 });
