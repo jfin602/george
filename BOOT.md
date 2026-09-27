@@ -188,7 +188,7 @@ The model provider is replaceable. LM Studio/Qwen is the first provider, not an 
 - Default LM Studio model ID: `qwen3-coder-30b-a3b-instruct@q4_k_m`; `GEORGE_MODEL` may explicitly override it.
 - Persistence: simple local filesystem state first; no database until justified.
 - Desktop: after the optimized primary-model baseline is frozen, Tauri becomes the observability-first native shell; its first-order purpose is model/agent debugging and developer leverage rather than visual polish.
-- Networking: architecture must permit a later daemon/server mode without rewriting the agent core.
+- Networking: Phase 12 introduces the localhost daemon/server transport without rewriting the agent core; broader trusted networking remains later and opt-in.
 - Browser UI: not required for the core or TUI.
 - Electron: not the default desktop direction.
 
@@ -200,6 +200,8 @@ Read:
 - workflow: `docs/workflow.md`;
 - stability/testing: `docs/stability-contract.md`;
 - roadmap: `docs/roadmap/mvp-roadmap.md`;
+- post-Phase-11 daemon/observability direction: `docs/planning/p12-local-daemon-observability/{decision-record,qualification-plan}.md`;
+- native desktop/Agent Observatory direction: `docs/planning/p13-native-desktop-observatory/{decision-record,qualification-plan}.md`;
 - Living Project Map / Software Graph, when relevant: `docs/planning/living-project-map/decision-record.md` (then its graph, interaction, and qualification companions as needed);
 - Phase 9 owner closeout: `docs/phase-9-owner-closeout.md`; retained Phase 9 authority/evidence: `docs/planning/p9-structured-task-execution/{decision-record,task-format-v1,qualification-plan}.md`, `docs/tasks/c9-final-live-convergence/closeout.md`, and its final report/ledger; Phase 10 authority: `docs/planning/p10-agent-loop-throughput/{decision-record,qualification-plan,optimization-metrics,fast-live-work}.md`; formal Phase 10 closeout: `docs/phase-10-closeout.md`; parent correction closeout: `docs/tasks/c10-generation-bottleneck/closeout.md`; active correction: `docs/planning/c10-gep-compatibility/{decision-record,qualification-plan}.md`;
 - Phase 8 closeout/history when needed: `docs/phase-8-closeout.md`, `docs/phase-8-owner-closeout.md`, `docs/tasks/c8-agentic-context/closeout.md`, `docs/planning/c8-agentic-context/decision-record.md`, `docs/planning/c8-agentic-context/qualification-plan.md`, `docs/planning/p8-context-throughput-optimization/decision-record.md`, `docs/planning/p8-context-throughput-optimization/initial-baseline.md`, and `docs/planning/performance-benchmarking-worksheet.md`;

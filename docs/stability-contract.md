@@ -751,13 +751,13 @@ Routine Phase 10 live qualification uses compact B3/C3 efficacy instruments. Fro
 
 Phase 11 closes the primary-model optimization campaign only after a full-suite consolidated run records the original baseline, accepted/rejected experiments, cumulative deltas, correctness state, call counts, token usage where available, and resource footprint. Speculative decoding is retained only if the end-to-end evidence justifies its memory/runtime complexity.
 
-Phase 12 utility-model qualification must prove:
+Phase 14 utility-model qualification must prove:
 - utility output is bounded derived context/evidence, not authoritative instructions or canonical session truth;
 - utility inference cannot grant permissions, invoke tools by its own authority, or expand George's capability ceiling;
 - helper routing has net measured benefit against the optimized Phase 11 primary-only baseline after accounting for helper latency, memory pressure, scheduling, and quality;
 - helper failure/disablement degrades explicitly through a documented fallback.
 
-Phase 13 local-research qualification must keep search discovery, fetch, deterministic extraction, browser fallback, utility inference, and premium escalation independently observable/disableable, while preserving source provenance and treating fetched content as untrusted data.
+Phase 15 local-research qualification must keep search discovery, fetch, deterministic extraction, browser fallback, utility inference, and premium escalation independently observable/disableable, while preserving source provenance, treating fetched content as untrusted data, and exposing stage-level evidence through the established Phase 12/13 observability surfaces.
 
 
 ## Correction 10 generation-bottleneck qualification

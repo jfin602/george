@@ -5,7 +5,7 @@ Status: INITIAL ARCHITECTURE CONTRACT
 ## Shape
 
 ```text
-OpenTUI / future Tauri / future network client
+OpenTUI / Phase 13 Tauri / future trusted client
                  |
           application service
                  |
@@ -413,7 +413,7 @@ Phase 5 implements compaction as provider-facing derived context over the author
 
 Compaction/summarization is exposed behind a provider-independent boundary. Deterministic structural reduction is preferred where inference is unnecessary so a later secondary utility model can assume semantic compaction duties without changing session or context architecture.
 
-Phase 12 may attach a secondary local utility model to that boundary only after the Phase 11 optimized primary-model baseline is frozen. Utility inference is subordinate derived-context work: it has no independent permission authority, cannot register or execute tools by instruction, cannot raise instruction precedence, and cannot replace canonical session/evidence state. Utility-model failure or disablement must have an explicit bounded fallback path.
+Phase 14 may attach a secondary local utility model to that boundary only after the Phase 11 optimized primary-model baseline is frozen and the Phase 12/13 observability surfaces are established. Utility inference is subordinate derived-context work: it has no independent permission authority, cannot register or execute tools by instruction, cannot raise instruction precedence, and cannot replace canonical session/evidence state. Utility-model failure or disablement must have an explicit bounded fallback path.
 
 The current Phase 1 behavior that loads bounded raw root `BOOT.md` and `AGENTS.md` content directly into a turn is a bootstrap implementation, not the intended mature context architecture.
 
@@ -650,11 +650,11 @@ The Phase 4 user-visible work log remains a presentation projection; diagnostic 
 
 ### Long-run process lifetime
 
-Phase 5 long runs remain attached to the local George process with durable recovery evidence. Detached/background service ownership, scheduling, and persistent server lifecycle remain later daemon concerns.
+Phase 5 long runs remain attached to the local George process with durable recovery evidence. Detached/background service ownership and persistent server lifecycle remain deferred to the Phase 12 daemon boundary; scheduling remains a later capability.
 
 ## Interfaces
 
-OpenTUI is the first presentation adapter. A later daemon may expose the application service over localhost. A Tauri UI or trusted remote client can then use that transport without moving agent logic into UI code.
+OpenTUI is the first presentation adapter. Phase 12 exposes the application service through a localhost daemon/observability transport. Phase 13 Tauri and later trusted clients consume that boundary without moving agent logic into UI code.
 
 ## Trust boundaries
 
@@ -881,4 +881,4 @@ One failing/malformed plugin or adapter must not corrupt unrelated extension sta
 
 ## Future boundaries
 
-Designed, not implemented initially: daemon/server transport, Tauri desktop UI, multiple inference providers, project software-graph/index services, broader general-purpose OS/container sandboxing beyond the planned Phase 9 workspace-process boundary, remembered broad permission profiles, authenticated remote clients, and multi-agent execution. Chrome DevTools, Parallel Search, GitHub, and MCP are now Phase 6 capability/adapter directions rather than future architecture.
+Planned but not implemented at the current Phase 10 gate: Phase 12 daemon/server observability transport, Phase 13 Tauri Agent Observatory, multiple inference providers, project software-graph/index services, broader general-purpose OS/container sandboxing beyond the Phase 9 workspace-process boundary, remembered broad permission profiles, authenticated remote clients, and multi-agent execution. Chrome DevTools, Parallel Search, GitHub, and MCP are Phase 6 capability/adapter directions rather than future architecture.

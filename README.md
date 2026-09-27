@@ -8,8 +8,8 @@ Start with `BOOT.md` before substantial repository-aware work.
 
 ## Initial direction
 
-- TypeScript + Node.js 24 core.
-- CLI-first; no browser UI requirement.
+- TypeScript + Node.js >=26.4.0 <27 core.
+- OpenTUI-first foundation; no browser UI requirement for the core.
 - Core implemented as reusable libraries, not CLI handlers.
 - LM Studio `/v1/responses` as the first inference provider.
 - Native filesystem, shell, Git, search, patch, test, and process tools.

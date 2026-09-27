@@ -56,7 +56,7 @@ Project documentation should be routed or retrieved when relevant instead of bei
 
 ### Structured task execution
 
-Phase 9 is the current execution phase. It uses versioned constrained-natural-language task prompts rather than relying on the coding model to infer requirements, workflow ordering, validation, and stop conditions from an unstructured implementation memo.
+Phase 9 established George's current structured execution model. It uses versioned constrained-natural-language task prompts rather than relying on the coding model to infer requirements, workflow ordering, validation, and stop conditions from an unstructured implementation memo.
 
 A structured task is parsed into application/core-owned requirements, work units, validation gates, stop conditions, correction state, and durable task progress. The model remains responsible for code understanding, implementation choices, and debugging inside the current bounded work unit. George remains responsible for deterministic orchestration and completion truth.
 
@@ -126,7 +126,7 @@ George's durable normalized session/event history remains authoritative across c
 
 Automatic retries are allowed only when George can establish replay safety. Ambiguous side effects are reconciled from durable and observable evidence or remain explicitly unknown; they are not blindly repeated. Long-run budgets, cancellation, cleanup, and recovery remain application-owned controls that repository/model/extension text cannot expand.
 
-Long-running Phase 5 work remains an attached local George run. A persistent detached service/background-job owner is a later daemon concern.
+Long-running Phase 5 work remains an attached local George run. Persistent detached service/background-job ownership remains deferred to the Phase 12 local-daemon boundary; historical Phase 5 evidence remains attached-run evidence.
 
 ### Small dependency surface
 
@@ -134,7 +134,7 @@ Prefer Node standard library and focused dependencies. OpenTUI is an approved Ph
 
 ### Networking-ready, not networking-first
 
-Core APIs should permit a later daemon/server transport so another local UI or trusted device can drive George. Phase 2 does not expose George to the LAN or Internet and does not add network-capable tools.
+Core APIs must support the Phase 12 localhost daemon/server transport so OpenTUI, Tauri, and later trusted clients can drive the same application service without moving agent logic into presentation code. Phase 2 does not expose George to the LAN or Internet and does not add network-capable tools.
 
 ### Observability-first native desktop
 
@@ -259,12 +259,18 @@ Phase 9 succeeds when George can parse and durably execute George Task Prompt v1
 
 Phases 7-11 succeed when George moves from the untouched benchmark baseline to a reproducible optimized single-primary-model baseline. Phases 7-8 optimize runtime/context, Phase 9 establishes the structured execution model, Phase 10 optimizes that agent loop, and Phase 11 performs final provider acceleration/consolidated qualification. Every accepted change must preserve correctness and existing safety/evidence contracts; rejected experiments remain visible. Phase 11 ends with a full-suite consolidated report showing cumulative benefit and remaining bottlenecks.
 
-## Phase 12 utility-model success condition
+## Phase 12 daemon + observability success condition
 
-Phase 12 succeeds when a secondary local utility model can assume at least one bounded compaction/ranking/extraction/routing task with demonstrated net benefit over the optimized Phase 11 primary-only baseline, while remaining unable to grant permissions, execute tools by its own authority, override instruction precedence, or replace canonical session/evidence state.
+Phase 12 succeeds when George can run behind a localhost-only daemon without moving execution authority out of the application/core/session layers; OpenTUI or another client can attach, disconnect, reconnect, and query/stream stable correlated session/run/task/provider/tool/validation/recovery evidence without duplicating work or fabricating terminal state; and safe provider-facing request projections make context/model debugging materially easier while remaining bounded, redacted, and distinct from raw provider payloads or hidden reasoning.
 
-## Phase 13 local-research success condition
+## Phase 13 desktop Agent Observatory success condition
 
-Phase 13 succeeds when representative ordinary technical/documentation research can use local/self-hosted discovery, bounded fetch/extraction, and optional utility-model compaction without requiring a paid research API, while premium providers such as Parallel remain explicit optional escalation paths and fetched content remains untrusted data.
+Phase 13 succeeds when the Tauri client provides a usable native George workflow and materially improves diagnosis of representative model/harness failures through correlated run timelines, provider/model inspection, context provenance, task/orchestration state, tool/approval lifecycle, diffs/changes, validation, recovery, diagnostics, and baseline-versus-candidate comparison. The desktop remains a presentation client over Phase 12/application authority, while OpenTUI remains supported as a lightweight terminal client.
 
-The persistent local service and Tauri desktop are therefore shifted to Phases 14 and 15 respectively, after the core agent path has been benchmarked and optimized.
+## Phase 14 utility-model success condition
+
+Phase 14 succeeds when a secondary local utility model can assume at least one bounded compaction/ranking/extraction/routing task with demonstrated net benefit over the optimized Phase 11 primary-only baseline, with its cost, savings, provenance, and failure modes inspectable through the Phase 12/13 observability surface, while remaining unable to grant permissions, execute tools by its own authority, override instruction precedence, or replace canonical session/evidence state.
+
+## Phase 15 local-research success condition
+
+Phase 15 succeeds when representative ordinary technical/documentation research can use local/self-hosted discovery, bounded fetch/extraction, and optional utility-model compaction without requiring a paid research API, while premium providers such as Parallel remain explicit optional escalation paths, fetched content remains untrusted data, and research stages remain observable through the established daemon/desktop instrumentation.
