@@ -45,37 +45,44 @@ function bounded(value: string, maximum = 4096): string {
   return Buffer.byteLength(value, 'utf8') <= maximum ? value : `${Buffer.from(value, 'utf8').subarray(0, maximum - 3).toString('utf8')}...`;
 }
 
-/** Attributes lifecycle intervals once; concurrent read overlap is removed from summed tool time. */
-class WorkflowTimer {
+/** Attributes each elapsed interval to one active lifecycle category. */
+export class WorkflowTimer {
   private readonly clock: () => number;
   private readonly startedAt: number;
-  private providerStarted: number | undefined;
-  private readonly tools = new Map<string, number>();
-  private readonly approvals = new Map<string, number>();
+  private lastAt: number;
+  private providerActive = false;
+  private readonly tools = new Set<string>();
+  private readonly approvals = new Set<string>();
   private providerMs = 0;
   private toolMs = 0;
   private approvalMs = 0;
 
-  constructor(clock: () => number) { this.clock = clock; this.startedAt = clock(); }
+  constructor(clock: () => number) { this.clock = clock; this.startedAt = clock(); this.lastAt = this.startedAt; }
+
+  private advance(): number {
+    const now = Math.max(this.lastAt, this.clock());
+    const elapsed = now - this.lastAt;
+    // Approval takes precedence if lifecycle categories ever overlap unexpectedly.
+    if (this.approvals.size) this.approvalMs += elapsed;
+    else if (this.tools.size) this.toolMs += elapsed;
+    else if (this.providerActive) this.providerMs += elapsed;
+    this.lastAt = now;
+    return now;
+  }
 
   observe(event: ApplicationEvent): void {
-    const now = this.clock();
-    const close = (started: number | undefined, add: (value: number) => void) => { if (started !== undefined) add(Math.max(0, now - started)); };
-    if (event.type === 'provider.attempt.started') this.providerStarted ??= now;
-    else if (event.type === 'provider.response.completed' || event.type === 'provider.error' || event.type === 'provider.retry.scheduled') { close(this.providerStarted, (value) => { this.providerMs += value; }); this.providerStarted = undefined; }
-    else if (event.type === 'tool.started') this.tools.set(event.callId, now);
-    else if (event.type === 'tool.completed' || event.type === 'tool.failed') { close(this.tools.get(event.callId), (value) => { this.toolMs += value; }); this.tools.delete(event.callId); }
-    else if (event.type === 'tool.concurrent-read-batch.completed') this.toolMs = Math.max(0, this.toolMs - event.observedOverlapMs);
-    else if (event.type === 'approval.requested') this.approvals.set(event.callId, now);
-    else if (event.type === 'approval.allowed' || event.type === 'approval.denied') { close(this.approvals.get(event.callId), (value) => { this.approvalMs += value; }); this.approvals.delete(event.callId); }
+    this.advance();
+    if (event.type === 'provider.attempt.started') this.providerActive = true;
+    else if (event.type === 'provider.response.completed' || event.type === 'provider.error' || event.type === 'provider.retry.scheduled') this.providerActive = false;
+    else if (event.type === 'tool.started') this.tools.add(event.callId);
+    else if (event.type === 'tool.completed' || event.type === 'tool.failed') this.tools.delete(event.callId);
+    else if (event.type === 'approval.requested') this.approvals.add(event.callId);
+    else if (event.type === 'approval.allowed' || event.type === 'approval.denied') this.approvals.delete(event.callId);
   }
 
   finish(): WorkflowTiming {
-    const now = this.clock();
-    if (this.providerStarted !== undefined) this.providerMs += Math.max(0, now - this.providerStarted);
-    for (const started of this.tools.values()) this.toolMs += Math.max(0, now - started);
-    for (const started of this.approvals.values()) this.approvalMs += Math.max(0, now - started);
-    this.providerStarted = undefined; this.tools.clear(); this.approvals.clear();
+    const now = this.advance();
+    this.providerActive = false; this.tools.clear(); this.approvals.clear();
     const totalMs = Math.max(0, now - this.startedAt);
     const providerMs = Math.round(this.providerMs); const toolMs = Math.round(this.toolMs); const approvalMs = Math.round(this.approvalMs);
     return { totalMs: Math.round(totalMs), providerMs, toolMs, approvalMs, otherMs: Math.max(0, Math.round(totalMs) - providerMs - toolMs - approvalMs) };

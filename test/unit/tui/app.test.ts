@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 
-import { RGBA, TextRenderable } from '@opentui/core';
+import { RGBA, StyledText, TextRenderable } from '@opentui/core';
 import { createTestRenderer } from '@opentui/core/testing';
 
 import {
@@ -21,8 +21,8 @@ import {
   type ProviderStreamOptions,
 } from '../../../src/core/index.ts';
 import { createCodingWorkflowApplicationService, createOneTurnApplicationService, StructuredTaskApplicationService, WorkProjection, type OneTurnServiceOptions } from '../../../src/application/index.ts';
-import { GeorgeTui, NEON_THEME, formatElapsedDuration, formatThinkingElapsed, formatWorkflowTiming, renderTask, renderTranscript, taskHeader, type GeorgeTuiOptions, type ThinkingClock, type TranscriptWorkEntry } from '../../../src/tui/app.ts';
-import { createTaskState, parseTaskPrompt } from '../../../src/tasks/index.ts';
+import { GeorgeTui, NEON_THEME, formatElapsedDuration, formatThinkingElapsed, formatWorkflowTiming, renderStyledTask, renderTask, renderTranscript, taskHeader, type GeorgeTuiOptions, type ThinkingClock, type TranscriptWorkEntry } from '../../../src/tui/app.ts';
+import { beginStackTask, createStackState, createTaskState, parseTaskPrompt } from '../../../src/tasks/index.ts';
 import type { ToolDefinition } from '../../../src/tools/index.ts';
 
 class ScriptedProvider implements ModelProvider {
@@ -113,8 +113,11 @@ class ApprovalProvider implements ModelProvider {
 class FakeThinkingClock implements ThinkingClock {
   private nextId = 0;
   private readonly callbacks = new Map<number, () => void>();
+  private elapsed = 0;
 
   get size(): number { return this.callbacks.size; }
+  now(): number { return this.elapsed; }
+  advance(ms: number): void { this.elapsed += ms; this.tick(); }
   setInterval(callback: () => void): number {
     const id = ++this.nextId;
     this.callbacks.set(id, callback);
@@ -122,6 +125,14 @@ class FakeThinkingClock implements ThinkingClock {
   }
   clearInterval(timer: number | ReturnType<typeof setInterval>): void { this.callbacks.delete(timer as number); }
   tick(): void { for (const callback of [...this.callbacks.values()]) callback(); }
+}
+
+function assertTimersCleared(app: GeorgeTui, clock: FakeThinkingClock): void {
+  const timing = app as unknown as { thinkingTimer?: unknown; thinkingStartedAt?: number; turnStartedAt?: number };
+  assert.equal(clock.size, 0);
+  assert.equal(timing.thinkingTimer, undefined);
+  assert.equal(timing.thinkingStartedAt, undefined);
+  assert.equal(timing.turnStartedAt, undefined);
 }
 
 class ObservedApprovalPort extends PendingApprovalPort {
@@ -252,6 +263,12 @@ test('structured work stays in both pages while active navigation preserves draf
   assert.equal(item.app.currentPage(), 'task');
   assert.match(item.setup.captureCharFrame(), /Goal/);
   assert.match(renderTask(item.app.session.taskState, item.app.work, 80), /Recent work[\s\S]*Read BOOT\.md/);
+  const taskText = item.setup.renderer.root.findDescendantById('task-text');
+  assert.ok(taskText instanceof TextRenderable && taskText.content instanceof StyledText);
+  item.setup.resize(48, 18);
+  await item.setup.flush();
+  assert.ok(item.app.task.width > 0 && item.app.task.height > 0);
+  assert.match(item.setup.captureCharFrame(), /\[Task\]/);
   item.setup.mockInput.pressKey('1', { ctrl: true });
   await item.setup.flush();
   assert.equal(item.app.currentPage(), 'transcript');
@@ -306,6 +323,73 @@ STOP CONDITIONS
   assert.doesNotMatch(taskHeader(state), /test\/unit\/tui/);
 });
 
+test('Task styling preserves text and wrapping while marking headings, current work, statuses, and access', () => {
+  const parsed = parseTaskPrompt(`GEORGE TASK FORMAT: 1
+
+TASK: P1 — Colored progress
+KIND: implementation
+
+GOAL
+
+- Keep descriptions readable at narrow widths.
+
+REQUIREMENTS
+
+- R1: Show verified progress and readable descriptions.
+
+WORKFLOW
+
+W1 — Render the current step with readable descriptions
+Covers: R1
+Depends on: none
+
+VALIDATION
+
+V1 — Check colors
+Covers: R1
+Run: node --version
+
+STOP CONDITIONS
+
+- S1: Stop safely.`);
+  assert.equal(parsed.kind, 'structured');
+  if (parsed.kind !== 'structured') return;
+  const base = createTaskState({ sessionId: 'session', workspace: '/workspace', definition: parsed.task });
+  const state = { ...base, status: 'in_progress' as const, currentWorkUnit: 'W1' as const,
+    requirements: { R1: 'verified' as const }, workUnits: { W1: 'active' as const },
+    validations: { V1: { status: 'failed' as const, attempts: [] } },
+    corrections: [{ cycle: 1, validationId: 'V1' as const, status: 'active' as const }],
+  };
+  const work: TranscriptWorkEntry[] = ['running', 'succeeded', 'failed', 'skipped'].map((status, index) => ({
+    afterEntryCount: 0, item: { id: `work-${index}`, turnId: 'turn', operationId: `call-${index}`, category: 'validation', status: status as 'running' | 'succeeded' | 'failed' | 'skipped', summary: `Check ${index}`, details: {} },
+  }));
+  const before = JSON.stringify(state);
+  const styled = renderStyledTask(state, work, 34);
+  assert.equal(styled.chunks.map((chunk) => chunk.text).join(''), renderTask(state, work, 34));
+  assert.match(renderTask(state, work, 34), /W1 \(active\): Render the current step with\n  readable descriptions/);
+  const color = (value: string) => styled.chunks.find((chunk) => chunk.text === value)?.fg?.toInts();
+  const hex = (value: string) => RGBA.fromHex(value).toInts();
+  for (const heading of ['Goal', 'Requirements', 'Workflow', 'Validation', 'Recent work', 'Corrections:']) assert.deepEqual(color(heading), hex(NEON_THEME.assistant));
+  assert.deepEqual(color('Effective access:'), hex(NEON_THEME.assistant));
+  assert.deepEqual(color('W1'), hex(NEON_THEME.user));
+  assert.deepEqual(color('R1'), hex(NEON_THEME.muted));
+  assert.deepEqual(color('verified'), hex(NEON_THEME.assistant));
+  assert.deepEqual(color('active'), hex(NEON_THEME.user));
+  assert.deepEqual(color('failed'), hex(NEON_THEME.error));
+  assert.deepEqual(color('running'), hex(NEON_THEME.user));
+  assert.deepEqual(color('skipped'), hex(NEON_THEME.muted));
+  assert.deepEqual(color('succeeded'), hex(NEON_THEME.assistant));
+  assert.equal(styled.chunks.find((chunk) => chunk.text.includes('Render the current step'))?.fg, undefined);
+  assert.equal(JSON.stringify(state), before);
+
+  const stack = beginStackTask(createStackState({ sessionId: 'session', workspace: '/workspace', definitions: [parsed.task] }), 0);
+  const stackStyled = renderStyledTask(stack, [], 34);
+  assert.equal(stackStyled.chunks.map((chunk) => chunk.text).join(''), renderTask(stack, [], 34));
+  assert.deepEqual(stackStyled.chunks.find((chunk) => chunk.text === 'P1')?.fg?.toInts(), hex(NEON_THEME.user));
+  assert.deepEqual(stackStyled.chunks.find((chunk) => chunk.text === 'pending')?.fg?.toInts(), hex(NEON_THEME.muted));
+  assert.deepEqual(stackStyled.chunks.find((chunk) => chunk.text === 'Tasks')?.fg?.toInts(), hex(NEON_THEME.assistant));
+});
+
 test('committed final answers reveal progressively without delaying canonical durability, and cancellation stops the reveal', async (t) => {
   const answer = `START ${'x'.repeat(3_000)} END`;
   const measurements: import('../../../src/core/index.ts').Measurement[] = [];
@@ -351,6 +435,7 @@ test('provider thinking animates deterministically without creating transcript, 
   const item = await tui(provider, {}, { thinkingClock: clock });
   const state = await mkdtemp(join(tmpdir(), 'george-tui-thinking-'));
   t.after(async () => {
+    provider.release.resolve();
     await cleanup(item);
     await rm(state, { recursive: true, force: true });
   });
@@ -360,26 +445,92 @@ test('provider thinking animates deterministically without creating transcript, 
   await provider.started.promise;
   await item.setup.flush();
   assert.equal(clock.size, 1);
-  assert.match(item.setup.captureCharFrame(), /Thinking\s+00:00/);
+  assert.match(item.setup.captureCharFrame(), /Thinking\s+00:00 · total 00:00/);
   const eventCount = item.app.session.events.length;
   const activityCount = item.app.session.events.filter((event) => event.type === 'activity.updated').length;
+  const transcript = JSON.stringify(item.app.session.transcript);
   const work = JSON.stringify(item.app.work);
   for (const label of ['Thinking.   00:00', 'Thinking..  00:00', 'Thinking... 00:00', 'Thinking    00:00']) {
     clock.tick();
     await item.setup.flush();
-    assert.equal(item.setup.captureCharFrame().split('\n').find((line) => line.includes('Thinking'))?.trim(), label);
+    assert.equal(item.setup.captureCharFrame().split('\n').find((line) => line.includes('Thinking'))?.trim(), `${label} · total 00:00`);
   }
+  clock.advance(61_999);
+  await item.setup.flush();
+  assert.match(item.setup.captureCharFrame(), /Thinking[. ]+01:01 · total 01:01/);
   assert.equal(item.app.session.events.length, eventCount);
   assert.equal(item.app.session.events.filter((event) => event.type === 'activity.updated').length, activityCount);
+  assert.equal(JSON.stringify(item.app.session.transcript), transcript);
   assert.equal(JSON.stringify(item.app.work), work);
-  assert.doesNotMatch(provider.calls[0]?.request.input ?? '', /Thinking/);
+  assert.doesNotMatch(provider.calls[0]?.request.input ?? '', /Thinking|total 01:01/);
   const store = new LocalSessionStore({ root: state });
   await store.save(item.app.session);
-  assert.doesNotMatch(JSON.stringify((await store.open(item.app.session.id, item.workspace)).events), /Thinking/);
+  assert.doesNotMatch(JSON.stringify((await store.open(item.app.session.id, item.workspace)).events), /Thinking|total 01:01/);
 
   provider.release.resolve();
   await item.app.waitForIdle();
+  assertTimersCleared(item.app, clock);
+});
+
+test('turn total begins at submission and survives provider rounds, tools, and approval', async (t) => {
+  const clock = new FakeThinkingClock();
+  const provider = new class implements ModelProvider {
+    entered = Promise.withResolvers<void>();
+    first = Promise.withResolvers<void>();
+    firstStarted = Promise.withResolvers<void>();
+    firstTool = Promise.withResolvers<void>();
+    secondStarted = Promise.withResolvers<void>();
+    second = Promise.withResolvers<void>();
+    calls = 0;
+    async *stream(): AsyncGenerator<ProviderEvent> {
+      this.calls += 1;
+      if (this.calls === 1) {
+        this.entered.resolve();
+        await this.first.promise;
+        yield { type: 'provider.response.started', responseId: 'first-round' };
+        this.firstStarted.resolve();
+        await this.firstTool.promise;
+        yield { type: 'provider.tool.call', callId: 'write', name: 'write_file', arguments: '{"path":"later.txt","content":"x"}' };
+      } else {
+        yield { type: 'provider.response.started' };
+        this.secondStarted.resolve();
+        await this.second.promise;
+        yield { type: 'provider.text.delta', delta: 'done' };
+      }
+      yield { type: 'provider.response.completed' };
+    }
+  }();
+  const item = await tui(provider, {}, { thinkingClock: clock });
+  t.after(async () => {
+    provider.first.resolve();
+    provider.firstTool.resolve();
+    provider.second.resolve();
+    await cleanup(item);
+  });
+
+  await item.setup.mockInput.typeText('write later');
+  item.setup.mockInput.pressEnter();
+  await provider.entered.promise;
+  clock.advance(12_000);
+  provider.first.resolve();
+  await provider.firstStarted.promise;
+  clock.advance(5_000);
+  await item.setup.flush();
+  assert.match(item.setup.captureCharFrame(), /Thinking[. ]+00:05 · total 00:17/);
+  provider.firstTool.resolve();
+  await item.approvals.requested.promise;
+  await item.setup.flush();
   assert.equal(clock.size, 0);
+  clock.advance(20_000);
+  item.setup.mockInput.pressKey('d', { ctrl: true });
+  await provider.secondStarted.promise;
+  clock.advance(5_000);
+  await item.setup.flush();
+  assert.match(item.setup.captureCharFrame(), /Thinking[. ]+00:05 · total 00:42/);
+  assert.equal(clock.size, 1);
+  provider.second.resolve();
+  await item.app.waitForIdle();
+  assertTimersCleared(item.app, clock);
 });
 
 test('thinking elapsed time renders minutes and seconds', () => {
@@ -402,6 +553,7 @@ test('tool activity, provider failure, cancellation, and teardown clear the thin
   assert.equal(toolClock.size, 0);
   tool.setup.mockInput.pressKey('d', { ctrl: true });
   await tool.app.waitForIdle();
+  assertTimersCleared(tool.app, toolClock);
 
   const failureClock = new FakeThinkingClock();
   const failureProvider = new FailingThinkingProvider();
@@ -412,7 +564,7 @@ test('tool activity, provider failure, cancellation, and teardown clear the thin
   await failure.setup.waitForFrame((frame) => frame.includes('Thinking'));
   failureProvider.release.resolve();
   await failure.app.waitForIdle();
-  assert.equal(failureClock.size, 0);
+  assertTimersCleared(failure.app, failureClock);
 
   const cancellationClock = new FakeThinkingClock();
   const cancellationProvider = new PausedProvider();
@@ -423,7 +575,7 @@ test('tool activity, provider failure, cancellation, and teardown clear the thin
   await cancellationProvider.started.promise;
   cancellation.app.escape();
   await cancellation.app.waitForIdle();
-  assert.equal(cancellationClock.size, 0);
+  assertTimersCleared(cancellation.app, cancellationClock);
 
   const teardownClock = new FakeThinkingClock();
   const teardownProvider = new PausedProvider();
@@ -433,7 +585,7 @@ test('tool activity, provider failure, cancellation, and teardown clear the thin
   teardown.setup.mockInput.pressEnter();
   await teardownProvider.started.promise;
   teardown.app.close();
-  assert.equal(teardownClock.size, 0);
+  assertTimersCleared(teardown.app, teardownClock);
 });
 
 test('tool-bearing provider text never becomes a George transcript block', async (t) => {

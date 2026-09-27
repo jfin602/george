@@ -44,8 +44,9 @@ const ASCII_BORDER = {
 type Clipboard = Pick<HostClipboardService, 'read' | 'writeText' | 'dispose'>;
 type ThinkingTimer = ReturnType<typeof setInterval> | number;
 
-/** Presentation-only clock seam so thinking animation stays deterministic in tests. */
+/** Presentation-only clock seam so live timers stay deterministic in tests. */
 export type ThinkingClock = Readonly<{
+  now(): number;
   setInterval(callback: () => void, delayMs: number): ThinkingTimer;
   clearInterval(timer: ThinkingTimer): void;
 }>;
@@ -126,6 +127,66 @@ export function renderTask(state: TaskState | StackState | undefined, work: read
     `Effective access: ${taskAccess(state)}`,
     '', 'Recent work', ...(recent.length ? recent : ['  none']),
   ].join('\n');
+}
+
+function taskStatusColor(status: string): string {
+  if (['failed', 'denied', 'cancelled', 'interrupted', 'blocked', 'planning_needed', 'budget_exhausted'].includes(status)) return NEON_THEME.error;
+  if (['completed', 'verified', 'passed', 'succeeded', 'addressed', 'repaired'].includes(status)) return NEON_THEME.assistant;
+  if (['active', 'in_progress', 'running', 'requested', 'waiting'].includes(status)) return NEON_THEME.user;
+  return NEON_THEME.muted;
+}
+
+/** Adds presentation styles without changing the bounded Task text or its wrapping. */
+export function renderStyledTask(state: TaskState | StackState | undefined, work: readonly TranscriptWorkEntry[], width = Number.MAX_SAFE_INTEGER): StyledText {
+  const chunks: StyledText['chunks'] = [];
+  const add = (value: string, color?: string, strong = false) => chunks.push(strong ? bold(fg(color ?? NEON_THEME.foreground)(value)) : color ? fg(color)(value) : plain(value));
+  const current = state && 'tasks' in state ? state.currentTaskIndex === undefined ? undefined : state.tasks[state.currentTaskIndex]?.taskState : state;
+  const currentTaskId = state && 'tasks' in state && state.currentTaskIndex !== undefined ? `P${state.tasks[state.currentTaskIndex]?.ordinal}` : undefined;
+  const headings = new Set(['Tasks', 'Goal', 'Requirements', 'Workflow', 'Validation', 'Recent work']);
+  for (const [index, line] of renderTask(state, work, width).split('\n').entries()) {
+    if (index) add('\n');
+    if (headings.has(line)) { add(line, NEON_THEME.assistant, true); continue; }
+    if (index === 0 && state) {
+      const marker = ` · ${state.status}`;
+      const at = line.lastIndexOf(marker);
+      if (at >= 0) { add(line.slice(0, at)); add(' · ', NEON_THEME.muted); add(state.status, taskStatusColor(state.status), true); continue; }
+    }
+    const row = /^(  )([PRWV]\d+) \(([^)]+)\): (.*)$/.exec(line);
+    if (row) {
+      const [, indent, id, detail, description] = row;
+      const [status, ...rest] = detail!.split(', ');
+      const active = id === currentTaskId || id === current?.currentWorkUnit || status === 'running';
+      add(indent!);
+      add(id!, active ? NEON_THEME.user : NEON_THEME.muted, active);
+      add(' ('); add(status!, taskStatusColor(status!), active);
+      if (rest.length) { add(', '); add(rest.join(', '), rest.includes('current') ? NEON_THEME.user : NEON_THEME.muted, rest.includes('current')); }
+      add('): '); add(description!);
+      continue;
+    }
+    const recent = /^(  \()([^)]+)(\) .*)$/.exec(line);
+    if (recent) { add(recent[1]!); add(recent[2]!, taskStatusColor(recent[2]!), recent[2] === 'running'); add(recent[3]!); continue; }
+    const currentWork = /^(Current work: )([WV]\d+) \(([^)]+)\)(.*)$/.exec(line);
+    if (currentWork) {
+      add(currentWork[1]!, NEON_THEME.assistant, true);
+      add(currentWork[2]!, NEON_THEME.user, true);
+      add(' ('); add(currentWork[3]!, taskStatusColor(currentWork[3]!), true); add(')'); add(currentWork[4]!);
+      continue;
+    }
+    const currentTask = /^(Current task: )(P\d+)( — .*)$/.exec(line);
+    if (currentTask) { add(currentTask[1]!, NEON_THEME.assistant, true); add(currentTask[2]!, NEON_THEME.user, true); add(currentTask[3]!); continue; }
+    const label = /^(Current task|Current work|Corrections|Blockers|Effective access|Terminal blocker): (.*)$/.exec(line);
+    if (label) {
+      add(`${label[1]}:`, label[1] === 'Blockers' && label[2] !== 'none' || label[1] === 'Terminal blocker' ? NEON_THEME.error : NEON_THEME.assistant, true);
+      add(' ');
+      if (label[1] === 'Corrections' && label[2] !== 'none') {
+        const parts = label[2]!.split(/(V\d+|\bactive\b|\brepaired\b|\bcompleted\b)/g);
+        for (const part of parts) add(part, /^V\d+$/.test(part) ? NEON_THEME.muted : ['active', 'repaired', 'completed'].includes(part) ? taskStatusColor(part) : undefined);
+      } else add(label[2]!, label[1] === 'Effective access' || label[2] === 'none' ? NEON_THEME.muted : undefined);
+      continue;
+    }
+    add(line);
+  }
+  return new StyledText(chunks);
 }
 
 export function taskHeader(state: TaskState | StackState | undefined): string {
@@ -405,6 +466,7 @@ export class GeorgeTui {
   private revealedAssistant: Readonly<{ index: number; text: string }> | undefined;
   private thinkingTimer: ThinkingTimer | undefined;
   private thinkingStartedAt: number | undefined;
+  private turnStartedAt: number | undefined;
   private thinkingDots = 0;
   private page: TuiPage = 'transcript';
   private closed = false;
@@ -415,7 +477,7 @@ export class GeorgeTui {
     this.approvals = options.approvals;
     this.clipboard = options.clipboard ?? createHostClipboard();
     this.ownsClipboard = options.clipboard === undefined;
-    this.thinkingClock = options.thinkingClock ?? { setInterval, clearInterval };
+    this.thinkingClock = options.thinkingClock ?? { now: () => performance.now(), setInterval, clearInterval };
     this.onMeasurement = options.onMeasurement;
     const agent = options.service instanceof CodingWorkflowApplicationService ? options.service.agent : options.service;
     this.session = options.session ?? createSession({ workspace: options.workspace ?? agent.workspace.root });
@@ -517,6 +579,7 @@ export class GeorgeTui {
     });
     this.renderer.on(CliRenderEvents.DESTROY, () => {
       this.stopThinking();
+      this.turnStartedAt = undefined;
       this.controller?.abort();
       this.closed = true;
       this.finish();
@@ -602,12 +665,14 @@ export class GeorgeTui {
 
   private async start(text: string, activatedSkills?: readonly string[]): Promise<void> {
     this.stopThinking();
+    this.turnStartedAt = this.thinkingClock.now();
     this.clearComposer();
     this.controller = new AbortController();
     this.statusView.content = this.status('Working');
     this.activityView.content = 'Starting turn';
     this.active = this.consume(text, this.controller.signal, activatedSkills).finally(() => {
       this.stopThinking();
+      this.turnStartedAt = undefined;
       this.controller = undefined;
       this.active = undefined;
       if (!this.closed) this.statusView.content = this.status('Ready');
@@ -623,6 +688,7 @@ export class GeorgeTui {
   escape(): boolean {
     if (this.controller) {
       this.stopThinking();
+      this.turnStartedAt = undefined;
       this.activityView.content = 'Cancelling…';
       this.controller.abort();
       return true;
@@ -685,6 +751,7 @@ export class GeorgeTui {
     if (this.closed) return;
     this.closed = true;
     this.stopThinking();
+    this.turnStartedAt = undefined;
     this.controller?.abort();
     this.renderer.destroy();
     if (this.ownsClipboard) void this.clipboard.dispose();
@@ -768,7 +835,7 @@ export class GeorgeTui {
 
   private startThinking(): void {
     this.stopThinking();
-    this.thinkingStartedAt = Date.now();
+    this.thinkingStartedAt = this.thinkingClock.now();
     this.thinkingDots = 0;
     this.activityView.content = this.thinkingActivity();
     this.thinkingTimer = this.thinkingClock.setInterval(() => {
@@ -786,7 +853,10 @@ export class GeorgeTui {
     this.thinkingDots = 0;
   }
 
-  private thinkingActivity(): string { return `Thinking${'.'.repeat(this.thinkingDots).padEnd(3, ' ')} ${formatThinkingElapsed(Date.now() - (this.thinkingStartedAt ?? Date.now()))}`; }
+  private thinkingActivity(): string {
+    const now = this.thinkingClock.now();
+    return `Thinking${'.'.repeat(this.thinkingDots).padEnd(3, ' ')} ${formatThinkingElapsed(now - (this.thinkingStartedAt ?? now))} · total ${formatThinkingElapsed(now - (this.turnStartedAt ?? now))}`;
+  }
 
   private refreshTranscript(): void {
     const bodyWidth = this.transcriptView.width - 4;
@@ -800,7 +870,7 @@ export class GeorgeTui {
   private refreshTask(): void {
     const bodyWidth = this.taskView.width - 2;
     if (bodyWidth < 1) return;
-    this.taskView.content = renderTask(this.session.stackState ?? this.session.taskState, this.work, bodyWidth);
+    this.taskView.content = renderStyledTask(this.session.stackState ?? this.session.taskState, this.work, bodyWidth);
   }
 
   private async revealAssistant(text: string): Promise<void> {

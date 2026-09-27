@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 
-import { createCodingWorkflowApplicationService } from '../../../src/application/index.ts';
+import { WorkflowTimer, createCodingWorkflowApplicationService } from '../../../src/application/index.ts';
 import { createSession, LocalSessionStore, type ApplicationEvent, type ApprovalDecision, type ApprovalPort, type ApprovalRequest, type ModelProvider, type ProviderEvent, type ProviderRequest, type ProviderStreamOptions } from '../../../src/core/index.ts';
 
 class ScriptedProvider implements ModelProvider {
@@ -167,6 +167,136 @@ test('workflow timing accumulates provider rounds and tools without entering can
   assert.doesNotMatch(JSON.stringify(session.transcript), /providerMs|toolMs|timing/);
   const work = session.events.filter((event): event is Extract<typeof event, { type: 'work.updated' }> => event.type === 'work.updated');
   assert.equal(work.find((event) => event.item.operationId === 'clock-tool' && event.item.status === 'succeeded')?.item.elapsedMs, 7);
+});
+
+test('workflow timing measures the union of overlapping tools, independent of completion order and batch metrics', () => {
+  let now = 0;
+  const timer = new WorkflowTimer(() => now);
+  const observe = (at: number, event: ApplicationEvent) => { now = at; timer.observe(event); };
+  const start = (callId: string): ApplicationEvent => ({ type: 'tool.started', turnId: 't', callId, name: 'read_file' });
+  const done = (callId: string): ApplicationEvent => ({ type: 'tool.completed', turnId: 't', callId, name: 'read_file', result: { ok: true, value: {} } });
+  observe(2, start('a'));
+  observe(3, start('b'));
+  observe(7, done('b'));
+  observe(12, done('a'));
+  observe(13, { type: 'tool.concurrent-read-batch.completed', turnId: 't', callIds: ['a', 'b'], width: 2, wallMs: 10, summedMemberMs: 14, observedOverlapMs: 999 });
+  now = 15;
+  assert.deepEqual(timer.finish(), { totalMs: 15, providerMs: 0, toolMs: 10, approvalMs: 0, otherMs: 5 });
+});
+
+test('workflow timing stays coherent across sequential tools, concurrent batches, retries, and active cancellation', () => {
+  let now = 0;
+  const timer = new WorkflowTimer(() => now);
+  const observe = (at: number, event: ApplicationEvent) => { now = at; timer.observe(event); };
+  const providerStart: ApplicationEvent = { type: 'provider.attempt.started', turnId: 't', runId: 'r', attemptId: 'p' };
+  const start = (callId: string): ApplicationEvent => ({ type: 'tool.started', turnId: 't', callId, name: 'read_file' });
+  const done = (callId: string): ApplicationEvent => ({ type: 'tool.completed', turnId: 't', callId, name: 'read_file', result: { ok: true, value: {} } });
+  observe(0, providerStart);
+  observe(10, { type: 'provider.response.completed' });
+  observe(12, start('sequential'));
+  observe(17, done('sequential'));
+  observe(20, start('a'));
+  observe(21, start('b'));
+  observe(25, done('b'));
+  observe(30, done('a'));
+  observe(32, start('c'));
+  observe(33, start('d'));
+  observe(35, done('d'));
+  observe(40, done('c'));
+  observe(42, providerStart);
+  observe(50, { type: 'provider.retry.scheduled', turnId: 't', runId: 'r', attemptId: 'p', retry: 1, delayMs: 2, category: 'provider' });
+  observe(52, providerStart);
+  observe(60, { type: 'provider.response.completed' });
+  now = 62;
+  assert.deepEqual(timer.finish(), { totalMs: 62, providerMs: 26, toolMs: 23, approvalMs: 0, otherMs: 13 });
+
+  now = 0;
+  const cancelled = new WorkflowTimer(() => now);
+  cancelled.observe(start('a'));
+  now = 7;
+  cancelled.observe(start('b'));
+  now = 10;
+  cancelled.observe({ type: 'tool.failed', turnId: 't', callId: 'b', name: 'read_file', result: { ok: false, error: { code: 'cancelled', message: 'cancelled' } } });
+  now = 12;
+  assert.deepEqual(cancelled.finish(), { totalMs: 12, providerMs: 0, toolMs: 12, approvalMs: 0, otherMs: 0 });
+  now = 20;
+  assert.deepEqual(cancelled.finish(), { totalMs: 20, providerMs: 0, toolMs: 12, approvalMs: 0, otherMs: 8 });
+});
+
+test('workflow timing closes provider errors and gives approval its own elapsed interval', () => {
+  let now = 0;
+  const timer = new WorkflowTimer(() => now);
+  const observe = (at: number, event: ApplicationEvent) => { now = at; timer.observe(event); };
+  const request: ApprovalRequest = { id: 'approval', toolName: 'write_file', execution: { effect: 'workspace_mutation', replaySafety: 'not_replay_safe', source: { kind: 'builtin' } } };
+  observe(0, { type: 'provider.attempt.started', turnId: 't', runId: 'r', attemptId: 'p' });
+  observe(4, { type: 'provider.error', error: { code: 'provider', message: 'failed' } });
+  observe(5, { type: 'tool.started', turnId: 't', callId: 'background', name: 'read_file' });
+  observe(6, { type: 'approval.requested', turnId: 't', callId: 'approval', request });
+  observe(11, { type: 'approval.allowed', turnId: 't', callId: 'approval', request });
+  observe(12, { type: 'tool.started', turnId: 't', callId: 'write', name: 'write_file' });
+  observe(13, { type: 'tool.completed', turnId: 't', callId: 'background', name: 'read_file', result: { ok: true, value: {} } });
+  observe(17, { type: 'tool.failed', turnId: 't', callId: 'write', name: 'write_file', result: { ok: false, error: { code: 'tool', message: 'failed' } } });
+  now = 20;
+  assert.deepEqual(timer.finish(), { totalMs: 20, providerMs: 4, toolMs: 7, approvalMs: 5, otherMs: 4 });
+});
+
+test('out-of-order concurrent batches, validation, and later session saves retain durable timing', async (t) => {
+  const root = await fixture();
+  const state = await mkdtemp(join(tmpdir(), 'george-workflow-concurrent-state-'));
+  t.after(() => Promise.all([rm(root, { recursive: true, force: true }), rm(state, { recursive: true, force: true })]));
+  const ids = ['a', 'b', 'c', 'd', 'e', 'f'];
+  const release = new Map<string, () => void>();
+  const gates = new Map(ids.map((id) => [id, new Promise<void>((resolve) => { release.set(id, resolve); })]));
+  const call = (id: string): ProviderEvent => ({ type: 'provider.tool.call', callId: id, name: 'gated_read', arguments: JSON.stringify({ id }) });
+  const round = (roundIds: readonly string[]): readonly ProviderEvent[] => [
+    { type: 'provider.response.started', responseId: roundIds[0]! }, ...roundIds.map(call), { type: 'provider.response.completed' },
+  ];
+  const provider = new ScriptedProvider([round(ids.slice(0, 3)), round(ids.slice(3)), [{ type: 'provider.response.completed' }]]);
+  const store = new LocalSessionStore({ root: state });
+  const workflow = await createCodingWorkflowApplicationService({
+    provider, workspace: root, sessionStore: store, approvalPort: new Approval(['allow_once']),
+    toolNames: ['gated_read', 'run_process'],
+    additionalTools: [{
+      name: 'gated_read', description: 'Controlled local read.',
+      inputSchema: { type: 'object', properties: { id: { type: 'string' } }, required: ['id'], additionalProperties: false },
+      execution: { effect: 'local_read', replaySafety: 'replay_safe', source: { kind: 'builtin' } },
+      execute: async (arguments_) => { const id = arguments_.id as string; await gates.get(id); return { id }; },
+    }],
+  });
+  const session = createSession({ id: 'concurrent-workflow', workspace: root });
+  const events: ApplicationEvent[] = [];
+  const started: string[] = [];
+  const completion = await workflow.run({
+    session, input: 'Read in two batches.',
+    validations: [{ label: 'process check', intent: 'verify later process timing', executable: 'node', arguments: ['-e', 'process.exit(0)'] }],
+    onEvent: (event) => {
+      events.push(event);
+      if (event.type === 'tool.started') {
+        started.push(event.callId);
+        if (started.length === 3) release.get('b')?.();
+        if (started.length === 6) release.get('e')?.();
+      }
+      if (event.type === 'tool.completed') {
+        const next: Record<string, string> = { b: 'a', a: 'c', e: 'd', d: 'f' };
+        release.get(next[event.callId] ?? '')?.();
+      }
+    },
+  });
+  assert.deepEqual(events.filter((event) => event.type === 'tool.completed' && event.name === 'gated_read').map((event) => event.callId), ['b', 'a', 'c', 'e', 'd', 'f']);
+  assert.deepEqual(provider.requests[1]?.continuation?.toolResults.map((result) => result.callId), ['a', 'b', 'c']);
+  assert.deepEqual(provider.requests[2]?.continuation?.toolResults.map((result) => result.callId), ['d', 'e', 'f']);
+  assert.equal(events.filter((event) => event.type === 'tool.concurrent-read-batch.completed').length, 2);
+  assert.equal(completion.validations[0]?.status, 'passed');
+  assert.ok(completion.timing && completion.timing.providerMs + completion.timing.toolMs + completion.timing.approvalMs + completion.timing.otherMs <= completion.timing.totalMs + 2);
+  const reopened = await store.open(session.id, root);
+  const durable = reopened.events.findLast((event) => event.type === 'workflow.completed');
+  assert.deepEqual(durable?.type === 'workflow.completed' ? durable.completion.timing : undefined, completion.timing);
+  await store.save(reopened);
+  assert.deepEqual((await store.open(session.id, root)).events.findLast((event) => event.type === 'workflow.completed'), durable);
+  if (durable?.type !== 'workflow.completed') throw new Error('Expected durable workflow completion.');
+  reopened.events.push({ ...durable, completion: { ...durable.completion, timing: { totalMs: 0, providerMs: 3, toolMs: 0, approvalMs: 0, otherMs: 0 } } });
+  await assert.rejects(store.save(reopened), /workflow timing exceeds total time/);
+  assert.deepEqual((await store.open(session.id, root)).events.findLast((event) => event.type === 'workflow.completed'), durable);
 });
 
 test('coding workflow captures clean and non-Git baselines without treating either as a mutation', async (t) => {

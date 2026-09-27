@@ -1,12 +1,12 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 
 import { CORRECTION_FRAME_LIMITS, MISSION_CARD_LIMITS, StructuredTaskApplicationService, createCodingWorkflowApplicationService, projectCorrectionFrame, projectStructuredMissionCard, renderCorrectionFrame, type StructuredFreshEvidence } from '../../../src/application/index.ts';
-import { appendSessionEvent, createSession, DEFAULT_RUN_BUDGET, RunBudget, type ApplicationEvent, type ApprovalDecision, type ApprovalPort, type ApprovalRequest, type ModelProvider, type ProviderEvent, type ProviderRequest } from '../../../src/core/index.ts';
+import { appendSessionEvent, createSession, DEFAULT_RUN_BUDGET, LocalSessionStore, RunBudget, type ApplicationEvent, type ApprovalDecision, type ApprovalPort, type ApprovalRequest, type ModelProvider, type ProviderEvent, type ProviderRequest } from '../../../src/core/index.ts';
 import { addressTaskWorkUnit, beginTaskCorrection, beginTaskWorkUnit, createTaskState, parseTaskPrompt, recordTaskInspection, recordTaskValidationAttempt } from '../../../src/tasks/index.ts';
 
 class Provider implements ModelProvider {
@@ -212,7 +212,7 @@ test('structured service preflights with local reads, progresses task state, and
   ]);
   assert.deepEqual(provider.requests.map((request) => request.executionMode), ['operation', 'operation', 'operation']);
   assert.equal(provider.requests.every((request) => request.outputPolicy === undefined), true);
-  assert.deepEqual(events.filter((event) => event.type === 'tool.completed' && event.execution?.effect === 'local_read').map((event) => event.callId), ['read', 'list']);
+  assert.deepEqual(events.filter((event) => event.type === 'tool.completed' && event.execution?.effect === 'local_read').map((event) => event.callId).sort(), ['list', 'read']);
   assert.match(provider.requests[0]?.input ?? '', /W1 — First work/);
   // live:c2:inspect-no-evidence — keep the bounded preflight from guessing enough paths to discard valid evidence at the frozen ceiling.
   assert.match(provider.requests[0]?.input ?? '', /at most 4 .*tool calls.*do not guess paths/i);
@@ -435,7 +435,8 @@ test('deterministic progression never suppresses approval, cancellation, or outc
 
 test('structured stages carry bounded safe evidence and share one task-wide budget', async (t) => {
   const root = await workspace();
-  t.after(() => rm(root, { recursive: true, force: true }));
+  const state = await mkdtemp(join(tmpdir(), 'george-structured-timing-state-'));
+  t.after(() => Promise.all([rm(root, { recursive: true, force: true }), rm(state, { recursive: true, force: true })]));
   await writeFile(join(root, 'target.txt'), `INSPECTION_PAYLOAD_ONLY_9E7C\nAPI_TOKEN=RAW_INSPECTION_SECRET\n${'x'.repeat(3000)}`);
   const input = `GEORGE TASK FORMAT: 1
 
@@ -478,11 +479,12 @@ STOP CONDITIONS
     [{ type: 'provider.response.completed' }],
     [{ type: 'provider.response.completed' }],
   ]);
-  const workflow = await createCodingWorkflowApplicationService({ provider, workspace: root, approvalPort: new Allow() });
-  const session = createSession({ workspace: root });
+  const store = new LocalSessionStore({ root: state });
+  const workflow = await createCodingWorkflowApplicationService({ provider, workspace: root, approvalPort: new Allow(), sessionStore: store });
+  const session = createSession({ id: 'structured-timing', workspace: root });
   const events: ApplicationEvent[] = [];
   const budget = new RunBudget('task-wide-test');
-  await new StructuredTaskApplicationService(workflow.agent, undefined, undefined, 1).run({ session, input, turnId: 'diagnostic', budget, onEvent: (event) => { events.push(event); } });
+  await new StructuredTaskApplicationService(workflow.agent, store, undefined, 1).run({ session, input, turnId: 'diagnostic', budget, onEvent: (event) => { events.push(event); } });
 
   assert.equal(provider.requests[0]?.toolChoice, 'required');
   assert.equal(provider.requests[1]?.toolChoice, undefined);
@@ -512,6 +514,87 @@ STOP CONDITIONS
   assert.equal(session.taskState?.status, 'failed');
   assert.deepEqual(session.taskState?.validations.V1?.attempts.map((attempt) => attempt.status), ['failed', 'failed']);
   assert.deepEqual(events.filter((event) => event.type === 'correction.revalidated').map((event) => event.status), ['failed']);
+  const reopened = await store.open(session.id, root);
+  const completions = reopened.events.filter((event) => event.type === 'workflow.completed');
+  assert.ok(completions.length >= 3);
+  for (const event of completions) {
+    assert.ok(event.completion.timing);
+    const { totalMs, providerMs, toolMs, approvalMs, otherMs } = event.completion.timing;
+    assert.ok(providerMs + toolMs + approvalMs + otherMs <= totalMs + 2);
+  }
+  assert.deepEqual(reopened.taskState?.validations.V1?.attempts.map((attempt) => attempt.status), ['failed', 'failed']);
+});
+
+test('structured concurrent inspection survives mutation, failed validation, correction, revalidation, and reopen', async (t) => {
+  const root = await workspace();
+  const state = await mkdtemp(join(tmpdir(), 'george-structured-concurrent-state-'));
+  t.after(() => Promise.all([rm(root, { recursive: true, force: true }), rm(state, { recursive: true, force: true })]));
+  const input = `GEORGE TASK FORMAT: 1
+
+TASK: P1 — Durable concurrent correction
+KIND: implementation
+
+GOAL
+
+Read the workspace, make a change, and pass validation.
+
+INSPECT
+
+- local workspace files
+
+REQUIREMENTS
+
+- R1: The corrected result is present.
+
+WORKFLOW
+
+W1 — Write initial work
+Covers: R1
+Depends on: none
+
+VALIDATION
+
+V1 — Corrected result
+Covers: R1
+Run: node -e "require('node:fs').existsSync('done.txt') || process.exit(1)"
+
+STOP CONDITIONS
+
+- S1: Stop truthfully.
+`;
+  const round = (responseId: string, calls: readonly Extract<ProviderEvent, { type: 'provider.tool.call' }>[]): readonly ProviderEvent[] => [
+    { type: 'provider.response.started', responseId }, ...calls, { type: 'provider.response.completed' },
+  ];
+  const provider = new Provider([
+    round('inspection', [
+      { type: 'provider.tool.call', callId: 'read-boot', name: 'read_file', arguments: '{"path":"BOOT.md"}' },
+      { type: 'provider.tool.call', callId: 'read-agents', name: 'read_file', arguments: '{"path":"AGENTS.md"}' },
+      { type: 'provider.tool.call', callId: 'read-target', name: 'read_file', arguments: '{"path":"target.txt"}' },
+    ]),
+    round('implementation', [{ type: 'provider.tool.call', callId: 'write-work', name: 'write_file', arguments: '{"path":"work.txt","content":"draft"}' }]),
+    [{ type: 'provider.response.completed' }],
+    round('correction', [{ type: 'provider.tool.call', callId: 'write-done', name: 'write_file', arguments: '{"path":"done.txt","content":"done"}' }]),
+    [{ type: 'provider.response.completed' }],
+  ]);
+  const store = new LocalSessionStore({ root: state });
+  const workflow = await createCodingWorkflowApplicationService({ provider, workspace: root, approvalPort: new Allow(), sessionStore: store });
+  const session = createSession({ id: 'durable-concurrent-correction', workspace: root });
+  const events: ApplicationEvent[] = [];
+  await new StructuredTaskApplicationService(workflow.agent, store).run({ session, input, onEvent: (event) => { events.push(event); } });
+
+  assert.equal(await readFile(join(root, 'done.txt'), 'utf8'), 'done');
+  assert.equal(events.some((event) => event.type === 'tool.concurrent-read-batch.completed' && event.width === 3), true);
+  assert.deepEqual(session.taskState?.validations.V1?.attempts.map((attempt) => attempt.status), ['failed', 'passed']);
+  assert.equal(session.taskState?.status, 'completed');
+  const reopened = await store.open(session.id, root);
+  assert.equal(reopened.taskState?.status, 'completed');
+  const completions = reopened.events.filter((event) => event.type === 'workflow.completed');
+  assert.ok(completions.length >= 4);
+  for (const event of completions) {
+    assert.ok(event.completion.timing);
+    const { totalMs, providerMs, toolMs, approvalMs, otherMs } = event.completion.timing;
+    assert.ok(providerMs + toolMs + approvalMs + otherMs <= totalMs + 2);
+  }
 });
 
 test('correction reuses fresh evidence, reinspects stale repair targets, and directly revalidates', async (t) => {
