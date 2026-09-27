@@ -107,11 +107,20 @@ Routine cleanup and bounded repository hygiene should normally be repaired and v
 
 ## Benchmark-gated optimization work
 
-The Phase 7-13 performance/developer-usefulness campaign uses the formal npm benchmark harness plus, from Phase 9 onward, frozen live-work task-stack qualification over the real George application/provider/tool path.
+The Phase 7-15 performance/developer-usefulness campaign uses the formal npm benchmark harness plus, from Phase 9 onward, frozen live-work task-stack qualification over the real George application/provider/tool path. Phases 12-13 add a correlated observability surface that may accelerate diagnosis and comparison, but it does not replace canonical tests, benchmark artifacts, or qualification evidence.
 
 Canonical optimization loop:
 
 `last accepted baseline -> one bounded optimization -> benchmark -> accept/revise/revert -> record new baseline -> next optimization`
+
+
+### Observability-first debugging after Phase 11
+
+Once Phase 12/13 are implemented, performance and agent-behavior debugging should preferentially use the daemon/Agent Observatory to inspect correlated provider, context, task, tool, validation, correction, recovery, and budget evidence before proposing a repair.
+
+The observatory is a diagnostic projection, not acceptance authority. A visually compelling explanation does not make a change Green; qualifying claims still require the repository's focused/broad/live gates and preserved historical evidence.
+
+Baseline/candidate comparison should retain individual raw dimensions (correctness, provider rounds/attempts, tokens, timings, tool duplication/concurrency, corrections, validation, failure class) rather than producing an opaque aggregate score.
 
 Use:
 - `npm run benchmark -- --suite quick` for representative per-change gates;

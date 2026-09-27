@@ -245,6 +245,56 @@ Documentation/evidence commits moving HEAD do not by themselves require repeatin
 
 A loaded pinned model instance and REST-visible runtime controls are required before official provider work. UI-only GPU Offload 26 may remain an Evidence Gap for controlled latency while functional qualification proceeds under the healthy REST-visible runtime, consistent with the Phase 9 live-model rule.
 
+### Phase 12 daemon + observability qualification
+
+The local daemon and observability transport are Green only when presentation independence is proven, not merely when a localhost server starts.
+
+Deterministic/integration coverage must prove:
+- daemon APIs project existing canonical session/task/application evidence rather than duplicating execution authority;
+- session/turn/run/provider-attempt/operation correlation is stable enough for a client to reconstruct one run timeline;
+- attach/disconnect/reconnect preserves canonical task/session/tool/provider state and does not replay ambiguous effects;
+- a client joining mid-run can obtain a bounded current snapshot plus future event stream without inventing missing lifecycle transitions;
+- event ordering, resumable cursors/sequence semantics, and snapshot/event reconciliation are deterministic or explicitly fail closed;
+- daemon restart/recovery preserves the existing interruption/reconciliation contract;
+- localhost authentication and default no-LAN exposure are enforced;
+- multiple local clients cannot race approval/cancellation/control in a way that bypasses the canonical authority rules;
+- diagnostic/history queries remain bounded and cannot become unbounded session dumps.
+
+Observability accuracy coverage must prove the client-visible projection matches canonical evidence for:
+- provider attempt start/finish, response acceptance, first useful output, active duration, usage where available, retries/stalls/rebases/errors;
+- context mode/profile, provider-input budget, headroom, category tokens, active/omitted/deferred/routed sources, promotions, and compaction;
+- budget pressure/exhaustion;
+- task/stack/work-unit updates and blockers;
+- tools, approvals, validation, correction, recovery, workflow completion, model-round avoidance, concurrency, and GEP metrics.
+
+Provider-input inspection must use a normalized George-owned **provider-facing request projection**, not unrestricted raw wire capture. Tests must prove secret/credential redaction, exclusion of internal-only canonical evidence, bounded source/body retention, and truthful distinction between canonical state and provider-visible projection.
+
+No observability feature may require retaining hidden chain-of-thought or unrestricted provisional model narration. Operation-mode hidden text remains subject to its existing non-retention contract; presentation may expose bounded metrics/protocol outcomes but not manufacture a reasoning transcript.
+
+### Phase 13 desktop Agent Observatory qualification
+
+Desktop qualification is not satisfied by launching a Tauri window or reproducing chat.
+
+The desktop must preserve the Phase 12/application authority boundary and prove:
+- ordinary conversation, structured task, approval, cancellation, session/reopen, and completion flows operate without moving agent-loop business logic into Tauri;
+- the same underlying task/session/evidence truth is visible from OpenTUI and desktop projections;
+- UI navigation, filters, layout, selection, and comparison state cannot mutate canonical execution state;
+- bounded/redacted evidence rules remain enforced when richer visual detail is available;
+- no secrets, unrestricted raw provider payloads, raw mutation bodies, or hidden reasoning become visible merely because the GUI can display more data.
+
+The Agent Observatory must exercise representative diagnostic fixtures/live cases for:
+- provider stall/retry/rebase/terminal failure;
+- context pressure/profile promotion/compaction;
+- run-budget pressure or exhaustion;
+- failed mutation/precondition;
+- failed validation followed by correction/revalidation;
+- redundant/model-round-avoidance and duplicate-read/concurrency evidence;
+- interruption/reopen/recovery.
+
+For each class, qualification should prove a developer can identify the relevant correlated cause/evidence through the GUI without manually parsing raw session files or reconstructing terminal chronology.
+
+Run-comparison qualification must preserve raw dimensions rather than collapsing performance/correctness into one score. At minimum compare functional result, provider rounds/attempts, reported input/output/cached tokens when available, provider-active/total time, tool calls/duplicate reads, corrections, validation outcomes, and terminal failure class.
+
 ### Provider contract
 
 Use deterministic/mock provider fixtures for ordinary tests and bounded live LM Studio qualification when provider integration changes.

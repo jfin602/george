@@ -144,6 +144,28 @@ Phase 10 historical/intermittent P7 lifecycle-order evidence remains preserved a
 
 The unexecuted `c9-gen-op` planning is historical precursor material only. Do not run that correction stack.
 
+
+## Approved post-Phase-11 roadmap shift
+
+After Phase 11 freezes the optimized single-primary-model baseline, George now prioritizes observability infrastructure before adding more intelligence/capability layers:
+
+- **Phase 12 — Local Daemon + Observability Foundation**: establish the localhost service/transport boundary, queryable correlated diagnostics, safe provider-facing request projections, and attach/reconnect semantics needed by richer clients.
+- **Phase 13 — Native Desktop + Agent Observatory**: build the Tauri client first as a model/agent observability and debugging workstation. Its initial value is exposing why George succeeds, stalls, wastes rounds, loses context, hits budgets, chooses tools, corrects failures, or diverges from task/validation state.
+- **Phase 14 — Local Utility Model**: add the bounded secondary local model only after the primary path can be inspected and compared through the observability surface.
+- **Phase 15 — Local Web Research**: add self-hosted/local research after the utility role and observability workstation exist.
+
+OpenTUI remains a supported lightweight client and terminal-native workflow. It is no longer the presentation container that every future George capability must fit inside. The application/core event, task, permission, validation, recovery, and session authorities remain presentation-independent.
+
+The desktop objective is **compounding development leverage**: make each George run easier to diagnose, compare, and improve so future agent-loop, helper-model, browser, research, and project-map work can be developed against substantially richer evidence instead of terminal reconstruction.
+
+The observability surface exposes George-owned inputs, projections, lifecycle events, timings, tool proposals/results, context provenance, and bounded diagnostics. It must not create a hidden-reasoning/chain-of-thought viewer, preserve unrestricted provisional model narration, leak secrets, or promote presentation state into canonical execution truth.
+
+Planning authority for the shift:
+- `docs/planning/p12-local-daemon-observability/decision-record.md`;
+- `docs/planning/p12-local-daemon-observability/qualification-plan.md`;
+- `docs/planning/p13-native-desktop-observatory/decision-record.md`;
+- `docs/planning/p13-native-desktop-observatory/qualification-plan.md`.
+
 ## Core premise
 
 George is a local-first coding agent harness. The pinned default local brain is LM Studio model ID `qwen3-coder-30b-a3b-instruct@q4_k_m`, with Qwen3-Coder served through LM Studio's OpenAI-compatible Responses API. `GEORGE_MODEL` remains an explicit override for deliberate model testing.
@@ -165,7 +187,7 @@ The model provider is replaceable. LM Studio/Qwen is the first provider, not an 
 - Inference: provider interface; first adapter is LM Studio Responses API.
 - Default LM Studio model ID: `qwen3-coder-30b-a3b-instruct@q4_k_m`; `GEORGE_MODEL` may explicitly override it.
 - Persistence: simple local filesystem state first; no database until justified.
-- Desktop: deferred; Tauri is the preferred later native shell.
+- Desktop: after the optimized primary-model baseline is frozen, Tauri becomes the observability-first native shell; its first-order purpose is model/agent debugging and developer leverage rather than visual polish.
 - Networking: architecture must permit a later daemon/server mode without rewriting the agent core.
 - Browser UI: not required for the core or TUI.
 - Electron: not the default desktop direction.

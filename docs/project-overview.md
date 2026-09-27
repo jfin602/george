@@ -16,7 +16,7 @@ George exists because a capable local model is most useful when paired with a st
 
 The normal MVP path runs on the developer's machine. Repository contents, prompts, tool results, and model inference stay local unless the user explicitly invokes a network-backed tool/provider.
 
-### Codex-style TUI first, UI-independent core
+### TUI foundation, UI-independent core, observability-first desktop
 
 The MVP interface is an interactive terminal application that behaves like a modern coding-agent TUI rather than a print-and-scroll command.
 
@@ -30,7 +30,13 @@ Provider-response text becomes canonical assistant history only when a completed
 
 The execution transcript should be space-efficient and diagnosable. Consecutive work items may render under one visual `Work` group while each operation retains stable identity, chronology, and an explicit textual lifecycle status. Invalid tool calls may expose bounded allowlisted requested-argument summaries sufficient to diagnose missing/wrong fields or types, but write/patch bodies, arbitrary raw JSON, unrestricted provider payloads, secrets, and unbounded outputs remain excluded. User-facing provider failures should preserve bounded safe event/code/message/reason/status metadata where available without exposing raw wire payloads.
 
-The initial renderer is `@opentui/core` used directly from TypeScript without React. OpenTUI is a presentation dependency only: the core agent engine must remain usable without it, must not depend on terminal state, and must be reusable by a future daemon or Tauri desktop application.
+The initial renderer is `@opentui/core` used directly from TypeScript without React. OpenTUI is a presentation dependency only: the core agent engine must remain usable without it and must not depend on terminal state.
+
+After the optimized primary-model baseline is frozen, George's preferred product direction is an observability-first Tauri desktop over a localhost daemon/application boundary. OpenTUI remains a supported lightweight terminal client; it is not the presentation container every future George capability must fit inside.
+
+The desktop's first-order purpose is to make the local model and harness easier to improve: correlated run timelines, provider-attempt telemetry, context composition/provenance, task/orchestration state, tools, validation, correction/recovery, budgets, changes, diagnostics, and baseline/candidate comparisons should make failures and inefficiencies visible without reconstructing them from terminal output. This is intended to create compounding development leverage for later model, browser, research, and project-understanding work.
+
+Desktop/daemon observability is a derived projection over George-owned canonical state. It cannot become a second authority for task/session/tool/permission/validation/recovery truth, and it must not create a hidden-reasoning viewer, persist unrestricted provisional model narration, expose secrets/raw provider payloads, or feed presentation state back into the model merely because it is visible.
 
 ### Provider independence
 
@@ -130,9 +136,11 @@ Prefer Node standard library and focused dependencies. OpenTUI is an approved Ph
 
 Core APIs should permit a later daemon/server transport so another local UI or trusted device can drive George. Phase 2 does not expose George to the LAN or Internet and does not add network-capable tools.
 
-### Native desktop later
+### Observability-first native desktop
 
-If a GUI becomes justified, Tauri is the preferred direction: a lightweight native shell over George's reusable core/daemon interfaces. Electron is not the default.
+The GUI is now justified after the primary-model optimization baseline: Tauri is the preferred native shell, built over George's reusable local-daemon/application interfaces rather than embedding agent logic in the frontend. Electron is not the default.
+
+The initial desktop milestone is an **Agent Observatory**, not merely a prettier chat surface. It should let developers inspect and compare George-owned execution evidence deeply enough to diagnose model alignment, context pressure, provider stalls, redundant rounds, tool decisions, mutation/validation failures, correction loops, recovery, and performance bottlenecks. Polished end-user workflow grows on top of that debugging substrate.
 
 ### Living project map later
 
