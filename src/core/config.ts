@@ -7,8 +7,8 @@ import { DEFAULT_RUN_BUDGET, type RunBudgetConfig, validateRunBudget } from './r
 
 export const DEFAULT_LM_STUDIO_BASE_URL = 'http://127.0.0.1:1234';
 export const DEFAULT_LM_STUDIO_MODEL_ID = 'qwen3-coder-30b-a3b-instruct@q4_k_m';
-export const DEFAULT_PROVIDER_TIMEOUT_MS = 120_000;
-export const MAX_PROVIDER_TIMEOUT_MS = 120_000;
+export const DEFAULT_PROVIDER_TIMEOUT_MS = 300_000;
+export const MAX_PROVIDER_TIMEOUT_MS = 600_000;
 
 /** Operating policy, not provider wire semantics or a claim about model capability. */
 export type ContextProfile = Readonly<{

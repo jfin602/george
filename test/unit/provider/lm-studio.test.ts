@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { createServer, type Server } from 'node:http';
 import test from 'node:test';
 
-import { GeorgeError, resolveGeorgeConfig, type ProviderActivity } from '../../../src/core/index.ts';
+import { DEFAULT_PROVIDER_TIMEOUT_MS, GeorgeError, MAX_PROVIDER_TIMEOUT_MS, resolveGeorgeConfig, type ProviderActivity } from '../../../src/core/index.ts';
 import { LmStudioResponsesProvider } from '../../../src/provider/index.ts';
 
 type RequestHandler = (request: import('node:http').IncomingMessage, response: import('node:http').ServerResponse) => void;
@@ -26,11 +26,14 @@ async function eventsFrom(stream: AsyncIterable<unknown>): Promise<unknown[]> {
 }
 
 test('LM Studio provider receives the resolved George timeout configuration', () => {
-  const config = resolveGeorgeConfig({ model: 'local-model' }, '/workspace', {
-    environment: { GEORGE_PROVIDER_TIMEOUT_MS: '120000' },
-  });
+  const config = resolveGeorgeConfig({ model: 'local-model' }, '/workspace');
   const provider = new LmStudioResponsesProvider(config.provider);
-  assert.equal(provider.defaultTimeoutMs, 120_000);
+  assert.equal(provider.defaultTimeoutMs, 300_000);
+  assert.equal(DEFAULT_PROVIDER_TIMEOUT_MS, 300_000);
+  assert.equal(MAX_PROVIDER_TIMEOUT_MS, 600_000);
+  assert.equal(new LmStudioResponsesProvider({ baseUrl: config.provider.baseUrl, model: 'local-model', timeoutMs: 20 }).defaultTimeoutMs, 20);
+  assert.equal(new LmStudioResponsesProvider({ baseUrl: config.provider.baseUrl, model: 'local-model', timeoutMs: 600_000 }).defaultTimeoutMs, 600_000);
+  assert.throws(() => new LmStudioResponsesProvider({ baseUrl: config.provider.baseUrl, model: 'local-model', timeoutMs: 600_001 }), /between 1 and 600000/);
 });
 
 function sse(response: import('node:http').ServerResponse, chunks: string[]): void {
@@ -426,6 +429,46 @@ test('LM Studio provider requires an explicit model and retains the loopback bou
   );
 });
 
+test('LM Studio keeps productive output alive past 120000 ms and enforces the 300000 ms emergency ceiling with fake time', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const encoder = new TextEncoder();
+  let body!: ReadableStreamDefaultController<Uint8Array>;
+  let requestSignal: AbortSignal | null | undefined;
+  t.mock.method(globalThis, 'fetch', async (_input: string | URL | Request, init?: RequestInit) => {
+    requestSignal = init?.signal;
+    return new Response(new ReadableStream<Uint8Array>({
+      start(controller) {
+        body = controller;
+        controller.enqueue(encoder.encode('data: {"type":"response.created","response":{"id":"long"}}\n\n'));
+        requestSignal?.addEventListener('abort', () => controller.error(requestSignal?.reason), { once: true });
+      },
+    }), { status: 200, headers: { 'content-type': 'text/event-stream' } });
+  });
+
+  const activity: ProviderActivity[] = [];
+  const provider = new LmStudioResponsesProvider({ baseUrl: 'http://127.0.0.1:1234', model: 'local-model' });
+  const iterator = provider.stream({ input: 'Long productive generation' }, { onActivity: (item) => { activity.push(item); } })[Symbol.asyncIterator]();
+  assert.equal((await iterator.next()).value?.type, 'provider.response.started');
+
+  for (let count = 0; count < 5; count += 1) {
+    const pending = iterator.next();
+    t.mock.timers.tick(50_000);
+    body.enqueue(encoder.encode(`data: {"type":"response.output_text.delta","delta":"${count}"}\n\n`));
+    assert.equal((await pending).value?.type, 'provider.text.delta');
+  }
+  const timeout = iterator.next();
+  t.mock.timers.tick(49_999);
+  assert.equal(requestSignal?.aborted, false, 'the former 120000 ms ceiling no longer aborts productive output');
+  t.mock.timers.tick(1);
+  const timeoutEvent = await timeout;
+  assert.equal(timeoutEvent.value?.type, 'provider.error');
+  assert.deepEqual(timeoutEvent.value?.error.cause, { kind: 'timeout', timeoutMs: 300_000 });
+  await assert.rejects(iterator.next(), (error: unknown) => error instanceof GeorgeError
+    && error.code === 'provider'
+    && /300000 ms absolute emergency timeout/.test(error.message));
+  assert.deepEqual(activity, ['accepted', ...Array<ProviderActivity>(5).fill('output_progress')]);
+});
+
 test('LM Studio provider reports caller aborts and bounded timeouts', async (t) => {
   const { server, baseUrl } = await fixture((_request, response) => {
     response.writeHead(200, { 'content-type': 'text/event-stream' });
@@ -451,8 +494,9 @@ test('LM Studio provider reports caller aborts and bounded timeouts', async (t) 
   const timeoutEvents: unknown[] = [];
   await assert.rejects(async () => {
     for await (const event of provider.stream({ input: 'Wait' }, { timeoutMs: 20 })) timeoutEvents.push(event);
-  }, (error: unknown) => error instanceof GeorgeError && error.code === 'provider' && /timed out/.test(error.message));
+  }, (error: unknown) => error instanceof GeorgeError && error.code === 'provider' && /absolute emergency timeout/.test(error.message));
   assert.equal((timeoutEvents.at(-1) as { type: string }).type, 'provider.error');
+  assert.deepEqual((timeoutEvents.at(-1) as { error: GeorgeError }).error.cause, { kind: 'timeout', timeoutMs: 20 });
 });
 
 test('LM Studio provider preserves bounded safe diagnostics from failure events', async (t) => {

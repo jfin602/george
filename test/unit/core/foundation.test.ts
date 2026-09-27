@@ -5,6 +5,7 @@ import {
   DEFAULT_LM_STUDIO_BASE_URL,
   DEFAULT_LM_STUDIO_MODEL_ID,
   DEFAULT_PROVIDER_TIMEOUT_MS,
+  MAX_PROVIDER_TIMEOUT_MS,
   DEFAULT_CONTEXT_PROFILE,
   DEFAULT_EXECUTION_POLICY,
   CONTEXT_PROFILE_REGISTRY,
@@ -41,8 +42,9 @@ test('configuration resolves the pinned Qwen default while preserving model over
     environment: { GEORGE_MODEL: 'environment-model' },
   });
   assert.equal(explicitOverride.provider.model, 'explicit-model');
-  assert.equal(config.provider.timeoutMs, 120_000);
-  assert.equal(DEFAULT_PROVIDER_TIMEOUT_MS, 120_000);
+  assert.equal(config.provider.timeoutMs, 300_000);
+  assert.equal(DEFAULT_PROVIDER_TIMEOUT_MS, 300_000);
+  assert.equal(MAX_PROVIDER_TIMEOUT_MS, 600_000);
   assert.equal(validateWorkspace('project', '/workspace'), '/workspace/project');
   assert.equal(validateModelId(' qwen-local '), 'qwen-local');
   assert.equal(resolveGeorgeUserConfigRoot({ XDG_CONFIG_HOME: '/tmp/config' }, 'linux', '/home/tester'), '/tmp/config/george');
@@ -96,11 +98,13 @@ test('Phase 8 context profiles are validated, stable, and preserve the large def
 
 test('configuration resolves and validates GEORGE_PROVIDER_TIMEOUT_MS', () => {
   const configured = resolveGeorgeConfig({}, '/workspace', {
-    environment: { GEORGE_PROVIDER_TIMEOUT_MS: '120000' },
+    environment: { GEORGE_PROVIDER_TIMEOUT_MS: '600000' },
   });
-  assert.equal(configured.provider.timeoutMs, 120_000);
+  assert.equal(configured.provider.timeoutMs, 600_000);
+  assert.equal(resolveGeorgeConfig({ providerTimeoutMs: 20 }, '/workspace').provider.timeoutMs, 20);
+  assert.equal(resolveGeorgeConfig({ providerTimeoutMs: 120_000 }, '/workspace').provider.timeoutMs, 120_000);
 
-  for (const value of ['', 'abc', '1.5', '0', '-1', '120001']) {
+  for (const value of ['', 'abc', '1.5', '0', '-1', '600001']) {
     assert.throws(
       () => resolveGeorgeConfig({}, '/workspace', { environment: { GEORGE_PROVIDER_TIMEOUT_MS: value } }),
       (error: unknown) => error instanceof GeorgeError && error.code === 'configuration',

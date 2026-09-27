@@ -406,8 +406,8 @@ export class LmStudioResponsesProvider implements ModelProvider {
         return cancellationError(options.signal) ?? new GeorgeError('cancelled', 'Operation cancelled.');
       }
       if (timeoutController.signal.aborted) {
-        return providerError(`LM Studio request timed out after ${requestTimeout} ms.`, {
-          kind: 'timeout',
+        return providerError(`LM Studio request reached the ${requestTimeout} ms absolute emergency timeout.`, {
+          kind: 'timeout', timeoutMs: requestTimeout,
         });
       }
       return error instanceof GeorgeError ? error : providerError('LM Studio request failed.', error);

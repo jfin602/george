@@ -7,6 +7,7 @@ import test from 'node:test';
 import {
   DEFAULT_CONTEXT_PROFILE,
   DEFAULT_PROVIDER_TIMEOUT_MS,
+  MAX_PROVIDER_TIMEOUT_MS,
   DEFAULT_RUN_BUDGET,
   GeorgeError,
   createSession,
@@ -106,13 +107,14 @@ async function waitFor(predicate: () => boolean): Promise<void> {
   assert.equal(predicate(), true, 'condition did not become true');
 }
 
-test('stall policy keeps the 120000 ms absolute ceiling and watchdog activity owns clean attempt timers', async () => {
-  assert.equal(DEFAULT_PROVIDER_TIMEOUT_MS, 120_000);
+test('stall policy remains independent below the 300000 ms emergency ceiling and watchdog activity owns clean attempt timers', async () => {
+  assert.equal(DEFAULT_PROVIDER_TIMEOUT_MS, 300_000);
+  assert.equal(MAX_PROVIDER_TIMEOUT_MS, 600_000);
   assert.deepEqual(DEFAULT_PROVIDER_STALL_POLICY, {
     suspectedInactivityMs: 60_000, firstEvidenceTimeoutMs: 90_000, activeInactivityTimeoutMs: 60_000,
     compactionTimeoutMs: 30_000, maxFreshRetries: 1, maxRebases: 1,
   });
-  assert.throws(() => validateProviderStallPolicy({ ...POLICY, firstEvidenceTimeoutMs: 120_000 }), /below 120000/);
+  assert.throws(() => validateProviderStallPolicy({ ...POLICY, firstEvidenceTimeoutMs: 300_000 }), /below 300000/);
 
   const scheduler = new FakeScheduler();
   const watchdog = new ProviderAttemptWatchdog(POLICY, scheduler);
@@ -129,6 +131,18 @@ test('stall policy keeps the 120000 ms absolute ceiling and watchdog activity ow
   scheduler.advance(4); accepted.activity('accepted'); scheduler.advance(6);
   assert.equal(accepted.controller.signal.aborted, true, 'acceptance neither starts active-output timing nor resets the first-useful-output ceiling');
   accepted.stop();
+  assert.equal(scheduler.pending, 0);
+
+  const inactive = new ProviderAttemptWatchdog(DEFAULT_PROVIDER_STALL_POLICY, scheduler);
+  inactive.activity('output_progress');
+  scheduler.advance(59_999);
+  assert.equal(inactive.controller.signal.aborted, false);
+  scheduler.advance(1);
+  assert.equal(inactive.controller.signal.aborted, true, 'active-output inactivity still terminates at 60000 ms');
+  assert.deepEqual((inactive.error().cause as { kind: string; phase: string; inactivityMs: number }), {
+    kind: 'stall', phase: 'response_active', inactivityMs: 60_000,
+  });
+  inactive.stop();
   assert.equal(scheduler.pending, 0);
 });
 
@@ -151,6 +165,37 @@ test('payload-free useful-output progress prevents a false application stall wit
   const events = await pending;
   assert.equal(events.some((event) => event.type.startsWith('provider.stall.')), false);
   assert.equal(events.at(-1)?.type, 'turn.completed');
+  assert.equal(scheduler.pending, 0);
+});
+
+test('productive output crosses 120000 ms and completes at 180000 ms without weakening inactivity recovery', async (t) => {
+  const root = await workspace();
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const scheduler = new FakeScheduler();
+  let pulse: ((activity: ProviderActivity) => void) | undefined;
+  let finish: (() => void) | undefined;
+  const provider = new ScriptedProvider([async function* (_request, options) {
+    pulse = options.onActivity;
+    yield { type: 'provider.response.started', responseId: 'long-productive' };
+    await new Promise<void>((resolve) => { finish = resolve; });
+    yield { type: 'provider.text.delta', delta: 'Completed after the former ceiling.' };
+    yield { type: 'provider.response.completed' };
+  }]);
+  const service = await createOneTurnApplicationService({ provider, workspace: root, providerStallScheduler: scheduler });
+  const pending = collect(service.run({ session: createSession({ workspace: root }), input: 'long productive generation' }));
+  await waitFor(() => pulse !== undefined && finish !== undefined);
+
+  for (let count = 0; count < 3; count += 1) {
+    scheduler.advance(50_000);
+    pulse!('output_progress');
+  }
+  scheduler.advance(30_000);
+  finish!();
+
+  const events = await pending;
+  assert.equal(events.some((event) => event.type.startsWith('provider.stall.')), false);
+  assert.equal(events.at(-1)?.type, 'turn.completed');
+  assert.equal(events.find((event) => event.type === 'provider.attempt.finished')?.timing.providerActiveMs, 180_000);
   assert.equal(scheduler.pending, 0);
 });
 
