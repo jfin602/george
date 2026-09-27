@@ -187,6 +187,9 @@ export type ApplicationEvent =
   | Readonly<{ type: 'assistant.response.completed'; turnId: string; text: string }>
   /** Completed-round metrics only; raw Operation-mode text is never retained. */
   | Readonly<{ type: 'agent.round.completed'; turnId: string; round: number; executionMode: ExecutionMode; internalTextBytes: number; estimatedInternalTextTokens: number; toolCallCount: number; control?: 'handoff' }>
+  /** Bounded GEP transport evidence; source and replacement bodies are never retained. */
+  | Readonly<{ type: 'gep.packet.completed'; turnId: string; packetBytes: number; expandedMutationBytes: number; receiptCount: number; editCount: number; fileCount: number; transmissionRatioPpm: number }>
+  | Readonly<{ type: 'gep.packet.rejected'; turnId: string; packetBytes: number; receiptCount: number; staleReceipt: boolean }>
   /** George-owned transition evidence; each event represents one provider confirmation round not requested. */
   | Readonly<{ type: 'model.round.avoided'; turnId: string; reason: ModelRoundAvoidanceReason }>
   | Readonly<{ type: 'correction.frame.created'; turnId: string; cycle: number; validationId: string; bytes: number; freshEvidenceCount: number }>

@@ -323,6 +323,8 @@ test('live telemetry records cached usage and completed tool batches with explic
     { type: 'provider.tool.call', callId: 'two', name: 'read_file', arguments: '{}' },
     { type: 'provider.response.completed', usage: { inputTokens: 10, outputTokens: 2, cachedInputTokens: 6 } },
     { type: 'agent.round.completed', turnId: 't', round: 1, executionMode: 'operation', internalTextBytes: 16, estimatedInternalTextTokens: 4, toolCallCount: 2, control: 'handoff' },
+    { type: 'gep.packet.completed', turnId: 't', packetBytes: 70, expandedMutationBytes: 200, receiptCount: 2, editCount: 3, fileCount: 2, transmissionRatioPpm: 350_000 },
+    { type: 'gep.packet.rejected', turnId: 't', packetBytes: 40, receiptCount: 2, staleReceipt: true },
     { type: 'model.round.avoided', turnId: 't', reason: 'validation-passed' },
     { type: 'correction.frame.created', turnId: 't', cycle: 1, validationId: 'V1', bytes: 800, freshEvidenceCount: 2 },
     { type: 'correction.repair.completed', turnId: 't', cycle: 1, validationId: 'V1', providerRounds: 2, reinspectionCalls: 1 },
@@ -340,6 +342,7 @@ test('live telemetry records cached usage and completed tool batches with explic
   assert.deepEqual(trace.timing.providerAttempts, [{ attemptId: 'a', outcome: 'completed', responseAcceptanceMs: 4, firstUsefulOutputMs: 61_000, providerActiveMs: 61_010 }]);
   assert.deepEqual({ internal: trace.metrics.internalTextBytes, concurrent: trace.metrics.concurrentReadBatchCount, widths: trace.metrics.concurrentReadBatchWidths, average: trace.metrics.averageConcurrentReadBatchWidth, maximum: trace.metrics.maxConcurrentReadBatchWidth, parallel: trace.metrics.parallelBatchWallMs, child: trace.metrics.summedChildToolRuntimeMs, overlap: trace.metrics.observedConcurrentReadOverlapMs, avoided: trace.metrics.modelRoundsAvoided, controls: trace.metrics.georgeControlCount, human: trace.metrics.humanModeRounds, operation: trace.metrics.operationModeRounds, corrections: trace.metrics.correctionCycles }, { internal: 16, concurrent: 1, widths: [2], average: 2, maximum: 2, parallel: 30, child: 50, overlap: 20, avoided: 1, controls: 1, human: 0, operation: 1, corrections: 0 });
   assert.deepEqual(trace.metrics.modelRoundsAvoidedByReason, { 'validation-passed': 1 });
+  assert.deepEqual({ packet: trace.metrics.gepPacketBytes, expanded: trace.metrics.gepExpandedMutationBytes, receipts: trace.metrics.gepReceiptCount, stale: trace.metrics.gepStaleReceiptRejections, ratio: trace.metrics.mutationTransmissionRatio }, { packet: 70, expanded: 200, receipts: 2, stale: 1, ratio: 0.35 });
   assert.deepEqual({ frames: trace.metrics.correctionFrameBytes, providerRounds: trace.metrics.correctionProviderRounds, reinspections: trace.metrics.correctionReinspectionCalls, reruns: trace.metrics.validationReruns }, { frames: [800], providerRounds: 2, reinspections: 1, reruns: 1 });
 });
 

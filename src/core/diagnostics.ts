@@ -133,6 +133,8 @@ function eventRecord(session: Session, event: ApplicationEvent, sequence: number
     case 'correction.frame.created': fields.cycle = event.cycle; fields.validationId = event.validationId; fields.bytes = event.bytes; fields.freshEvidenceCount = event.freshEvidenceCount; break;
     case 'correction.repair.completed': fields.cycle = event.cycle; fields.validationId = event.validationId; fields.providerRounds = event.providerRounds; fields.reinspectionCalls = event.reinspectionCalls; break;
     case 'correction.revalidated': fields.cycle = event.cycle; fields.validationId = event.validationId; fields.status = event.status; break;
+    case 'gep.packet.completed': fields.packetBytes = event.packetBytes; fields.expandedMutationBytes = event.expandedMutationBytes; fields.receiptCount = event.receiptCount; fields.editCount = event.editCount; fields.fileCount = event.fileCount; fields.transmissionRatioPpm = event.transmissionRatioPpm; break;
+    case 'gep.packet.rejected': fields.packetBytes = event.packetBytes; fields.receiptCount = event.receiptCount; fields.staleReceipt = event.staleReceipt; break;
     case 'turn.failed': case 'turn.cancelled': fields.code = bounded(event.error.code, 128); fields.message = bounded(event.error.message); break;
     default: break;
   }

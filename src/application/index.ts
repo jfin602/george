@@ -8,3 +8,4 @@ export * from './provider-stall.ts';
 export * from './recovery.ts';
 export * from './lm-studio-smoke-diagnostics.ts';
 export * from './plugin-commands.ts';
+export * from './george-edit.ts';

@@ -72,6 +72,11 @@ export type LiveWorkMetrics = Readonly<{
   georgeControlCount: number;
   humanModeRounds: number | null;
   operationModeRounds: number | null;
+  gepPacketBytes: number;
+  gepExpandedMutationBytes: number;
+  gepReceiptCount: number;
+  gepStaleReceiptRejections: number;
+  mutationTransmissionRatio: number | null;
   completedToolPayloads: number;
   completedControlPayloads: number;
   correctionCycles: number;
@@ -315,6 +320,10 @@ function operationalEvent(event: ApplicationEvent): boolean {
 function metrics(events: readonly ApplicationEvent[], correctionCycles: number): LiveWorkMetrics {
   const completed = events.filter((event): event is Extract<ApplicationEvent, { type: 'provider.response.completed' }> => event.type === 'provider.response.completed');
   const agentRounds = events.filter((event): event is Extract<ApplicationEvent, { type: 'agent.round.completed' }> => event.type === 'agent.round.completed');
+  const gepPackets = events.filter((event): event is Extract<ApplicationEvent, { type: 'gep.packet.completed' }> => event.type === 'gep.packet.completed');
+  const gepRejected = events.filter((event): event is Extract<ApplicationEvent, { type: 'gep.packet.rejected' }> => event.type === 'gep.packet.rejected');
+  const gepPacketBytes = gepPackets.reduce((total, event) => total + event.packetBytes, 0);
+  const gepExpandedMutationBytes = gepPackets.reduce((total, event) => total + event.expandedMutationBytes, 0);
   const attemptTimings = events.filter((event): event is Extract<ApplicationEvent, { type: 'provider.attempt.finished' }> => event.type === 'provider.attempt.finished');
   const attemptCount = events.filter((event) => event.type === 'provider.attempt.started').length;
   const outputPolicies = events.flatMap((event) => event.type === 'provider.attempt.started' && event.outputPolicy ? [event.outputPolicy] : []);
@@ -368,6 +377,11 @@ function metrics(events: readonly ApplicationEvent[], correctionCycles: number):
     georgeControlCount: agentRounds.filter((event) => event.control !== undefined).length,
     humanModeRounds: agentRounds.length ? agentRounds.filter((event) => event.executionMode === 'human').length : null,
     operationModeRounds: agentRounds.length ? agentRounds.filter((event) => event.executionMode === 'operation').length : null,
+    gepPacketBytes,
+    gepExpandedMutationBytes,
+    gepReceiptCount: gepPackets.reduce((maximum, event) => Math.max(maximum, event.receiptCount), 0),
+    gepStaleReceiptRejections: gepRejected.filter((event) => event.staleReceipt).length,
+    mutationTransmissionRatio: gepExpandedMutationBytes === 0 ? null : gepPacketBytes / gepExpandedMutationBytes,
     completedToolPayloads: agentRounds.reduce((total, event) => total + event.toolCallCount, 0),
     completedControlPayloads: agentRounds.filter((event) => event.control !== undefined).length,
     correctionCycles,
@@ -603,6 +617,8 @@ function eventEvidence(event: ApplicationEvent): Readonly<Record<string, unknown
   if (event.type === 'context.envelope.promoted') safe.promotion = { fromProfileId: event.fromProfileId, toProfileId: event.toProfileId, reason: event.reason, tokens: event.tokens, providerInputBudget: event.providerInputBudget };
   if (event.type === 'provider.response.completed') safe.usage = { inputTokens: event.usage?.inputTokens ?? null, outputTokens: event.usage?.outputTokens ?? null, cachedInputTokens: event.usage?.cachedInputTokens ?? null };
   if (event.type === 'agent.round.completed') safe.round = { round: event.round, executionMode: event.executionMode, internalTextBytes: event.internalTextBytes, estimatedInternalTextTokens: event.estimatedInternalTextTokens, toolCallCount: event.toolCallCount, control: event.control ?? null };
+  if (event.type === 'gep.packet.completed') safe.gep = { packetBytes: event.packetBytes, expandedMutationBytes: event.expandedMutationBytes, receiptCount: event.receiptCount, editCount: event.editCount, fileCount: event.fileCount, transmissionRatioPpm: event.transmissionRatioPpm };
+  if (event.type === 'gep.packet.rejected') safe.gep = { packetBytes: event.packetBytes, receiptCount: event.receiptCount, staleReceipt: event.staleReceipt };
   if (event.type === 'model.round.avoided') safe.modelRoundAvoided = { reason: event.reason };
   if (event.type === 'correction.frame.created') safe.correctionFrame = { cycle: event.cycle, validationId: event.validationId, bytes: event.bytes, freshEvidenceCount: event.freshEvidenceCount };
   if (event.type === 'correction.repair.completed') safe.correctionRepair = { cycle: event.cycle, validationId: event.validationId, providerRounds: event.providerRounds, reinspectionCalls: event.reinspectionCalls };

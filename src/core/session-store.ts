@@ -293,6 +293,15 @@ function durableEvent(event: ApplicationEvent): ApplicationEvent | undefined {
       internalTextBytes: boundedInteger(event.internalTextBytes, 'internal text bytes', 4 * 1024), estimatedInternalTextTokens: boundedInteger(event.estimatedInternalTextTokens, 'estimated internal text tokens', 1024),
       toolCallCount: boundedInteger(event.toolCallCount, 'round tool call count', 1024), ...(event.control === undefined ? {} : { control: oneOf(event.control, 'George control', ['handoff'] as const) }),
     };
+    case 'gep.packet.completed': return {
+      type: event.type, turnId: string(event.turnId, 'turn ID', 256), packetBytes: boundedInteger(event.packetBytes, 'GEP packet bytes', 4 * 1024),
+      expandedMutationBytes: boundedInteger(event.expandedMutationBytes, 'GEP expanded mutation bytes', 1024 * 1024), receiptCount: boundedInteger(event.receiptCount, 'GEP receipt count', 32),
+      editCount: boundedInteger(event.editCount, 'GEP edit count', 32), fileCount: boundedInteger(event.fileCount, 'GEP file count', 8), transmissionRatioPpm: boundedInteger(event.transmissionRatioPpm, 'GEP transmission ratio', 1_000_000),
+    };
+    case 'gep.packet.rejected': return {
+      type: event.type, turnId: string(event.turnId, 'turn ID', 256), packetBytes: boundedInteger(event.packetBytes, 'GEP packet bytes', 4 * 1024),
+      receiptCount: boundedInteger(event.receiptCount, 'GEP receipt count', 32), staleReceipt: boolean(event.staleReceipt, 'GEP stale receipt'),
+    };
     case 'model.round.avoided': return { type: event.type, turnId: string(event.turnId, 'turn ID', 256), reason: oneOf(event.reason, 'model round avoidance reason', MODEL_ROUND_AVOIDANCE_REASONS) };
     case 'correction.frame.created': return {
       type: event.type, turnId: string(event.turnId, 'turn ID', 256), cycle: boundedInteger(event.cycle, 'correction cycle', 10), validationId: string(event.validationId, 'correction validation ID', 64),
