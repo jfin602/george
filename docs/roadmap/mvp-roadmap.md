@@ -1,6 +1,6 @@
 # George MVP Roadmap
 
-Status: CURRENT ROADMAP — PHASE 9 OWNER-CLOSED; PHASE 10 CURRENT WITH ACTIVE CORRECTION
+Status: CURRENT ROADMAP — PHASE 10 OWNER-CLOSED; PHASE 11 CURRENT
 
 The roadmap deliberately proves the provider, read-only tool foundation, real interactive terminal surface, and safe autonomous tool execution before broader coding workflow, networking, or a desktop GUI.
 
@@ -485,7 +485,7 @@ Non-goals:
 
 ## Phase 10 — Agent Loop Throughput
 
-Status: CURRENT PHASE — formal closeout Not Green; `c10-gep-compatibility` active at package `0.10.12`
+Status: OWNER-CLOSED WITH EXPLICIT LIVE GEP-SELECTION NOT-GREEN ACCEPTANCE — accepted package `0.10.12`
 
 Decision authority: `docs/planning/p10-agent-loop-throughput/decision-record.md`.  
 Qualification authority: `docs/planning/p10-agent-loop-throughput/qualification-plan.md`.  
@@ -547,42 +547,23 @@ Non-goals:
 The approved implementation order is baseline/fast-gate instrumentation -> useful-output liveness -> stable prefix -> Operation Protocol -> deterministic round elimination -> read batching -> read-only concurrency -> focused correction/output budgets -> primary-only qualification with B2/C2 milestone -> helper A/B -> closeout.
 
 
-Active post-closeout correction: `c10-generation-bottleneck`.
+Owner closeout: `docs/phase-10-owner-closeout.md`.
 
-Triggering live evidence shows context size is not the current dominant bottleneck. The correction instead targets:
-- verbose text mutation transmission that requires the model to echo path/SHA/old/new content through JSON;
-- healthy local generation being aborted by the inherited 120s absolute provider ceiling;
-- invalid terminal TaskState persistence when a failed active work unit is left `active` after `currentWorkUnit` is cleared.
+Phase 10 is owner-closed for roadmap progression with explicit acceptance of the remaining live GEP-selection Not Green result.
 
-Correction policy:
-- keep the package at `0.10.12`;
-- preserve Phase 10 Human/Operation, stable-prefix, batching/concurrency, focused-correction, recovery and evidence authority;
-- introduce GEP/1 only as a compact model-facing mutation transport that expands back into the existing mutation engine;
-- use 300s default / 600s maximum finite provider emergency timeout while retaining first-evidence and active-inactivity guards;
-- repair terminal active-work-unit state at the TaskState producer;
-- obtain supported Node 26 + real LM Studio/Qwen evidence before reassessing Phase 10 readiness.
+The owner-closeout boundary preserves:
+- `docs/phase-10-closeout.md` as the original formal Not Green evidence closeout;
+- `c10-generation-bottleneck` as historically Not Green while retaining its accepted TaskState, timeout, and GEP implementation;
+- `c10-gep-compatibility` as historically Not Green because the sole supported live workload selected legacy mutation fallback instead of an existing-file GEP packet;
+- deterministic GEP correctness/compatibility/efficiency as Green on the follow-up candidate;
+- the supported real-model task as functionally successful through the qualified legacy fallback;
+- Phase 10 P7 lifecycle ordering as historical/intermittent Not Green evidence.
 
-This correction does not relabel the formal Phase 10 P7 historical/intermittent lifecycle-order evidence.
-
-
-The parent `c10-generation-bottleneck` correction closed Not Green after deterministic qualification exposed:
-- GEP receipt-only projection breaking advertised legacy mutation fallback;
-- a separate Phase 5 fixed-profile workflow ending `budget_exhausted`;
-- the required live GEP workload remaining unspent.
-
-Active follow-up correction: `c10-gep-compatibility`.
-
-It must:
-- restore legacy `read_file` text/SHA/framing evidence through a bounded additive GEP projection;
-- cap serialized dual projection at 16 KiB and fall back to unchanged legacy evidence when the bound would be exceeded;
-- retain Mutation Transmission Ratio <= 0.70 and additionally prove Net Edit Transport Ratio < 1.0;
-- identify the Phase 5 first bad historical boundary and exact exhausted dimension before changing production behavior;
-- forbid broad budget/context increases as a pass-seeking repair;
-- obtain the previously blocked supported Node 26 + real LM Studio/Qwen live qualification only after deterministic/broad Green.
-
-If Green, the parent + follow-up correction chain becomes the candidate for formal Phase 10 closeout/readiness reassessment.
+Live GEP selection remains unresolved and must not be silently treated as qualified. It is carried forward as an observability/debugging target for the Phase 12 daemon and Phase 13 Agent Observatory rather than a reason for additional blind Phase 10 correction cycles.
 
 ## Phase 11 — Final Acceleration + Primary-Model Performance Qualification
+
+Status: CURRENT PHASE — primary-model baseline freeze before the observability foundation
 
 Goal: characterize remaining provider acceleration, then freeze a consolidated optimized single-primary-model baseline over the Phase 9 structured execution model and Phase 10 loop optimizations, while retaining any post-Phase-10 helper A/B result as comparative research rather than baseline authority.
 
@@ -598,7 +579,7 @@ Success condition:
 - consolidated report shows cumulative gain/remaining bottlenecks;
 - structured-task live-work results remain comparable to Phase 9.
 
-Non-goals: helper model, local web research, daemon/desktop.
+Non-goals: helper model, local web research, daemon/desktop, or treating the carried live GEP-selection Not Green result as silently fixed.
 
 ## Phase 12 — Local Daemon + Observability Foundation
 

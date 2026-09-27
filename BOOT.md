@@ -106,44 +106,37 @@ Key carried-forward truth:
 - `c9-gen-op` planning remains unexecuted Phase 9 planning and is carried forward only as possible Phase 10 throughput input;
 - historical Phase 8/9 failures and Evidence Gaps remain immutable evidence.
 
-**Phase 10 — Agent Loop Throughput — is the current roadmap gate.**
+**Phase 10 — Agent Loop Throughput — is owner-closed.**
 
-Phase 10 baseline: `0.10.0`. Current package: `0.10.12`.
+Phase 10 owner closeout: `docs/phase-10-owner-closeout.md`.
 
-Formal Phase 10 closeout: `docs/phase-10-closeout.md` — **Not Green / not ready for Phase 11 planning**.
+Accepted Phase 10 package state remains `0.10.12`.
 
-Phase 10 authority:
-- `docs/planning/p10-agent-loop-throughput/decision-record.md`;
-- `docs/planning/p10-agent-loop-throughput/qualification-plan.md`;
-- `docs/planning/p10-agent-loop-throughput/optimization-metrics.md`;
-- `docs/planning/p10-agent-loop-throughput/fast-live-work.md`.
+The owner explicitly accepts the current live GEP-selection Not Green result for roadmap progression. This acceptance does not relabel it Green.
 
-The parent correction `c10-generation-bottleneck` is closed **Not Green / Not Qualified**. Its closeout is `docs/tasks/c10-generation-bottleneck/closeout.md`.
+Key carried-forward truth:
+- the latest correction-focused deterministic floor is Green at 293/293;
+- the applicable broad deterministic suite is Green at 520 passed / 0 failed / 1 native-real-TTY skip;
+- deterministic GEP correctness, compatibility, receipt freshness, canonical SHA/framing mutation authority, and efficiency metrics are Green;
+- the supported real LM Studio/Qwen workload completed functionally through qualified legacy mutation fallback with 2/2 validations, completed/reopened TaskState, and zero human intervention;
+- the model did not emit the required existing-file GEP packet, so live GEP selection and live GEP transport ratios remain Not Green / unavailable;
+- Phase 10 P7 lifecycle-order failure remains historical/intermittent Not Green evidence;
+- the original formal Phase 10 closeout, `c10-generation-bottleneck` closeout, and `c10-gep-compatibility` closeout retain their recorded Not Green states;
+- Phase 8/9 historical failures and Evidence Gaps remain immutable.
 
-The active inserted correction is now `c10-gep-compatibility`.
+Accepted Phase 10 implementation includes the Human/Operation split, stable prefix/late context, useful-output-aware provider liveness, batching, dependency-safe read concurrency, focused correction/direct revalidation, terminal TaskState repair, 300s default / 600s maximum finite provider emergency timeout, and GEP/1 with bounded additive legacy-compatible read projection.
 
-Correction authority:
-- `docs/planning/c10-gep-compatibility/decision-record.md`;
-- `docs/planning/c10-gep-compatibility/qualification-plan.md`;
-- `docs/tasks/c10-gep-compatibility/README.md`.
+Live GEP selection is now a carried observability target. It should be investigated later with the Phase 12/13 observability infrastructure rather than through additional blind Phase 10 correction cycles.
 
-It owns exactly:
-- bounded additive GEP read projection that restores legacy `read_file` SHA/text/framing fallback without unbounded duplicated provider input;
-- whole read->edit transport efficiency, including Net Edit Transport Ratio;
-- causal isolation and bounded repair/characterization of the current Phase 5 fixed-profile `budget_exhausted` failure;
-- supported Node 26 + real LM Studio/Qwen qualification once deterministic/broad gates are Green.
+**Phase 11 — Final Acceleration + Primary-Model Performance Qualification — is the current roadmap gate.**
 
-The parent correction's accepted implementation pieces remain in force while this follow-up repairs coexistence:
-- terminal TaskState cleanup;
-- 300s default / 600s maximum finite provider emergency timeout;
-- GEP/1 parser, receipts, canonical mutation expansion, SHA/framing/permission/recovery authority.
+Planned Phase 11 baseline transition: `0.11.0`.
 
-This follow-up does not reopen context profiles/compaction, helper work, GPU tuning, additional concurrency work, frozen B2/C2, or browser/visual feedback.
+The repository remains at package `0.10.12` until that explicit transition.
 
-Phase 10 historical/intermittent P7 lifecycle-order evidence remains preserved and is not relabeled by this correction.
+Phase 11 should freeze a consolidated primary-model baseline and hand it into the already approved observability-first roadmap. It must preserve the unresolved live GEP-selection result rather than treating it as silently fixed.
 
-The unexecuted `c9-gen-op` planning is historical precursor material only. Do not run that correction stack.
-
+The unexecuted `c9-gen-op` planning remains historical precursor material only. Do not run that correction stack.
 
 ## Approved post-Phase-11 roadmap shift
 
@@ -203,7 +196,7 @@ Read:
 - post-Phase-11 daemon/observability direction: `docs/planning/p12-local-daemon-observability/{decision-record,qualification-plan}.md`;
 - native desktop/Agent Observatory direction: `docs/planning/p13-native-desktop-observatory/{decision-record,qualification-plan}.md`;
 - Living Project Map / Software Graph, when relevant: `docs/planning/living-project-map/decision-record.md` (then its graph, interaction, and qualification companions as needed);
-- Phase 9 owner closeout: `docs/phase-9-owner-closeout.md`; retained Phase 9 authority/evidence: `docs/planning/p9-structured-task-execution/{decision-record,task-format-v1,qualification-plan}.md`, `docs/tasks/c9-final-live-convergence/closeout.md`, and its final report/ledger; Phase 10 authority: `docs/planning/p10-agent-loop-throughput/{decision-record,qualification-plan,optimization-metrics,fast-live-work}.md`; formal Phase 10 closeout: `docs/phase-10-closeout.md`; parent correction closeout: `docs/tasks/c10-generation-bottleneck/closeout.md`; active correction: `docs/planning/c10-gep-compatibility/{decision-record,qualification-plan}.md`;
+- Phase 9 owner closeout: `docs/phase-9-owner-closeout.md`; retained Phase 9 authority/evidence: `docs/planning/p9-structured-task-execution/{decision-record,task-format-v1,qualification-plan}.md`, `docs/tasks/c9-final-live-convergence/closeout.md`, and its final report/ledger; Phase 10 authority: `docs/planning/p10-agent-loop-throughput/{decision-record,qualification-plan,optimization-metrics,fast-live-work}.md`; formal Phase 10 closeout: `docs/phase-10-closeout.md`; Phase 10 owner closeout: `docs/phase-10-owner-closeout.md`; correction closeouts: `docs/tasks/c10-generation-bottleneck/closeout.md` and `docs/tasks/c10-gep-compatibility/closeout.md`;
 - Phase 8 closeout/history when needed: `docs/phase-8-closeout.md`, `docs/phase-8-owner-closeout.md`, `docs/tasks/c8-agentic-context/closeout.md`, `docs/planning/c8-agentic-context/decision-record.md`, `docs/planning/c8-agentic-context/qualification-plan.md`, `docs/planning/p8-context-throughput-optimization/decision-record.md`, `docs/planning/p8-context-throughput-optimization/initial-baseline.md`, and `docs/planning/performance-benchmarking-worksheet.md`;
 - Phase 7 closeout/history when needed: `docs/phase-7-closeout.md`, `docs/phase-7-owner-closeout.md`, `docs/planning/p7-inference-runtime-optimization/initial-baseline.md`;
 - Phase 6 closeout/history when needed: `docs/phase-6-closeout.md`, `docs/phase-6-owner-closeout.md`, `docs/planning/p6-plugins-external-adapters/decision-record.md`;
