@@ -31,7 +31,7 @@ function providerMutationResult(value: import('../core/index.ts').JsonValue): im
 
 export const WORKSPACE_MUTATION_TOOL_DEFINITIONS = [
   {
-    name: 'write_file', description: 'Atomically create or exactly replace workspace text using the latest read_file.sha256 for an existing target. Prefer apply_patch for localized edits. Existing text must preserve read_file.textFraming unless an intentional framing change is acknowledged; George never reformats content. Compatibility fallback when GEP/1 is ineligible.', execution: { effect: 'workspace_mutation', replaySafety: 'not_replay_safe', source: { kind: 'builtin' } },
+    name: 'write_file', description: 'Atomically create or exactly replace workspace text using the latest read_file.sha256 for an existing target. Prefer apply_patch for localized edits. Existing text must preserve read_file.textFraming unless an intentional framing change is acknowledged; George never reformats content.', execution: { effect: 'workspace_mutation', replaySafety: 'not_replay_safe', source: { kind: 'builtin' } },
     projectProviderResult: providerMutationResult,
     inputSchema: {
       type: 'object', properties: {
@@ -42,7 +42,7 @@ export const WORKSPACE_MUTATION_TOOL_DEFINITIONS = [
     },
   },
   {
-    name: 'apply_patch', description: 'Preferred for localized legacy edits: atomically apply unambiguous exact-text edits using the latest read_file.sha256 while preserving untouched bytes and read_file.textFraming unless an intentional framing change is acknowledged. Compatibility fallback when GEP/1 is ineligible.', execution: { effect: 'workspace_mutation', replaySafety: 'not_replay_safe', source: { kind: 'builtin' } },
+    name: 'apply_patch', description: 'Preferred for localized edits: atomically apply unambiguous exact-text edits using the latest read_file.sha256 while preserving untouched bytes and read_file.textFraming unless an intentional framing change is acknowledged.', execution: { effect: 'workspace_mutation', replaySafety: 'not_replay_safe', source: { kind: 'builtin' } },
     projectProviderResult: providerMutationResult,
     inputSchema: {
       type: 'object', properties: {

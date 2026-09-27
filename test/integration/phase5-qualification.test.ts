@@ -93,6 +93,7 @@ test('Phase 5 long workflow compacts durable Phase 4 history, continues safely, 
   });
 
   assert.equal(completion.terminalState, 'completed');
+  assert.equal(session.events.some((event) => event.turnId === 'long-turn' && (event.type === 'budget.exhausted' || (event.type === 'turn.failed' && event.error.code === 'budget'))), false);
   assert.equal(completion.validations[0]?.status, 'passed');
   assert.equal(await readFile(join(root, 'long.txt'), 'utf8'), 'LONG_SECRET_BODY');
   assert.deepEqual(approvals.requests.map((request) => request.toolName), ['write_file', 'run_process', 'run_process']);
