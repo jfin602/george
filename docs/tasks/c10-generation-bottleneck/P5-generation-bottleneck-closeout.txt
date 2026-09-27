@@ -1,0 +1,141 @@
+GEORGE TASK FORMAT: 1
+
+STACK: c10-generation-bottleneck
+TASK: Correction 10 / P5 — Generation bottleneck closeout
+KIND: closeout
+
+VERSIONING
+
+- Required unchanged project version: `0.10.12`.
+- Recommended configuration: `Sol Medium`.
+- Browser required: no.
+
+GOAL
+
+Perform an evidence-only closeout of `c10-generation-bottleneck` from the exact P4 candidate. Do not repair production behavior, rerun expensive live work, owner-close Phase 10, or open Phase 11.
+
+READ FIRST
+
+- REQUIRED: BOOT.md
+- REQUIRED: AGENTS.md
+- REQUIRED: docs/workflow.md
+- REQUIRED: docs/stability-contract.md
+- REQUIRED: docs/phase-10-closeout.md
+- REQUIRED: docs/planning/c10-generation-bottleneck/decision-record.md
+- REQUIRED: docs/planning/c10-generation-bottleneck/qualification-plan.md
+- REQUIRED: docs/tasks/c10-generation-bottleneck/prompt-assessment.md
+- REQUIRED: docs/tasks/c10-generation-bottleneck/implementation-plan.md
+- REQUIRED: docs/tasks/c10-generation-bottleneck/qualification-report.md
+- REQUIRED: P1/P2/P3 source/tests and P4 artifacts
+
+CREATE
+
+- docs/tasks/c10-generation-bottleneck/closeout.md
+
+REQUIREMENTS
+
+- R1: Tie closeout to exact P4 candidate SHA/tree and package 0.10.12.
+- R2: Audit P1 terminal TaskState behavior against source, deterministic tests and durable reopen evidence.
+- R3: Audit P2 default 300000 ms / maximum 600000 ms emergency provider policy and preservation of first-evidence, active-inactivity, cancellation, retry/rebase and incomplete-branch safety.
+- R4: Audit P3 GEP/1 grammar, receipt eligibility/freshness, parser framing, canonical mutation expansion, SHA/framing/permission/recovery boundaries, response-completion-before-effect, and legacy mutation compatibility.
+- R5: Record deterministic Mutation Transmission Ratio and byte-equivalent mutation evidence.
+- R6: Record P4 supported Node 26 + LM Studio/Qwen live result and every remaining correction-local Not Green/Evidence Gap.
+- R7: Preserve Phase 10 P7 historical/intermittent evidence and all Phase 8/9/10 historical outcomes without relabeling.
+- R8: Run only a bounded closeout recheck of correction-focused deterministic tests, typecheck, runner regression and diff hygiene. Do not rerun the live workload or broad suite merely for a better result.
+- R9: Verify package remains 0.10.12 and root package-lock.json is absent.
+- R10: State whether `c10-generation-bottleneck` is Qualified.
+- R11: State whether Phase 10 formal closeout/readiness is ready to be reassessed. This is not the same as declaring Phase 10 Green or ready for Phase 11.
+- R12: Do not owner-close Phase 10 or open Phase 11.
+
+DECISION TABLE
+
+Include at minimum:
+
+- Terminal TaskState Integrity Qualified;
+- Active Work Unit Terminalization Qualified;
+- StackState Child Terminalization Qualified;
+- Durable Session Round Trip Green;
+- Default Provider Emergency Ceiling 300s;
+- Maximum Configurable Provider Ceiling 600s;
+- Healthy Active Generation Beyond 120s Qualified;
+- First-Useful-Output Guard Preserved;
+- Active-Inactivity Guard Preserved;
+- Caller Cancellation Preserved;
+- Finite Retry/Rebase Safety Preserved;
+- George Edit Protocol v1 Qualified;
+- Ephemeral Read Receipt Freshness Qualified;
+- GEP Parser/Framing Qualified;
+- SHA Preconditions Preserved;
+- Text Framing Preserved;
+- ToolRegistry/Permission Boundary Preserved;
+- Response Completion Before Mutation Preserved;
+- Legacy Mutation Compatibility Preserved;
+- Mutation Transmission Ratio;
+- Node 26 + Real LM Studio/Qwen Live Qualification;
+- Phase 5/9 Reliability Floors;
+- Broad Suite;
+- Phase 10 P7 Historical/Intermittent Evidence Preserved;
+- Remaining Blocking Failure Count;
+- Nonblocking Evidence Gaps;
+- Overall `c10-generation-bottleneck` Qualified;
+- Phase 10 Closeout Ready To Reassess.
+
+INVARIANTS
+
+- I1: Closeout is evidence-only.
+- I2: Performance does not convert a functional failure to Green.
+- I3: Historical evidence remains historical truth.
+- I4: Correction qualification does not itself owner-close Phase 10.
+- I5: No root package-lock.json.
+
+WORKFLOW
+
+W1 — Audit exact candidate and P1-P3 contracts
+Covers: R1, R2, R3, R4, R5
+Depends on: none
+
+W2 — Reconcile P4 live/deterministic evidence
+Covers: R6, R7
+Depends on: W1
+
+W3 — Bounded recheck and formal closeout
+Covers: R8, R9, R10, R11, R12
+Depends on: W1, W2
+
+VALIDATION
+
+V1 — Correction-focused deterministic floor
+Covers: R2, R3, R4, R5, R8
+Run: DISCOVER
+Scope: terminal TaskState, provider liveness/timeout, GEP/parser/mutation/session tests representing P1-P3
+
+V2 — TypeScript
+Covers: R8
+Run: npm run typecheck
+
+V3 — Runner regression
+Covers: R8, R9
+Run: npm run test:runner
+
+V4 — Diff hygiene
+Covers: R8, R9
+Run: git diff --check
+
+STOP CONDITIONS
+
+- S1: Do not repair implementation in closeout.
+- S2: Do not rerun the real-model workload or broad suite to fish for Green.
+- S3: Do not owner-close Phase 10.
+- S4: Do not open Phase 11.
+- S5: Do not claim correction qualification if evidence is internally inconsistent or a correction-local blocker remains.
+
+DELIVERABLES
+
+- D1: docs/tasks/c10-generation-bottleneck/closeout.md.
+- D2: Explicit Green / Not Green / Evidence Gap decision table.
+- D3: Correction qualification verdict.
+- D4: Phase 10 closeout reassessment readiness statement.
+
+EVIDENCE
+
+Cite exact commits/artifacts/commands and preserve every remaining Not Green/Evidence Gap.

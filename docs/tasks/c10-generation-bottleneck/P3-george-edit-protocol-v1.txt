@@ -1,0 +1,145 @@
+GEORGE TASK FORMAT: 1
+
+STACK: c10-generation-bottleneck
+TASK: Correction 10 / P3 — George Edit Protocol v1 compact mutation channel
+KIND: implementation
+
+VERSIONING
+
+- Required unchanged project version: `0.10.12`.
+- Recommended configuration: `Sol High`.
+- Browser required: no.
+
+GOAL
+
+Replace verbose model-facing text mutation transmission with George Edit Protocol v1 (GEP/1): compact Operation-mode edit packets backed by ephemeral read receipts, while expanding every accepted edit back into George's existing SHA/framing/permission/recovery mutation authority.
+
+Do not create a second filesystem mutation engine.
+
+READ FIRST
+
+- REQUIRED: BOOT.md
+- REQUIRED: AGENTS.md
+- REQUIRED: docs/stability-contract.md
+- REQUIRED: docs/planning/c10-generation-bottleneck/decision-record.md
+- REQUIRED: docs/planning/c10-generation-bottleneck/qualification-plan.md
+- REQUIRED: docs/tasks/c10-generation-bottleneck/prompt-assessment.md
+- REQUIRED: docs/tasks/c10-generation-bottleneck/implementation-plan.md
+- REQUIRED: P1/P2 implementation/tests
+- REQUIRED: docs/planning/p10-agent-loop-throughput/decision-record.md
+
+INSPECT
+
+- src/core/provider.ts
+- src/application/one-turn.ts
+- src/application/structured-task.ts
+- src/tools/read-only.ts
+- src/tools/mutation.ts
+- tool registry/provider-result projection
+- evidence freshness/mutation epochs
+- Operation Protocol v1 tests
+- mutation SHA/framing/recovery/permission tests
+
+REQUIREMENTS
+
+- R1: Define a versioned George Edit Protocol v1 parser/contract for Operation-mode text mutation packets.
+- R2: GEP/1 is application-owned and provider-independent. LM Studio remains unaware of GEP semantics beyond ordinary streamed text/function transport.
+- R3: For complete eligible UTF-8 Operation-mode `read_file` observations, create short bounded run-local receipt IDs mapped ephemerally to canonical path, full current SHA-256, exact complete snapshot, text framing, and current freshness/mutation epoch.
+- R4: Do not persist receipt file bodies or treat the receipt map as canonical durable state. Restart/recovery requires fresh read evidence.
+- R5: Provider-facing eligible read evidence must expose deterministic compact line addresses so the model can reference replacement ranges without echoing old source text.
+- R6: GEP/1 existing-file edits must identify a receipt and one or more non-overlapping line ranges plus replacement content. All ranges are interpreted against the original receipt snapshot.
+- R7: GEP/1 must support creation of a new bounded UTF-8 text file without requiring legacy JSON `write_file` framing.
+- R8: Support multiple independent edit/create operations in one completed packet when every member is prevalidated and unambiguous.
+- R9: Use robust bounded packet framing. If a George-supplied unique delimiter/sentinel is used, collision or malformed framing must fail closed before any side effect.
+- R10: Reject before mutation on unknown/stale receipt, truncated/ineligible snapshot, unsupported/mixed framing where exact conversion is not safe, out-of-range lines, overlapping ranges, duplicate ambiguous target, malformed packet, unknown version, NUL/invalid text, or byte/edit/file limit overflow.
+- R11: Parse and prevalidate the complete packet only after `provider.response.completed`; no GEP side effect may execute from a partial/incomplete response.
+- R12: Expand every accepted existing-file edit into the inherited canonical mutation path using George-derived path, expected SHA, exact old text/range content, replacement text, and framing evidence.
+- R13: Expand accepted new-file creation into the inherited canonical write mutation path.
+- R14: Preserve ToolRegistry effect classification, execution policy/approval, workspace containment, recovery intent, Git/direct-mutation evidence, mutation epochs, provider-safe mutation receipts, cancellation, and outcome-unknown semantics.
+- R15: Human mode remains conversational. Operation mode may produce normal typed tools, GEP/1 packets, or the existing non-executable handoff control.
+- R16: Define one explicit fail-closed rule for ambiguous mixtures such as GEP text plus executable tool calls/control in the same completed response.
+- R17: Existing `write_file` and `apply_patch` remain supported compatibility/fallback surfaces. Do not delete or weaken them.
+- R18: For eligible structured text mutations, adjust Operation-mode guidance/tool exposure so GEP/1 is the normal compact path rather than continuing to force path/SHA/oldText/newText legacy emission.
+- R19: Add bounded aggregate metrics for GEP packet bytes, expanded canonical mutation bytes, receipt count, stale-receipt rejection, and mutation transmission ratio. Do not persist raw source bodies solely for metrics.
+- R20: Add a deterministic representative existing-file edit fixture and prove `Mutation Transmission Ratio = GEP packet bytes / equivalent expanded canonical mutation bytes <= 0.70`, with byte-identical final output.
+- R21: Add permanent parser/security regressions covering single/multiple edits, multiple files, create, delete/empty replacement where supported, delimiter collision, malformed/unknown version, stale/unknown receipt, overlap, out-of-range, oversized/NUL/invalid text, response incompleteness, mixed output, framing, SHA drift and cancellation.
+- R22: Preserve package `0.10.12`; do not create package-lock.json.
+
+INVARIANTS
+
+- I1: Compact protocol changes model transmission, not executable authority.
+- I2: Current-content SHA is rechecked at execution.
+- I3: The model never supplies authoritative path/SHA/old text for an eligible receipt edit.
+- I4: No mutation executes before the whole GEP response is completed and validated.
+- I5: A stale receipt fails rather than silently rebasing.
+- I6: Unsupported targets fall back to inherited safe mutation behavior rather than unsafe approximation.
+- I7: Do not change read concurrency, context profiles, helper behavior, or browser tooling.
+
+WORKFLOW
+
+W1 — Design bounded receipts and GEP/1 grammar
+Covers: R1, R2, R3, R4, R5, R6, R7, R8, R9, R10
+Depends on: none
+
+W2 — Expand GEP into canonical mutation authority
+Covers: R11, R12, R13, R14, R15, R16, R17, R18
+Depends on: W1
+
+W3 — Metrics and transmission-efficiency fixture
+Covers: R19, R20
+Depends on: W1, W2
+
+W4 — Security/regression matrix
+Covers: R21, R22
+Depends on: W1, W2, W3
+
+VALIDATION
+
+V1 — GEP parser/receipt tests
+Covers: R1, R3, R4, R5, R6, R7, R8, R9, R10, R16, R21
+Run: DISCOVER
+Scope: new GEP/receipt parser and application tests
+
+V2 — Mutation authority tests
+Covers: R11, R12, R13, R14, R17, R21
+Run: DISCOVER
+Scope: mutation SHA/framing/permission/recovery/cancellation tests plus GEP expansion integration
+
+V3 — Operation/structured-task tests
+Covers: R15, R18, R19, R20
+Run: DISCOVER
+Scope: Operation protocol, structured implementation/correction, provider projection and metrics tests affected by P3
+
+V4 — TypeScript
+Covers: R1, R2, R19
+Run: npm run typecheck
+
+V5 — Runner regression
+Covers: R22
+Run: npm run test:runner
+
+V6 — Diff hygiene
+Covers: R22
+Run: git diff --check
+
+STOP CONDITIONS
+
+- S1: Do not add a bypass filesystem writer for GEP.
+- S2: Do not execute a packet that cannot be expanded into the existing SHA/framing mutation authority.
+- S3: Do not accept stale/ambiguous receipt/range state by heuristic.
+- S4: Do not remove legacy mutation compatibility.
+- S5: If compact line/range addressing cannot preserve exact source framing safely, narrow GEP eligibility rather than weakening framing.
+- S6: Do not claim completion while the <=0.70 transmission fixture or required safety tests fail.
+
+DELIVERABLES
+
+- D1: George Edit Protocol v1.
+- D2: Ephemeral Operation-mode read receipt registry/projection.
+- D3: Canonical GEP-to-mutation expansion.
+- D4: Transmission-efficiency metrics/fixture.
+- D5: Permanent parser/security/mutation regressions.
+- D6: Package remains 0.10.12.
+
+EVIDENCE
+
+Record grammar/version, receipt eligibility rules, metric formula, deterministic transmission ratio, parser/mutation/Operation test counts, typecheck/runner/diff results, and root package-lock absence.

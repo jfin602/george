@@ -708,3 +708,41 @@ Phase 12 utility-model qualification must prove:
 - helper failure/disablement degrades explicitly through a documented fallback.
 
 Phase 13 local-research qualification must keep search discovery, fetch, deterministic extraction, browser fallback, utility inference, and premium escalation independently observable/disableable, while preserving source provenance and treating fetched content as untrusted data.
+
+
+## Correction 10 generation-bottleneck qualification
+
+`c10-generation-bottleneck` is a Phase 10 correction and does not change package version from `0.10.12`.
+
+Qualification must preserve all Phase 9/10 authority and additionally prove:
+
+### Terminal TaskState integrity
+- terminalizing a task with one active work unit atomically changes that work unit to `blocked` and clears `currentWorkUnit`;
+- already addressed/pending work is not fabricated as complete;
+- terminal status/outcome and blocker history remain correct;
+- nested StackState and LocalSessionStore save/reopen remain valid;
+- strict durable validation continues to reject impossible active-work-unit states.
+
+### Generation-aware provider liveness
+- default absolute provider emergency ceiling is 300000 ms and the configured maximum is 600000 ms;
+- first-useful-output and active-output inactivity remain independent guards;
+- productive output can continue past 120000 ms;
+- output inactivity still terminates promptly;
+- finite emergency timeout, caller cancellation, retry/rebase and provisional-branch discard remain authoritative.
+
+### George Edit Protocol v1
+- compact edit packets are Operation-mode derived input only and never executable authority by themselves;
+- eligible read receipts are bounded/run-local/freshness-checked and cannot replace current-content SHA verification;
+- accepted packets are fully parsed/prevalidated after response completion and expand into the existing mutation engine;
+- path/SHA/old text are George-derived for eligible receipt edits;
+- SHA, text framing, workspace containment, permissions, recovery intent, cancellation, Git evidence and mutation freshness remain unchanged;
+- malformed/stale/overlapping/out-of-range/unsupported packets fail before side effects;
+- legacy mutation tools remain compatible fallback surfaces;
+- deterministic existing-file Mutation Transmission Ratio is <= 0.70 with byte-identical output.
+
+### Supported live evidence
+- integrated qualification requires Node >=26.4.0 <27 and reachable recorded LM Studio/Qwen;
+- one disposable real-model workload exercises reads, new-file mutation, substantial existing-file GEP edit, validation and durable reopen;
+- unavailable Node/provider validity is an Evidence Gap/Not Green, not mock Green evidence;
+- frozen Phase 9 B2/C2 and unrelated helper/context/runtime tuning are not rerun as part of this correction;
+- Phase 10 P7 historical/intermittent evidence remains preserved.

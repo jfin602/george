@@ -1,0 +1,117 @@
+GEORGE TASK FORMAT: 1
+
+STACK: c10-generation-bottleneck
+TASK: Correction 10 / P1 — Terminal TaskState integrity
+KIND: implementation
+
+VERSIONING
+
+- Required unchanged project version: `0.10.12`.
+- Recommended configuration: `Sol High`.
+- Browser required: no.
+
+GOAL
+
+Repair the Phase 9/10 TaskState terminalization defect exposed by a real provider failure: a terminal task must never clear `currentWorkUnit` while leaving the corresponding authored work unit `active`.
+
+This prompt owns only TaskState/StackState/session consistency. Do not change provider timeout or mutation protocol yet.
+
+READ FIRST
+
+- REQUIRED: BOOT.md
+- REQUIRED: AGENTS.md
+- REQUIRED: docs/stability-contract.md
+- REQUIRED: docs/phase-10-closeout.md
+- REQUIRED: docs/planning/c10-generation-bottleneck/decision-record.md
+- REQUIRED: docs/planning/c10-generation-bottleneck/qualification-plan.md
+- REQUIRED: docs/tasks/c10-generation-bottleneck/prompt-assessment.md
+- REQUIRED: docs/tasks/c10-generation-bottleneck/implementation-plan.md
+
+INSPECT
+
+- src/tasks/state.ts
+- src/tasks/stack-state.ts
+- src/application/structured-task.ts
+- src/application/structured-task-stack.ts
+- src/core/session-store.ts
+- session/task/stack persistence tests
+- provider-failure/cancellation/budget structured-task tests
+
+REQUIREMENTS
+
+- R1: When `blockTask()` terminalizes a task and `currentWorkUnit` references an authored work unit whose status is `active`, transition that work unit to `blocked` in the same immutable state transition.
+- R2: Clear `currentWorkUnit` in the same transition and preserve the requested terminal `status` / `terminalOutcome`.
+- R3: If no work unit is active, do not rewrite addressed or pending work merely because the task becomes terminal.
+- R4: Preserve blocker history, requirements, inspections, validations, corrections, permissions and all other canonical task evidence.
+- R5: Apply the invariant uniformly for `blocked`, `planning_needed`, `cancelled`, `budget_exhausted`, and `failed` terminalization.
+- R6: Preserve nested StackState consistency when the current child task terminalizes during an active work unit.
+- R7: LocalSessionStore save/reopen must accept every legitimately terminalized state.
+- R8: Keep the strict durable validator: manually constructed state with no `currentWorkUnit` but an `active` work unit must still be rejected.
+- R9: Add permanent regressions for provider failure, cancellation, run/stage budget exhaustion, permission/policy block, planning-needed recovery, and stack-child terminalization while W1 is active.
+- R10: Add a regression close to the live failure path: structured implementation provider failure while a work unit is active -> task terminalization -> lifecycle persistence -> durable reopen.
+- R11: Preserve package `0.10.12`; do not create package-lock.json.
+
+INVARIANTS
+
+- I1: Do not invent new WorkUnitStatus variants for this correction.
+- I2: Do not mark unfinished work `addressed` merely to make persistence valid.
+- I3: Do not weaken session-store structural validation.
+- I4: Validation/completion truth remains George-owned.
+- I5: Historical TaskState/session evidence is not rewritten.
+
+WORKFLOW
+
+W1 — Repair terminal TaskState transition
+Covers: R1, R2, R3, R4, R5
+Depends on: none
+
+W2 — Preserve nested StackState/session durability
+Covers: R6, R7, R8
+Depends on: W1
+
+W3 — Install permanent live-failure regressions
+Covers: R9, R10, R11
+Depends on: W1, W2
+
+VALIDATION
+
+V1 — TaskState/StackState focused tests
+Covers: R1, R2, R3, R4, R5, R6, R8, R9
+Run: DISCOVER
+Scope: task state, stack state and structured-task terminalization tests affected by P1
+
+V2 — Durable session regression
+Covers: R7, R8, R10
+Run: DISCOVER
+Scope: LocalSessionStore task/stack save/reopen tests and structured lifecycle persistence affected by P1
+
+V3 — TypeScript
+Covers: R1, R6
+Run: npm run typecheck
+
+V4 — Runner regression
+Covers: R11
+Run: npm run test:runner
+
+V5 — Diff hygiene
+Covers: R11
+Run: git diff --check
+
+STOP CONDITIONS
+
+- S1: Do not change provider timeout/liveness behavior in P1.
+- S2: Do not add GEP/compact mutation behavior in P1.
+- S3: Do not relax durable-state validation to make the regression pass.
+- S4: Stop and report if the live failure cannot be reproduced structurally from current source.
+- S5: Do not claim completion while required validation fails.
+
+DELIVERABLES
+
+- D1: Terminal TaskState invariant repair.
+- D2: Stack/session durability regressions.
+- D3: Evidence that impossible active-work-unit terminal state is prevented at the producer.
+- D4: Package remains 0.10.12.
+
+EVIDENCE
+
+Record exact files changed, focused test counts, durable round-trip results, typecheck/runner/diff results, and root package-lock absence.

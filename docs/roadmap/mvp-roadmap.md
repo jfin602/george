@@ -485,7 +485,7 @@ Non-goals:
 
 ## Phase 10 — Agent Loop Throughput
 
-Status: CURRENT PHASE — approved design; baseline transition to `0.10.0` pending
+Status: CURRENT PHASE — formal closeout Not Green; `c10-generation-bottleneck` active at package `0.10.12`
 
 Decision authority: `docs/planning/p10-agent-loop-throughput/decision-record.md`.  
 Qualification authority: `docs/planning/p10-agent-loop-throughput/qualification-plan.md`.  
@@ -545,6 +545,24 @@ Non-goals:
 - opaque compressed machine language without measured efficacy.
 
 The approved implementation order is baseline/fast-gate instrumentation -> useful-output liveness -> stable prefix -> Operation Protocol -> deterministic round elimination -> read batching -> read-only concurrency -> focused correction/output budgets -> primary-only qualification with B2/C2 milestone -> helper A/B -> closeout.
+
+
+Active post-closeout correction: `c10-generation-bottleneck`.
+
+Triggering live evidence shows context size is not the current dominant bottleneck. The correction instead targets:
+- verbose text mutation transmission that requires the model to echo path/SHA/old/new content through JSON;
+- healthy local generation being aborted by the inherited 120s absolute provider ceiling;
+- invalid terminal TaskState persistence when a failed active work unit is left `active` after `currentWorkUnit` is cleared.
+
+Correction policy:
+- keep the package at `0.10.12`;
+- preserve Phase 10 Human/Operation, stable-prefix, batching/concurrency, focused-correction, recovery and evidence authority;
+- introduce GEP/1 only as a compact model-facing mutation transport that expands back into the existing mutation engine;
+- use 300s default / 600s maximum finite provider emergency timeout while retaining first-evidence and active-inactivity guards;
+- repair terminal active-work-unit state at the TaskState producer;
+- obtain supported Node 26 + real LM Studio/Qwen evidence before reassessing Phase 10 readiness.
+
+This correction does not relabel the formal Phase 10 P7 historical/intermittent lifecycle-order evidence.
 
 ## Phase 11 — Final Acceleration + Primary-Model Performance Qualification
 

@@ -1,0 +1,120 @@
+GEORGE TASK FORMAT: 1
+
+STACK: c10-generation-bottleneck
+TASK: Correction 10 / P2 — Generation-aware provider emergency ceiling
+KIND: implementation
+
+VERSIONING
+
+- Required unchanged project version: `0.10.12`.
+- Recommended configuration: `Sol High`.
+- Browser required: no.
+
+GOAL
+
+Stop aborting healthy local-model coding generations at the inherited 120000 ms absolute timeout while preserving independent first-useful-output, active-output inactivity, cancellation, replay, retry and finite emergency-bound safety.
+
+READ FIRST
+
+- REQUIRED: BOOT.md
+- REQUIRED: AGENTS.md
+- REQUIRED: docs/stability-contract.md
+- REQUIRED: docs/planning/c10-generation-bottleneck/decision-record.md
+- REQUIRED: docs/planning/c10-generation-bottleneck/qualification-plan.md
+- REQUIRED: docs/tasks/c10-generation-bottleneck/implementation-plan.md
+- REQUIRED: P1 implementation/tests
+- REQUIRED: docs/tasks/c9-provider-stall-recovery/closeout.md
+- REQUIRED: docs/planning/p10-agent-loop-throughput/decision-record.md
+
+INSPECT
+
+- src/core/config.ts
+- src/provider/lm-studio.ts
+- src/application/provider-stall.ts
+- src/application/one-turn.ts
+- provider timeout/config tests
+- stall watchdog/retry/rebase tests
+- benchmark/live-work attempt timing
+
+REQUIREMENTS
+
+- R1: Change the default absolute provider timeout from 120000 ms to 300000 ms.
+- R2: Change the maximum configurable provider timeout to 600000 ms.
+- R3: Keep explicit provider timeout configuration validated, bounded, observable, and provider-independent.
+- R4: Preserve the existing first-useful-output watchdog semantics through accepted prefill.
+- R5: Preserve the existing active-output inactivity threshold: a response that stops making useful progress must still terminate without waiting for the emergency ceiling.
+- R6: A response making useful output progress at intervals below the inactivity threshold must be allowed to continue past 120000 ms.
+- R7: A productive response may complete successfully between 120000 and 300000 ms.
+- R8: A productive response that reaches the finite 300000 ms default emergency ceiling must still terminate.
+- R9: Caller cancellation must still win over stall/timeout classification.
+- R10: Preserve at most the existing finite replay-safe fresh retry / canonical rebase behavior. Do not replay incomplete tool/edit/control proposals.
+- R11: Preserve explicit short timeout overrides used by focused tests and deliberate callers.
+- R12: Distinguish bounded diagnostics for inactivity termination versus absolute emergency timeout where current event/error contracts allow it without leaking payloads.
+- R13: Add fake-time/scripted-provider regressions for healthy active output crossing 120s, completion after 120s, inactivity failure, 300s emergency termination, 600s validation bound, cancellation, and retry/rebase behavior.
+- R14: Do not use real minute-scale sleeps in deterministic tests.
+- R15: Preserve package `0.10.12`; do not create package-lock.json.
+
+INVARIANTS
+
+- I1: The provider timeout remains finite.
+- I2: Useful-output watchdogs remain application-owned; LM Studio does not own recovery policy.
+- I3: Response completion remains required before side effects.
+- I4: Incomplete response branches remain provisional and discardable.
+- I5: Do not change context profiles/compaction merely because a generation is long.
+
+WORKFLOW
+
+W1 — Update centralized emergency timeout policy
+Covers: R1, R2, R3, R11, R12
+Depends on: none
+
+W2 — Prove active-generation versus inactivity semantics
+Covers: R4, R5, R6, R7, R8, R9, R10
+Depends on: W1
+
+W3 — Permanent deterministic regression matrix
+Covers: R13, R14, R15
+Depends on: W1, W2
+
+VALIDATION
+
+V1 — Config/provider timeout tests
+Covers: R1, R2, R3, R8, R11, R12, R13
+Run: DISCOVER
+Scope: config and LM Studio provider timeout/cancellation tests affected by P2
+
+V2 — Stall/retry/rebase tests
+Covers: R4, R5, R6, R7, R9, R10, R13, R14
+Run: DISCOVER
+Scope: provider-stall, agent-loop replay/retry/rebase and Phase 5 recovery tests affected by P2
+
+V3 — TypeScript
+Covers: R1, R2, R3
+Run: npm run typecheck
+
+V4 — Runner regression
+Covers: R15
+Run: npm run test:runner
+
+V5 — Diff hygiene
+Covers: R15
+Run: git diff --check
+
+STOP CONDITIONS
+
+- S1: Do not disable the finite emergency timeout.
+- S2: Do not raise first-evidence or active-inactivity thresholds merely to pass.
+- S3: Do not treat healthy output progress as a stall.
+- S4: Do not touch context profile sizes or compaction policy.
+- S5: Do not claim completion while required validation fails.
+
+DELIVERABLES
+
+- D1: 300s default / 600s maximum provider emergency timeout policy.
+- D2: Permanent active-generation >120s regressions.
+- D3: Preserved retry/rebase/cancellation safety evidence.
+- D4: Package remains 0.10.12.
+
+EVIDENCE
+
+Record exact timeout constants, fake-time scenarios, provider/stall test counts, typecheck/runner/diff results, and root package-lock absence.
