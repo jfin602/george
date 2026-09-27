@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "correction": "c10-generation-bottleneck",
+  "observedAt": "2026-09-27",
+  "candidate": {
+    "sha": "384091366fcd1addabf0a2cff456a6ece77f7875",
+    "tree": "8191d407ad178e7549669ed9d87dc7cd60c5515d",
+    "packageVersion": "0.10.12",
+    "initialWorktree": "clean",
+    "rootPackageLock": "absent"
+  },
+  "environment": {
+    "node": "v26.10.0",
+    "npm": "11.19.1",
+    "platform": "Linux jfin 7.0.0-31-generic #31~24.04.1-Ubuntu SMP PREEMPT_DYNAMIC Mon Aug 10 09:38:02 UTC 2 x86_64 GNU/Linux",
+    "lmStudio": "0.4.25+1",
+    "lmStudioBackend": "llama.cpp-linux-x86_64-vulkan-avx2-2.46.0",
+    "providerOrigin": "http://127.0.0.1:1234",
+    "providerReachable": true,
+    "model": "qwen3-coder-30b-a3b-instruct@q4_k_m",
+    "modelState": "loaded",
+    "loadedContextLength": 32768,
+    "contextMode": "adaptive",
+    "configuredProfile": "qwen3-coder-30b-a3b-instruct-q4_k_m-lm-studio-32k",
+    "providerTimeoutMs": 300000,
+    "maximumProviderTimeoutMs": 600000,
+    "firstUsefulOutputTimeoutMs": 90000,
+    "activeOutputInactivityTimeoutMs": 60000,
+    "executionPolicy": {
+      "workspace": "standard",
+      "outsideWorkspace": "reject",
+      "network": "ask",
+      "remoteMutation": "ask",
+      "browserInteraction": "ask",
+      "credentialsEnvironment": "ask"
+    }
+  },
+  "validation": {
+    "focused": { "total": 275, "passed": 272, "failed": 3, "skipped": 0, "state": "not_green" },
+    "typecheck": { "exitCode": 0, "state": "green" },
+    "runner": { "total": 90, "passed": 90, "failed": 0, "skipped": 0, "state": "green" },
+    "broad": { "total": 518, "passed": 514, "failed": 3, "skipped": 1, "state": "not_green" },
+    "diffCheck": { "exitCode": 0, "state": "green" }
+  },
+  "gepRepresentative": {
+    "packetBytes": 69,
+    "expandedCanonicalMutationBytes": 356,
+    "transmissionRatio": 0.19382022471910113,
+    "threshold": 0.7,
+    "byteIdentical": true
+  },
+  "live": {
+    "state": "not_run",
+    "providerAttempts": 0,
+    "providerRounds": 0,
+    "reason": "W1 deterministic affected-system floor was Not Green; W2 depends on W1 and qualification forbids repairing or fishing for Green."
+  },
+  "disposition": "not_green"
+}
