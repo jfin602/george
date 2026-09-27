@@ -1,0 +1,49 @@
+GEORGE TASK FORMAT: 1
+
+STACK: greenfield-core-correction-v1
+TASK: P1 — Create the title core
+KIND: implementation
+
+GOAL
+
+Create a tiny dependency-free ESM task core.
+
+INSPECT
+
+- clean repository structure
+- package and Git baseline
+
+REQUIREMENTS
+
+- R1: Create package.json with ESM and a test script that runs node --test.
+- R2: Create src/title.js exporting normalizeTitle(value).
+- R3: normalizeTitle rejects non-strings and blank strings, trims the title, and collapses internal whitespace to one space.
+- R4: Add focused node:test coverage for the title behavior.
+
+WORKFLOW
+
+W1 — Build the title core
+Covers: R1, R2, R3, R4
+Depends on: none
+
+Keep the implementation dependency-free and bounded to the requested files.
+
+VALIDATION
+
+V1 — Title core
+Covers: R1, R2, R3, R4
+Run: node --test test/title.test.js
+
+STOP CONDITIONS
+
+- S1: Do not use the network or install packages.
+- S2: Do not claim completion while V1 is failing or unexecuted.
+
+PERMISSIONS
+
+- Workspace: autonomous
+- Network: reject
+
+EVIDENCE
+
+After George runs V1, record changed files, the literal result, zero dependency installation, and final task state.

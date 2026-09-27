@@ -68,6 +68,9 @@ test('Operation rounds persist only bounded metrics and never enter the transcri
   appendSessionEvent(session, { type: 'input.submitted', text: 'INTERNAL_OPERATION_OBJECTIVE', executionMode: 'operation' });
   appendSessionEvent(session, { type: 'agent.round.completed', turnId: 'operation', round: 1, executionMode: 'operation', internalTextBytes: 17, estimatedInternalTextTokens: 5, toolCallCount: 1, control: 'handoff' });
   appendSessionEvent(session, { type: 'model.round.avoided', turnId: 'operation', reason: 'validation-passed' });
+  appendSessionEvent(session, { type: 'correction.frame.created', turnId: 'operation', cycle: 1, validationId: 'V1', bytes: 900, freshEvidenceCount: 2 });
+  appendSessionEvent(session, { type: 'correction.repair.completed', turnId: 'operation', cycle: 1, validationId: 'V1', providerRounds: 2, reinspectionCalls: 1 });
+  appendSessionEvent(session, { type: 'correction.revalidated', turnId: 'operation', cycle: 1, validationId: 'V1', status: 'passed' });
   appendSessionEvent(session, { type: 'tool.concurrent-read-batch.completed', turnId: 'operation', callIds: ['a', 'b'], width: 2, wallMs: 30, summedMemberMs: 50, observedOverlapMs: 20 });
   await store.save(session);
 
@@ -78,6 +81,9 @@ test('Operation rounds persist only bounded metrics and never enter the transcri
   assert.deepEqual(reopened.events, [
     { type: 'agent.round.completed', turnId: 'operation', round: 1, executionMode: 'operation', internalTextBytes: 17, estimatedInternalTextTokens: 5, toolCallCount: 1, control: 'handoff' },
     { type: 'model.round.avoided', turnId: 'operation', reason: 'validation-passed' },
+    { type: 'correction.frame.created', turnId: 'operation', cycle: 1, validationId: 'V1', bytes: 900, freshEvidenceCount: 2 },
+    { type: 'correction.repair.completed', turnId: 'operation', cycle: 1, validationId: 'V1', providerRounds: 2, reinspectionCalls: 1 },
+    { type: 'correction.revalidated', turnId: 'operation', cycle: 1, validationId: 'V1', status: 'passed' },
     { type: 'tool.concurrent-read-batch.completed', turnId: 'operation', callIds: ['a', 'b'], width: 2, wallMs: 30, summedMemberMs: 50, observedOverlapMs: 20 },
   ]);
 });

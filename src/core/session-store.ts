@@ -291,6 +291,18 @@ function durableEvent(event: ApplicationEvent): ApplicationEvent | undefined {
       toolCallCount: boundedInteger(event.toolCallCount, 'round tool call count', 1024), ...(event.control === undefined ? {} : { control: oneOf(event.control, 'George control', ['handoff'] as const) }),
     };
     case 'model.round.avoided': return { type: event.type, turnId: string(event.turnId, 'turn ID', 256), reason: oneOf(event.reason, 'model round avoidance reason', MODEL_ROUND_AVOIDANCE_REASONS) };
+    case 'correction.frame.created': return {
+      type: event.type, turnId: string(event.turnId, 'turn ID', 256), cycle: boundedInteger(event.cycle, 'correction cycle', 10), validationId: string(event.validationId, 'correction validation ID', 64),
+      bytes: boundedInteger(event.bytes, 'correction frame bytes', 16 * 1024), freshEvidenceCount: boundedInteger(event.freshEvidenceCount, 'correction fresh evidence count', 8),
+    };
+    case 'correction.repair.completed': return {
+      type: event.type, turnId: string(event.turnId, 'turn ID', 256), cycle: boundedInteger(event.cycle, 'correction cycle', 10), validationId: string(event.validationId, 'correction validation ID', 64),
+      providerRounds: boundedInteger(event.providerRounds, 'correction provider rounds', 12), reinspectionCalls: boundedInteger(event.reinspectionCalls, 'correction reinspection calls', 12),
+    };
+    case 'correction.revalidated': return {
+      type: event.type, turnId: string(event.turnId, 'turn ID', 256), cycle: boundedInteger(event.cycle, 'correction cycle', 10), validationId: string(event.validationId, 'correction validation ID', 64),
+      status: oneOf(event.status, 'correction validation status', ['passed', 'failed', 'denied', 'cancelled']),
+    };
     case 'tool.concurrent-read-batch.completed': return {
       type: event.type, turnId: string(event.turnId, 'turn ID', 256), callIds: boundedArray(event.callIds, 'concurrent read call IDs', 128).map((callId) => string(callId, 'concurrent read call ID', 256)),
       width: boundedInteger(event.width, 'concurrent read width', 128), wallMs: boundedInteger(event.wallMs, 'concurrent read wall time'),

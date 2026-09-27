@@ -23,6 +23,7 @@ export const STRUCTURED_CONVERGENCE_POLICY = Object.freeze({
 const STAGE_LIMITS = STRUCTURED_CONVERGENCE_POLICY;
 
 export const MISSION_CARD_LIMITS = Object.freeze({ maxBytes: 8 * 1024, maxEstimatedTokens: 2 * 1024, maxEvidence: 12 });
+export const CORRECTION_FRAME_LIMITS = Object.freeze({ maxBytes: 16 * 1024, maxEvidence: 8 });
 
 export type StructuredFreshEvidence = Readonly<{
   identity: string;
@@ -48,6 +49,30 @@ export type StructuredTaskSlice = Readonly<{
   validations: readonly string[];
   stops: readonly string[];
   evidence: readonly string[];
+}>;
+
+export type CorrectionFrameV1 = Readonly<{
+  version: 1;
+  activeRepairWorkUnit: string;
+  failedValidation: Readonly<{
+    id: `V${number}`;
+    title: string;
+    status: 'failed';
+    exitCode: number | null;
+    signal: string | null;
+    outcome?: 'completed' | 'failed' | 'timed_out' | 'spawn_failed';
+    stdout: string;
+    stderr: string;
+    stdoutTruncated: boolean;
+    stderrTruncated: boolean;
+    redacted: boolean;
+    error?: Readonly<{ code: string; message: string }>;
+  }>;
+  requirements: readonly string[];
+  invariants: readonly string[];
+  stops: readonly string[];
+  freshEvidence: readonly string[];
+  repairCompletionCondition: readonly string[];
 }>;
 
 export function permissionProjection(policy: ReturnType<CodingWorkflowApplicationService['agent']['effectiveExecutionPolicy']>): import('../tasks/index.ts').PermissionExpectation {
@@ -84,6 +109,65 @@ export function projectStructuredTaskSlice(state: TaskState, workId: `W${number}
     stops: Object.freeze(state.definition.stopConditions.map((item) => `${item.id}: ${item.text}`)),
     evidence: Object.freeze(evidence),
   });
+}
+
+/** Canonical bounded provider frame for one active repair; durable TaskState remains authoritative. */
+export function projectCorrectionFrame(
+  state: TaskState,
+  workId: `W${number}`,
+  validationId: `V${number}`,
+  evidence: readonly StructuredFreshEvidence[],
+): CorrectionFrameV1 {
+  const work = state.definition.workflow.find((item) => item.id === workId);
+  const validation = state.definition.validations.find((item) => item.id === validationId);
+  const attempt = state.validations[validationId]?.attempts.at(-1);
+  const correction = state.corrections.find((item) => item.status === 'active');
+  if (!work || !validation || !attempt || attempt.status !== 'failed' || correction?.validationId !== validationId) throw new GeorgeError('validation', 'Correction frame requires an active failed validation and repair work unit.');
+  const freshEvidence = [...evidence]
+    .filter((item) => item.state === 'valid' && (item.kind === 'observation' || item.kind === 'mutation'))
+    .sort((left, right) => (left.kind === right.kind ? right.observedGeneration - left.observedGeneration || left.identity.localeCompare(right.identity) : left.kind === 'mutation' ? -1 : 1))
+    .slice(0, CORRECTION_FRAME_LIMITS.maxEvidence)
+    .map((item) => item.fact);
+  const permission = state.effectivePermissionExpectations;
+  const frame: CorrectionFrameV1 = Object.freeze({
+    version: 1,
+    activeRepairWorkUnit: [`${work.id} — ${work.title}`, ...work.description].join('\n'),
+    failedValidation: Object.freeze({
+      id: validation.id, title: validation.title, status: 'failed', exitCode: attempt.exitCode, signal: attempt.signal,
+      ...(attempt.outcome === undefined ? {} : { outcome: attempt.outcome }), stdout: attempt.stdout ?? '', stderr: attempt.stderr ?? '',
+      stdoutTruncated: attempt.stdoutTruncated === true, stderrTruncated: attempt.stderrTruncated === true, redacted: attempt.redacted === true,
+      ...(attempt.error === undefined ? {} : { error: Object.freeze({ ...attempt.error }) }),
+    }),
+    requirements: Object.freeze(state.definition.requirements.filter((item) => work.covers.includes(item.id) && validation.covers.includes(item.id)).map((item) => `${item.id}: ${item.text}`)),
+    invariants: Object.freeze(state.definition.invariants.map((item) => `${item.id}: ${item.text}`)),
+    stops: Object.freeze([
+      ...state.definition.stopConditions.map((item) => `${item.id}: ${item.text}`),
+      `Permission ceiling: workspace=${permission.workspace ?? 'standard'}; outside=${permission.outsideWorkspace ?? 'reject'}; network=${permission.network ?? 'reject'}; remoteMutation=${permission.remoteMutation ?? 'reject'}.`,
+      'Stop on permission denial, ambiguous recovery, cancellation, duplicate/no-progress exhaustion, or task-wide RunBudget exhaustion.',
+    ]),
+    freshEvidence: Object.freeze(freshEvidence),
+    repairCompletionCondition: Object.freeze([
+      ...(work.completeWhen.length ? work.completeWhen : [`Repair only the observed ${validation.id} failure within ${work.id}.`]),
+      `Return control after the repair is complete; George reruns ${validation.id} directly and owns its result.`,
+    ]),
+  });
+  if (Buffer.byteLength(renderCorrectionFrame(frame), 'utf8') > CORRECTION_FRAME_LIMITS.maxBytes) throw new GeorgeError('validation', 'Correction frame exceeded its explicit safety bound without dropping required context.');
+  return frame;
+}
+
+export function renderCorrectionFrame(frame: CorrectionFrameV1): string {
+  const failed = frame.failedValidation;
+  return [
+    'CORRECTION FRAME v1 (derived, non-authoritative)',
+    `ACTIVE REPAIR WORK UNIT\n${frame.activeRepairWorkUnit}`,
+    `FAILED VALIDATION\n${failed.id}: ${failed.title}\nstatus=${failed.status}; outcome=${failed.outcome ?? 'unavailable'}; exit=${failed.exitCode ?? 'null'}; signal=${failed.signal ?? 'null'}${failed.stdout ? `\nstdout${failed.stdoutTruncated ? ' (truncated)' : ''}: ${failed.stdout}` : ''}${failed.stderr ? `\nstderr${failed.stderrTruncated ? ' (truncated)' : ''}: ${failed.stderr}` : ''}${failed.error ? `\nerror ${failed.error.code}: ${failed.error.message}` : ''}${failed.redacted ? '\ndiagnostic redaction: sensitive values removed' : ''}`,
+    `APPLICABLE REQUIREMENTS\n${frame.requirements.join('\n') || '(none)'}`,
+    `APPLICABLE INVARIANTS\n${frame.invariants.join('\n') || '(none)'}`,
+    `APPLICABLE STOPS\n${frame.stops.join('\n') || '(none)'}`,
+    `FRESH OBSERVATIONS AND MUTATIONS\n${frame.freshEvidence.join('\n') || '(none; inspect only repair-target evidence that is missing or stale)'}`,
+    `REPAIR COMPLETION CONDITION\n${frame.repairCompletionCondition.join('\n')}`,
+    'Repair only this observed failure in Operation mode. Reuse supplied fresh evidence; do not repeat broad root, Git, or file discovery. Reinspect only missing or stale repair-target evidence through normal read tools. Do not run the declared validation or claim it passed.',
+  ].join('\n\n');
 }
 
 function missionSection(title: string, lines: readonly string[], maximum: number): string {
@@ -373,6 +457,11 @@ export class StructuredTaskApplicationService extends CodingWorkflowApplicationS
     await this.structuredStore?.save(submission.session);
   }
 
+  private async emit(submission: CodingWorkflowSubmission, event: ApplicationEvent): Promise<void> {
+    for (const item of this.agent.record(submission.session, event)) await submission.onEvent?.(item);
+    await this.structuredStore?.save(submission.session);
+  }
+
   private async routed(definition: TaskDefinition): Promise<readonly string[]> {
     const paths: string[] = [];
     for (const entry of definition.readFirst) {
@@ -472,21 +561,32 @@ export class StructuredTaskApplicationService extends CodingWorkflowApplicationS
         if (pendingCorrection?.validationId !== undefined && pendingCorrection.validationId !== validation.id) throw new GeorgeError('validation', 'A different structured correction is active.');
         if (pendingCorrection?.status === 'active') {
           const repair = correctionWork(state, validation);
+          const frame = projectCorrectionFrame(state, repair, validation.id, [...freshness.items.values()]);
+          const renderedFrame = renderCorrectionFrame(frame);
+          const correctionTurnId = `${(submission.turnId ?? randomUUID()).slice(0, 200)}-correction-${pendingCorrection.cycle}`;
+          await this.emit(submission, { type: 'correction.frame.created', turnId: correctionTurnId, cycle: pendingCorrection.cycle, validationId: validation.id, bytes: Buffer.byteLength(renderedFrame, 'utf8'), freshEvidenceCount: frame.freshEvidence.length });
+          const repairEvents: ApplicationEvent[] = [];
           const repaired = await super.run({
             ...submission,
-            input: renderSlice(projectStructuredTaskSlice(state, repair, validEvidence().map((item) => item.fact), validation.id), 'correction'),
+            input: renderedFrame,
             executionMode: 'operation',
-            alignment: () => projectStructuredMissionCard(state, repair, 'correction', [...freshness.items.values()], validation.id),
+            alignment: () => renderCorrectionFrame(projectCorrectionFrame(state, repair, validation.id, [...freshness.items.values()])),
             allowCanonicalRebase: true,
-            onEvent: observeStage,
-            routedDocuments: routed, toolNames: CODING_TOOLS, omitHistory: true, validations: [], executionPolicy, budget, limits: STAGE_LIMITS.correction,
+            turnId: correctionTurnId,
+            onEvent: async (event) => { repairEvents.push(event); await observeStage(event); },
+            routedDocuments: [], toolNames: CODING_TOOLS, omitHistory: true, validations: [], executionPolicy, budget, limits: STAGE_LIMITS.correction,
           });
           if (repaired.terminalState !== 'completed') {
             state = blockTask(state, outcomeFor(repaired), `Correction for ${validation.id} did not complete.`);
             submission.session.taskState = state; await this.lifecycle(submission, state, `Structured correction stopped at ${validation.id}.`); return repaired;
           }
+          const correctionMetrics = Object.freeze({
+            providerRounds: repairEvents.filter((event) => event.type === 'provider.response.completed').length,
+            reinspectionCalls: repairEvents.filter((event) => event.type === 'tool.requested' && INSPECTION_TOOLS.includes(event.name as typeof INSPECTION_TOOLS[number])).length,
+          });
           state = repairTaskCorrection(state, pendingCorrection.cycle);
           submission.session.taskState = state;
+          await this.emit(submission, { type: 'correction.repair.completed', turnId: correctionTurnId, cycle: pendingCorrection.cycle, validationId: validation.id, ...correctionMetrics });
           await this.lifecycle(submission, state, `Structured correction repair completed for ${validation.id}; rerunning validation.`, 'correction-repaired');
           continue;
         }
@@ -499,7 +599,11 @@ export class StructuredTaskApplicationService extends CodingWorkflowApplicationS
           stdoutTruncated: observed.stdoutTruncated, stderrTruncated: observed.stderrTruncated, ...(observed.error === undefined ? {} : { error: observed.error }),
         });
         const active = state.corrections.find((item) => item.status === 'repaired');
-        if (active) state = completeTaskCorrection(state, active.cycle);
+        if (active) {
+          state = completeTaskCorrection(state, active.cycle);
+          submission.session.taskState = state;
+          await this.emit(submission, { type: 'correction.revalidated', turnId: submission.turnId ?? 'structured-task', cycle: active.cycle, validationId: validation.id, status: observed.status });
+        }
         submission.session.taskState = state;
         if (last.terminalState === 'budget_exhausted') {
           state = blockTask(state, 'budget_exhausted', `Validation ${validation.id} exhausted the run budget.`);

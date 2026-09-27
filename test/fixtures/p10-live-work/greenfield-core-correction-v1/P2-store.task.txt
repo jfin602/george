@@ -1,0 +1,64 @@
+GEORGE TASK FORMAT: 1
+
+STACK: greenfield-core-correction-v1
+TASK: P2 — Add the task store through correction
+KIND: implementation
+
+GOAL
+
+Build the task store on the title core completed by P1.
+
+INSPECT
+
+- P1 title implementation and tests
+- current package scripts
+
+REQUIREMENTS
+
+- R1: Preserve P1 behavior and import normalizeTitle from src/title.js rather than duplicating it.
+- R2: Create src/task-store.js exporting createTaskStore().
+- R3: The store adds normalized titles with increasing integer IDs and done false, completes a known ID, and lists tasks in insertion order.
+- R4: Completing an unknown ID throws and returned task objects cannot mutate stored state.
+- R5: Add focused node:test coverage for the store behavior.
+
+WORKFLOW
+
+W1 — Build on the P1 title core
+Covers: R1, R2, R3, R4
+Depends on: none
+
+Use the existing title module as the cross-task dependency.
+
+W2 — Add store coverage
+Covers: R5
+Depends on: W1
+
+Keep coverage focused on observable behavior.
+
+VALIDATION
+
+V1 — Store behavior
+Covers: R1, R2, R3, R4, R5
+Run: node --test test/task-store.test.js
+
+V2 — Whole stack
+Covers: R1, R2, R3, R4, R5
+Run: npm test
+
+STOP CONDITIONS
+
+- S1: Do not use the network or install packages.
+- S2: Do not claim completion while V1 or V2 is failing or unexecuted.
+
+DELIVERABLES
+
+- D1: Dependency-free title and task-store modules with tests.
+
+PERMISSIONS
+
+- Workspace: autonomous
+- Network: reject
+
+EVIDENCE
+
+After George runs V1 and V2, record the first bounded V1 failure, focused repair, direct rerun, changed files, P1 reuse, zero dependency installation, and final stack and task state.

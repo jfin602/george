@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 
-import { MISSION_CARD_LIMITS, StructuredTaskApplicationService, createCodingWorkflowApplicationService, projectStructuredMissionCard, type StructuredFreshEvidence } from '../../../src/application/index.ts';
+import { CORRECTION_FRAME_LIMITS, MISSION_CARD_LIMITS, StructuredTaskApplicationService, createCodingWorkflowApplicationService, projectCorrectionFrame, projectStructuredMissionCard, renderCorrectionFrame, type StructuredFreshEvidence } from '../../../src/application/index.ts';
 import { appendSessionEvent, createSession, DEFAULT_RUN_BUDGET, RunBudget, type ApplicationEvent, type ApprovalDecision, type ApprovalPort, type ApprovalRequest, type ModelProvider, type ProviderEvent, type ProviderRequest } from '../../../src/core/index.ts';
 import { addressTaskWorkUnit, beginTaskCorrection, beginTaskWorkUnit, createTaskState, parseTaskPrompt, recordTaskInspection, recordTaskValidationAttempt } from '../../../src/tasks/index.ts';
 
@@ -147,6 +147,36 @@ test('mission card is deterministic, bounded, non-authoritative, and hands compl
   assert.match(first, /stale SHA/);
   assert.match(first, /Do not create completion\/report artifacts unless the authored task requires them/);
   assert.match(first, /stop unrelated verification or mutation and allow George to run: V1: Node check/);
+});
+
+test('Correction Frame v1 is bounded, failure-focused, and contains only fresh observation or mutation evidence', async (t) => {
+  const root = await workspace();
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const parsed = parseTaskPrompt(singleWorkTask('Correction frame').replace('STOP CONDITIONS', 'INVARIANTS\n\n- I1: Preserve current behavior.\n\nSTOP CONDITIONS'));
+  if (parsed.kind !== 'structured') throw new Error('Expected structured task.');
+  let state = addressTaskWorkUnit(beginTaskWorkUnit(createTaskState({ sessionId: 'frame', workspace: root, definition: parsed.task }), 'W1'), 'W1');
+  state = recordTaskValidationAttempt(state, 'V1', { turnId: 'failed', callId: 'validation', status: 'failed', exitCode: 1, signal: null, outcome: 'failed', stdout: `token=SECRET failure detail ${'x'.repeat(3000)}`, stderr: 'bounded error', error: { code: 'process', message: 'password=ERROR_SECRET' } });
+  state = beginTaskCorrection(state, 'V1');
+  const evidence: StructuredFreshEvidence[] = [
+    { identity: 'read_file:target.txt', source: 'read_file:fresh', kind: 'observation', resource: 'target.txt', fact: 'fresh target contents and sha', observedGeneration: 1, state: 'valid' },
+    { identity: 'read_file:old.txt', source: 'read_file:stale', kind: 'observation', resource: 'old.txt', fact: 'STALE_BODY', observedGeneration: 0, state: 'stale', invalidatedGeneration: 1 },
+    { identity: 'mutation:target.txt', source: 'write_file:write', kind: 'mutation', resource: 'target.txt', fact: 'current target mutation receipt', observedGeneration: 1, state: 'valid' },
+    { identity: 'failure:apply_patch:target.txt', source: 'apply_patch:failed', kind: 'failure', resource: 'target.txt', fact: 'UNRELATED_TOOL_FAILURE', observedGeneration: 1, state: 'valid' },
+  ];
+  const frame = projectCorrectionFrame(state, 'W1', 'V1', evidence);
+  const rendered = renderCorrectionFrame(frame);
+
+  assert.equal(frame.version, 1);
+  assert.deepEqual(frame.freshEvidence, ['current target mutation receipt', 'fresh target contents and sha']);
+  assert.match(frame.failedValidation.stdout, /^token=\[redacted\] failure detail/);
+  assert.equal(frame.failedValidation.stdoutTruncated, true);
+  assert.deepEqual(frame.failedValidation.error, { code: 'process', message: 'password=[redacted]' });
+  assert.match(rendered, /V1: Node check[\s\S]*bounded error/);
+  assert.match(rendered, /I1: Preserve current behavior/);
+  assert.match(rendered, /Permission ceiling/);
+  assert.match(rendered, /George reruns V1 directly and owns its result/);
+  assert.doesNotMatch(rendered, /STALE_BODY|UNRELATED_TOOL_FAILURE|SECRET/);
+  assert.ok(Buffer.byteLength(rendered, 'utf8') <= CORRECTION_FRAME_LIMITS.maxBytes);
 });
 
 test('structured service preflights with local reads, progresses task state, and omits unrelated ledger text', async (t) => {
@@ -347,14 +377,18 @@ STOP CONDITIONS
   await new StructuredTaskApplicationService(workflow.agent).run({ session, input, turnId: 'resume' });
   assert.equal(provider.requests[0]?.toolChoice, undefined);
   assert.deepEqual(provider.requests[0]?.tools.map((tool) => tool.name), ['read_file', 'list_directory', 'search_text', 'git_status', 'git_diff', 'write_file', 'apply_patch', 'create_directory']);
-  assert.match(provider.requests[0]?.roundContext ?? '', /MISSION CARD/);
-  assert.match(provider.requests[0]?.roundContext ?? '', /validation V1: failed outcome=failed exit=1/);
+  assert.match(provider.requests[0]?.input ?? '', /CORRECTION FRAME v1/);
+  assert.match(provider.requests[0]?.roundContext ?? '', /CORRECTION FRAME v1/);
+  assert.match(provider.requests[0]?.roundContext ?? '', /V1: Marker check[\s\S]*status=failed; outcome=failed; exit=1/);
+  assert.doesNotMatch(provider.requests[0]?.roundContext ?? '', /MISSION CARD|GOAL|DELIVERABLES/);
   assert.equal(provider.requests.every((request) => request.executionMode === 'operation'), true);
   assert.equal(session.taskState?.status, 'completed');
   assert.deepEqual(session.taskState?.validations.V1?.attempts.map((attempt) => attempt.status), ['failed', 'passed']);
   assert.equal(session.taskState?.validations.V1?.attempts[0]?.stderr, 'old diagnostic');
   assert.deepEqual(session.taskState?.corrections.map((correction) => correction.status), ['completed']);
   assert.deepEqual(session.events.filter((event) => event.type === 'model.round.avoided').map((event) => event.reason), ['correction-repaired', 'validation-passed']);
+  assert.deepEqual(session.events.filter((event) => event.type === 'correction.repair.completed').map((event) => [event.providerRounds, event.reinspectionCalls]), [[2, 0]]);
+  assert.deepEqual(session.events.filter((event) => event.type === 'correction.revalidated').map((event) => event.status), ['passed']);
 });
 
 test('deterministic progression never suppresses approval, cancellation, or outcome-unknown recovery', async (t) => {
@@ -458,8 +492,10 @@ STOP CONDITIONS
   const failedValidation = events.find((event) => event.type === 'workflow.completed' && event.completion.validations[0]?.status === 'failed');
   assert.ok(failedValidation?.type === 'workflow.completed');
   assert.match(failedValidation.completion.validations[0]?.stderr ?? '', /CORRECTION_DIAGNOSTIC_4B2A/);
-  assert.match(provider.requests[2]?.input ?? '', /validation V1: failed outcome=failed exit=1/);
+  assert.match(provider.requests[2]?.input ?? '', /V1: Deliberate failure[\s\S]*status=failed; outcome=failed; exit=1/);
   assert.match(JSON.stringify(provider.requests[2]), /CORRECTION_DIAGNOSTIC_4B2A/);
+  assert.match(provider.requests[2]?.input ?? '', /INSPECTION_PAYLOAD_ONLY_9E7C/);
+  assert.doesNotMatch(provider.requests[2]?.input ?? '', /MISSION CARD|Structured task correction stage/);
   assert.match(JSON.stringify(session.taskState), /CORRECTION_DIAGNOSTIC_4B2A/);
 
   assert.equal(provider.requests.length, 3);
@@ -467,6 +503,70 @@ STOP CONDITIONS
   assert.equal(runIds.length, 3);
   assert.deepEqual([...new Set(runIds)], ['task-wide-test']);
   assert.equal(session.taskState?.status, 'failed');
+  assert.deepEqual(session.taskState?.validations.V1?.attempts.map((attempt) => attempt.status), ['failed', 'failed']);
+  assert.deepEqual(events.filter((event) => event.type === 'correction.revalidated').map((event) => event.status), ['failed']);
+});
+
+test('correction reuses fresh evidence, reinspects stale repair targets, and directly revalidates', async (t) => {
+  const root = await workspace();
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const originalSha = createHash('sha256').update('target').digest('hex');
+  const brokenSha = createHash('sha256').update('BROKEN').digest('hex');
+  const input = `GEORGE TASK FORMAT: 1
+
+TASK: P8 — Focused correction
+KIND: implementation
+
+GOAL
+
+Repair the exact failed target.
+
+REQUIREMENTS
+
+- R1: target.txt contains FIXED.
+
+INVARIANTS
+
+- I1: Do not touch unrelated files.
+
+WORKFLOW
+
+W1 — Update target
+Covers: R1
+Depends on: none
+
+VALIDATION
+
+V1 — Exact target
+Covers: R1
+Run: node -e "process.exit(require('node:fs').readFileSync('target.txt','utf8') === 'FIXED' ? 0 : 1)"
+
+STOP CONDITIONS
+
+- S1: Stop on permission or recovery failure.
+`;
+  const provider = new Provider([
+    [{ type: 'provider.response.started', responseId: 'initial-read' }, { type: 'provider.tool.call', callId: 'initial-read', name: 'read_file', arguments: '{"path":"target.txt"}' }, { type: 'provider.response.completed' }],
+    [{ type: 'provider.response.started', responseId: 'break-target' }, { type: 'provider.tool.call', callId: 'break-target', name: 'write_file', arguments: JSON.stringify({ path: 'target.txt', content: 'BROKEN', expectedSha256: originalSha }) }, { type: 'provider.response.completed' }],
+    [{ type: 'provider.response.completed' }],
+    [{ type: 'provider.response.started', responseId: 'repair-read' }, { type: 'provider.tool.call', callId: 'repair-read', name: 'read_file', arguments: '{"path":"target.txt"}' }, { type: 'provider.response.completed' }],
+    [{ type: 'provider.response.started', responseId: 'repair-write' }, { type: 'provider.tool.call', callId: 'repair-write', name: 'write_file', arguments: JSON.stringify({ path: 'target.txt', content: 'FIXED', expectedSha256: brokenSha }) }, { type: 'provider.response.completed' }],
+    [{ type: 'provider.response.completed' }],
+  ]);
+  const workflow = await createCodingWorkflowApplicationService({ provider, workspace: root, approvalPort: new Allow() });
+  const session = createSession({ workspace: root });
+  const events: ApplicationEvent[] = [];
+  await new StructuredTaskApplicationService(workflow.agent).run({ session, input, turnId: 'focused', onEvent: (event) => { events.push(event); } });
+
+  assert.equal(session.taskState?.status, 'completed', JSON.stringify({ task: session.taskState, requestCount: provider.requests.length, eventTypes: events.map((event) => event.type), failures: events.flatMap((event) => event.type === 'tool.failed' ? [{ type: event.type, message: event.result.error.message }] : event.type === 'turn.failed' ? [{ type: event.type, message: String(event.error.message) }] : event.type === 'validation.completed' ? [{ type: event.type, status: event.status, message: event.error?.message }] : []) }));
+  assert.deepEqual(session.taskState?.validations.V1?.attempts.map((attempt) => attempt.status), ['failed', 'passed']);
+  assert.match(provider.requests[3]?.input ?? '', /CORRECTION FRAME v1[\s\S]*George observed write_file target\.txt/);
+  assert.doesNotMatch(provider.requests[3]?.input ?? '', /"text":"target"/);
+  assert.match(provider.requests[4]?.roundContext ?? '', /"text":"BROKEN"/);
+  assert.deepEqual(events.filter((event) => event.type === 'correction.repair.completed').map((event) => [event.providerRounds, event.reinspectionCalls]), [[3, 1]]);
+  assert.deepEqual(events.filter((event) => event.type === 'correction.revalidated').map((event) => event.status), ['passed']);
+  assert.equal(events.filter((event) => event.type === 'validation.started').length, 2);
+  assert.equal(events.filter((event) => event.type === 'tool.started' && ['list_directory', 'git_status', 'git_diff', 'search_text'].includes(event.name)).length, 0);
 });
 
 test('structured duplicate local reads execute once and terminate truthfully before inherited limits', async (t) => {

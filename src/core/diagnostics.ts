@@ -124,6 +124,9 @@ function eventRecord(session: Session, event: ApplicationEvent, sequence: number
     case 'provider.rebase.started': correlation.providerAttemptId = event.attemptId; fields.pressure = event.pressure; fields.estimatedTokens = event.estimatedTokens; fields.profileId = bounded(event.profileId, 256); fields.compaction = event.compaction; break;
     case 'provider.stall.terminal': correlation.providerAttemptId = event.attemptId; fields.phase = event.phase; fields.attempts = event.attempts; fields.pressure = event.pressure; fields.compaction = event.compaction; break;
     case 'model.round.avoided': fields.reason = event.reason; break;
+    case 'correction.frame.created': fields.cycle = event.cycle; fields.validationId = event.validationId; fields.bytes = event.bytes; fields.freshEvidenceCount = event.freshEvidenceCount; break;
+    case 'correction.repair.completed': fields.cycle = event.cycle; fields.validationId = event.validationId; fields.providerRounds = event.providerRounds; fields.reinspectionCalls = event.reinspectionCalls; break;
+    case 'correction.revalidated': fields.cycle = event.cycle; fields.validationId = event.validationId; fields.status = event.status; break;
     case 'turn.failed': case 'turn.cancelled': fields.code = bounded(event.error.code, 128); fields.message = bounded(event.error.message); break;
     default: break;
   }

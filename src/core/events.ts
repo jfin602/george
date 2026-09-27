@@ -189,6 +189,9 @@ export type ApplicationEvent =
   | Readonly<{ type: 'agent.round.completed'; turnId: string; round: number; executionMode: ExecutionMode; internalTextBytes: number; estimatedInternalTextTokens: number; toolCallCount: number; control?: 'handoff' }>
   /** George-owned transition evidence; each event represents one provider confirmation round not requested. */
   | Readonly<{ type: 'model.round.avoided'; turnId: string; reason: ModelRoundAvoidanceReason }>
+  | Readonly<{ type: 'correction.frame.created'; turnId: string; cycle: number; validationId: string; bytes: number; freshEvidenceCount: number }>
+  | Readonly<{ type: 'correction.repair.completed'; turnId: string; cycle: number; validationId: string; providerRounds: number; reinspectionCalls: number }>
+  | Readonly<{ type: 'correction.revalidated'; turnId: string; cycle: number; validationId: string; status: 'passed' | 'failed' | 'denied' | 'cancelled' }>
   | Readonly<{ type: 'tool.concurrent-read-batch.completed'; turnId: string; callIds: readonly string[]; width: number; wallMs: number; summedMemberMs: number; observedOverlapMs: number }>
   | Readonly<{ type: 'context.source'; turnId: string; sourceId: string; kind: string; status: 'loading' | 'loaded' | 'missing' | 'oversized' | 'failed'; bytes?: number }>
   | Readonly<{ type: 'context.assembled'; turnId: string; diagnostics: ContextDiagnostics }>

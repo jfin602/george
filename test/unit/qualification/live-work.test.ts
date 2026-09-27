@@ -7,7 +7,7 @@ import test from 'node:test';
 
 import { StructuredTaskApplicationService, StructuredTaskStackApplicationService, createAgentLoopApplicationService, createCodingWorkflowApplicationService } from '../../../src/application/index.ts';
 import { CONTEXT_PROFILE_REGISTRY, createSession, type ApplicationEvent, type ApprovalDecision, type ApprovalPort, type ApprovalRequest, type ModelProvider, type ProviderEvent, type ProviderRequest } from '../../../src/core/index.ts';
-import { THREE_FILE_INSPECTION_SMOKE, acceptGreetingSmoke, acceptThreeFileSmoke, createFrozenEditQualificationApproval, extractLiveWorkTrace, preparePhase10CoreWorkspace, prepareThreeFileInspectionFixture, recognizeLiveWorkArtifactSchema, runExistingCoreEditV1, runExistingExpressFeatureV1, runExistingExpressFeatureV2, runGreenfieldCoreV1, runGreenfieldExpressV1, runGreenfieldExpressV2, runLiveWorkInstrument, runOrdinaryTurnQualification, writeLiveWorkArtifacts, type LiveWorkResult } from '../../../src/qualification/index.ts';
+import { THREE_FILE_INSPECTION_SMOKE, acceptGreetingSmoke, acceptThreeFileSmoke, createFrozenEditQualificationApproval, extractLiveWorkTrace, preparePhase10CoreWorkspace, prepareThreeFileInspectionFixture, recognizeLiveWorkArtifactSchema, runExistingCoreEditV1, runExistingExpressFeatureV1, runExistingExpressFeatureV2, runGreenfieldCoreCorrectionV1, runGreenfieldCoreV1, runGreenfieldExpressV1, runGreenfieldExpressV2, runLiveWorkInstrument, runOrdinaryTurnQualification, writeLiveWorkArtifacts, type LiveWorkResult } from '../../../src/qualification/index.ts';
 import { createStackState, createTaskState, parseTaskPrompt } from '../../../src/tasks/index.ts';
 
 class Provider implements ModelProvider {
@@ -32,6 +32,12 @@ class OrdinaryProvider implements ModelProvider {
     yield* this.rounds[this.requests.length - 1] ?? [];
   }
 }
+const toolRound = (id: string, calls: readonly Extract<ProviderEvent, { type: 'provider.tool.call' }>[]): readonly ProviderEvent[] => Object.freeze([
+  { type: 'provider.response.started', responseId: id }, ...calls, { type: 'provider.response.completed' },
+]);
+const handoffRound = (id: string): readonly ProviderEvent[] => Object.freeze([
+  { type: 'provider.response.started', responseId: id }, { type: 'provider.text.delta', delta: '{"version":1,"control":"handoff"}' }, { type: 'provider.response.completed' },
+]);
 class Allow implements ApprovalPort { async request(_request: ApprovalRequest): Promise<ApprovalDecision> { return 'allow_once'; } }
 const mutationExecution = { effect: 'workspace_mutation', replaySafety: 'not_replay_safe', source: { kind: 'builtin' } } as const;
 const processExecution = { effect: 'host_process', replaySafety: 'not_replay_safe', source: { kind: 'builtin' } } as const;
@@ -238,11 +244,76 @@ test('Phase 10 B3/C3 runners select only their frozen pure-Node instruments', as
   const stackService = { run: async ({ prompts }: { prompts: readonly string[] }) => { stackPrompts = prompts; return { state: { status: 'completed' }, taskCompletions: [] }; } } as unknown as StructuredTaskStackApplicationService;
   await runGreenfieldCoreV1({ attemptId: 'b3', humanInterventions: 0, service: stackService, session: createSession({ workspace: greenfieldWorkspace }), instrumentRoot: join(fixtures, 'greenfield-core-v1'), acceptancePath: join(acceptance, 'greenfield-core-v1.test.mjs'), runHiddenAcceptance: async () => true });
   assert.deepEqual(stackPrompts.map((value) => value.match(/STACK: ([^\n]+)/)?.[1]), ['greenfield-core-v1', 'greenfield-core-v1']);
+  await runGreenfieldCoreCorrectionV1({ attemptId: 'b3-correction', humanInterventions: 0, service: stackService, session: createSession({ workspace: greenfieldWorkspace }), instrumentRoot: join(fixtures, 'greenfield-core-correction-v1'), acceptancePath: join(acceptance, 'greenfield-core-v1.test.mjs'), runHiddenAcceptance: async () => true });
+  assert.deepEqual(stackPrompts.map((value) => value.match(/STACK: ([^\n]+)/)?.[1]), ['greenfield-core-correction-v1', 'greenfield-core-correction-v1']);
 
   let singlePrompt = '';
   const singleService = { run: async ({ input }: { input: string }) => { singlePrompt = input; throw new Error('captured'); } } as unknown as StructuredTaskApplicationService;
   await runExistingCoreEditV1({ attemptId: 'c3', humanInterventions: 0, service: singleService, session: createSession({ workspace: existingWorkspace }), instrumentRoot: join(fixtures, 'existing-core-edit-v1'), acceptancePath: join(acceptance, 'existing-core-edit-v1.test.mjs'), runHiddenAcceptance: async () => true });
   assert.match(singlePrompt, /STACK: existing-core-edit-v1/);
+});
+
+test('deterministic B3 correction variant fails once, repairs from focused evidence, and directly revalidates', async (t) => {
+  const workspace = await mkdtemp(join(tmpdir(), 'george-b3-correction-'));
+  t.after(() => rm(workspace, { recursive: true, force: true }));
+  await preparePhase10CoreWorkspace({ workspace });
+  const packageJson = '{"name":"greenfield-core-correction-v1","private":true,"type":"module","scripts":{"test":"node --test"}}\n';
+  const title = "export function normalizeTitle(value) {\n  if (typeof value !== 'string') throw new TypeError('title must be a string');\n  const normalized = value.trim().replace(/\\s+/g, ' ');\n  if (!normalized) throw new RangeError('title must not be blank');\n  return normalized;\n}\n";
+  const titleTest = "import assert from 'node:assert/strict';\nimport test from 'node:test';\nimport { normalizeTitle } from '../src/title.js';\ntest('normalizes titles', () => { assert.equal(normalizeTitle('  Ship   it  '), 'Ship it'); assert.throws(() => normalizeTitle('   ')); });\n";
+  const brokenStore = "import { normalizeTitle } from './title.js';\nexport function createTaskStore() { const tasks = []; return { add(title) { const task = { id: 1, title: normalizeTitle(title), done: false }; tasks.push(task); return task; }, complete(id) { const task = tasks.find((item) => item.id === id); if (task) task.done = true; return task; }, list() { return tasks; } }; }\n";
+  const fixedStore = "import { normalizeTitle } from './title.js';\nexport function createTaskStore() { const tasks = []; return { add(title) { const task = { id: tasks.length + 1, title: normalizeTitle(title), done: false }; tasks.push(task); return { ...task }; }, complete(id) { const task = tasks.find((item) => item.id === id); if (!task) throw new RangeError('unknown task'); task.done = true; return { ...task }; }, list() { return tasks.map((task) => ({ ...task })); } }; }\n";
+  const storeTest = "import assert from 'node:assert/strict';\nimport test from 'node:test';\nimport { createTaskStore } from '../src/task-store.js';\ntest('stores isolated normalized tasks', () => { const store = createTaskStore(); const first = store.add('  Ship   it  '); const second = store.add('Review'); assert.deepEqual(first, { id: 1, title: 'Ship it', done: false }); assert.deepEqual(second, { id: 2, title: 'Review', done: false }); first.title = 'outside'; assert.deepEqual(store.complete(1), { id: 1, title: 'Ship it', done: true }); assert.deepEqual(store.list(), [{ id: 1, title: 'Ship it', done: true }, { id: 2, title: 'Review', done: false }]); assert.throws(() => store.complete(999)); });\n";
+  const provider = new OrdinaryProvider([
+    toolRound('p1-inspect', [{ type: 'provider.tool.call', callId: 'p1-list', name: 'list_directory', arguments: '{"path":"."}' }]),
+    toolRound('p1-dirs', [
+      { type: 'provider.tool.call', callId: 'p1-src', name: 'create_directory', arguments: '{"path":"src"}' },
+      { type: 'provider.tool.call', callId: 'p1-test', name: 'create_directory', arguments: '{"path":"test"}' },
+    ]),
+    toolRound('p1-files', [
+      { type: 'provider.tool.call', callId: 'p1-package', name: 'write_file', arguments: JSON.stringify({ path: 'package.json', content: packageJson }) },
+      { type: 'provider.tool.call', callId: 'p1-title', name: 'write_file', arguments: JSON.stringify({ path: 'src/title.js', content: title }) },
+      { type: 'provider.tool.call', callId: 'p1-title-test', name: 'write_file', arguments: JSON.stringify({ path: 'test/title.test.js', content: titleTest }) },
+    ]),
+    handoffRound('p1-done'),
+    toolRound('p2-inspect', [
+      { type: 'provider.tool.call', callId: 'p2-read-title', name: 'read_file', arguments: '{"path":"src/title.js"}' },
+      { type: 'provider.tool.call', callId: 'p2-read-title-test', name: 'read_file', arguments: '{"path":"test/title.test.js"}' },
+      { type: 'provider.tool.call', callId: 'p2-read-package', name: 'read_file', arguments: '{"path":"package.json"}' },
+    ]),
+    toolRound('p2-broken-store', [{ type: 'provider.tool.call', callId: 'p2-store', name: 'write_file', arguments: JSON.stringify({ path: 'src/task-store.js', content: brokenStore }) }]),
+    handoffRound('p2-store-done'),
+    toolRound('p2-store-test', [{ type: 'provider.tool.call', callId: 'p2-store-test', name: 'write_file', arguments: JSON.stringify({ path: 'test/task-store.test.js', content: storeTest }) }]),
+    handoffRound('p2-tests-done'),
+    toolRound('correction-read', [
+      { type: 'provider.tool.call', callId: 'correction-read-store', name: 'read_file', arguments: '{"path":"src/task-store.js"}' },
+      { type: 'provider.tool.call', callId: 'correction-read-test', name: 'read_file', arguments: '{"path":"test/task-store.test.js"}' },
+    ]),
+    toolRound('correction-patch', [{ type: 'provider.tool.call', callId: 'correction-patch-store', name: 'apply_patch', arguments: JSON.stringify({ path: 'src/task-store.js', expectedSha256: createHash('sha256').update(brokenStore).digest('hex'), edits: [{ oldText: brokenStore, newText: fixedStore }] }) }]),
+    handoffRound('correction-done'),
+  ]);
+  const workflow = await createCodingWorkflowApplicationService({ provider, workspace, approvalPort: new Allow() });
+  const service = new StructuredTaskStackApplicationService(new StructuredTaskApplicationService(workflow.agent));
+  const { acceptGreenfieldCore } = await import('../../acceptance/p10-live-work/greenfield-core-v1.test.mjs');
+  const result = await runGreenfieldCoreCorrectionV1({
+    attemptId: 'b3-correction-deterministic', humanInterventions: 0, service, session: createSession({ workspace }),
+    instrumentRoot: join(process.cwd(), 'test/fixtures/p10-live-work/greenfield-core-correction-v1'),
+    acceptancePath: join(process.cwd(), 'test/acceptance/p10-live-work/greenfield-core-v1.test.mjs'),
+    runHiddenAcceptance: async () => { await acceptGreenfieldCore(workspace); return true; },
+  });
+  assert.equal(result.qualifying, true, JSON.stringify(result.trace.failures));
+  assert.equal(result.hiddenAcceptance, 'passed');
+  assert.equal(result.trace.stackState?.status, 'completed');
+  assert.equal(result.trace.taskState?.status, 'completed');
+  assert.deepEqual(result.trace.taskState?.validations.find(({ id }) => id === 'V1'), { id: 'V1', status: 'passed', attempts: 2 });
+  assert.deepEqual(result.trace.validations.map(({ status }) => status), ['passed', 'failed', 'passed', 'passed']);
+  assert.equal(result.metrics.correctionFrameBytes.length, 1);
+  assert.equal(result.metrics.correctionFrameBytes[0]! > 0 && result.metrics.correctionFrameBytes[0]! <= 16 * 1024, true);
+  assert.equal(result.metrics.correctionProviderRounds, 3);
+  assert.equal(result.metrics.correctionReinspectionCalls, 2);
+  assert.equal(result.metrics.validationReruns, 1);
+  assert.equal(result.metrics.providerRounds, 12);
+  assert.equal(result.metrics.modelRoundsAvoidedByReason['correction-repaired'], 1);
+  assert.equal((result.trace.timing.totalMs ?? -1) >= 0, true);
 });
 
 test('live telemetry records cached usage and completed tool batches with explicit unavailable defaults', () => {
@@ -253,6 +324,9 @@ test('live telemetry records cached usage and completed tool batches with explic
     { type: 'provider.response.completed', usage: { inputTokens: 10, outputTokens: 2, cachedInputTokens: 6 } },
     { type: 'agent.round.completed', turnId: 't', round: 1, executionMode: 'operation', internalTextBytes: 16, estimatedInternalTextTokens: 4, toolCallCount: 2, control: 'handoff' },
     { type: 'model.round.avoided', turnId: 't', reason: 'validation-passed' },
+    { type: 'correction.frame.created', turnId: 't', cycle: 1, validationId: 'V1', bytes: 800, freshEvidenceCount: 2 },
+    { type: 'correction.repair.completed', turnId: 't', cycle: 1, validationId: 'V1', providerRounds: 2, reinspectionCalls: 1 },
+    { type: 'correction.revalidated', turnId: 't', cycle: 1, validationId: 'V1', status: 'passed' },
     { type: 'tool.concurrent-read-batch.completed', turnId: 't', callIds: ['one', 'two'], width: 2, wallMs: 30, summedMemberMs: 50, observedOverlapMs: 20 },
     { type: 'provider.attempt.finished', turnId: 't', runId: 'r', attemptId: 'a', outcome: 'completed', timing: { responseAcceptanceMs: 4, firstUsefulOutputMs: 61_000, providerActiveMs: 61_010 } },
   ], terminalStatus: 'failed', hiddenAcceptance: 'not_run', humanInterventions: 0 });
@@ -265,6 +339,7 @@ test('live telemetry records cached usage and completed tool batches with explic
   assert.deepEqual(trace.timing.providerAttempts, [{ attemptId: 'a', outcome: 'completed', responseAcceptanceMs: 4, firstUsefulOutputMs: 61_000, providerActiveMs: 61_010 }]);
   assert.deepEqual({ internal: trace.metrics.internalTextBytes, concurrent: trace.metrics.concurrentReadBatchCount, widths: trace.metrics.concurrentReadBatchWidths, average: trace.metrics.averageConcurrentReadBatchWidth, maximum: trace.metrics.maxConcurrentReadBatchWidth, parallel: trace.metrics.parallelBatchWallMs, child: trace.metrics.summedChildToolRuntimeMs, overlap: trace.metrics.observedConcurrentReadOverlapMs, avoided: trace.metrics.modelRoundsAvoided, controls: trace.metrics.georgeControlCount, human: trace.metrics.humanModeRounds, operation: trace.metrics.operationModeRounds, corrections: trace.metrics.correctionCycles }, { internal: 16, concurrent: 1, widths: [2], average: 2, maximum: 2, parallel: 30, child: 50, overlap: 20, avoided: 1, controls: 1, human: 0, operation: 1, corrections: 0 });
   assert.deepEqual(trace.metrics.modelRoundsAvoidedByReason, { 'validation-passed': 1 });
+  assert.deepEqual({ frames: trace.metrics.correctionFrameBytes, providerRounds: trace.metrics.correctionProviderRounds, reinspections: trace.metrics.correctionReinspectionCalls, reruns: trace.metrics.validationReruns }, { frames: [800], providerRounds: 2, reinspections: 1, reruns: 1 });
 });
 
 test('live trace uses typed diagnostics, pairs tools, retains mutation and safe task projections, and tolerates missing or future evidence', () => {

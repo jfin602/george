@@ -70,6 +70,10 @@ export type LiveWorkMetrics = Readonly<{
   humanModeRounds: number | null;
   operationModeRounds: number | null;
   correctionCycles: number;
+  correctionFrameBytes: readonly number[];
+  correctionProviderRounds: number;
+  correctionReinspectionCalls: number;
+  validationReruns: number;
   contextAssemblies: number;
   sandboxedProcessCalls: number;
   taskUpdates: number;
@@ -310,6 +314,8 @@ function metrics(events: readonly ApplicationEvent[], correctionCycles: number):
   const attemptCount = events.filter((event) => event.type === 'provider.attempt.started').length;
   const avoidedByReason = countModelRoundsAvoided(events);
   const concurrentReadBatches = events.filter((event): event is Extract<ApplicationEvent, { type: 'tool.concurrent-read-batch.completed' }> => event.type === 'tool.concurrent-read-batch.completed');
+  const correctionFrames = events.filter((event): event is Extract<ApplicationEvent, { type: 'correction.frame.created' }> => event.type === 'correction.frame.created');
+  const correctionRepairs = events.filter((event): event is Extract<ApplicationEvent, { type: 'correction.repair.completed' }> => event.type === 'correction.repair.completed');
   const concurrentReadBatchWidths = concurrentReadBatches.map((event) => event.width);
   const input = completed.map((event) => number(event.usage?.inputTokens)).filter((value): value is number => value !== null);
   const output = completed.map((event) => number(event.usage?.outputTokens)).filter((value): value is number => value !== null);
@@ -354,6 +360,10 @@ function metrics(events: readonly ApplicationEvent[], correctionCycles: number):
     humanModeRounds: agentRounds.length ? agentRounds.filter((event) => event.executionMode === 'human').length : null,
     operationModeRounds: agentRounds.length ? agentRounds.filter((event) => event.executionMode === 'operation').length : null,
     correctionCycles,
+    correctionFrameBytes: Object.freeze(correctionFrames.map((event) => event.bytes)),
+    correctionProviderRounds: correctionRepairs.reduce((total, event) => total + event.providerRounds, 0),
+    correctionReinspectionCalls: correctionRepairs.reduce((total, event) => total + event.reinspectionCalls, 0),
+    validationReruns: events.filter((event) => event.type === 'correction.revalidated').length,
     contextAssemblies: events.filter((event) => event.type === 'context.assembled').length,
     sandboxedProcessCalls: events.filter((event) => event.type === 'tool.started' && event.execution?.effect === 'sandboxed_workspace_process').length,
     taskUpdates: events.filter((event) => event.type === 'task.updated').length,
@@ -580,6 +590,9 @@ function eventEvidence(event: ApplicationEvent): Readonly<Record<string, unknown
   if (event.type === 'provider.response.completed') safe.usage = { inputTokens: event.usage?.inputTokens ?? null, outputTokens: event.usage?.outputTokens ?? null, cachedInputTokens: event.usage?.cachedInputTokens ?? null };
   if (event.type === 'agent.round.completed') safe.round = { round: event.round, executionMode: event.executionMode, internalTextBytes: event.internalTextBytes, estimatedInternalTextTokens: event.estimatedInternalTextTokens, toolCallCount: event.toolCallCount, control: event.control ?? null };
   if (event.type === 'model.round.avoided') safe.modelRoundAvoided = { reason: event.reason };
+  if (event.type === 'correction.frame.created') safe.correctionFrame = { cycle: event.cycle, validationId: event.validationId, bytes: event.bytes, freshEvidenceCount: event.freshEvidenceCount };
+  if (event.type === 'correction.repair.completed') safe.correctionRepair = { cycle: event.cycle, validationId: event.validationId, providerRounds: event.providerRounds, reinspectionCalls: event.reinspectionCalls };
+  if (event.type === 'correction.revalidated') safe.correctionRevalidation = { cycle: event.cycle, validationId: event.validationId, status: event.status };
   if (event.type === 'tool.concurrent-read-batch.completed') safe.concurrentReadBatch = { callIds: event.callIds, width: event.width, wallMs: event.wallMs, summedMemberMs: event.summedMemberMs, observedOverlapMs: event.observedOverlapMs };
   if (event.type === 'provider.error' || event.type === 'turn.failed' || event.type === 'turn.cancelled') safe.error = boundedFailureError(event.error);
   if (event.type === 'tool.failed') safe.error = boundedFailureError(event.result.error);
@@ -645,6 +658,11 @@ export async function runExistingExpressFeatureV2(options: Omit<Extract<LiveWork
 }
 
 export async function runGreenfieldCoreV1(options: Omit<Extract<LiveWorkSubmission, { kind: 'stack' }>, 'kind' | 'prompts'> & Readonly<{ instrumentRoot: string }>): Promise<LiveWorkResult> {
+  const prompts = await Promise.all(['P1-core.task.txt', 'P2-store.task.txt'].map((name) => readFile(join(options.instrumentRoot, name), 'utf8')));
+  return runLiveWorkInstrument({ ...options, kind: 'stack', prompts });
+}
+
+export async function runGreenfieldCoreCorrectionV1(options: Omit<Extract<LiveWorkSubmission, { kind: 'stack' }>, 'kind' | 'prompts'> & Readonly<{ instrumentRoot: string }>): Promise<LiveWorkResult> {
   const prompts = await Promise.all(['P1-core.task.txt', 'P2-store.task.txt'].map((name) => readFile(join(options.instrumentRoot, name), 'utf8')));
   return runLiveWorkInstrument({ ...options, kind: 'stack', prompts });
 }

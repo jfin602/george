@@ -1,0 +1,12 @@
+{
+  "instrument": "greenfield-core-correction-v1",
+  "version": 1,
+  "taskFormat": 1,
+  "taskStackSha256": "c12e2722370da52127d3ed74daa746087127d218ec71c09a80bc8581e7393b91",
+  "acceptance": "greenfield-core-v1.test.mjs",
+  "acceptancePath": "test/acceptance/p10-live-work/greenfield-core-v1.test.mjs",
+  "acceptanceVersion": 1,
+  "acceptanceSha256": "6fae093f474006f0b097f38b900dfda39613719f6ae2e2e8e883193f987137c0",
+  "failureInjection": "The deterministic qualification provider writes one invalid P2 task-store implementation so V1 fails once before focused repair and direct revalidation.",
+  "dependencyPrerequisite": "none; network and dependency installation prohibited"
+}

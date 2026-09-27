@@ -25,19 +25,25 @@ async function digest(root: string, only?: (path: string) => boolean): Promise<s
   return hash.digest('hex');
 }
 
-test('Phase 10 B3/C3 identities, fixtures, tasks, and independently versioned hidden acceptance are frozen', async () => {
+test('Phase 10 B3/C3 and deterministic B3 correction identities, fixtures, tasks, and hidden acceptance are frozen', async () => {
   const b3 = join(FIXTURES, 'greenfield-core-v1');
+  const b3Correction = join(FIXTURES, 'greenfield-core-correction-v1');
   const c3 = join(FIXTURES, 'existing-core-edit-v1');
   const b3Metadata = JSON.parse(await readFile(join(b3, 'instrument.json'), 'utf8'));
+  const b3CorrectionMetadata = JSON.parse(await readFile(join(b3Correction, 'instrument.json'), 'utf8'));
   const c3Metadata = JSON.parse(await readFile(join(c3, 'instrument.json'), 'utf8'));
   assert.deepEqual({ instrument: b3Metadata.instrument, version: b3Metadata.version, acceptanceVersion: b3Metadata.acceptanceVersion }, { instrument: 'greenfield-core-v1', version: 1, acceptanceVersion: 1 });
+  assert.deepEqual({ instrument: b3CorrectionMetadata.instrument, version: b3CorrectionMetadata.version, acceptanceVersion: b3CorrectionMetadata.acceptanceVersion }, { instrument: 'greenfield-core-correction-v1', version: 1, acceptanceVersion: 1 });
   assert.deepEqual({ instrument: c3Metadata.instrument, version: c3Metadata.version, fixtureVersion: c3Metadata.fixtureVersion, acceptanceVersion: c3Metadata.acceptanceVersion }, { instrument: 'existing-core-edit-v1', version: 1, fixtureVersion: 1, acceptanceVersion: 1 });
   assert.equal(await digest(b3, (path) => path.endsWith('.task.txt')), b3Metadata.taskStackSha256);
+  assert.equal(await digest(b3Correction, (path) => path.endsWith('.task.txt')), b3CorrectionMetadata.taskStackSha256);
   assert.equal(await digest(c3, (path) => path.endsWith('.task.txt')), c3Metadata.taskStackSha256);
   assert.equal(await digest(join(c3, 'base')), c3Metadata.fixtureSourceSha256);
   assert.equal(createHash('sha256').update(await readFile(join(ACCEPTANCE, b3Metadata.acceptance))).digest('hex'), b3Metadata.acceptanceSha256);
+  assert.equal(createHash('sha256').update(await readFile(join(ACCEPTANCE, b3CorrectionMetadata.acceptance))).digest('hex'), b3CorrectionMetadata.acceptanceSha256);
   assert.equal(createHash('sha256').update(await readFile(join(ACCEPTANCE, c3Metadata.acceptance))).digest('hex'), c3Metadata.acceptanceSha256);
   assert.equal((await paths(b3)).some((path) => path.includes('acceptance')), false);
+  assert.equal((await paths(b3Correction)).some((path) => path.includes('acceptance')), false);
   assert.equal((await paths(c3)).some((path) => path.includes('acceptance')), false);
 
   const b3Tasks = await Promise.all(['P1-core.task.txt', 'P2-store.task.txt'].map(async (name) => parseTaskPrompt(await readFile(join(b3, name), 'utf8'))));
@@ -46,6 +52,11 @@ test('Phase 10 B3/C3 identities, fixtures, tasks, and independently versioned hi
   validateTaskStack(definitions);
   assert.deepEqual(definitions.map(({ stack, task }) => [stack, task.ordinal]), [['greenfield-core-v1', 1], ['greenfield-core-v1', 2]]);
   assert.match(definitions[1]?.requirements.map(({ text }) => text).join(' ') ?? '', /import normalizeTitle/);
+  const correctionTasks = await Promise.all(['P1-core.task.txt', 'P2-store.task.txt'].map(async (name) => parseTaskPrompt(await readFile(join(b3Correction, name), 'utf8'))));
+  const correctionDefinitions = correctionTasks.flatMap((item) => item.kind === 'structured' ? [item.task] : []);
+  validateTaskStack(correctionDefinitions);
+  assert.deepEqual(correctionDefinitions.map(({ stack, task }) => [stack, task.ordinal]), [['greenfield-core-correction-v1', 1], ['greenfield-core-correction-v1', 2]]);
+  assert.match(b3CorrectionMetadata.failureInjection, /V1 fails once before focused repair and direct revalidation/);
   const c3Task = parseTaskPrompt(await readFile(join(c3, 'P1-release-label.task.txt'), 'utf8'));
   assert.equal(c3Task.kind, 'structured');
   if (c3Task.kind === 'structured') {
