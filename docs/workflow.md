@@ -116,6 +116,8 @@ Canonical optimization loop:
 
 ### Observability-first debugging after Phase 11
 
+Phase 11 establishes the presentation-independent Observability Projection v1 at the application/core boundary. Phase 12 transports/query-streams it through the localhost daemon, and Phase 13 renders it in the Agent Observatory.
+
 Once Phase 12/13 are implemented, performance and agent-behavior debugging should preferentially use the daemon/Agent Observatory to inspect correlated provider, context, task, tool, validation, correction, recovery, and budget evidence before proposing a repair.
 
 The observatory is a diagnostic projection, not acceptance authority. A visually compelling explanation does not make a change Green; qualifying claims still require the repository's focused/broad/live gates and preserved historical evidence.

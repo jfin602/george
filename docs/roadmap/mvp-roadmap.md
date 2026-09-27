@@ -561,25 +561,59 @@ The owner-closeout boundary preserves:
 
 Live GEP selection remains unresolved and must not be silently treated as qualified. It is carried forward as an observability/debugging target for the Phase 12 daemon and Phase 13 Agent Observatory rather than a reason for additional blind Phase 10 correction cycles.
 
-## Phase 11 — Final Acceleration + Primary-Model Performance Qualification
+## Phase 11 — Primary Baseline Freeze + Observatory Bridge
 
-Status: CURRENT PHASE — primary-model baseline freeze before the observability foundation
+Status: CURRENT PHASE — baseline `0.11.0`
 
-Goal: characterize remaining provider acceleration, then freeze a consolidated optimized single-primary-model baseline over the Phase 9 structured execution model and Phase 10 loop optimizations, while retaining any post-Phase-10 helper A/B result as comparative research rather than baseline authority.
+Decision authority: `docs/planning/p11-primary-baseline-observatory-bridge/decision-record.md`.  
+Observability contract: `docs/planning/p11-primary-baseline-observatory-bridge/observability-projection-v1.md`.  
+Qualification authority: `docs/planning/p11-primary-baseline-observatory-bridge/qualification-plan.md`.
+
+Goal: freeze the accepted single-primary-model architecture and expose the bounded application/core evidence required by Phase 12/13 before further opaque model/runtime optimization.
+
+Primary design rule:
+
+> Make George observable before making George more complicated.
 
 Scope:
-- evaluate speculative decoding only if a compatible path is practical;
-- retain it only when end-to-end benefit justifies memory/runtime complexity;
-- run full benchmark plus frozen live-work qualification;
-- consolidate original baseline, structured-execution baseline, accepted/rejected changes, cumulative deltas, correctness, call counts, token usage, retries, resources, and live-work outcomes.
+- freeze one provenance-bearing primary-model baseline over the owner-accepted Phase 10 candidate;
+- introduce Observability Projection v1 as presentation-independent derived evidence rather than execution authority;
+- stable correlation across session/turn/run/provider-round/provider-attempt/tool/task/work-unit/validation/correction identities where available;
+- normalized provider-facing request projection built at the actual request producer;
+- ordered provider-visible section metadata with source/provenance, bytes, estimated tokens, bounds/redaction and safe preview disposition;
+- exact exposed-tool identity/effect/replay/schema-size evidence;
+- context profile/budget/headroom/source contribution and compaction evidence where current producers can support it truthfully;
+- explicit GEP eligibility/receipt/fallback evidence plus the mutation mechanism the model actually selected;
+- provider response-acceptance/first-useful-output/active-duration/usage/retry/stall/rebase correlation;
+- task/tool/approval/validation/correction/budget/concurrency/model-round-avoidance correlation through existing canonical IDs/events;
+- one quick benchmark baseline and one compact supported real-Qwen workload after deterministic Green;
+- record current GEP selection as descriptive baseline evidence rather than a Phase 11 pass/fail target.
 
 Success condition:
-- reproducible optimized primary-model baseline;
-- no performance acceptance hides correctness failures;
-- consolidated report shows cumulative gain/remaining bottlenecks;
-- structured-task live-work results remain comparable to Phase 9.
+- the primary-model baseline is versioned/frozen;
+- Phase 10 owner-waived evidence remains intact;
+- the observability projection is bounded, redacted, versioned and presentation-independent;
+- a developer/client can determine what normalized request/capabilities George exposed and what tool/mutation mechanism the model selected without reverse-engineering terminal output or raw session files;
+- one representative supported primary-model baseline exists for future run comparison;
+- Phase 12 can transport/query the projection without creating a second task/tool/provider authority.
 
-Non-goals: helper model, local web research, daemon/desktop, or treating the carried live GEP-selection Not Green result as silently fixed.
+Explicitly deferred until after the observability foundation:
+- speculative decoding;
+- further broad primary-model prompt/tool-selection tuning;
+- blind live GEP-selection correction;
+- helper/utility inference;
+- nonessential runtime/GPU experiments;
+- browser/visual-model work;
+- additional concurrency/parallel-mutation experiments.
+
+Non-goals:
+- daemon transport;
+- Tauri/Desktop implementation;
+- hidden-reasoning capture;
+- raw provider wire capture;
+- forcing GEP selection;
+- helper model;
+- local web research.
 
 ## Phase 12 — Local Daemon + Observability Foundation
 

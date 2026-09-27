@@ -1,0 +1,140 @@
+GEORGE TASK FORMAT: 1
+
+STACK: p11
+TASK: Phase 11 / P4 — Primary baseline and observatory bridge closeout
+KIND: closeout
+
+VERSIONING
+
+The assigned project version is `0.11.4`.
+
+- Recommended configuration: `Sol Medium`.
+- Browser required: no.
+
+GOAL
+
+Close Phase 11 as the frozen primary-model baseline and application/core observability bridge for Phase 12. This prompt is evidence-only: do not optimize the model, repair selection behavior, implement daemon transport, or open the desktop.
+
+READ FIRST
+
+- REQUIRED: BOOT.md
+- REQUIRED: AGENTS.md
+- REQUIRED: docs/workflow.md
+- REQUIRED: docs/stability-contract.md
+- REQUIRED: docs/phase-10-owner-closeout.md
+- REQUIRED: docs/planning/p11-primary-baseline-observatory-bridge/decision-record.md
+- REQUIRED: docs/planning/p11-primary-baseline-observatory-bridge/observability-projection-v1.md
+- REQUIRED: docs/planning/p11-primary-baseline-observatory-bridge/qualification-plan.md
+- REQUIRED: docs/planning/p12-local-daemon-observability/decision-record.md
+- REQUIRED: docs/tasks/p11/P1-baseline-identity.md
+- REQUIRED: docs/tasks/p11/P3-primary-baseline.md
+- REQUIRED: P1/P2 source/tests and P3 artifacts
+
+CREATE
+
+- docs/phase-11-closeout.md
+
+REQUIREMENTS
+
+- R1: Tie closeout to exact P3 candidate SHA/tree and Phase 11 evidence.
+- R2: Record the frozen primary baseline identity and explicitly preserve the Phase 10 owner waiver/live GEP-selection Not Green result.
+- R3: Audit Observability Projection v1 versioning, bounds, redaction, canonical/derived distinction and presentation independence.
+- R4: Audit provider request projection against actual producer semantics for initial/continuation/roundContext/retry/rebase cases.
+- R5: Audit context/profile/headroom/source contribution projection and tool exposure/effect/replay/schema accounting.
+- R6: Audit GEP eligibility/receipt/fallback and actual mutation-mechanism selection projection without claiming motive.
+- R7: Audit provider timing/usage/retry/stall/rebase projection and task/tool/validation/correction/budget correlation.
+- R8: Record P3 deterministic/broad results, quick benchmark and single real-model baseline exactly as observed.
+- R9: Treat live GEP selection as an observed state, not a Phase 11 success requirement. Do not relabel Phase 10's historical Not Green result.
+- R10: Run only bounded closeout rechecks of Phase 11 focused projection tests, typecheck, runner and diff hygiene. Do not rerun benchmark/live workload or broad suite merely for a better result.
+- R11: Verify package version is `0.11.4` and root package-lock.json is absent.
+- R12: Determine whether Phase 11 is Qualified.
+- R13: Determine whether Phase 12 Local Daemon + Observability Foundation is Ready.
+- R14: Phase 12 Ready requires stable application/core projections; it does not require speculative decoding or live GEP selection Green.
+- R15: Do not implement Phase 12 or Phase 13 behavior in closeout.
+
+DECISION TABLE
+
+Include at minimum:
+
+- Phase 10 Owner Waiver Preserved;
+- Primary Baseline Identity Frozen;
+- Observability Projection v1 Versioned;
+- Correlation Identity Qualified;
+- Provider Request Projection Accurate;
+- Context Projection Accurate;
+- Tool Exposure Projection Accurate;
+- GEP Eligibility/Selection Projection Qualified;
+- Provider Timing/Usage Projection Qualified;
+- Task/Validation/Correction/Budget Correlation Qualified;
+- Canonical/Derived Boundary Preserved;
+- Redaction/Privacy Qualified;
+- Broad Suite;
+- Quick Benchmark;
+- Real LM Studio/Qwen Baseline;
+- Live GEP Selection Observed State;
+- Phase 10 P7 Historical/Intermittent Evidence Preserved;
+- Remaining Blocking Failure Count;
+- Evidence Gaps;
+- Overall Phase 11 Qualified;
+- Phase 12 Ready.
+
+INVARIANTS
+
+- I1: Closeout is evidence-only.
+- I2: Historical Not Green/Evidence Gap states remain historical truth.
+- I3: Projection does not become execution authority.
+- I4: No hidden reasoning/raw provider wire/secrets are exposed.
+- I5: No daemon/Tauri implementation in P4.
+
+WORKFLOW
+
+W1 — Audit baseline and projection contracts
+Covers: R1, R2, R3, R4, R5, R6, R7
+Depends on: none
+
+W2 — Reconcile qualification evidence
+Covers: R8, R9
+Depends on: W1
+
+W3 — Bounded closeout recheck and Phase 12 readiness
+Covers: R10, R11, R12, R13, R14, R15
+Depends on: W1, W2
+
+VALIDATION
+
+V1 — Phase 11 focused observability floor
+Covers: R3, R4, R5, R6, R7, R10
+Run: DISCOVER
+Scope: Observability Projection v1 request/context/tool/GEP/task/privacy regressions representing P1/P2
+
+V2 — TypeScript
+Covers: R10
+Run: npm run typecheck
+
+V3 — Runner regression
+Covers: R10, R11
+Run: npm run test:runner
+
+V4 — Diff hygiene
+Covers: R10, R11
+Run: git diff --check
+
+STOP CONDITIONS
+
+- S1: Do not repair implementation in closeout.
+- S2: Do not rerun live/benchmark/broad work to fish for Green.
+- S3: Do not relabel Phase 10 live GEP selection Green without actual evidence.
+- S4: Do not implement daemon/desktop code.
+- S5: Do not declare Phase 12 Ready if request projection/privacy/correlation evidence is contradictory or unsafe.
+
+DELIVERABLES
+
+- D1: docs/phase-11-closeout.md.
+- D2: Explicit Green / Not Green / Evidence Gap matrix.
+- D3: Frozen primary-model baseline disposition.
+- D4: Phase 12 readiness decision.
+- D5: package.json at 0.11.4.
+
+EVIDENCE
+
+Cite exact candidate, P1/P2/P3 commits/artifacts/commands and preserve every historical/current Not Green and Evidence Gap.

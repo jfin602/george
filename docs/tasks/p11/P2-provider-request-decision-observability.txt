@@ -1,0 +1,154 @@
+GEORGE TASK FORMAT: 1
+
+STACK: p11
+TASK: Phase 11 / P2 — Provider request and model-decision observability
+KIND: implementation
+
+VERSIONING
+
+The assigned project version is `0.11.2`.
+
+- Recommended configuration: `Sol High`.
+- Browser required: no.
+
+GOAL
+
+Populate Observability Projection v1 at the actual application/core producer seams so George can truthfully correlate what the model received, which capabilities were available, what it selected, and what provider/context/task/tool evidence surrounded the round.
+
+This prompt adds observability, not behavior optimization.
+
+READ FIRST
+
+- REQUIRED: BOOT.md
+- REQUIRED: AGENTS.md
+- REQUIRED: docs/stability-contract.md
+- REQUIRED: docs/phase-10-owner-closeout.md
+- REQUIRED: docs/planning/p11-primary-baseline-observatory-bridge/decision-record.md
+- REQUIRED: docs/planning/p11-primary-baseline-observatory-bridge/observability-projection-v1.md
+- REQUIRED: docs/planning/p11-primary-baseline-observatory-bridge/qualification-plan.md
+- REQUIRED: docs/planning/p12-local-daemon-observability/decision-record.md
+- REQUIRED: P1 source/tests and docs/tasks/p11/P1-baseline-identity.md
+
+INSPECT
+
+- src/application/one-turn.ts actual ProviderRequest construction
+- provider attempt/retry/rebase lifecycle
+- context assembly/diagnostics/source contribution code
+- ToolRegistry definitions/effect/replay metadata
+- src/application/george-edit.ts receipt eligibility/projection/fallback
+- TaskState/StackState/current work-unit projection seams
+- session/event persistence and diagnostic sinks
+- benchmark/live-work telemetry consumers
+
+REQUIREMENTS
+
+- R1: Construct provider-round observability from the same normalized values used to create the actual `ProviderRequest`; do not reconstruct the request afterward from transcript/TUI output.
+- R2: Assign a logical provider-round identity and correlate all attempts/retries/rebases for that round with existing `turnId`, `runId`, and `attemptId` authority.
+- R3: Project execution mode, effective context profile, estimated provider-facing tokens, provider-input ceiling/headroom/pressure, initial tool choice and requested/applied output policy when present.
+- R4: Project ordered provider-visible sections for initial requests, continuations and canonical rebases. At minimum distinguish instructions/guidance, conversation/current input, late `roundContext`, continuation tool results and recovery/rebase evidence where present.
+- R5: Section byte/token accounting must be based on the actual normalized provider-visible values. Metadata-only/unavailable must be explicit; do not infer missing provider values.
+- R6: Project exposed tools using the exact selected registry for the round: name, execution effect, replay-safety/source and normalized schema byte contribution.
+- R7: Project context source/profile contribution using current context diagnostics and source evidence. If category/source contribution cannot be produced truthfully from current source, mark it unavailable rather than inventing it.
+- R8: Instrument GEP availability without changing selection behavior:
+  - eligible read/receipt exposed;
+  - dual projection bytes;
+  - GEP withheld/ineligible/fallback reason;
+  - legacy `write_file` / `apply_patch` availability.
+- R9: After a completed model round, project the mutation mechanism actually selected: GEP packet, `write_file`, `apply_patch`, `create_directory`, other tool(s), or none. Record facts only; do not infer motive.
+- R10: Correlate provider outcome with existing attempt evidence: response acceptance, first useful output, provider-active duration, reported input/output/cached tokens when available, retry/stall/rebase relationship and terminal error/outcome.
+- R11: Correlate current structured task/stack/work-unit identity when available without making the projection TaskState authority.
+- R12: Correlate tools, approvals, validations, corrections, budget pressure/exhaustion, model-round avoidance, concurrency and GEP transport through existing IDs/events rather than duplicating execution.
+- R13: Add bounded application events or an application-owned observation recorder only where required to make the projection queryable. Any new durable evidence must pass session-store bounds/versioning; ephemeral fields must be explicitly documented as such.
+- R14: Add scripted-provider regressions comparing the projection against the exact `ProviderRequest` received by the provider for:
+  - initial request;
+  - tool-result continuation;
+  - late roundContext;
+  - retry;
+  - canonical rebase.
+- R15: Add GEP/legacy selection regressions for:
+  - eligible receipt + GEP packet selected;
+  - eligible receipt + legacy apply_patch selected;
+  - eligible receipt + legacy write_file selected;
+  - oversized/ineligible legacy-only fallback;
+  - no mutation.
+- R16: Add privacy regressions proving credentials/raw environment/raw provider wire/hidden reasoning/unrestricted provisional Operation text/unbounded bodies remain absent.
+- R17: Preserve provider/tool/context/task behavior byte-for-byte where practical; observability must not cause a different model request except bounded metadata already intentionally provider-visible.
+- R18: Do not add daemon/network/Tauri dependencies.
+- R19: Set package version to `0.11.2`; do not create package-lock.json.
+
+INVARIANTS
+
+- I1: Projection accurately describes actual requests; it does not become the request authority.
+- I2: Missing data is unavailable, not guessed.
+- I3: Tool/GEP selection evidence is descriptive, not a recommendation or model-motive inference.
+- I4: Observability cannot raise permissions or execute/cancel/validate.
+- I5: No hidden reasoning or raw wire capture.
+- I6: Live GEP selection remains unresolved until P3 observes it or records fallback again.
+
+WORKFLOW
+
+W1 — Instrument exact provider request projection
+Covers: R1, R2, R3, R4, R5, R6, R7
+Depends on: none
+
+W2 — Instrument GEP/tool selection and task correlation
+Covers: R8, R9, R11, R12
+Depends on: W1
+
+W3 — Correlate provider outcome
+Covers: R10, R13
+Depends on: W1, W2
+
+W4 — Permanent accuracy/privacy regressions
+Covers: R14, R15, R16, R17, R18, R19
+Depends on: W1, W2, W3
+
+VALIDATION
+
+V1 — Provider request projection accuracy
+Covers: R1, R2, R3, R4, R5, R6, R10, R14
+Run: DISCOVER
+Scope: scripted provider request/attempt/continuation/rebase observability tests
+
+V2 — Context/GEP/tool/task observability
+Covers: R7, R8, R9, R11, R12, R15
+Run: DISCOVER
+Scope: context diagnostics, GEP, tool exposure/selection, structured task and budget/correction observability tests
+
+V3 — Privacy/redaction
+Covers: R13, R16, R17
+Run: DISCOVER
+Scope: observability bounds/redaction/session durability negative tests
+
+V4 — TypeScript
+Covers: R1, R13
+Run: npm run typecheck
+
+V5 — Runner regression
+Covers: R19
+Run: npm run test:runner
+
+V6 — Diff hygiene
+Covers: R19
+Run: git diff --check
+
+STOP CONDITIONS
+
+- S1: Do not change prompt/tool wording merely to influence Qwen selection.
+- S2: Do not expose raw HTTP/SSE/provider payloads.
+- S3: Do not persist hidden/provisional Operation narration.
+- S4: Do not implement daemon transport or GUI.
+- S5: If requested observability cannot be grounded at the producer, mark it unavailable rather than infer it.
+- S6: Do not claim completion while request-projection accuracy or privacy regressions fail.
+
+DELIVERABLES
+
+- D1: Populated provider-round/request observability.
+- D2: GEP/legacy availability and actual-selection observability.
+- D3: Provider/context/task/tool/validation/budget correlation.
+- D4: Permanent accuracy/privacy regressions.
+- D5: package.json at 0.11.2.
+
+EVIDENCE
+
+Record exact scripted request/projection comparisons, GEP/legacy selection cases, projection bounds/redaction outcomes, test counts, typecheck/runner/diff results, and root package-lock absence.

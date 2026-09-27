@@ -1,0 +1,137 @@
+GEORGE TASK FORMAT: 1
+
+STACK: p11
+TASK: Phase 11 / P3 — Primary baseline freeze qualification
+KIND: qualification
+
+VERSIONING
+
+The assigned project version is `0.11.3`.
+
+- Recommended configuration: `Sol Medium`.
+- Browser required: no.
+
+GOAL
+
+Qualify Observability Projection v1 and freeze one representative supported primary-model baseline for Phase 12. This is a bounded consolidation, not another optimization campaign and not a live GEP-selection gate.
+
+READ FIRST
+
+- REQUIRED: BOOT.md
+- REQUIRED: AGENTS.md
+- REQUIRED: docs/stability-contract.md
+- REQUIRED: docs/phase-10-owner-closeout.md
+- REQUIRED: docs/planning/p11-primary-baseline-observatory-bridge/decision-record.md
+- REQUIRED: docs/planning/p11-primary-baseline-observatory-bridge/observability-projection-v1.md
+- REQUIRED: docs/planning/p11-primary-baseline-observatory-bridge/qualification-plan.md
+- REQUIRED: docs/tasks/p11/P1-baseline-identity.md
+- REQUIRED: P1/P2 implementation and tests
+
+CREATE
+
+- docs/tasks/p11/P3-primary-baseline.md
+- bounded machine-readable/supporting evidence under docs/tasks/p11/evidence/
+
+REQUIREMENTS
+
+- R1: Record exact candidate SHA/tree/package, clean/dirty state, Node/npm/platform, LM Studio version/backend where observable, model ID/state/context length, provider timeout policy and context mode/profile.
+- R2: Common live validity requires Node >=26.4.0 <27, package 0.11.3 candidate, reachable LM Studio and loaded recorded Qwen model.
+- R3: Run focused Observability Projection v1 tests covering request accuracy, correlation, context/tool/GEP selection, redaction/bounds and canonical/derived separation.
+- R4: Run affected inherited provider/context/GEP/TaskState/session/Phase 5/9/10 deterministic floors.
+- R5: Run `npm run typecheck`, `npm run test:runner`, `npm test` exactly once and `git diff --check`.
+- R6: Preserve any historical failures/waivers as historical truth; a current pass does not relabel them.
+- R7: Run one quick benchmark on the exact candidate when common provider validity is Green. Do not tune or rerun based on performance outcome.
+- R8: Run one compact disposable real Qwen coding workload exactly once after deterministic Green. Do not use B2/C2 or the owner's current Express workspace.
+- R9: The live workload must exercise enough behavior to produce useful observability:
+  - context assembly;
+  - multiple provider rounds;
+  - read/tool exposure;
+  - at least one workspace mutation path;
+  - George-owned validation;
+  - TaskState/session completion/reopen when using structured execution.
+- R10: Record the live observability baseline:
+  - provider rounds/attempts/retries/rebases;
+  - input/cached/output tokens when reported;
+  - provider-active/total elapsed;
+  - context profile/budget/headroom;
+  - ordered request-section contribution;
+  - tools exposed;
+  - GEP eligibility/receipt/fallback;
+  - mutation mechanism actually selected;
+  - tool/validation/correction/budget summary;
+  - terminal TaskState/session reopen;
+  - projection completeness/redaction.
+- R11: Live GEP selection is descriptive evidence. If Qwen selects legacy mutation fallback again and the task is otherwise correct, record that unresolved state; do not fail Phase 11 solely for not selecting GEP.
+- R12: Functional correctness, permission/recovery/session regressions, observability contradiction, secret leakage, projection/request mismatch, or invalid TaskState remain blocking.
+- R13: Do not implement speculative decoding, helper inference, runtime/GPU tuning or additional primary-model optimization in P3.
+- R14: Do not rerun live work to fish for a preferred model/tool choice.
+- R15: Set package version to `0.11.3`; do not create package-lock.json.
+
+INVARIANTS
+
+- I1: Qualification cannot repair production behavior.
+- I2: Observability evidence must agree with canonical provider/tool/task/session evidence.
+- I3: Legacy GEP fallback is not silently relabeled as live GEP success.
+- I4: Unavailable provider metrics remain unavailable, not zero.
+- I5: Benchmark/live performance is baseline evidence, not a pass-seeking optimization loop.
+
+WORKFLOW
+
+W1 — Common validity and deterministic projection gate
+Covers: R1, R2, R3, R4, R5, R6
+Depends on: none
+
+W2 — Quick benchmark baseline
+Covers: R7
+Depends on: W1
+
+W3 — One real Qwen observability baseline
+Covers: R8, R9, R10, R11, R12, R14
+Depends on: W1
+
+W4 — Record frozen baseline
+Covers: R13, R15
+Depends on: W1, W2, W3
+
+VALIDATION
+
+V1 — Phase 11 observability focused floor
+Covers: R3, R4, R12
+Run: DISCOVER
+Scope: P1/P2 observability plus affected provider/context/GEP/task/session integration tests
+
+V2 — TypeScript
+Covers: R5
+Run: npm run typecheck
+
+V3 — Runner regression
+Covers: R5, R15
+Run: npm run test:runner
+
+V4 — Broad suite
+Covers: R5
+Run: npm test
+
+V5 — Diff hygiene
+Covers: R5, R15
+Run: git diff --check
+
+STOP CONDITIONS
+
+- S1: Do not change implementation to improve benchmark/live outcome in P3.
+- S2: Do not rerun a valid live workload for a different GEP/tool choice.
+- S3: Do not run B2/C2.
+- S4: If common provider validity is unavailable, record Evidence Gap rather than mock live evidence.
+- S5: Secret leakage, request/projection contradiction, invalid canonical state, or affected deterministic failure blocks qualification.
+
+DELIVERABLES
+
+- D1: docs/tasks/p11/P3-primary-baseline.md.
+- D2: Bounded evidence artifacts.
+- D3: Quick benchmark baseline.
+- D4: One real-model observability baseline.
+- D5: package.json at 0.11.3.
+
+EVIDENCE
+
+Record exact commands/test counts, runtime/model/candidate identity, benchmark artifact paths, real-model metrics, request/tool/GEP projection evidence, canonical cross-checks, remaining historical Not Green/Evidence Gaps, and root package-lock absence.

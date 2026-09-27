@@ -1,0 +1,133 @@
+GEORGE TASK FORMAT: 1
+
+STACK: p11
+TASK: Phase 11 / P1 — Primary baseline identity and Observability Projection v1
+KIND: implementation
+
+VERSIONING
+
+The assigned project version is `0.11.1`.
+
+- Recommended configuration: `Sol High`.
+- Browser required: no.
+
+GOAL
+
+Freeze the owner-accepted Phase 10 primary-model architecture as the Phase 11 baseline and introduce the presentation-independent, versioned Observability Projection v1 contract that Phase 12 can transport without reconstructing execution truth from the TUI or raw session files.
+
+READ FIRST
+
+- REQUIRED: BOOT.md
+- REQUIRED: AGENTS.md
+- REQUIRED: docs/workflow.md
+- REQUIRED: docs/stability-contract.md
+- REQUIRED: docs/phase-10-owner-closeout.md
+- REQUIRED: docs/planning/p11-primary-baseline-observatory-bridge/decision-record.md
+- REQUIRED: docs/planning/p11-primary-baseline-observatory-bridge/observability-projection-v1.md
+- REQUIRED: docs/planning/p11-primary-baseline-observatory-bridge/qualification-plan.md
+- REQUIRED: docs/planning/p12-local-daemon-observability/decision-record.md
+- REQUIRED: docs/tasks/p11/prompt-assessment.md
+- REQUIRED: docs/tasks/p11/implementation-plan.md
+
+INSPECT
+
+- src/core/events.ts
+- src/core/session.ts and durable event/session schemas
+- src/application/one-turn.ts
+- src/application/progress.ts
+- context diagnostics/source projection code
+- TaskState/StackState projections
+- provider request/tool definition types
+- Phase 10 GEP/budget/timing events and tests
+
+REQUIREMENTS
+
+- R1: Create a presentation-independent Observability Projection v1 module/type surface under application/core. It must not depend on OpenTUI, daemon transport, Tauri, browser UI, or LM Studio-specific wire payloads.
+- R2: Version the projection schema explicitly and fail explicitly on unsupported serialized schema versions where serialization/parsing exists.
+- R3: Define bounded read-only projections for run/turn/provider-round/request-section/tool-exposure/context/task/validation/correction/budget relationships required by the Phase 11 contract.
+- R4: Reuse existing canonical IDs rather than inventing parallel identity: session, turn, run, provider attempt, tool call, task/stack fingerprint, work unit, validation/correction where available.
+- R5: Distinguish canonical evidence from derived observability projection in code/types/docs. Projection state cannot grant permission, execute a tool, validate work, advance TaskState, cancel a run, or mutate session truth.
+- R6: Define provider-round projection bounds:
+  - safe individual text preview <= 8 KiB;
+  - complete provider-round projection <= 64 KiB or explicit truncation/metadata-only fallback;
+  - tool schemas may degrade to identity/size metadata when bounded projection would overflow.
+- R7: Define deterministic redaction/preview disposition so credentials/secrets, raw process environment, provider adapter credentials, unrestricted mutation/process bodies, raw provider wire payloads, hidden reasoning and unrestricted provisional Operation prose cannot enter the projection.
+- R8: Define RequestSectionProjection semantics for intentionally provider-visible ordered sections with kind, source/provenance identity when known, byte count, estimated token count, order and preview/redaction disposition.
+- R9: Define ToolExposureProjection semantics for name, effect, replay-safety, source and schema size without allowing adapter secrets into the projection.
+- R10: Define mutation-selection observability fields needed later to distinguish GEP eligibility/receipt/fallback from the mutation mechanism actually selected.
+- R11: Define context/task correlation fields by referencing existing ContextDiagnostics and TaskState/StackState authority rather than copying them into a separately mutable state model.
+- R12: Add deterministic unit tests for schema versioning, immutability/read-only behavior, bounds, truncation, redaction, correlation identity and canonical/derived separation.
+- R13: Create `docs/tasks/p11/P1-baseline-identity.md` recording the exact inherited Phase 10 owner-accepted baseline, current package/Git identity, known live GEP-selection Not Green result and fields intentionally unavailable before P2.
+- R14: Preserve every Phase 10 owner waiver and historical Not Green/Evidence Gap exactly; P1 must not perform GEP selection tuning or another performance optimization.
+- R15: Set package version to `0.11.1`; do not create package-lock.json.
+
+INVARIANTS
+
+- I1: Observability is read-only derived evidence.
+- I2: No TUI/client/daemon code becomes execution authority.
+- I3: No hidden chain-of-thought capture.
+- I4: No unrestricted raw provider request/response capture.
+- I5: No secret-bearing environment/config capture.
+- I6: Phase 10 live GEP selection remains Not Green unless fresh later evidence proves otherwise.
+- I7: P1 does not implement daemon transport or desktop UI.
+
+WORKFLOW
+
+W1 — Freeze primary baseline identity
+Covers: R13, R14, R15
+Depends on: none
+
+W2 — Implement projection schema and correlation types
+Covers: R1, R2, R3, R4, R5, R8, R9, R10, R11
+Depends on: W1
+
+W3 — Implement bounds/redaction contract
+Covers: R6, R7
+Depends on: W2
+
+W4 — Permanent schema/boundary regressions
+Covers: R12, R15
+Depends on: W2, W3
+
+VALIDATION
+
+V1 — Observability projection focused tests
+Covers: R1, R2, R3, R4, R5, R6, R7, R8, R9, R10, R11, R12
+Run: DISCOVER
+Scope: new observability projection schema/bounds/redaction/correlation tests
+
+V2 — Core event/session authority preservation
+Covers: R4, R5, R11, R14
+Run: DISCOVER
+Scope: affected events, session-store, TaskState/StackState and work-projection tests
+
+V3 — TypeScript
+Covers: R1, R2, R3
+Run: npm run typecheck
+
+V4 — Runner regression
+Covers: R15
+Run: npm run test:runner
+
+V5 — Diff hygiene
+Covers: R15
+Run: git diff --check
+
+STOP CONDITIONS
+
+- S1: Do not capture hidden reasoning/provisional Operation prose.
+- S2: Do not duplicate canonical TaskState/session truth into a mutable observability state machine.
+- S3: Do not add network/daemon/Tauri implementation.
+- S4: Do not tune GEP/tool prompts or model runtime.
+- S5: Do not claim completion while projection safety/versioning tests fail.
+
+DELIVERABLES
+
+- D1: Observability Projection v1 application/core types/helpers.
+- D2: Bounded/redacted projection contract and tests.
+- D3: docs/tasks/p11/P1-baseline-identity.md.
+- D4: package.json at 0.11.1.
+
+EVIDENCE
+
+Record exact projection schema/version, bounds, redaction cases, test counts, baseline SHA/package identity, typecheck/runner/diff results, and root package-lock absence.

@@ -128,13 +128,18 @@ Accepted Phase 10 implementation includes the Human/Operation split, stable pref
 
 Live GEP selection is now a carried observability target. It should be investigated later with the Phase 12/13 observability infrastructure rather than through additional blind Phase 10 correction cycles.
 
-**Phase 11 — Final Acceleration + Primary-Model Performance Qualification — is the current roadmap gate.**
+**Phase 11 — Primary Baseline Freeze + Observatory Bridge — is the current roadmap gate.**
 
-Planned Phase 11 baseline transition: `0.11.0`.
+Phase 11 baseline: `0.11.0`.
 
-The repository remains at package `0.10.12` until that explicit transition.
+Phase 11 authority:
+- `docs/planning/p11-primary-baseline-observatory-bridge/decision-record.md`;
+- `docs/planning/p11-primary-baseline-observatory-bridge/observability-projection-v1.md`;
+- `docs/planning/p11-primary-baseline-observatory-bridge/qualification-plan.md`.
 
-Phase 11 should freeze a consolidated primary-model baseline and hand it into the already approved observability-first roadmap. It must preserve the unresolved live GEP-selection result rather than treating it as silently fixed.
+Phase 11 is intentionally short. It freezes the accepted primary-only baseline, adds bounded presentation-independent observability projections at application/core producer seams, records one representative primary-model baseline, and hands those contracts directly to Phase 12.
+
+It does not reopen speculative decoding, broad primary-model optimization, helper inference, runtime/GPU tuning, or live GEP-selection correction. The unresolved live GEP-selection result remains a carried observability target, not a hidden Phase 11 prerequisite.
 
 The unexecuted `c9-gen-op` planning remains historical precursor material only. Do not run that correction stack.
 
@@ -193,6 +198,7 @@ Read:
 - workflow: `docs/workflow.md`;
 - stability/testing: `docs/stability-contract.md`;
 - roadmap: `docs/roadmap/mvp-roadmap.md`;
+- current Phase 11 observatory-bridge authority: `docs/planning/p11-primary-baseline-observatory-bridge/{decision-record,observability-projection-v1,qualification-plan}.md`;
 - post-Phase-11 daemon/observability direction: `docs/planning/p12-local-daemon-observability/{decision-record,qualification-plan}.md`;
 - native desktop/Agent Observatory direction: `docs/planning/p13-native-desktop-observatory/{decision-record,qualification-plan}.md`;
 - Living Project Map / Software Graph, when relevant: `docs/planning/living-project-map/decision-record.md` (then its graph, interaction, and qualification companions as needed);

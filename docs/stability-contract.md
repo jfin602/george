@@ -749,7 +749,7 @@ Phase 10 model-call reduction qualification must distinguish logical provider ro
 
 Routine Phase 10 live qualification uses compact B3/C3 efficacy instruments. Frozen Phase 9 B2/C2 remain milestone longitudinal gates and are not required after every bounded optimization.
 
-Phase 11 closes the primary-model optimization campaign only after a full-suite consolidated run records the original baseline, accepted/rejected experiments, cumulative deltas, correctness state, call counts, token usage where available, and resource footprint. Speculative decoding is retained only if the end-to-end evidence justifies its memory/runtime complexity.
+Phase 11 closes the primary-model optimization campaign by freezing the owner-accepted primary baseline and qualifying Observability Projection v1. It does not require speculative decoding or another optimization wave. Qualification must prove that bounded correlated provider-request/context/tool/GEP/task/validation/budget evidence matches the actual application/core producer state, remains derived/read-only, is redacted/bounded, and can support one representative baseline run for Phase 12/13. Live GEP selection is descriptive evidence and remains historically Not Green unless actually observed; legacy fallback does not by itself fail Phase 11 after the Phase 10 owner waiver.
 
 Phase 14 utility-model qualification must prove:
 - utility output is bounded derived context/evidence, not authoritative instructions or canonical session truth;
@@ -833,3 +833,48 @@ Qualification must additionally prove:
 - one disposable Node 26 + recorded LM Studio/Qwen workload exercises read -> GEP existing-file edit -> new file -> literal validation -> TaskState/session persistence;
 - frozen B2/C2, helper inference, runtime retuning and the owner's Express workspace are not used;
 - Phase 10 P7 historical/intermittent evidence remains immutable.
+
+
+## Phase 11 observatory-bridge qualification
+
+Phase 11 baseline is `0.11.0`.
+
+Qualification must prove:
+
+### Observability authority boundary
+- projection is versioned, read-only, bounded and presentation-independent;
+- canonical ApplicationEvent/session/TaskState/ToolRegistry/provider execution truth remains authoritative;
+- projection cannot execute tools, grant permissions, validate work, cancel runs, advance tasks or mutate session truth;
+- unsupported/missing observability fields are unavailable rather than inferred.
+
+### Correlation
+- existing session, turn, run, provider-attempt, tool-call, task/stack/work-unit, validation/correction identities are reused where available;
+- logical provider rounds remain distinguishable from retry attempts and rebases;
+- tool/validation/correction/budget events correlate without duplicating execution state.
+
+### Provider request projection
+- projection is constructed from the same normalized values used to build the actual ProviderRequest;
+- initial requests, tool-result continuations, late roundContext and canonical rebase requests are covered;
+- ordered provider-visible sections expose bounded kind/provenance/bytes/estimated-token metadata;
+- exposed tool name/effect/replay/schema-size evidence matches the exact selected registry;
+- raw LM Studio HTTP/SSE payloads are not persisted as observability authority.
+
+### Context and mutation selection
+- context profile/budget/headroom/source contribution reflects actual context diagnostics where supported;
+- GEP eligibility, receipt exposure/withholding, legacy fallback availability and the mutation mechanism actually selected are descriptive facts;
+- observability never invents a model motive.
+
+### Privacy
+- no hidden chain-of-thought;
+- no unrestricted provisional Operation narration;
+- no provider credentials or raw process environment;
+- no unbounded mutation/process bodies;
+- bounded provider-visible previews are redacted and carry truncation/preview disposition.
+
+### Baseline
+- one quick benchmark and one compact supported Qwen workload are recorded after deterministic Green;
+- the live workload records correctness, rounds/attempts, usage, timing, context, exposed capabilities, actual mutation selection, validation and terminal session/task state;
+- live GEP selection is not a Phase 11 Green prerequisite after the explicit Phase 10 owner waiver;
+- a valid legacy fallback choice remains truthful baseline evidence and is not rerun to obtain a different selection.
+
+Phase 12 is ready only when the application/core projection is accurate/safe enough to transport without reverse-engineering TUI output or raw session files.
