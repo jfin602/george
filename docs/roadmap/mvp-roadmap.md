@@ -1,6 +1,6 @@
 # George MVP Roadmap
 
-Status: CURRENT ROADMAP — PHASE 8 OWNER-CLOSED; PHASE 9 ACTIVE
+Status: CURRENT ROADMAP — PHASE 9 OWNER-CLOSED; PHASE 10 CURRENT WITH ACTIVE CORRECTION
 
 The roadmap deliberately proves the provider, read-only tool foundation, real interactive terminal surface, and safe autonomous tool execution before broader coding workflow, networking, or a desktop GUI.
 
@@ -263,7 +263,7 @@ Non-goals:
 - Tauri desktop UI;
 - multi-agent scheduling/execution.
 
-Long-running in Phase 5 means a bounded attached local George run with durable recovery evidence. A persistent detached local service remains deferred until Phase 14, after structured-task execution, the benchmark-driven primary-model optimization campaign, utility-model work, and local-research path.
+Long-running in Phase 5 means a bounded attached local George run with durable recovery evidence. A persistent detached local service remains deferred until the new Phase 12, after structured-task execution and the benchmark-driven single-primary-model optimization campaign have been frozen.
 
 ## Phase 6 — Plugins + External Adapters
 
@@ -600,36 +600,133 @@ Success condition:
 
 Non-goals: helper model, local web research, daemon/desktop.
 
-## Phase 12 — Local Utility Model
+## Phase 12 — Local Daemon + Observability Foundation
 
-Goal: promote a secondary local model only after the single-primary-model path is optimized and the bounded post-Phase-10 helper A/B evidence justifies it, for narrow low-cost context preparation with demonstrated net benefit.
+Goal: separate the long-lived George service from presentation clients **and** establish the stable observability/debugging transport needed to inspect model and harness behavior before more intelligence layers are added.
+
+Primary product purpose:
+- make George's provider rounds, context assembly, task/orchestration state, tools, validation, recovery, budgets, timings, and diagnostics queryable and streamable through one presentation-independent localhost contract;
+- preserve canonical application/core/session truth while giving richer clients enough correlated evidence to explain why a run succeeded, stalled, repeated work, exhausted a budget, entered correction, or diverged from the task;
+- create the foundation for compounding development leverage: future George work should be easier to diagnose and compare than the work that built this phase.
+
+Scope:
+- localhost-only service;
+- authenticated local client protocol;
+- session/run/task query APIs;
+- normalized application-event streaming with stable session/turn/run/provider-attempt/operation correlation;
+- process ownership appropriate to the daemon boundary;
+- single-user concurrency policy;
+- bounded historical diagnostic queries over George-owned durable/derived evidence;
+- safe normalized provider-facing request projection sufficient to inspect what George intentionally assembled for a model round without exposing raw wire payloads, credentials, unrestricted tool bodies, secrets, or hidden model reasoning;
+- context diagnostics including selected profile, budgets/headroom, category contributions, active/omitted/deferred/routed sources, promotions, and compaction evidence;
+- provider telemetry including attempt lifecycle, response acceptance, first useful output, active duration, reported usage where available, retries, stalls, rebases, and terminal failures;
+- tool/approval/validation/recovery/budget/task/workflow evidence required by clients;
+- attach/reconnect semantics that cannot change execution truth;
+- OpenTUI compatibility as a lightweight supported client or in-process adapter over the same application contracts.
+
+Success condition:
+- George can be driven/observed without OpenTUI owning agent behavior;
+- a client can attach, query current state, stream future evidence, disconnect, and reconnect without mutating task/session/provider/tool truth;
+- observability records remain bounded, redacted, correlated, and distinguish canonical evidence from derived projections;
+- provider-facing request inspection accurately represents George's normalized assembled input while preserving trust/secrecy boundaries;
+- daemon failure/restart behavior does not fabricate completed work or replay ambiguous effects;
+- no LAN/Internet exposure by default;
+- the daemon adds no model, tool, permission, validation, or recovery authority.
+
+Non-goals:
+- polished desktop UX;
+- browser automation or visual-model tooling;
+- helper/utility model;
+- local web research;
+- LAN/Internet service;
+- multi-agent scheduling;
+- chain-of-thought or hidden-reasoning capture.
+
+Decision authority:
+- `docs/planning/p12-local-daemon-observability/decision-record.md`;
+- `docs/planning/p12-local-daemon-observability/qualification-plan.md`.
+
+## Phase 13 — Native Desktop + Agent Observatory
+
+Goal: build the Tauri desktop client first as George's **agent observatory**: a developer workstation for understanding and debugging the local model/harness with substantially greater fidelity than terminal reconstruction.
+
+Primary product purpose:
+- expose the exact George-owned evidence needed to answer why the model/harness behaved as it did;
+- shorten the loop from run -> inspect -> identify divergence -> repair -> rerun -> compare;
+- create multiplicative/compounding development leverage before George gains utility-model, research, browser, visual, and richer project-map capabilities.
+
+Initial desktop surfaces:
+- run timeline with correlated context/provider/tool/validation/correction/recovery events;
+- model/provider inspector with per-attempt timing, usage, output policy, tool proposals, retries/stalls, Operation/Human mode, avoided rounds, and GEP metrics;
+- context inspector with profile/budget/headroom/category contributions/source provenance/omission/defer/promotion/compaction evidence;
+- task/orchestration inspector separating authored requirements, George-owned state transitions, model proposals, validation truth, corrections, and blockers;
+- tool/approval inspector with safe bounded arguments, lifecycle, effect/replay classification, duration, result/failure, and surrounding provider/task context;
+- change/diff inspection and expected/inspected/changed/validated file distinctions;
+- validation panel with status, duration, bounded evidence, and correction linkage;
+- diagnostics panel for stalls, retries, budgets, recovery, duplicate reads, concurrency, GEP transport, model-round avoidance, and related performance evidence;
+- run comparison for baseline/candidate analysis across correctness, rounds, tokens, timing, duplicate work, corrections, and failures.
+
+Architecture:
+- Tauri is a client over the Phase 12 daemon/application contracts;
+- it never owns canonical task/session/tool/permission/validation/recovery truth;
+- presentation filters/layouts/selections remain derived UI state;
+- OpenTUI remains supported for lightweight terminal workflows;
+- the desktop may render screenshots/browser/visual artifacts later, but Phase 13 does not itself add browser-control or visual-model authority.
+
+Success condition:
+- ordinary chat/task/approval/cancellation/session workflows are usable from the desktop without moving agent logic into Tauri;
+- representative historical failure classes (provider stall, context pressure, budget exhaustion, failed mutation, failed validation, correction loop, redundant round/duplicate read, interrupted run) can be located and explained through the desktop using authoritative correlated evidence without manually reconstructing raw session files/terminal output;
+- baseline-versus-candidate run comparison is usable for performance/correctness work;
+- diagnostics remain bounded/redacted and no hidden reasoning, secrets, unrestricted raw provider payloads, or raw mutation bodies are exposed;
+- client disconnect/reconnect and UI state changes cannot alter canonical George execution state;
+- TUI and desktop observe equivalent underlying task/session/evidence truth.
+
+Non-goals:
+- replacing the agent core with frontend logic;
+- browser automation/Chrome DevTools implementation;
+- visual-model runtime;
+- utility/helper model;
+- local web research;
+- Living Project Map implementation itself;
+- multi-agent scheduling.
+
+Decision authority:
+- `docs/planning/p13-native-desktop-observatory/decision-record.md`;
+- `docs/planning/p13-native-desktop-observatory/qualification-plan.md`.
+
+## Phase 14 — Local Utility Model
+
+Goal: promote a secondary local model only after the single-primary-model path is optimized **and observable through the daemon/desktop workstation**, for narrow low-cost context preparation with demonstrated net benefit.
 
 Scope:
 - provider-independent utility role;
 - begin from the bounded post-Phase-10 helper A/B evidence, then evaluate any production candidate against the Phase 11 optimized primary-only baseline;
+- use Phase 12/13 observability to inspect helper cost, primary-model savings, alignment effects, failure modes, and provenance rather than relying only on aggregate end results;
 - context/log compaction, diff summarization, relevance extraction, result/file ranking, bounded classification/routing, structured extraction;
 - utility output remains derived context/evidence, never authoritative task/session truth;
 - utility model cannot grant permissions, invoke tools independently, expand capabilities, or override instruction precedence;
 - measure helper overhead, quality, primary-model savings, frozen live-work results, and whether primary tokens saved + primary rounds avoided + success-rate improvement outweigh helper inference cost + latency + new failure rate.
 
 Success condition:
-- at least one bounded helper use case has net benefit versus Phase 11 primary-only baseline;
+- at least one bounded helper use case has net benefit versus the Phase 11 primary-only baseline;
+- the observability workstation makes helper contribution/provenance and primary-model impact inspectable;
 - failure/disablement degrades explicitly;
 - provider/model implementations remain replaceable;
 - task/permission/evidence authority remains George-owned.
 
 Non-goals: unrestricted helper autonomy, helper-owned permissions/tools, web search itself, daemon scheduling.
 
-## Phase 13 — Local Web Research
+## Phase 15 — Local Web Research
 
-Goal: make ordinary technical/documentation research primarily self-hosted/local where practical, with Parallel or another premium provider as optional escalation.
+Goal: make ordinary technical/documentation research primarily self-hosted/local where practical, with Parallel or another premium provider as optional escalation, using the established observability surface to diagnose research routing, extraction, compaction, and context effects.
 
 Scope:
 - provider-independent research orchestration through George tool/network/permission boundaries;
 - local/self-hosted discovery, SearXNG preferred initially but replaceable;
 - separate discovery, bounded fetch, deterministic extraction, semantic compaction, final primary-model reasoning;
-- use Phase 12 utility role for relevance extraction/compaction/reranking where useful;
+- use Phase 14 utility role for relevance extraction/compaction/reranking where useful;
 - preserve source identity/provenance;
+- expose bounded research lifecycle/provenance through Phase 12/13 observability without treating fetched content as trusted instructions;
 - fetched content remains untrusted;
 - bound results/bytes/rendering/context/utility/timeouts/retries/research budget;
 - compare local/premium paths and frozen live-work effects.
@@ -637,37 +734,11 @@ Scope:
 Success condition:
 - representative research can complete without paid API when public sources suffice;
 - premium escalation independently disableable;
+- research provenance, routing, extraction/compaction, costs/failures, and final context contribution are inspectable;
 - hostile page text cannot register tools, raise permissions, alter task authority, or override precedence;
 - disabled components degrade explicitly.
 
 Non-goals: private web crawl/index, unrestricted model sockets, utility-model authority, required paid provider.
-
-## Phase 14 — Local Daemon
-
-Goal: separate the long-lived George service from presentation clients after the core agent path is measured and optimized.
-
-Scope:
-- localhost-only server;
-- authenticated local client protocol;
-- session/run/task APIs;
-- event streaming;
-- process ownership;
-- single-user concurrency policy.
-
-No LAN/Internet exposure by default.
-
-## Phase 15 — Native Desktop
-
-Goal: provide a polished native application without rewriting the agent.
-
-Direction:
-- Tauri shell;
-- reuse daemon/application-service/task interfaces;
-- preserve OpenTUI event/command/task semantics;
-- session/task UI;
-- permission prompts;
-- tool/event inspection;
-- model/provider controls.
 
 ## Post-MVP — Living Project Map / Software Graph
 
@@ -680,7 +751,7 @@ Graph contract: `docs/planning/living-project-map/graph-contract.md`.
 Interaction model: `docs/planning/living-project-map/interaction-model.md`.  
 Qualification direction: `docs/planning/living-project-map/qualification-plan.md`.
 
-This capability describes the repository George is working on, not George's own internal architecture. It should build on canonical workspace identity, durable session/change/validation evidence, the utility-model boundary, daemon/service interfaces, and future desktop presentation rather than expanding earlier closed phases.
+This capability describes the repository George is working on, not George's own internal architecture. It should build on canonical workspace identity, durable session/change/validation evidence, the utility-model boundary, Phase 12 daemon/service interfaces, and Phase 13 desktop observability presentation rather than expanding earlier closed phases.
 
 Direction:
 - deterministic repository indexing for files/modules/packages/imports/exports/symbols/routes/schemas/tests and other statically recoverable structure;
@@ -697,7 +768,7 @@ Direction:
 - semantic/model augmentation as optional derived evidence; no primary-model call required on ordinary deterministic refresh/edit paths;
 - workspace-scoped schema-versioned derived state outside the target repository by default;
 - lightweight OpenTUI/text projections independent from a rich GUI;
-- rich Tauri canvas when desktop presentation is available;
+- rich Tauri canvas built on the Phase 13 desktop/Agent Observatory when the Project Map is implemented;
 - JSON Canvas 1.0 export as an interoperability adapter, initially export-only and never the canonical George graph format.
 
 Candidate task-delta semantics:

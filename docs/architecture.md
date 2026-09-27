@@ -29,6 +29,41 @@ The model proposes actions. George decides whether those actions are known, vali
 
 The core does not know terminal rendering, OpenTUI widgets, Tauri windows, HTTP routes, or LM Studio-specific wire details.
 
+
+## Presentation, daemon, and observability topology
+
+George's historical OpenTUI client may remain in-process, but the approved post-Phase-11 direction introduces a localhost daemon before the rich desktop:
+
+```text
+OpenTUI (lightweight client)      Tauri Agent Observatory
+            \                         /
+             \                       /
+              +---- local daemon ----+
+                        |
+                application service
+                        |
+                    agent core
+```
+
+The daemon is a transport/process-ownership boundary, not a new source of truth. Canonical task/session/tool/permission/validation/recovery state remains in the existing application/core/session layers. Presentation clients may query and subscribe to derived projections but cannot manufacture completion, validation, approval, or recovery outcomes.
+
+The Phase 12 observability contract should expose correlated, bounded, redacted evidence for:
+- session/turn/run/provider-attempt/operation identity;
+- provider attempt lifecycle, timing, usage where available, retries, stalls, rebases, and errors;
+- context profile/budget/headroom/category contributions/source provenance/omission/defer/promotion/compaction;
+- task/stack/work-unit state and blockers;
+- tool/approval/process/validation/recovery lifecycle;
+- run budgets and exhaustion/pressure;
+- correction frames/revalidation;
+- Operation/Human round metrics, model-round avoidance, concurrency, and GEP transport;
+- workflow completion and safe change/validation evidence.
+
+A safe provider-facing request projection may describe what George intentionally assembled for a model round, including category/source contributions and eligible normalized text, but it is not the raw provider wire payload and must exclude credentials, secrets, unrestricted tool or mutation bodies, internal-only canonical evidence, and hidden model reasoning.
+
+The Phase 13 Tauri client is initially an **Agent Observatory**. Its run timeline, model/context/task/tool/validation/diff/diagnostic inspectors and baseline/candidate comparison views are presentation over this contract. UI filters, viewport state, selections, layout, and comparison choices are derived user state and never execution authority.
+
+OpenTUI remains supported. New capabilities should not be forced into TUI-only presentation when the desktop observatory is the natural richer surface.
+
 ### Phase 2 loop contract
 
 The first autonomous loop follows this lifecycle:

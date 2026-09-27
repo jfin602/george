@@ -330,7 +330,7 @@ OpenTUI may eventually provide textual/compact commands such as:
 /map deps <entity>
 ```
 
-The future Tauri client is the natural home for the full interactive spatial canvas, but Tauri does not own graph truth.
+The Phase 13 Tauri desktop/Agent Observatory is the natural home for the full interactive spatial canvas when this post-MVP feature is implemented, but Tauri does not own graph truth. The Project Map should reuse the observability workstation's established selection, evidence, task-overlay, artifact, and inspection patterns rather than creating a separate desktop architecture.
 
 ## JSON Canvas interoperability
 

@@ -14,8 +14,8 @@ Start with `BOOT.md` before substantial repository-aware work.
 - LM Studio `/v1/responses` as the first inference provider.
 - Native filesystem, shell, Git, search, patch, test, and process tools.
 - Local-first permissions and explicit trust boundaries.
-- Architecture ready for a later local daemon and networking.
-- Tauri desktop application is a later adapter, not part of the core.
+- Architecture is ready for the Phase 12 local daemon/observability boundary and later networking.
+- After the optimized primary-model baseline, Tauri becomes George's Phase 13 Agent Observatory: a native debugging/observability workstation over the reusable daemon/application core, while OpenTUI remains a lightweight supported client.
 - Future tools may include Chrome DevTools, Parallel Search, GitHub, and MCP.
 
 See `docs/project-overview.md`, `docs/architecture.md`, `docs/workflow.md`, and `docs/roadmap/mvp-roadmap.md`.
